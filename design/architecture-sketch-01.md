@@ -139,8 +139,11 @@ pattern into a proper surface.
 Before adding a field, predicate, or event attribute to the schema,
 answer:
 
-> *Does this content constrain against drift in a way an LLM or
-> author would struggle to self-police?*
+> *Would an attentive LLM or human author reliably catch drift in
+> this content without the schema?*
+>
+> - If **yes** → the content belongs in a Description.
+> - If **no** → the content belongs in the Facts grid.
 
 Examples of drift the schema catches:
 
@@ -182,14 +185,26 @@ Elements the descriptions sketch is expected to include:
 
 - **kind** — what sort of interpretation this is (texture, motivation,
   reader-frame, authorial-uncertainty, trust-flag, …).
-- **attention** — urgency level; how load-bearing to the scene.
-  High-attention descriptions trigger callouts in tooling.
+- **attention** — categorical, not ordinal. Tells a reviewer *what
+  kind of scrutiny* this description warrants:
+  - `structural` — this description bears on how a nearby fact
+    should be read. Must be reviewed; can change interpretation of
+    the grid around it.
+  - `interpretive` — meaningful texture a reader or LLM should
+    consider when reading the scene. Should be reviewed.
+  - `flavor` — background color. Review is optional.
 - **review state** — unreviewed, LLM-reviewed, author-approved.
-  An unreviewed high-attention description is itself a signal.
+  An unreviewed `structural` description is itself a signal.
 - **attached_to** — the typed anchor (event id, effect, proposition,
   sjuzhet entry) this description hangs off.
 - **open-question marker** — optional; lets an author write a
   description-as-question that routes to a review queue.
+
+Categorical attention is preferred over ordinal (low / medium /
+high) because the level carries *why* — what kind of review this
+needs — rather than *how much*. A three-point Likert scale invites
+bikeshedding about whether something is medium or high; three
+categories name the different jobs a reviewer would do.
 
 The failure mode this prevents: descriptions sliding into the tool's
 background and being treated as comments rather than as a parallel
@@ -229,20 +244,31 @@ reader the substrate's current shape.
 Two specific points of interaction are worth naming rather than
 hiding.
 
-**F1 is in tension with A3.** Substrate-sketch-04 commits to
-"Emotion and tension as parallel projections with the same discipline
-as knowledge." That is exactly the kind of affective/interpretive
-content A3 says the schema should not attempt to capture. F1 is not
-currently exercised by the prototype (the Oedipus and Rashomon
-encodings do not use emotion or tension projections), so this tension
-is latent rather than operative — but it is a real disagreement. The
-event-vocabulary and descriptions sketches should resolve it, most
-likely by demoting F1 from "parallel substrate projection" to "affect
-surfaces as descriptions attached to events," with any structural
-hooks for tension (e.g., open narrative questions) reformulated as
-description kinds rather than typed projections. Until that
-resolution lands, F1 is an open item; any prototype work that starts
-to exercise F1 should pause and sort this out first.
+**F1 is retired.** Substrate-sketch-04 commits to "Emotion and
+tension as parallel projections with the same discipline as
+knowledge." That is exactly the kind of affective/interpretive
+content A3 says the schema must not attempt to capture, and F1 was
+overreach. Architecture-01 retires it:
+
+- Affect, mood, and tonal content are descriptions attached to
+  events (or effects, or sjuzhet entries) per A2. They do not form
+  a parallel typed projection.
+- Any pacing / tension-management query that is genuinely structural
+  (e.g., "what open narrative questions exist at τ_d?", "which
+  reader-gaps are overdue for resolution?") is reformulated as a
+  query over description kinds and fact-level gap state — not as a
+  query over a separate affect projection.
+- There is no substrate-level "tension level" scalar, curve, or
+  projection. If the project later needs tension-shaping tooling, it
+  lives above the substrate and consults descriptions + epistemic
+  state.
+
+F1 is not currently exercised by the prototype (neither the Oedipus
+nor Rashomon encodings use emotion or tension projections), so this
+retirement is a forward commitment rather than a breaking change.
+The formal removal from the substrate lineage lands when
+substrate-sketch-05 (event vocabulary) supersedes substrate-sketch-04;
+in the meantime, no new work should start to exercise F1.
 
 **Provenance is proto-description.** Substrate-sketch-04 treats
 `provenance` as a minimal unstructured trail on Held records. A2 and
@@ -276,22 +302,18 @@ descriptions surface as a unified statement.
    description to a fact?** A UI click? A commit? An annotation
    field? The promotion rule is declared (A2) but its operational
    shape is open.
-2. **Attention levels — ordinal or categorical?** "Low / medium /
-   high" is the default frame here, but "texture / load-bearing /
-   open-question" might be more useful. Resolve in the descriptions
-   sketch.
-3. **Can a description be attached to another description?**
+2. **Can a description be attached to another description?**
    (Commentary on an interpretation.) Probably yes, but not urgent.
-4. **Does the description surface have its own branch semantics?**
+3. **Does the description surface have its own branch semantics?**
    A description attached to a `:b-wife`-only event lives on that
    branch. But a description that *compares* the four testimonies
    — where does that live? Probably on `:canonical` as a trans-
    branch annotation. Needs thought.
-5. **Review state decay.** If a description is author-approved and
+4. **Review state decay.** If a description is author-approved and
    then the event it annotates changes, should the review state
    drop back to unreviewed automatically? Yes, probably, but the
    trigger conditions need spelling out.
-6. **LLM proposing facts from descriptions.** The promotion rule
+5. **LLM proposing facts from descriptions.** The promotion rule
    forbids automatic promotion, but a proposal queue ("the LLM
    suggests this fact based on description X") is useful and
    consistent with A5. Where that lives (substrate-adjacent tool?
