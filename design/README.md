@@ -23,16 +23,17 @@ These are the sketches to read. Each is self-contained within its topic; no need
 
 - [Substrate — sketch 05](substrate-sketch-05.md) — consolidated substrate, aligned with architecture-sketch-01. Retires F1 (emotion/tension as parallel projection); adds M1 (adverbial/modal routing rule); makes event type an extensible categorical tag rather than a dispatch key; applies A3 retroactively to every carried-forward commitment. Current substrate statement; read alone for the substrate's shape.
 - [Descriptions — sketch 01](descriptions-sketch-01.md) — the fold-invisible interpretive peer surface to the substrate's typed facts. Commitments D1–D5 (fold-invisibility, attention affordances, anchor-attachment, branch-default-from-anchor, no-auto-promotion). Specifies the description record, kind vocabulary, attention levels, review state with staleness under anchor edits, promotion mechanics via proposal queue, and tooling obligations. Absorbs substrate provenance.
+- [Reader-model — sketch 01](reader-model-sketch-01.md) — how human or LLM interpretation of descriptions is invoked, reviewed, and fed back into authorial acts. Commitments R1–R6 (typed I/O, descriptions labeled in the view, partner-not-fallback, shared review-entry type across humans and LLMs, declared-scope invocations, anchor-τ_a staleness). Specifies the ReaderView, invocation modes (interactive, triggered, batch), the typed output shape (reviews, promotion proposals, question-answers), refusal/malformed handling, and the API/firewall boundary between substrate and tooling.
 
 ## Upcoming sketches
 
-Planned work, in dependency order. Each is a sketch-to-write; filenames are provisional.
+Planned work. Each is a sketch-to-write; filenames are provisional. Dependency order is approximate — reader-model was originally third but was advanced because the description surface shipped write-only without it.
 
 1. **Inference model** — addresses substrate-sketch-05 open question 2. Realization-as-integration needs a bounded inference layer; the shape (forward chaining, proof-carrying, something else) is open.
 2. **Proper focalization semantics** — closes the weakening the prototype flagged. Requires τ_d-scoped reader-state tracking.
-3. **Reader-model integration** — how LLM/human interpretation of descriptions is invoked, cached, reviewed, and integrated with structural queries. Architecture-sketch-01 A5 says this work is in scope; the shape of the integration is open.
+3. **Prescriptive / upper-layer sketch** (provisional) — a Dramatica-adjacent layer that sits *above* the substrate and consults its queries. Addresses the "multiple models operating simultaneously" intuition: the substrate grid-snaps low-level structure; this layer would carry scene-level, act-level, or throughline-level prescription. Opens a new topic sibling to substrate and descriptions, related via shared coordinates (τ_s, τ_d, τ_a, entity/branch ids), not inheritance.
 
-The next unit of prototype work is the Rashomon encoding refactor per substrate-sketch-05 plus the description surface from descriptions-sketch-01: `duel_character`, `coerced`/`yielded_willingly`, `begged_to_kill` predicates retired in favor of descriptions; `provenance` tuples absorbed into the description surface; tests updated to pin description-attachment invariants.
+The next unit of prototype work is a second reader-model probe iteration once a real LLM-backed tooling layer is in place: exercise the view against a live model, ingest structured reviews, and surface a proposal queue the author can walk.
 
 ## Superseded sketches
 
