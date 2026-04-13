@@ -4,9 +4,11 @@ scene and print a branch-indexed report.
 
 Where demo.py (Oedipus) demonstrates reader-vs-character irony on a
 single canonical branch, this demo exercises the `:contested` branch
-machinery: four sibling branches, each internally consistent, mutually
-incompatible, with the substrate reporting per-branch answers for the
-same propositions.
+machinery and the description surface: four sibling branches, each
+internally consistent, mutually incompatible, with the substrate
+reporting per-branch answers for structural questions and the
+description API carrying the interpretive content that the fold does
+not touch.
 
 Run:
     cd prototype && python3 demo_rashomon.py
@@ -15,16 +17,18 @@ Run:
 from __future__ import annotations
 
 from substrate import (
-    Slot, Confidence,
+    Slot, Confidence, Attention,
     scope, project_knowledge, project_reader, project_world,
     dramatic_ironies, sternberg_curiosity,
+    descriptions_for, descriptions_on_branch, by_kind, open_questions,
+    anchor_event,
 )
 from rashomon import (
     EVENTS_ALL, SJUZHET_BY_BRANCH, AGENT_IDS, ALL_BRANCHES,
-    CONTESTED_BRANCHES,
+    CONTESTED_BRANCHES, DESCRIPTIONS,
     B_TAJOMARU, B_WIFE, B_HUSBAND, B_WOODCUTTER,
-    killed, killed_with, coerced, yielded_willingly, duel_character,
-    stole, begged_to_kill, fled, dead, had_intercourse_with,
+    killed, killed_with, stole, fled, dead,
+    had_intercourse_with, bound_to, at_location,
 )
 
 
@@ -68,8 +72,11 @@ SEP = "─" * 76
 
 
 # ----------------------------------------------------------------------------
-# Propositions whose contested status is the whole point. For each, the
-# demo shows the per-branch verdict side by side.
+# Propositions whose contested status is the whole point. With the
+# interpretive predicates retired (duel_character, coerced,
+# yielded_willingly, begged_to_kill), the contested structural surface
+# is smaller — who killed, with what weapon, did someone flee or steal.
+# The interpretive material is reported separately as descriptions.
 # ----------------------------------------------------------------------------
 
 CENTRAL_PROPS = [
@@ -79,11 +86,8 @@ CENTRAL_PROPS = [
     killed_with("tajomaru", "husband", "sword"),
     killed_with("wife",     "husband", "dagger"),
     killed_with("husband",  "husband", "dagger"),
-    coerced("tajomaru", "wife"),
-    yielded_willingly("wife", "tajomaru"),
-    duel_character("tajomaru", "husband", "noble"),
-    duel_character("tajomaru", "husband", "cowardly"),
-    begged_to_kill("wife", "tajomaru", "husband"),
+    fled("tajomaru"),
+    fled("wife"),
     stole("woodcutter", "dagger"),
 ]
 
@@ -102,7 +106,6 @@ def print_header(title: str) -> None:
 def world_state_matrix(τ_s: int) -> None:
     print_header(f"Per-branch world state at τ_s={τ_s}")
     print()
-    # Column: each contested branch. Row: each proposition.
     header = f"  {'proposition':<48}" + "".join(
         f"{b.label:<16}" for b in CONTESTED_BRANCHES
     )
@@ -129,10 +132,13 @@ def reader_state_matrix(up_to_τ_d: int) -> None:
     print_header(f"Per-branch reader state at τ_d={up_to_τ_d}")
     print()
     print("  The reader inhabits each branch's reality in turn. On each")
-    print("  branch the reader holds that branch's disclosed facts as KNOWN;")
-    print("  the facts of other branches are simply absent from this branch's")
-    print("  reader state. Cross-branch uncertainty (meta-level) is a known")
-    print("  soft spot — see rashomon.py's *Known soft spots* #2.")
+    print("  branch the reader holds that branch's disclosed structural")
+    print("  facts as KNOWN; the facts of other branches are simply absent")
+    print("  from this branch's reader state. The interpretive content")
+    print("  (modality, character of the fight, speech-act content) is")
+    print("  not in the reader state at all — it lives on the description")
+    print("  surface below. Cross-branch uncertainty (meta-level) is a")
+    print("  known soft spot — see rashomon.py's *Known soft spots* #2.")
     print()
     reader_by_branch = {}
     for b in CONTESTED_BRANCHES:
@@ -158,7 +164,46 @@ def reader_state_matrix(up_to_τ_d: int) -> None:
 
 
 # ----------------------------------------------------------------------------
-# Section 3 — per-branch dramatic-irony summary
+# Section 3 — per-branch descriptions on the intercourse event
+# ----------------------------------------------------------------------------
+#
+# This is the surface the fold does not see. Each branch carries its
+# own texture description; one reader-frame description on canonical
+# is visible on every branch via canonical-is-universal.
+
+def intercourse_descriptions() -> None:
+    print_header("Per-branch descriptions on E_intercourse")
+    print()
+    print("  The intercourse event itself is a canonical fact (every")
+    print("  branch agrees it happened). The *modality* — was it")
+    print("  violation or yielding, coerced or consented — is not a")
+    print("  proposition the fold dispatches on. It is a description")
+    print("  attached to the event, branch-scoped where it differs.")
+    print()
+    anchor = anchor_event("E_intercourse")
+    all_ = descriptions_for(anchor, DESCRIPTIONS)
+    for b in CONTESTED_BRANCHES:
+        visible = descriptions_on_branch(
+            branch=b, descriptions=all_, events=EVENTS_ALL,
+            all_branches=ALL_BRANCHES, up_to_τ_a=10_000,
+        )
+        print(f"  {BRANCH_NAMES[b.label]}  ({b.label})")
+        for d in visible:
+            scope_note = ""
+            if d.branches is not None:
+                if ":canonical" in d.branches and len(d.branches) == 1:
+                    scope_note = "  [canonical — visible on every branch]"
+                elif d.branches == frozenset({b.label}):
+                    scope_note = f"  [branch-scoped to {b.label}]"
+                else:
+                    scope_note = f"  [branches={sorted(d.branches)}]"
+            print(f"    · [{d.kind}/{d.attention.value}] "
+                  f"{d.text}{scope_note}")
+        print()
+
+
+# ----------------------------------------------------------------------------
+# Section 4 — per-branch dramatic-irony summary
 # ----------------------------------------------------------------------------
 
 def per_branch_irony_counts(up_to_τ_d: int, τ_s: int) -> None:
@@ -194,7 +239,7 @@ def per_branch_irony_counts(up_to_τ_d: int, τ_s: int) -> None:
 
 
 # ----------------------------------------------------------------------------
-# Section 4 — where the branches agree vs disagree on a key proposition
+# Section 5 — who killed the husband (per-branch verdict)
 # ----------------------------------------------------------------------------
 
 def agreement_on_killer() -> None:
@@ -226,7 +271,7 @@ def agreement_on_killer() -> None:
 
 
 # ----------------------------------------------------------------------------
-# Section 5 — sibling non-inheritance, demonstrated
+# Section 6 — sibling non-inheritance, demonstrated
 # ----------------------------------------------------------------------------
 
 def sibling_non_inheritance() -> None:
@@ -245,15 +290,46 @@ def sibling_non_inheritance() -> None:
         verdict = "TRUE" if p in w else "absent"
         print(f"  {b.label:<18}  {verdict}")
     print()
-    print("  By contrast, had_intercourse_with(Tajomaru, the Wife) is on")
-    print("  :canonical, so every branch sees it:")
+    print("  The D4 branch-scoping rule mirrors this for descriptions.")
+    print("  The wife's texture description on E_intercourse is visible on")
+    print("  :b-wife only, not on sibling branches:")
     print()
-    p2 = had_intercourse_with("tajomaru", "wife")
+    anchor = anchor_event("E_intercourse")
     for b in CONTESTED_BRANCHES:
-        scoped = scope(b, EVENTS_ALL, ALL_BRANCHES)
-        w = project_world(scoped, 100)
-        verdict = "TRUE" if p2 in w else "absent"
+        visible = descriptions_on_branch(
+            branch=b, descriptions=descriptions_for(anchor, DESCRIPTIONS),
+            events=EVENTS_ALL, all_branches=ALL_BRANCHES, up_to_τ_a=10_000,
+        )
+        wife_texture = any(d.id == "D_intercourse_wife_texture" for d in visible)
+        verdict = "TRUE" if wife_texture else "absent"
         print(f"  {b.label:<18}  {verdict}")
+
+
+# ----------------------------------------------------------------------------
+# Section 7 — description surface summary
+# ----------------------------------------------------------------------------
+
+def description_surface_summary() -> None:
+    print_header("Description surface — summary")
+    print()
+    by_kind_counts = {}
+    by_attention_counts = {}
+    for d in DESCRIPTIONS:
+        by_kind_counts[d.kind] = by_kind_counts.get(d.kind, 0) + 1
+        by_attention_counts[d.attention.value] = \
+            by_attention_counts.get(d.attention.value, 0) + 1
+    print("  By kind:")
+    for k in sorted(by_kind_counts):
+        print(f"    {k:<24} {by_kind_counts[k]}")
+    print()
+    print("  By attention:")
+    for a in sorted(by_attention_counts):
+        print(f"    {a:<24} {by_attention_counts[a]}")
+    print()
+    questions = open_questions(DESCRIPTIONS)
+    print(f"  Open questions (is_question=True): {len(questions)}")
+    for q in questions:
+        print(f"    · [{q.kind}] {q.text[:72]}{'...' if len(q.text) > 72 else ''}")
 
 
 # ----------------------------------------------------------------------------
@@ -262,7 +338,7 @@ def sibling_non_inheritance() -> None:
 
 def main() -> None:
     print()
-    print("Rashomon — substrate prototype (four contested branches)")
+    print("Rashomon — substrate prototype (four contested branches + descriptions)")
     print()
     print("Branches:")
     for b in CONTESTED_BRANCHES:
@@ -272,9 +348,11 @@ def main() -> None:
     # content is folded. τ_d=100 likewise exceeds all sjuzhet entries.
     world_state_matrix(τ_s=100)
     reader_state_matrix(up_to_τ_d=100)
+    intercourse_descriptions()
     per_branch_irony_counts(up_to_τ_d=100, τ_s=100)
     agreement_on_killer()
     sibling_non_inheritance()
+    description_surface_summary()
     print()
 
 

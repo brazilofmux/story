@@ -605,3 +605,257 @@ def sternberg_curiosity(reader_state: KnowledgeState) -> list:
     extension point when the prototype earns its next iteration.
     """
     return reader_state.gaps()
+
+
+# ============================================================================
+# Descriptions — the fold-invisible peer surface (descriptions-sketch-01).
+# ============================================================================
+#
+# Facts live above; descriptions live below. The two surfaces never share a
+# type in a way that would let a fold function receive a description. That
+# separation is the firewall architecture-sketch-01 A2 and descriptions-01 D1
+# commit to. The surfaces meet only at the rendering layer (a tool that prints
+# a scene prints both) and at authorial promotion (an author turns a
+# description into an event, explicitly).
+#
+# Descriptions are immutable records. Edits append a new description with a
+# later τ_a; review history is a tuple of ReviewEntry records. Staleness is
+# computed, not stored: a review is stale when its anchor_τ_a is less than
+# the anchor's current τ_a.
+#
+# This prototype implements the event-anchor and description-anchor shapes
+# (the two the Rashomon refactor exercises). Effect-anchors, proposition-
+# anchors, and sjuzhet-entry-anchors are declared in descriptions-sketch-01
+# and left for a later iteration; the shape of AnchorRef is built to admit
+# them without a signature change.
+
+
+class Attention(str, Enum):
+    STRUCTURAL = "structural"
+    INTERPRETIVE = "interpretive"
+    FLAVOR = "flavor"
+
+
+class ReviewVerdict(str, Enum):
+    APPROVED = "approved"
+    NEEDS_WORK = "needs-work"
+    REJECTED = "rejected"
+    NOTED = "noted"
+
+
+class DescStatus(str, Enum):
+    COMMITTED = "committed"
+    PROVISIONAL = "provisional"
+
+
+@dataclass(frozen=True)
+class ReviewEntry:
+    """One review act on one description.
+
+    `anchor_τ_a` is the anchor's τ_a at the time of review. Staleness is the
+    pair (this entry, current anchor τ_a); the entry is not mutated when the
+    anchor is edited, the comparison is.
+    """
+    reviewer_id: str
+    reviewed_at_τ_a: int
+    verdict: ReviewVerdict
+    anchor_τ_a: int
+    comment: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class AnchorRef:
+    """A description's attachment point. `kind` names the anchor's type
+    ('event', 'description'); `target_id` is the anchored record's id.
+    Effect-anchors, proposition-anchors, and sjuzhet-entry-anchors are
+    reachable from this shape without field additions — the prototype simply
+    does not resolve them yet.
+    """
+    kind: str
+    target_id: str
+
+
+def anchor_event(event_id: str) -> AnchorRef:
+    return AnchorRef(kind="event", target_id=event_id)
+
+
+def anchor_desc(description_id: str) -> AnchorRef:
+    return AnchorRef(kind="description", target_id=description_id)
+
+
+@dataclass(frozen=True)
+class Description:
+    """A fold-invisible interpretive record attached to a typed anchor.
+
+    `branches=None` means "inherit from the anchor" (the D4 default). An
+    explicit `branches` set is a subset override; descriptions-sketch-01's
+    subset-override invariant (must be non-empty subset of the anchor's
+    branches) is a responsibility of the authoring tool / encoding, not
+    enforced at record construction — a prototype would need the anchor
+    resolved at construction time to enforce it, which couples this record
+    to the event log in a way the data type should not require.
+    """
+    id: str
+    attached_to: AnchorRef
+    kind: str
+    attention: Attention
+    text: str
+    authored_by: str
+    τ_a: int
+    is_question: bool = False
+    branches: Optional[frozenset] = None
+    review_states: tuple = ()
+    promoted_to: Optional[str] = None
+    status: DescStatus = DescStatus.COMMITTED
+    metadata: dict = field(default_factory=dict)
+
+
+# ----------------------------------------------------------------------------
+# Description queries — the API that is NOT the fold API (D1).
+# ----------------------------------------------------------------------------
+#
+# Fold functions (project_knowledge, project_world, project_reader,
+# dramatic_ironies, sternberg_curiosity) do not accept descriptions in any
+# signature. These functions live in a separate surface. Callers that want
+# to display facts and descriptions side by side compose at the rendering
+# layer.
+
+
+def _resolve_anchor_branches(
+    anchor: AnchorRef,
+    events: list,
+    descriptions: list,
+) -> Optional[frozenset]:
+    """The branch set of a description's anchor, or None if the anchor is
+    an orphan (referent does not exist). Used to compute a description's
+    effective branches when the description did not set its own.
+    """
+    if anchor.kind == "event":
+        for e in events:
+            if e.id == anchor.target_id:
+                return e.branches
+        return None
+    if anchor.kind == "description":
+        for d in descriptions:
+            if d.id == anchor.target_id:
+                return effective_branches(d, events, descriptions)
+        return None
+    return None
+
+
+def effective_branches(
+    desc: Description,
+    events: list,
+    descriptions: list,
+) -> frozenset:
+    """The branch set this description is visible on.
+
+    If the description carries an explicit `branches` set, that is authoritative
+    (subset-override per D4). Otherwise it inherits from the anchor. An orphan
+    description (anchor id missing) resolves to the empty set, which means no
+    branch sees it; this is a bug signal, not a feature.
+    """
+    if desc.branches is not None:
+        return desc.branches
+    anchor_branches = _resolve_anchor_branches(desc.attached_to, events, descriptions)
+    if anchor_branches is None:
+        return frozenset()
+    return anchor_branches
+
+
+def descriptions_for(
+    anchor: AnchorRef,
+    descriptions: list,
+) -> list:
+    """All descriptions attached to `anchor`, in τ_a order."""
+    matches = [d for d in descriptions if d.attached_to == anchor]
+    return sorted(matches, key=lambda d: d.τ_a)
+
+
+def descriptions_on_branch(
+    branch: Branch,
+    descriptions: list,
+    events: list,
+    all_branches: dict,
+    up_to_τ_a: int,
+) -> list:
+    """All descriptions visible on `branch` at `up_to_τ_a`, in τ_a order.
+
+    Visibility follows the same inheritance rule as events: a description is
+    visible on `branch` if its effective-branches set contains `branch.label`
+    or the label of any ancestor. Sibling :contested branches do not inherit
+    from each other — the D4 branch semantics mirror the B1 fold-scope rule.
+    """
+    result = []
+    for d in descriptions:
+        if d.τ_a > up_to_τ_a:
+            continue
+        eff = effective_branches(d, events, descriptions)
+        if not eff:
+            continue
+        if branch.label in eff:
+            result.append(d)
+            continue
+        for ancestor in ancestor_chain(branch, all_branches):
+            if ancestor.label in eff:
+                result.append(d)
+                break
+    return sorted(result, key=lambda d: d.τ_a)
+
+
+def by_kind(descriptions: list, kind: str) -> list:
+    """All descriptions of a given kind."""
+    return [d for d in descriptions if d.kind == kind]
+
+
+def open_questions(descriptions: list) -> list:
+    """All descriptions flagged as questions (is_question=True)."""
+    return [d for d in descriptions if d.is_question]
+
+
+def is_review_stale(entry: ReviewEntry, anchor_current_τ_a: int) -> bool:
+    """A review is stale if its recorded anchor_τ_a is older than the
+    anchor's current τ_a (i.e., the anchor has been edited since)."""
+    return entry.anchor_τ_a < anchor_current_τ_a
+
+
+def is_effectively_unreviewed(
+    desc: Description,
+    anchor_current_τ_a: int,
+) -> bool:
+    """A description is effectively unreviewed if it has no approved/noted
+    review whose anchor_τ_a ≥ the anchor's current τ_a. `needs-work` and
+    `rejected` verdicts do not count as review for this purpose — they are
+    flags, not approvals; a description with only those has been seen and
+    marked for action, which is a distinct state from unreviewed.
+    """
+    for entry in desc.review_states:
+        if entry.verdict in (ReviewVerdict.APPROVED, ReviewVerdict.NOTED):
+            if entry.anchor_τ_a >= anchor_current_τ_a:
+                return False
+    return True
+
+
+def unreviewed(
+    descriptions: list,
+    anchor_τ_a_by_id: dict,
+    attention: Attention = Attention.STRUCTURAL,
+) -> list:
+    """Descriptions that are effectively unreviewed at the current anchor τ_a,
+    filtered to a single attention level (structural by default — the ones
+    that block).
+
+    `anchor_τ_a_by_id` maps anchor target_id -> the anchor's current τ_a. The
+    caller supplies this; computing it from scratch would couple descriptions
+    to the event log in a way the API does not mandate.
+    """
+    result = []
+    for d in descriptions:
+        if d.attention != attention:
+            continue
+        current = anchor_τ_a_by_id.get(d.attached_to.target_id)
+        if current is None:
+            continue
+        if is_effectively_unreviewed(d, current):
+            result.append(d)
+    return result

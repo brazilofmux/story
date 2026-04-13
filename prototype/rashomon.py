@@ -1,11 +1,23 @@
 """
-Rashomon — the encoded fabula and sjuzhet across four contested branches.
+Rashomon — the encoded fabula, sjuzhet, and descriptions across four
+contested branches.
 
 Story content only. No substrate logic. This file encodes the grove scene
 and its four testimonies (Tajomaru, the wife, the husband via the medium,
 and the woodcutter), following Akutagawa's *In a Grove* as filmed by
 Kurosawa. Purpose: to exercise the substrate's `:contested` branch
-machinery, which the *Oedipus Rex* slice does not.
+machinery — which the *Oedipus Rex* slice does not — and the
+description surface specified by descriptions-sketch-01.
+
+This is the second iteration of the encoding. The first (superseded by
+git) tried to schematize the *character* of the testimonies —
+`duel_character(A, B, "noble")`, `coerced` vs `yielded_willingly` as
+sibling predicates, `begged_to_kill` as a structured utterance content.
+Those predicates all failed architecture-sketch-01's A3 test (an
+attentive LLM or author would catch drift in that content from prose
+as reliably as any schema could). Substrate-sketch-05 routed them to
+the description surface per the M1 adverbial/modal rule. This
+encoding applies the routing.
 
 Fidelity choices:
 
@@ -13,10 +25,11 @@ Fidelity choices:
   The party enters the forest; Tajomaru sees them; he lures the husband
   off-road with a story about a buried sword; he ties the husband to a
   tree; he brings the wife to the grove; intercourse occurs (the bare
-  fact of it — every account agrees this much); at the end of the scene,
-  the husband is dead; a woodcutter discovers the body. Nothing about
-  the modality of the intercourse, the manner of the killing, who held
-  the weapon, or what the wife said or did after, is canonical.
+  fact of it — every account agrees this much); at the end of the
+  scene, the husband is dead; a woodcutter discovers the body. Nothing
+  about the modality of the intercourse, the manner of the killing,
+  who held the weapon, or what the wife said or did after, is
+  canonical.
 
 - **What is contested.** The four mutually incompatible accounts live
   on four sibling `:contested` branches:
@@ -33,13 +46,21 @@ Fidelity choices:
                      wife goaded both men; the woodcutter himself stole
                      the dagger from the scene.
 
+- **Facts and descriptions split per A3 / M1.** Structural facts
+  (locations, bindings, intercourse-happened, killer-of-husband,
+  weapon, body discovery, theft) are event effects on the branch
+  where they hold. Interpretive content (the modality of the
+  intercourse, the character of the duel, the content of utterances
+  beyond "an utterance occurred") is a description attached to the
+  relevant anchor event, branch-scoped where branch-specific.
+
 - **The woodcutter's account has no privileged status in the substrate.**
   In the film, the woodcutter's testimony is offered last and is widely
   read as closer to the truth, but this is a property of the film's
   framing and of the woodcutter's self-incrimination, not a substrate-
   level distinction. The substrate treats all four branches as peers.
-  Representing comparative credibility is a known soft spot; see the
-  *Known soft spots* section at the bottom of this file.
+  Comparative credibility surfaces as a trust-flag description, not
+  as a schema distinction.
 
 - **Simplifications.** The framing characters (the priest, the
   policeman, the commoner at Rashomon gate) are omitted. The trial
@@ -47,13 +68,16 @@ Fidelity choices:
   reader experiences each account through a per-branch sjuzhet whose
   entries carry `focalizer_id = <testifier>`. This keeps the substrate
   stress test clean: what is being exercised is sibling-contested
-  non-inheritance and per-branch reader projection, not the additional
-  machinery of utterance-as-testimony.
+  non-inheritance, per-branch reader projection, and per-branch
+  description scoping, not the additional machinery of
+  utterance-as-testimony.
 
-- **Language.** The encoding treats sexual coercion and death
-  clinically. The predicates used are `coerced`, `yielded_willingly`,
-  `killed`, etc. The substrate is a substrate; the story is not told
-  here.
+
+Event-type vocabulary used in this encoding (per substrate-sketch-05
+discipline — types are categorical tags, not dispatch keys):
+
+    travel, observation, deception, action, combat, killing,
+    utterance, outcome, discovery, theft
 
 
 Known soft spots (expected; flagged rather than hidden):
@@ -62,7 +86,9 @@ Known soft spots (expected; flagged rather than hidden):
    The substrate does not represent "branch X is more reliable than
    branch Y." Distinguishing credibility would need either branch-level
    metadata (trust weight, probability) or a meta-branch asserting
-   relative reliability as a canonical claim about the contest.
+   relative reliability as a canonical claim about the contest. The
+   woodcutter trust-flag description names the tension without
+   resolving it.
 
 2. **No "the reader heard a testimony" layer.** The reader's disclosures
    on each branch use slot=KNOWN as a first-order move, meaning "within
@@ -76,19 +102,21 @@ Known soft spots (expected; flagged rather than hidden):
    then holding a separate branch-indexed belief about Y. This is an
    open-question item for a future sketch.
 
-3. **No intercourse-as-event distinct from its modality.** We model the
-   bare fact on canonical and the modality (`coerced` vs
-   `yielded_willingly`) on branches. This is a pragmatic split but it
-   leaves "modality of an event" as a stand-alone proposition rather
-   than an adverbial modifier of the event itself. Event-modifier
-   structure is part of open question 1 (event vocabulary).
-
-4. **The husband's "I saw someone pull the dagger out after I died"
+3. **The husband's "I saw someone pull the dagger out after I died"
    detail is not represented.** In the film this is a notable feature
    of the husband's testimony (he narrates post-mortem events). The
    substrate has no mechanism for an agent's knowledge state to extend
    past their own death, and inventing one for this single case would
    distort the machinery. Left out.
+
+4. **Coercion-as-event is deferred.** Per substrate-sketch-05's M1
+   worked example, coercion would promote from description to event if
+   the encoding added trauma-state propositions downstream
+   (`traumatized(wife)` grounding later preconditions). The current
+   encoding does not model trauma-state, so coercion is descriptive.
+   When a later sketch adds trauma-state, the D_intercourse_*
+   descriptions on `:b-wife` and `:b-woodcutter` promote to `coercion`
+   events with world effects.
 """
 
 from __future__ import annotations
@@ -99,6 +127,7 @@ from substrate import (
     Slot, Confidence, Diegetic, Narrative,
     Held, KnowledgeEffect, WorldEffect,
     SjuzhetEntry, Disclosure,
+    Description, AnchorRef, Attention, anchor_event, anchor_desc,
 )
 
 
@@ -126,8 +155,19 @@ AGENT_IDS = [e.id for e in ENTITIES if e.kind == "agent"]
 
 
 # ----------------------------------------------------------------------------
-# Proposition constructors
+# Proposition constructors — structural only.
 # ----------------------------------------------------------------------------
+#
+# Predicates retired in this iteration per substrate-sketch-05 M1 + A3:
+#   coerced, yielded_willingly   — descriptive modality of intercourse
+#   duel_character               — reader's tonal read of a fight
+#   begged_to_kill               — speech-act content of an utterance
+#
+# The utterance *events* that carried begged_to_kill as a world effect
+# remain — an utterance occurring is structural (it changes the
+# listener's knowledge via UTTERANCE_HEARD, even if we do not populate
+# that effect here). What is gone is the predicate attempting to pin
+# down what the utterance said; that is description territory.
 
 def at_location(who: str, where: str) -> Prop:
     return Prop("at_location", (who, where))
@@ -141,12 +181,6 @@ def bound_to(who: str, what: str) -> Prop:
 def had_intercourse_with(a: str, b: str) -> Prop:
     return Prop("had_intercourse_with", (a, b))
 
-def coerced(agent: str, patient: str) -> Prop:
-    return Prop("coerced", (agent, patient))
-
-def yielded_willingly(who: str, toward: str) -> Prop:
-    return Prop("yielded_willingly", (who, toward))
-
 def killed(killer: str, victim: str) -> Prop:
     return Prop("killed", (killer, victim))
 
@@ -155,13 +189,6 @@ def killed_with(killer: str, victim: str, weapon: str) -> Prop:
 
 def dead(who: str) -> Prop:
     return Prop("dead", (who,))
-
-def duel_character(a: str, b: str, quality: str) -> Prop:
-    # quality in {"noble", "cowardly"}
-    return Prop("duel_character", (a, b, quality))
-
-def begged_to_kill(pleader: str, target: str, victim: str) -> Prop:
-    return Prop("begged_to_kill", (pleader, target, victim))
 
 def stole(who: str, what: str) -> Prop:
     return Prop("stole", (who, what))
@@ -220,6 +247,10 @@ def world(p: Prop, asserts: bool = True) -> WorldEffect:
 #
 # These events appear on every branch's fold via the canonical-is-universal
 # rule. They are the facts no testimony disputes.
+#
+# The intercourse event is on :canonical too — every account agrees it
+# happened. The per-branch descriptions below carry the branch-specific
+# reading of what kind of act it was.
 
 CANONICAL_FABULA = [
 
@@ -255,8 +286,6 @@ CANONICAL_FABULA = [
         τ_s=2, τ_a=3,
         participants={"deceiver": "tajomaru", "target": "husband"},
         effects=(
-            # Tajomaru tells the husband of a buried sword in the grove.
-            # The husband, persuaded, leaves the road.
             world(at_location("husband", "grove")),
             observe("tajomaru", at_location("husband", "grove"), 2),
             observe("husband",  at_location("husband", "grove"), 2,
@@ -290,12 +319,13 @@ CANONICAL_FABULA = [
         ),
     ),
 
-    # The bare fact of intercourse. Every account agrees that this
-    # happened; every account disagrees about its modality. Modality
-    # lives on the per-branch events below.
+    # The intercourse event on canonical. Every account agrees it
+    # happened; every account disagrees about its modality. The
+    # modality lives in per-branch descriptions attached to this
+    # event, not in sibling predicates.
     Event(
-        id="E_intercourse_bare",
-        type="action",
+        id="E_intercourse",
+        type="intercourse",
         τ_s=5, τ_a=6,
         participants={"a": "tajomaru", "b": "wife"},
         effects=(
@@ -347,28 +377,24 @@ CANONICAL_FABULA = [
 # alive will know her shame. Tajomaru, respecting the husband as a
 # worthy opponent, unties him and fights him in a long, skilled duel —
 # twenty-three strokes — and kills him with the sword.
+#
+# Structural on this branch: Tajomaru unbinds the husband, they fight,
+# Tajomaru kills him with the sword. Interpretive (the "noble" quality
+# of the duel, the wife's "yielding," her "begging" for the killing):
+# descriptions below, not events.
 
 TAJOMARU_FABULA = [
 
     Event(
-        id="E_t_yields",
-        type="internal",
-        τ_s=6, τ_a=20,
-        participants={"who": "wife", "toward": "tajomaru"},
-        branches=frozenset({B_TAJOMARU.label}),
-        effects=(
-            world(yielded_willingly("wife", "tajomaru")),
-        ),
-    ),
-
-    Event(
-        id="E_t_wife_begs",
+        id="E_t_wife_requests_killing",
         type="utterance",
         τ_s=7, τ_a=21,
         participants={"speaker": "wife", "listener": "tajomaru", "target": "husband"},
         branches=frozenset({B_TAJOMARU.label}),
         effects=(
-            world(begged_to_kill("wife", "tajomaru", "husband")),
+            # Structural: an utterance occurred from wife to tajomaru about
+            # the husband. Content — "kill him so only one man alive will
+            # know my shame" — is a description.
         ),
     ),
 
@@ -392,7 +418,6 @@ TAJOMARU_FABULA = [
         effects=(
             world(killed("tajomaru", "husband")),
             world(killed_with("tajomaru", "husband", "sword")),
-            world(duel_character("tajomaru", "husband", "noble")),
         ),
     ),
 
@@ -403,26 +428,19 @@ TAJOMARU_FABULA = [
 # :b-wife — the wife's account
 # ----------------------------------------------------------------------------
 #
-# She is violated (coerced, not willing). Tajomaru leaves. She goes to
-# her husband, seeking comfort, and meets a gaze of cold contempt. In
-# anguish she begs him to kill her; he only stares. Half-conscious, she
-# strikes him with her dagger. (In the film, she "faints holding the
-# dagger" and wakes to find it in his chest — the testimony is vague by
-# design. We encode the branch as asserting she killed him, since that
-# is the claim her testimony makes.)
+# She is violated. Tajomaru leaves. She goes to her husband, seeking
+# comfort, and meets a gaze of cold contempt. In anguish she begs him
+# to kill her; he only stares. Half-conscious, she strikes him with
+# her dagger. (In the film, she "faints holding the dagger" and wakes
+# to find it in his chest — the testimony is vague by design. We
+# encode the branch as asserting she killed him, since that is the
+# claim her testimony makes.)
+#
+# Structural on this branch: Tajomaru flees; the wife kills the
+# husband with the dagger. Interpretive (the violation, the
+# contemptuous gaze, her half-conscious state): descriptions.
 
 WIFE_FABULA = [
-
-    Event(
-        id="E_w_coerced",
-        type="internal",
-        τ_s=6, τ_a=40,
-        participants={"agent": "tajomaru", "patient": "wife"},
-        branches=frozenset({B_WIFE.label}),
-        effects=(
-            world(coerced("tajomaru", "wife")),
-        ),
-    ),
 
     Event(
         id="E_w_tajomaru_leaves",
@@ -461,28 +479,24 @@ WIFE_FABULA = [
 # or let her live — and the wife flees. Tajomaru unties the husband
 # and leaves. Alone, humiliated, the husband takes up his wife's
 # dagger (left behind in the struggle) and ends his own life.
+#
+# Structural on this branch: an utterance from wife to tajomaru;
+# tajomaru refuses to act (a null event, structurally — kept as a
+# narrative beat the sjuzhet references); the wife flees; the husband
+# is unbound; the husband kills himself with the dagger.
+# Interpretive (her willingness, the flattery in "even Tajomaru was
+# disgusted," the humiliation): descriptions.
 
 HUSBAND_FABULA = [
 
     Event(
-        id="E_h_willing",
-        type="internal",
-        τ_s=6, τ_a=60,
-        participants={"who": "wife", "toward": "tajomaru"},
-        branches=frozenset({B_HUSBAND.label}),
-        effects=(
-            world(yielded_willingly("wife", "tajomaru")),
-        ),
-    ),
-
-    Event(
-        id="E_h_wife_begs",
+        id="E_h_wife_requests_killing",
         type="utterance",
         τ_s=7, τ_a=61,
         participants={"speaker": "wife", "listener": "tajomaru", "target": "husband"},
         branches=frozenset({B_HUSBAND.label}),
         effects=(
-            world(begged_to_kill("wife", "tajomaru", "husband")),
+            # Utterance occurred; content is a description.
         ),
     ),
 
@@ -493,9 +507,9 @@ HUSBAND_FABULA = [
         participants={"agent": "tajomaru"},
         branches=frozenset({B_HUSBAND.label}),
         effects=(
-            # Tajomaru refuses to kill the husband; this is the husband's
-            # flattering framing, in which even the bandit is disgusted
-            # by the wife.
+            # Refusal is a non-event structurally — Tajomaru does not
+            # do the requested thing. Kept as a sjuzhet beat; the
+            # "disgust" framing is a description.
         ),
     ),
 
@@ -547,19 +561,14 @@ HUSBAND_FABULA = [
 # eventually killed the husband in the messy skirmish. The woodcutter's
 # own self-incriminating disclosure: after the scene he crept out and
 # took the wife's dagger, which is why it was missing from the body.
+#
+# Structural on this branch: an utterance from wife to the two men;
+# a fight in which tajomaru kills the husband with the sword; the
+# wife flees; the woodcutter steals the dagger. Interpretive (the
+# goading, the cowardliness of the fight, the coercion of the
+# intercourse): descriptions.
 
 WOODCUTTER_FABULA = [
-
-    Event(
-        id="E_wc_coerced",
-        type="internal",
-        τ_s=6, τ_a=80,
-        participants={"agent": "tajomaru", "patient": "wife"},
-        branches=frozenset({B_WOODCUTTER.label}),
-        effects=(
-            world(coerced("tajomaru", "wife")),
-        ),
-    ),
 
     Event(
         id="E_wc_wife_goads",
@@ -568,11 +577,7 @@ WOODCUTTER_FABULA = [
         participants={"speaker": "wife", "listeners": ["tajomaru", "husband"]},
         branches=frozenset({B_WOODCUTTER.label}),
         effects=(
-            # The wife, in the woodcutter's account, is the one who
-            # forces the killing by shaming both men into a fight.
-            # Represented as her asking for the killing the way
-            # Tajomaru's account claims.
-            world(begged_to_kill("wife", "tajomaru", "husband")),
+            # Utterance occurred; the goading content is a description.
         ),
     ),
 
@@ -585,7 +590,6 @@ WOODCUTTER_FABULA = [
         effects=(
             world(killed("tajomaru", "husband")),
             world(killed_with("tajomaru", "husband", "sword")),
-            world(duel_character("tajomaru", "husband", "cowardly")),
         ),
     ),
 
@@ -607,9 +611,6 @@ WOODCUTTER_FABULA = [
         participants={"thief": "woodcutter", "object": "dagger"},
         branches=frozenset({B_WOODCUTTER.label}),
         effects=(
-            # Self-incriminating. The woodcutter's credibility within the
-            # film rests partly on volunteering this detail. Substrate
-            # does not model that credibility effect.
             world(stole("woodcutter", "dagger")),
             observe("woodcutter", stole("woodcutter", "dagger"), 11),
         ),
@@ -629,6 +630,209 @@ EVENTS_ALL = (
     + HUSBAND_FABULA
     + WOODCUTTER_FABULA
 )
+
+
+# ----------------------------------------------------------------------------
+# Descriptions — the fold-invisible interpretive surface
+# ----------------------------------------------------------------------------
+#
+# Attached to events; branch-scoped where the interpretation is branch-
+# specific. Kinds in use: texture, reader-frame, trust-flag,
+# authorial-uncertainty. Attention levels per descriptions-sketch-01
+# defaults (texture → interpretive/structural; reader-frame →
+# structural; trust-flag → interpretive; authorial-uncertainty →
+# structural).
+#
+# τ_a values are chosen to place each description after its anchor in
+# the shared authored-time sequence — this matters for staleness
+# computations if an anchor is later edited (not exercised in this
+# encoding, but the ordering is legible).
+
+DESCRIPTIONS = [
+
+    # --- Intercourse — four per-branch texture descriptions, one
+    # trans-branch reader-frame on canonical.
+    #
+    # Each branch's texture sits on the canonical E_intercourse event
+    # with explicit branches=:b-X. The reader-frame is scoped to
+    # :canonical and is visible on every branch via
+    # canonical-is-universal.
+
+    Description(
+        id="D_intercourse_tajomaru_texture",
+        attached_to=anchor_event("E_intercourse"),
+        kind="texture",
+        attention=Attention.STRUCTURAL,
+        text=("she yielded; what began as coercion became consent. "
+              "Her resistance was a show, and it passed."),
+        branches=frozenset({B_TAJOMARU.label}),
+        authored_by="tajomaru-testimony",
+        τ_a=100,
+    ),
+
+    Description(
+        id="D_intercourse_wife_texture",
+        attached_to=anchor_event("E_intercourse"),
+        kind="texture",
+        attention=Attention.STRUCTURAL,
+        text=("violation — she fights, loses, goes silent. "
+              "There was no yielding; there was only the end of fighting."),
+        branches=frozenset({B_WIFE.label}),
+        authored_by="wife-testimony",
+        τ_a=101,
+    ),
+
+    Description(
+        id="D_intercourse_husband_texture",
+        attached_to=anchor_event("E_intercourse"),
+        kind="texture",
+        attention=Attention.STRUCTURAL,
+        text=("she went to him with her eyes open. Worse — she watched the "
+              "husband while it happened, and her gaze was the cut."),
+        branches=frozenset({B_HUSBAND.label}),
+        authored_by="husband-testimony",
+        τ_a=102,
+    ),
+
+    Description(
+        id="D_intercourse_woodcutter_texture",
+        attached_to=anchor_event("E_intercourse"),
+        kind="texture",
+        attention=Attention.STRUCTURAL,
+        text=("coercion, unambiguously, though Tajomaru grew gentler after — "
+              "pleading with her as much as taking from her."),
+        branches=frozenset({B_WOODCUTTER.label}),
+        authored_by="woodcutter-testimony",
+        τ_a=103,
+    ),
+
+    Description(
+        id="D_intercourse_frame",
+        attached_to=anchor_event("E_intercourse"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("across all four testimonies the intercourse is the pivot; "
+              "what differs is whose agency the testifier centers. Each "
+              "account's texture description is the testifier's self-"
+              "portrait as much as a claim about the wife."),
+        branches=frozenset({CANONICAL_LABEL}),
+        authored_by="author",
+        τ_a=104,
+    ),
+
+    # --- Wife's request / goading — the speech-act content of
+    # each branch's utterance event. Each testimony reports a
+    # different utterance; the events themselves are structural, the
+    # content is description.
+
+    Description(
+        id="D_t_wife_requests_killing",
+        attached_to=anchor_event("E_t_wife_requests_killing"),
+        kind="motivation",
+        attention=Attention.INTERPRETIVE,
+        text=("she said: one of you must die; I cannot belong to two men. "
+              "In Tajomaru's telling she asks it of him — kill the husband "
+              "and take me."),
+        authored_by="tajomaru-testimony",
+        τ_a=121,
+    ),
+
+    Description(
+        id="D_h_wife_requests_killing",
+        attached_to=anchor_event("E_h_wife_requests_killing"),
+        kind="motivation",
+        attention=Attention.INTERPRETIVE,
+        text=("in the husband's telling she asked Tajomaru to kill him so "
+              "she could be free to follow the bandit. The husband hears "
+              "this and loses faith in everything."),
+        authored_by="husband-testimony",
+        τ_a=161,
+    ),
+
+    Description(
+        id="D_wc_wife_goads",
+        attached_to=anchor_event("E_wc_wife_goads"),
+        kind="motivation",
+        attention=Attention.INTERPRETIVE,
+        text=("she said: you are both less than men if you will not fight "
+              "for me. In the woodcutter's telling she shames both into a "
+              "fight neither wanted."),
+        authored_by="woodcutter-testimony",
+        τ_a=181,
+    ),
+
+    # --- Duel / fight character — the "noble" vs "cowardly" framing.
+    # Attaches to the two combat events (E_t_duel, E_wc_fight). The
+    # fight itself is structural; its character is read from prose.
+
+    Description(
+        id="D_t_duel_character",
+        attached_to=anchor_event("E_t_duel"),
+        kind="texture",
+        attention=Attention.INTERPRETIVE,
+        text=("twenty-three strokes; Tajomaru fought as to an equal, "
+              "respecting the husband's skill. A noble duel, in his telling."),
+        authored_by="tajomaru-testimony",
+        τ_a=123,
+    ),
+
+    Description(
+        id="D_wc_fight_character",
+        attached_to=anchor_event("E_wc_fight"),
+        kind="texture",
+        attention=Attention.INTERPRETIVE,
+        text=("a cowardly, clumsy skirmish. Both men flinched and missed. "
+              "The woodcutter's version denies either man their dignity."),
+        authored_by="woodcutter-testimony",
+        τ_a=182,
+    ),
+
+    # --- Husband's suicide — the humiliated framing is description.
+
+    Description(
+        id="D_h_suicide_texture",
+        attached_to=anchor_event("E_h_suicide"),
+        kind="motivation",
+        attention=Attention.INTERPRETIVE,
+        text=("humiliated and alone, he chose the only dignity left to him. "
+              "Or so his ghost claims."),
+        authored_by="husband-testimony",
+        τ_a=165,
+    ),
+
+    # --- Trust-flag on the woodcutter's confession, plus an
+    # authorial-uncertainty description attached to that trust-flag
+    # (description-on-description, per D3).
+
+    Description(
+        id="D_woodcutter_trust",
+        attached_to=anchor_event("E_wc_theft"),
+        kind="trust-flag",
+        attention=Attention.INTERPRETIVE,
+        text=("the woodcutter's self-incrimination (the stolen dagger) "
+              "reads as candor, but he is also the last witness and the "
+              "only one without an alibi. The film declines to adjudicate; "
+              "this encoding does the same."),
+        branches=frozenset({B_WOODCUTTER.label}),
+        authored_by="author",
+        τ_a=184,
+    ),
+
+    Description(
+        id="D_wc_authorial_doubt",
+        attached_to=anchor_desc("D_woodcutter_trust"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("am I representing this right? the film's stance on the "
+              "woodcutter's reliability is famously contested. If a later "
+              "encoding pass decides the film is closer to endorsing his "
+              "account, this description is the place to surface that."),
+        is_question=True,
+        authored_by="author",
+        τ_a=185,
+    ),
+
+]
 
 
 # ----------------------------------------------------------------------------
@@ -652,8 +856,17 @@ EVENTS_ALL = (
 #   3. A canonical closing panel — the body is found; the frame story
 #      resumes; the testimonies have concluded.
 #
-# All disclosures are slot=KNOWN. See *Known soft spots* #2 above on
-# why this is a first-order encoding.
+# All disclosures are slot=KNOWN. The reader hears each testimony as if
+# it were the reality of that branch. Cross-testimony meta-uncertainty
+# is soft spot #2 above.
+#
+# Disclosures of the now-retired interpretive predicates are gone. The
+# sjuzhet entries that narrated the dropped modality events (E_t_yields,
+# E_w_coerced, E_h_willing, E_wc_coerced) are gone with them. Utterance
+# events whose content was a begged_to_kill world effect keep their
+# sjuzhet entries (the utterance happened, the narration points at it)
+# but no longer disclose a speech-act proposition — the speech's content
+# is a description the reader reads alongside.
 
 
 def _disc(prop: Prop, via: str = Narrative.DISCLOSURE.value) -> Disclosure:
@@ -686,7 +899,7 @@ PREAMBLE_ENTRIES = (
     SjuzhetEntry(event_id="E_lure",               τ_d=2, focalizer_id=None),
     SjuzhetEntry(event_id="E_bind",               τ_d=3, focalizer_id=None),
     SjuzhetEntry(event_id="E_bring_wife",         τ_d=4, focalizer_id=None),
-    SjuzhetEntry(event_id="E_intercourse_bare",   τ_d=5, focalizer_id=None),
+    SjuzhetEntry(event_id="E_intercourse",        τ_d=5, focalizer_id=None),
 )
 
 # Closing panel — body discovery, narrated omnisciently.
@@ -707,14 +920,8 @@ CLOSING_ENTRIES = (
 # :b-tajomaru sjuzhet — testimony at τ_d 10..19.
 TAJOMARU_ENTRIES = (
     SjuzhetEntry(
-        event_id="E_t_yields",
-        τ_d=10, focalizer_id="tajomaru",
-        disclosures=(_disc(yielded_willingly("wife", "tajomaru")),),
-    ),
-    SjuzhetEntry(
-        event_id="E_t_wife_begs",
+        event_id="E_t_wife_requests_killing",
         τ_d=11, focalizer_id="tajomaru",
-        disclosures=(_disc(begged_to_kill("wife", "tajomaru", "husband")),),
     ),
     SjuzhetEntry(
         event_id="E_t_frees_husband",
@@ -726,18 +933,12 @@ TAJOMARU_ENTRIES = (
         disclosures=(
             _disc(killed("tajomaru", "husband")),
             _disc(killed_with("tajomaru", "husband", "sword")),
-            _disc(duel_character("tajomaru", "husband", "noble")),
         ),
     ),
 )
 
 # :b-wife sjuzhet — testimony at τ_d 20..29.
 WIFE_ENTRIES = (
-    SjuzhetEntry(
-        event_id="E_w_coerced",
-        τ_d=20, focalizer_id="wife",
-        disclosures=(_disc(coerced("tajomaru", "wife")),),
-    ),
     SjuzhetEntry(
         event_id="E_w_tajomaru_leaves",
         τ_d=21, focalizer_id="wife",
@@ -756,14 +957,8 @@ WIFE_ENTRIES = (
 # :b-husband sjuzhet — testimony via medium at τ_d 30..39.
 HUSBAND_ENTRIES = (
     SjuzhetEntry(
-        event_id="E_h_willing",
-        τ_d=30, focalizer_id="husband",
-        disclosures=(_disc(yielded_willingly("wife", "tajomaru")),),
-    ),
-    SjuzhetEntry(
-        event_id="E_h_wife_begs",
+        event_id="E_h_wife_requests_killing",
         τ_d=31, focalizer_id="husband",
-        disclosures=(_disc(begged_to_kill("wife", "tajomaru", "husband")),),
     ),
     SjuzhetEntry(
         event_id="E_h_tajomaru_refuses",
@@ -791,14 +986,8 @@ HUSBAND_ENTRIES = (
 # :b-woodcutter sjuzhet — later confession at τ_d 40..49.
 WOODCUTTER_ENTRIES = (
     SjuzhetEntry(
-        event_id="E_wc_coerced",
-        τ_d=40, focalizer_id="woodcutter",
-        disclosures=(_disc(coerced("tajomaru", "wife")),),
-    ),
-    SjuzhetEntry(
         event_id="E_wc_wife_goads",
         τ_d=41, focalizer_id="woodcutter",
-        disclosures=(_disc(begged_to_kill("wife", "tajomaru", "husband")),),
     ),
     SjuzhetEntry(
         event_id="E_wc_fight",
@@ -806,7 +995,6 @@ WOODCUTTER_ENTRIES = (
         disclosures=(
             _disc(killed("tajomaru", "husband")),
             _disc(killed_with("tajomaru", "husband", "sword")),
-            _disc(duel_character("tajomaru", "husband", "cowardly")),
         ),
     ),
     SjuzhetEntry(

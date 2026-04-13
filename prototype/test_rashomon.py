@@ -1,20 +1,30 @@
 """
 test_rashomon.py — permanent tests over the Rashomon contested-branch
-encoding.
+encoding, covering both the structural substrate and the description
+surface.
 
 These tests are story-specific: they import from `rashomon` and pin
-properties of the substrate as exercised by that encoding. Substrate-
-level invariants that can be pinned *without* a story live in
-`test_substrate.py`. This file exists because some invariants only
-become load-bearing once a non-trivial :contested example is folded
-through the substrate, and a regression in those invariants would be
-invisible without a concrete case.
+properties of the substrate and description API as exercised by that
+encoding. Substrate-level invariants that can be pinned *without* a
+story live in `test_substrate.py`. This file exists because some
+invariants only become load-bearing once a non-trivial :contested
+example is folded through the substrate, and a regression in those
+invariants would be invisible without a concrete case.
+
+After the descriptions-sketch-01 refactor, this file also pins:
+
+- Description-anchor invariants (every description's anchor resolves).
+- Branch-scoping of descriptions (D4: inherit from anchor, with
+  subset-override).
+- Fold-description firewall (D1): fold functions do not see
+  descriptions, and vice versa.
 
 Discipline matches test_substrate.py:
 
 - Plain assertions, no framework, no dependencies.
-- Each test's docstring flags whether it pins a sketch-04 commitment
-  or a narrower encoding choice.
+- Each test's docstring flags whether it pins a sketch-04 / -05
+  commitment, a descriptions-sketch-01 commitment, or a narrower
+  encoding choice.
 
 Run:
     python3 test_rashomon.py
@@ -24,19 +34,21 @@ from __future__ import annotations
 
 import sys
 import traceback
+import inspect
 
 from substrate import (
-    Slot,
+    Slot, Attention, Description,
     scope, project_knowledge, project_reader, project_world,
     dramatic_ironies,
+    descriptions_for, descriptions_on_branch, by_kind, open_questions,
+    effective_branches, anchor_event, anchor_desc,
 )
 from rashomon import (
     EVENTS_ALL, SJUZHET_BY_BRANCH, AGENT_IDS, ALL_BRANCHES,
-    CONTESTED_BRANCHES,
+    CONTESTED_BRANCHES, DESCRIPTIONS,
     B_TAJOMARU, B_WIFE, B_HUSBAND, B_WOODCUTTER,
-    killed, killed_with, coerced, yielded_willingly, duel_character,
-    stole, had_intercourse_with, dead, body_found_by, begged_to_kill,
-    bound_to, at_location,
+    killed, killed_with, stole, had_intercourse_with,
+    dead, body_found_by, bound_to, at_location, fled,
 )
 
 
@@ -45,10 +57,10 @@ from rashomon import (
 # ============================================================================
 
 def test_stole_dagger_only_visible_on_woodcutter_branch():
-    """Pins sketch-04 fold-scope rule: sibling :contested branches do
-    not inherit from each other. stole(woodcutter, dagger) is authored
-    only on :b-woodcutter. Every other branch's world projection must
-    omit it."""
+    """Pins sketch-04/05 fold-scope rule: sibling :contested branches
+    do not inherit from each other. stole(woodcutter, dagger) is
+    authored only on :b-woodcutter. Every other branch's world
+    projection must omit it."""
     prop = stole("woodcutter", "dagger")
     for b in CONTESTED_BRANCHES:
         scoped = scope(b, EVENTS_ALL, ALL_BRANCHES)
@@ -87,27 +99,6 @@ def test_each_branchs_killing_does_not_leak_to_siblings():
                 continue
             assert other_claim not in world, \
                 f"{b.label} leaked {other_claim} from {other_label}"
-
-
-def test_modality_of_intercourse_differs_by_branch():
-    """Pins that branch-specific modality lives on the branch, not on
-    canonical. Two branches assert coerced(tajomaru, wife); two assert
-    yielded_willingly(wife, tajomaru); no branch asserts both."""
-    coerced_on = set()
-    willing_on = set()
-    for b in CONTESTED_BRANCHES:
-        scoped = scope(b, EVENTS_ALL, ALL_BRANCHES)
-        world = project_world(scoped, 100)
-        if coerced("tajomaru", "wife") in world:
-            coerced_on.add(b.label)
-        if yielded_willingly("wife", "tajomaru") in world:
-            willing_on.add(b.label)
-    assert coerced_on == {B_WIFE.label, B_WOODCUTTER.label}, \
-        f"coerced_on={sorted(coerced_on)}"
-    assert willing_on == {B_TAJOMARU.label, B_HUSBAND.label}, \
-        f"willing_on={sorted(willing_on)}"
-    assert coerced_on.isdisjoint(willing_on), \
-        f"branch asserts both modalities: {coerced_on & willing_on}"
 
 
 # ============================================================================
@@ -237,10 +228,10 @@ def test_reader_on_every_branch_shares_the_canonical_preamble():
 # ============================================================================
 
 def test_project_reader_rejects_tajomaru_sjuzhet_projected_on_wife_branch():
-    """Sketch-04 guarantee: project_reader validates that every sjuzhet
-    entry's event is in fold-scope for the target branch. Projecting
-    Tajomaru's sjuzhet on :b-wife references events labeled only on
-    :b-tajomaru, which are out of scope for :b-wife — sibling
+    """Sketch-04/05 guarantee: project_reader validates that every
+    sjuzhet entry's event is in fold-scope for the target branch.
+    Projecting Tajomaru's sjuzhet on :b-wife references events labeled
+    only on :b-tajomaru, which are out of scope for :b-wife — sibling
     contested. This must raise."""
     try:
         project_reader(
@@ -262,13 +253,11 @@ def test_project_reader_rejects_tajomaru_sjuzhet_projected_on_wife_branch():
 # ============================================================================
 
 def test_dramatic_irony_results_differ_per_branch():
-    """Sketch-04 commits to branch-aware queries: in contested regions,
-    Sternberg and irony queries return branch-indexed results. This
-    test pins that the totals differ — if a regression collapsed
+    """Sketch-04/05 commits to branch-aware queries: in contested
+    regions, Sternberg and irony queries return branch-indexed results.
+    This test pins that the totals differ — if a regression collapsed
     branch-awareness back to canonical-only, all four counts would be
-    equal. (This is a necessary-not-sufficient check; a stronger one
-    would compare the specific Irony records per branch, but that is
-    brittle against encoding refinement.)"""
+    equal. (Necessary-not-sufficient.)"""
     counts = {}
     for b in CONTESTED_BRANCHES:
         reader = project_reader(
@@ -287,9 +276,9 @@ def test_dramatic_irony_results_differ_per_branch():
             τ_s=100,
         )
         counts[b.label] = len(ironies)
-    # Woodcutter's branch has extra disclosed facts (the theft, the
-    # cowardly-duel character) beyond what other branches see, so its
-    # total should be the largest. This pins a specific relation.
+    # Woodcutter's branch has extra disclosed facts (the theft) beyond
+    # what other branches see, so its total should be the largest. This
+    # pins a specific relation.
     assert counts[B_WOODCUTTER.label] > counts[B_WIFE.label], \
         f"expected :b-woodcutter ({counts[B_WOODCUTTER.label]}) > " \
         f":b-wife ({counts[B_WIFE.label]}); counts={counts}"
@@ -347,6 +336,201 @@ def test_branch_scope_sizes_add_up():
 
 
 # ============================================================================
+# Description surface — attachment, branch-scoping, firewall
+# (descriptions-sketch-01 D1–D5)
+# ============================================================================
+
+def test_every_description_has_a_resolvable_anchor():
+    """D3: descriptions attach to typed anchors. A free-floating
+    description is not a valid record. Every description in the
+    encoding must have an anchor that resolves to an existing event
+    or description."""
+    event_ids = {e.id for e in EVENTS_ALL}
+    desc_ids  = {d.id for d in DESCRIPTIONS}
+    for d in DESCRIPTIONS:
+        if d.attached_to.kind == "event":
+            assert d.attached_to.target_id in event_ids, \
+                f"{d.id}: event anchor {d.attached_to.target_id!r} not found"
+        elif d.attached_to.kind == "description":
+            assert d.attached_to.target_id in desc_ids, \
+                f"{d.id}: description anchor " \
+                f"{d.attached_to.target_id!r} not found"
+        else:
+            raise AssertionError(
+                f"{d.id}: unexpected anchor kind {d.attached_to.kind!r}"
+            )
+
+
+def test_intercourse_has_four_branch_scoped_textures_plus_canonical_frame():
+    """Pins the descriptions-sketch-01 worked example: the canonical
+    E_intercourse event carries four per-branch texture descriptions
+    (one per contested branch) and a trans-branch reader-frame
+    description scoped to :canonical."""
+    attached = descriptions_for(anchor_event("E_intercourse"), DESCRIPTIONS)
+    texture_by_branch = {}
+    frame = None
+    for d in attached:
+        if d.kind == "texture":
+            assert d.branches is not None and len(d.branches) == 1, \
+                f"{d.id}: texture should be scoped to a single branch"
+            (label,) = tuple(d.branches)
+            texture_by_branch[label] = d
+        elif d.kind == "reader-frame":
+            frame = d
+    expected = {b.label for b in CONTESTED_BRANCHES}
+    assert set(texture_by_branch.keys()) == expected, \
+        f"texture-branch coverage: got {sorted(texture_by_branch.keys())}, " \
+        f"expected {sorted(expected)}"
+    assert frame is not None, "no reader-frame description on E_intercourse"
+    assert frame.branches == frozenset({":canonical"}), \
+        f"frame should be :canonical-scoped; got {frame.branches}"
+
+
+def test_branch_scoped_description_visible_only_on_its_branch():
+    """D4: a branch-scoped description is visible on that branch and
+    invisible on siblings. The wife's texture description on
+    E_intercourse has branches={:b-wife}; :b-tajomaru, :b-husband, and
+    :b-woodcutter must not see it."""
+    anchor_desc_id = "D_intercourse_wife_texture"
+    attached = descriptions_for(anchor_event("E_intercourse"), DESCRIPTIONS)
+    for b in CONTESTED_BRANCHES:
+        visible = descriptions_on_branch(
+            branch=b, descriptions=attached, events=EVENTS_ALL,
+            all_branches=ALL_BRANCHES, up_to_τ_a=10_000,
+        )
+        visible_ids = {d.id for d in visible}
+        if b.label == B_WIFE.label:
+            assert anchor_desc_id in visible_ids, \
+                f"{anchor_desc_id} missing on own branch {b.label}"
+        else:
+            assert anchor_desc_id not in visible_ids, \
+                f"{anchor_desc_id} leaked onto sibling {b.label}"
+
+
+def test_canonical_scoped_description_visible_on_every_branch():
+    """D4 + canonical-is-universal: a description scoped to :canonical
+    is visible on every descendant branch. The reader-frame
+    description on E_intercourse must surface in every contested
+    branch's visible description set."""
+    attached = descriptions_for(anchor_event("E_intercourse"), DESCRIPTIONS)
+    for b in CONTESTED_BRANCHES:
+        visible = descriptions_on_branch(
+            branch=b, descriptions=attached, events=EVENTS_ALL,
+            all_branches=ALL_BRANCHES, up_to_τ_a=10_000,
+        )
+        visible_ids = {d.id for d in visible}
+        assert "D_intercourse_frame" in visible_ids, \
+            f"canonical reader-frame missing on {b.label}"
+
+
+def test_description_inherits_anchor_branches_when_no_override():
+    """D4 default: a description without an explicit `branches` field
+    inherits its anchor's branch set. The duel-character texture on
+    E_t_duel does not set `branches`; it should inherit {:b-tajomaru}
+    and therefore be visible on :b-tajomaru but not on sibling
+    branches."""
+    # D_t_duel_character has no branches field; it inherits from its
+    # anchor E_t_duel which is on {:b-tajomaru}.
+    target = "D_t_duel_character"
+    d = next(d for d in DESCRIPTIONS if d.id == target)
+    assert d.branches is None, \
+        f"precondition: {target} should have no explicit branches"
+    eff = effective_branches(d, EVENTS_ALL, DESCRIPTIONS)
+    assert eff == frozenset({B_TAJOMARU.label}), \
+        f"expected inherited branches {{:b-tajomaru}}, got {eff}"
+
+
+def test_description_on_description_resolves_through_chain():
+    """D3: descriptions can anchor on other descriptions. The
+    authorial-uncertainty description is attached to the
+    woodcutter-trust description. Its effective branches should
+    resolve through the anchor chain — D_woodcutter_trust is scoped
+    to :b-woodcutter, so the uncertainty description inherits that."""
+    target = "D_wc_authorial_doubt"
+    d = next(d for d in DESCRIPTIONS if d.id == target)
+    assert d.attached_to.kind == "description", \
+        f"precondition: {target} should anchor on another description"
+    eff = effective_branches(d, EVENTS_ALL, DESCRIPTIONS)
+    assert eff == frozenset({B_WOODCUTTER.label}), \
+        f"expected inherited {{:b-woodcutter}} via description chain, " \
+        f"got {eff}"
+
+
+def test_open_questions_surface_authorial_uncertainty():
+    """An is_question description routes to the open-questions queue
+    per descriptions-sketch-01. The woodcutter-reliability question is
+    the only one in the encoding; pinning that it surfaces protects
+    the API contract."""
+    questions = open_questions(DESCRIPTIONS)
+    ids = {d.id for d in questions}
+    assert "D_wc_authorial_doubt" in ids, \
+        f"expected D_wc_authorial_doubt in open_questions; got {sorted(ids)}"
+
+
+def test_by_kind_returns_consistent_counts():
+    """by_kind should return exactly the descriptions whose kind field
+    matches. Pins the starting-six vocabulary is exercised: the
+    encoding uses texture, motivation, reader-frame, trust-flag, and
+    authorial-uncertainty. (provenance is not yet exercised — a
+    follow-on for the next iteration.)"""
+    kinds_used = {d.kind for d in DESCRIPTIONS}
+    expected_kinds = {
+        "texture", "motivation", "reader-frame",
+        "trust-flag", "authorial-uncertainty",
+    }
+    assert kinds_used == expected_kinds, \
+        f"kinds used: {sorted(kinds_used)}; expected {sorted(expected_kinds)}"
+    # And by_kind agrees with manual filtering (compared by id, since
+    # Description carries a mutable metadata dict and is not hashable).
+    for k in kinds_used:
+        got = {d.id for d in by_kind(DESCRIPTIONS, k)}
+        manual = {d.id for d in DESCRIPTIONS if d.kind == k}
+        assert got == manual, f"by_kind({k!r}) diverges from manual filter"
+
+
+# ============================================================================
+# Firewall — fold functions do not accept descriptions (D1)
+# ============================================================================
+
+def test_fold_function_signatures_do_not_mention_descriptions():
+    """D1: the fold API and the description API are separate surfaces.
+    No fold function accepts a Description in its signature. This is a
+    signature check — not a runtime guarantee, but a structural
+    invariant that catches regressions where someone would pass
+    descriptions through a fold by accident."""
+    fold_functions = [project_knowledge, project_world, project_reader,
+                      dramatic_ironies, scope]
+    for fn in fold_functions:
+        sig = inspect.signature(fn)
+        for param_name in sig.parameters:
+            assert "description" not in param_name.lower(), \
+                f"fold function {fn.__name__} has description-adjacent " \
+                f"parameter {param_name!r}; D1 firewall breach"
+
+
+def test_fold_outputs_do_not_carry_description_values():
+    """D1 from the other direction: projection outputs (reader state,
+    world state) must not contain Description instances. They carry
+    Held records and Prop records only. Pinning this catches a class
+    of regression where a fold implementer might try to attach
+    interpretive content to the fold's output structure."""
+    for b in CONTESTED_BRANCHES:
+        scoped = scope(b, EVENTS_ALL, ALL_BRANCHES)
+        w = project_world(scoped, 100)
+        for item in w:
+            assert not isinstance(item, Description), \
+                f"project_world leaked a Description on {b.label}"
+        reader = project_reader(
+            sjuzhet=SJUZHET_BY_BRANCH[b.label],
+            all_events=EVENTS_ALL, branch=b,
+            all_branches=ALL_BRANCHES, up_to_τ_d=100,
+        )
+        for h in reader.by_prop:
+            assert not isinstance(h, Description), \
+                f"project_reader leaked a Description on {b.label}"
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -354,7 +538,6 @@ TESTS = [
     # Sibling non-inheritance
     test_stole_dagger_only_visible_on_woodcutter_branch,
     test_each_branchs_killing_does_not_leak_to_siblings,
-    test_modality_of_intercourse_differs_by_branch,
     # Canonical-is-universal
     test_canonical_intercourse_fact_visible_on_every_branch,
     test_canonical_outcome_dead_husband_visible_on_every_branch,
@@ -371,6 +554,18 @@ TESTS = [
     test_reader_over_character_irony_on_contested_fact,
     # Scope sanity
     test_branch_scope_sizes_add_up,
+    # Description surface (descriptions-sketch-01)
+    test_every_description_has_a_resolvable_anchor,
+    test_intercourse_has_four_branch_scoped_textures_plus_canonical_frame,
+    test_branch_scoped_description_visible_only_on_its_branch,
+    test_canonical_scoped_description_visible_on_every_branch,
+    test_description_inherits_anchor_branches_when_no_override,
+    test_description_on_description_resolves_through_chain,
+    test_open_questions_surface_authorial_uncertainty,
+    test_by_kind_returns_consistent_counts,
+    # Firewall
+    test_fold_function_signatures_do_not_mention_descriptions,
+    test_fold_outputs_do_not_carry_description_values,
 ]
 
 
