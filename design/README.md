@@ -4,17 +4,36 @@ Architectural sketches and design notes for the story-telling engine. Each sketc
 
 ## Convention
 
-- Files named `{topic}-sketch-NN.md` where NN is sequential per topic.
+- Files named `{topic}-sketch-NN.md` where NN is sequential per topic. A *topic* is a coherent design area — `substrate`, `architecture`, `descriptions`, and so on. Each topic has its own sequence.
 - Every sketch has a **Status** (*draft, active*, *superseded*, *abandoned*) and a **Date** at the top.
-- **Active sketches are self-contained.** A reader should be able to understand the current design from the active sketch alone, without chasing a chain of deltas. When corrections pile up, consolidate into a new sketch rather than let the active starting point depend on superseded context.
+- **Active sketches are self-contained within their topic.** A reader should be able to understand the current state of *that topic* from the active sketch alone, without chasing a chain of deltas. When corrections pile up, consolidate into a new sketch rather than let the active starting point depend on superseded context.
+- **Cross-topic sketches are expected.** Some sketches (notably architecture-level ones) apply across topics. They do not supersede the sketches they constrain; they add a frame that future topic sketches are expected to satisfy. Reading a topic sketch alone gives the reader that topic's current state; reading the cross-topic sketches additionally gives them the frame those topic sketches sit inside.
 - When a sketch is superseded, its status is updated and a link to the successor is added — but the file stays.
 - Sketches are not specifications. They are the design thinking in progress. Claims and commitments may be wrong. Open questions are first-class.
 
 ## Active sketches
 
-These are the sketches to read. Each is self-contained; no need to chase predecessors unless you want the history.
+These are the sketches to read. Each is self-contained within its topic; no need to chase predecessors for that topic. Cross-topic sketches (architecture) sit alongside and add a frame.
 
-- [Substrate — sketch 04](substrate-sketch-04.md) — the event-log + per-agent-knowledge-projection substrate, with contested-fabula support for ambiguous fiction, source-agnostic epistemic slots, disjoint diegetic/narrative update operators, and explicit branch kinds (contested / draft / counterfactual).
+**Cross-topic (applies across topics):**
+
+- [Architecture — sketch 01](architecture-sketch-01.md) — grid-snap scope, two-surface semantics (facts vs descriptions), test for schema inclusion, descriptions draft attention. Frames all substrate and descriptions work. See its *Relation to substrate-sketch-04* section for how it interacts with the current substrate sketch, including the one point of genuine tension (F1).
+
+**Per topic:**
+
+- [Substrate — sketch 04](substrate-sketch-04.md) — the event-log + per-agent-knowledge-projection substrate, with contested-fabula support for ambiguous fiction, source-agnostic epistemic slots, disjoint diegetic/narrative update operators, and explicit branch kinds (contested / draft / counterfactual). Current substrate statement; read alone for the substrate's shape.
+
+## Upcoming sketches
+
+Planned work, in dependency order. Each is a sketch-to-write; filenames are provisional.
+
+1. **Event vocabulary** — *substrate-sketch-05.md.* Carves the event grid's joints per architecture-sketch-01's inclusion test. Refuses interpretive predicates (the Rashomon ugliness — `duel_character("noble")`, modality splits) and routes that content to descriptions. Settles adverbial/modal structure on events.
+2. **Descriptions surface** — *descriptions-sketch-01.md.* Formalizes architecture-sketch-01 A2 and A4. Specifies the description record (kind, attention, review state, attached_to), the promotion rule's operational shape, and tooling obligations. Absorbs and widens the current `provenance` convention.
+3. **Inference model** — addresses substrate-sketch-04 open question 2. Realization-as-integration needs a bounded inference layer; the shape (forward chaining, proof-carrying, something else) is open.
+4. **Proper focalization semantics** — closes the weakening the prototype flagged. Requires τ_d-scoped reader-state tracking.
+5. **Reader-model integration** — how LLM/human interpretation of descriptions is invoked, cached, reviewed, and integrated with structural queries. Architecture-sketch-01 A5 says this work is in scope; the shape of the integration is open.
+
+After the first two land, a consolidated **substrate-sketch-06** (or similar) integrates the structural substrate with the descriptions surface as a unified statement. That is not yet scheduled.
 
 ## Superseded sketches
 
