@@ -1,9 +1,9 @@
 # Substrate — sketch 04 (consolidated)
 
-**Status:** draft, active
+**Status:** superseded
 **Date:** 2026-04-13
 **Supersedes:** [substrate-sketch-01.md](substrate-sketch-01.md), [substrate-sketch-02.md](substrate-sketch-02.md), [substrate-sketch-03.md](substrate-sketch-03.md)
-**Superseded by:** nothing yet
+**Superseded by:** [substrate-sketch-05.md](substrate-sketch-05.md)
 
 ## Purpose
 

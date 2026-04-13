@@ -21,19 +21,18 @@ These are the sketches to read. Each is self-contained within its topic; no need
 
 **Per topic:**
 
-- [Substrate — sketch 04](substrate-sketch-04.md) — the event-log + per-agent-knowledge-projection substrate, with contested-fabula support for ambiguous fiction, source-agnostic epistemic slots, disjoint diegetic/narrative update operators, and explicit branch kinds (contested / draft / counterfactual). Current substrate statement; read alone for the substrate's shape.
+- [Substrate — sketch 05](substrate-sketch-05.md) — consolidated substrate, aligned with architecture-sketch-01. Retires F1 (emotion/tension as parallel projection); adds M1 (adverbial/modal routing rule); makes event type an extensible categorical tag rather than a dispatch key; applies A3 retroactively to every carried-forward commitment. Current substrate statement; read alone for the substrate's shape.
 
 ## Upcoming sketches
 
 Planned work, in dependency order. Each is a sketch-to-write; filenames are provisional.
 
-1. **Event vocabulary** — *substrate-sketch-05.md.* Carves the event grid's joints per architecture-sketch-01's inclusion test. Refuses interpretive predicates (the Rashomon ugliness — `duel_character("noble")`, modality splits) and routes that content to descriptions. Settles adverbial/modal structure on events.
-2. **Descriptions surface** — *descriptions-sketch-01.md.* Formalizes architecture-sketch-01 A2 and A4. Specifies the description record (kind, attention, review state, attached_to), the promotion rule's operational shape, and tooling obligations. Absorbs and widens the current `provenance` convention.
-3. **Inference model** — addresses substrate-sketch-04 open question 2. Realization-as-integration needs a bounded inference layer; the shape (forward chaining, proof-carrying, something else) is open.
-4. **Proper focalization semantics** — closes the weakening the prototype flagged. Requires τ_d-scoped reader-state tracking.
-5. **Reader-model integration** — how LLM/human interpretation of descriptions is invoked, cached, reviewed, and integrated with structural queries. Architecture-sketch-01 A5 says this work is in scope; the shape of the integration is open.
+1. **Descriptions surface** — *descriptions-sketch-01.md.* Formalizes architecture-sketch-01 A2 and A4. Specifies the description record (kind, attention, review state, attached_to), the promotion rule's operational shape, and tooling obligations. Absorbs and widens the current `provenance` convention. Substrate-sketch-05 defers the description record's shape to this sketch.
+2. **Inference model** — addresses substrate-sketch-05 open question 2. Realization-as-integration needs a bounded inference layer; the shape (forward chaining, proof-carrying, something else) is open.
+3. **Proper focalization semantics** — closes the weakening the prototype flagged. Requires τ_d-scoped reader-state tracking.
+4. **Reader-model integration** — how LLM/human interpretation of descriptions is invoked, cached, reviewed, and integrated with structural queries. Architecture-sketch-01 A5 says this work is in scope; the shape of the integration is open.
 
-After the first two land, a consolidated **substrate-sketch-06** (or similar) integrates the structural substrate with the descriptions surface as a unified statement. That is not yet scheduled.
+After descriptions-sketch-01 lands, the prototype iterates: the Rashomon encoding refactor per substrate-sketch-05's worked example, `provenance` absorbed into the description surface, and tests updated to pin description-attachment invariants. That is the next unit of prototype work.
 
 ## Superseded sketches
 
@@ -42,3 +41,4 @@ Kept as historical record of the design's evolution. Do not use as a starting po
 - [Substrate — sketch 01](substrate-sketch-01.md) — initial substrate statement. Too strong on T1 (single ground truth), conflated slot identity with update source for reader vs. character, too narrow on library claim.
 - [Substrate — sketch 02](substrate-sketch-02.md) — delta on 01. Revised T1, K2, and library claim, but left fact/state semantics inconsistent across canonical and contested regions, and retained character-centric slot names.
 - [Substrate — sketch 03](substrate-sketch-03.md) — first consolidation. Fixed sketch 02's inconsistencies but conflated three branch uses (contested / draft / counterfactual) under one concept, claimed post-contested canonical consistency "by construction" without a mechanism to back it, and used an undeclared epistemic slot in the worked example.
+- [Substrate — sketch 04](substrate-sketch-04.md) — second consolidation. Separated branch kinds (contested / draft / counterfactual), parameterized queries by branch, defined fold scope across branches, and simplified event status to two values. Committed to F1 (emotion/tension as parallel projections), which architecture-sketch-01's A3 later ruled out; left event type's role ambiguous; offered no principled routing rule for adverbial/modal content. Superseded by sketch 05.
