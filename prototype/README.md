@@ -1,9 +1,11 @@
 # Prototype — substrate reference implementation
 
 A small Python implementation of the substrate design in
-`../design/substrate-sketch-04.md`, exercised on a slice of *Oedipus Rex*.
-This is the first executable artifact of the project. It exists to pressure-
-test the sketch by making the semantics run.
+`../design/substrate-sketch-04.md`, exercised on two encoded stories:
+a slice of *Oedipus Rex* (dramatic irony on `:canonical`) and the grove
+scene from *Rashomon* (four sibling `:contested` branches). This is the
+first executable artifact of the project. It exists to pressure-test
+the sketch by making the semantics run.
 
 ## Goals
 
@@ -26,7 +28,9 @@ test the sketch by making the semantics run.
 ```sh
 cd prototype
 python3 demo.py            # narrative report on the Oedipus slice
-python3 test_substrate.py  # permanent tests (30 cases, no framework)
+python3 demo_rashomon.py   # branch-indexed report on the Rashomon grove scene
+python3 test_substrate.py  # permanent substrate tests (no framework)
+python3 test_rashomon.py   # permanent contested-branch tests (no framework)
 ```
 
 No dependencies beyond the Python 3.12 standard library. No virtualenv needed.
@@ -37,20 +41,37 @@ No dependencies beyond the Python 3.12 standard library. No virtualenv needed.
   the fold-scope rule; knowledge-projection and world-projection folds;
   reader-projection from a sjuzhet; dramatic-irony and Sternberg-curiosity
   queries.
-- `oedipus.py` — the encoded story. Entities, proposition constructors,
-  the pre-play and in-play fabula, the sjuzhet for the Messenger +
-  Shepherd → anagnorisis slice. No substrate logic; this is content.
-- `demo.py` — the driver. Prints a per-τ_d report showing reader and
-  character states, live ironies, and anagnorisis deltas on a set of
-  central propositions.
-- `test_substrate.py` — permanent tests pinning sketch-04 invariants
-  and current implementation behavior. No framework, no dependencies;
-  plain assertions with a minimal runner. Each test's docstring flags
-  when it is pinning a convention rather than a sketch commitment
-  (notably: focalization-as-metadata-only, remove-effect's partial use
-  of the Held record).
+- `oedipus.py` — the encoded *Oedipus Rex* slice. Entities, proposition
+  constructors, the pre-play and in-play fabula, the sjuzhet for the
+  Messenger + Shepherd → anagnorisis slice. No substrate logic; content
+  only. Used by `demo.py`.
+- `rashomon.py` — the encoded *Rashomon* grove scene. Canonical floor
+  (travel, lure, binding, bare fact of intercourse, body discovery)
+  plus four sibling `:contested` branches — one per testimony, including
+  the woodcutter's later confession. Per-branch sjuzhets share a
+  canonical preamble and a canonical closing panel. No substrate logic;
+  content only. Used by `demo_rashomon.py` and `test_rashomon.py`.
+- `demo.py` — the Oedipus driver. Prints a per-τ_d report showing
+  reader and character states, live ironies, and anagnorisis deltas on
+  a set of central propositions.
+- `demo_rashomon.py` — the Rashomon driver. Prints branch-indexed
+  matrices: per-branch world state, per-branch reader state, per-branch
+  dramatic-irony counts, and sibling-non-inheritance side-by-side.
+- `test_substrate.py` — permanent substrate tests pinning sketch-04
+  invariants and current implementation behavior. Story-agnostic
+  (though two oedipus integration tests live at the end).
+- `test_rashomon.py` — permanent contested-branch tests pinning
+  invariants that only become load-bearing with a non-trivial
+  `:contested` example: sibling non-inheritance on a live encoding,
+  canonical-is-universal propagation, per-branch reader projections,
+  sjuzhet rejection for out-of-scope entries, branch-aware query
+  differentiation.
 
-## What the demo demonstrates
+Both test files: no framework, no dependencies, plain assertions with a
+minimal runner. Each test's docstring flags when it pins a convention
+rather than a sketch commitment.
+
+## What the Oedipus demo demonstrates
 
 For a sequence of discourse-time milestones in the play, the report
 displays the state of four central propositions:
@@ -100,6 +121,66 @@ The demo makes three features of the substrate visible:
    DISCLOSURE is behaviorally active; FOCALIZATION is recorded as
    metadata but does not currently modify reader state (see
    *Focalization, honestly* below).
+
+## What the Rashomon demo demonstrates
+
+Where Oedipus exercises irony on a single canonical timeline, the
+Rashomon demo exercises the `:contested` branch machinery: four
+sibling branches, each internally consistent, mutually incompatible,
+with the substrate computing per-branch answers for the same
+propositions.
+
+The demo prints four matrices:
+
+- **Per-branch world state** on a dozen contested propositions
+  (different killer per branch, different weapon, different modality
+  of intercourse, and so on). Each row shows which branches assert
+  the proposition and which do not.
+- **Per-branch reader state** at τ_d=100 (after all testimonies). On
+  each branch the reader holds that branch's disclosed facts as KNOWN;
+  the facts of sibling branches are simply absent. What the substrate
+  does *not* yet represent is the reader's meta-knowledge that they
+  have heard four conflicting accounts — see `rashomon.py`'s *Known
+  soft spots* #2.
+- **Per-branch dramatic-irony counts.** A regression that collapsed
+  branch-awareness back to canonical-only would make all four branches
+  return identical counts. The woodcutter's branch has the largest
+  total because it discloses one extra self-incriminating fact (the
+  dagger theft) the other testimonies do not.
+- **Who killed the husband?** — the same question resolved four
+  different ways across the branches. Two branches agree Tajomaru did
+  it; one says the wife; one says the husband himself. The substrate
+  returns the multiplicity without arbitration, which is what sketch
+  04 means by "represented ambiguity."
+
+A final panel makes the fold-scope rule tangible: `stole(woodcutter,
+dagger)` appears on `:b-woodcutter` and nowhere else (sibling non-
+inheritance); `had_intercourse_with(Tajomaru, wife)` is on
+`:canonical` and therefore appears on every branch (canonical-is-
+universal).
+
+## The payoff, Rashomon-flavored
+
+Three features the Rashomon encoding makes visible:
+
+1. **Represented ambiguity, not reader-side misunderstanding.** The
+   substrate does not stage Rashomon as "the reader is confused."
+   The fabula itself carries a contest; each branch is a complete,
+   internally consistent reality; the substrate returns all four.
+   This is sketch 04's commitment T1 in action.
+
+2. **Sibling non-inheritance as a test.** The fold-scope rule reads
+   as a line of prose in the sketch; in the prototype it is the
+   reason `stole(woodcutter, dagger)` stays on one branch. A test
+   (`test_stole_dagger_only_visible_on_woodcutter_branch`) pins this
+   property against regression.
+
+3. **Per-branch sjuzhets share a canonical spine.** The preamble
+   disclosures — the entities travel, Tajomaru binds the husband,
+   intercourse occurs — appear identically in every branch's
+   sjuzhet because those events are labeled `:canonical`. The
+   testimony-specific disclosures diverge. This is the narrator's
+   "what everyone agrees on" framing, made mechanical.
 
 ## Focalization, honestly
 
@@ -166,10 +247,10 @@ derived propositions or a composite-proposition mechanism.
   inference, realization. Narrative operators: DISCLOSURE is fully
   behavioral; FOCALIZATION is metadata-only for now (see
   *Focalization, honestly* above).
-- **B1.** Branch labels, kinds, fold-scope rule. The scope logic runs on
-  every query; the encoded story happens to place every event on
-  `:canonical`, so scope degenerates cleanly. Adding a `:contested`
-  branch would require no substrate changes.
+- **B1.** Branch labels, kinds, fold-scope rule. Exercised end-to-end by
+  the Rashomon encoding (four sibling `:contested` branches plus
+  `:canonical`) as well as the Oedipus slice (canonical-only). The
+  Rashomon demo makes per-branch divergence visible side-by-side.
 - **Dramatic irony query.** Both Reader > Character and Character >
   Character ironies (with reader aware).
 - **Sternberg curiosity gaps.** Reports propositions in the reader's GAP
@@ -182,11 +263,19 @@ Pulled in later, as the prototype earns iterations:
 
 - **F1** — emotional and tension projections.
 - **Partial order** — structure is in place; no partial-order solver yet.
-- **Contested branches** — supported by the fold-scope rule; no example
-  uses one. Adding *Rashomon* or *Turn of the Screw* material would
-  exercise this without substrate changes.
-- **Draft / counterfactual branches** — as above. See open questions
-  13 and 14 in sketch 04.
+- **Draft / counterfactual branches** — supported by the fold-scope
+  rule; no encoded story uses one. See open questions 13 and 14 in
+  sketch 04.
+- **Credibility weighting of contested branches** — Rashomon's four
+  testimonies are represented as peer branches. The substrate has no
+  notion of "branch X is more reliable than branch Y"; the woodcutter's
+  account is not privileged. See `rashomon.py`'s *Known soft spots* #1.
+- **Testimony-as-utterance** — Rashomon's reader disclosures land on
+  each branch as KNOWN, which represents "within this branch's reality,
+  the reader knows X" but not "the reader has heard four conflicting
+  accounts and is uncertain." The latter meta-uncertainty needs a layer
+  the substrate does not have yet. See `rashomon.py`'s *Known soft
+  spots* #2.
 - **Proper focalization semantics** — currently metadata-only; see
   *Focalization, honestly*.
 - **Narrative operators beyond disclosure and focalization** —

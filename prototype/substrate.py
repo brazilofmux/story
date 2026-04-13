@@ -17,8 +17,7 @@ Sketch-04 commitments implemented:
 Deliberately omitted in this first prototype:
   F1                 emotional / tension projections
   partial order      total order is enough for the encoded slice
-  contested branches code supports shape; no encoded story uses them yet
-  draft branches     as above; see open question 14
+  draft branches     code supports shape; no encoded story uses them yet
   counterfactuals    as above
   framing, omission, retroactive reframing
   causality warrants beyond preconditions
