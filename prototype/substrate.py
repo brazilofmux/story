@@ -27,7 +27,7 @@ Deliberately omitted in this first prototype:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Optional, Union
 
@@ -859,3 +859,256 @@ def unreviewed(
         if is_effectively_unreviewed(d, current):
             result.append(d)
     return result
+
+
+# ============================================================================
+# Reader-model surface — the view and the ingest path
+# (reader-model-sketch-01).
+# ============================================================================
+#
+# The substrate exposes two things the reader-model (human or LLM) needs:
+# a typed view of the fabula+descriptions scoped to an invocation, and
+# an ingest path for the typed outputs the reader-model produces
+# (reviews and promotion proposals).
+#
+# The substrate does not call the reader-model. Tooling does. The view
+# is pure data; ingestion produces new immutable records (descriptions
+# are append-only per descriptions-sketch-01) or adds entries to a
+# proposal queue (a plain list; persistence is tooling's problem).
+#
+# This is the first probe (sketch-01's tiny prototype slice). Three
+# commitments from the sketch exercise here: R1 (typed I/O — every
+# input and output is a dataclass), R2 (facts and descriptions are
+# structurally distinct in the view), and R5 (every invocation
+# declares its scope — branch, τ_s bound, τ_a bound, attention filter,
+# optional anchor scope). R3, R4, R6 are implicit in the surface
+# shape and tested by the consumers.
+#
+# Question-answer ingestion and refusal/malformed record handling are
+# deferred to a later probe iteration — neither is exercised by the
+# current Rashomon encoding beyond one authorial-uncertainty question,
+# and this probe's job is to prove the view + review plumbing without
+# overbuilding.
+
+
+@dataclass(frozen=True)
+class ViewEventRecord:
+    """An event, as the reader-model sees it. The record's presence in
+    the view's `events` list (rather than its `descriptions` list) is
+    the fact-vs-description label — there is no merged container the
+    reader-model could accidentally read as one when it is the other.
+    """
+    event: Event
+
+
+@dataclass(frozen=True)
+class ViewDescriptionRecord:
+    """A description, as the reader-model sees it, annotated with
+    review-state derivatives the reader-model would otherwise have to
+    recompute.
+
+    `anchor_in_view` is True if the description's anchor (event or
+    other description) is also in the view; False if the anchor is
+    outside the view's scope. A description whose anchor is out-of-
+    view is still legal (descriptions-sketch-01 requires the anchor
+    to resolve *in the story*, not in any particular view), but the
+    reader-model should be warned that context is thin.
+
+    `effectively_unreviewed` and `stale_review_ids` are computed at
+    the view's τ_a bound, using the anchor's τ_a at that same bound.
+    The reader-model does not have to recompute staleness — the view
+    did it already.
+    """
+    description: Description
+    anchor_in_view: bool
+    effectively_unreviewed: bool
+    stale_review_ids: tuple  # tuple[int] — indices into description.review_states
+
+
+@dataclass(frozen=True)
+class ReaderView:
+    """The typed view the reader-model consumes. Scope is declared on
+    every field; two identical ReaderViews produce identical LLM
+    prompts (modulo serialization format), which is reproducibility.
+    """
+    branch_label: str
+    up_to_τ_s: int
+    up_to_τ_a: int
+    attention_filter: Optional[frozenset]
+    anchor_scope: Optional[frozenset]
+    events: tuple  # tuple[ViewEventRecord]
+    descriptions: tuple  # tuple[ViewDescriptionRecord]
+    open_questions: tuple  # tuple[ViewDescriptionRecord] — subset of descriptions
+
+
+@dataclass(frozen=True)
+class PromotionProposal:
+    """A reader-model's proposal that a description warrants a fact.
+    Lives in the proposal queue; an authorial act is required to
+    promote (descriptions-sketch-01 D5). `proposed_fact` is an Event
+    or an Effect record constructed but not added to any event log;
+    status transitions pending → accepted | declined.
+    """
+    description_id: str
+    proposed_fact: object
+    proposer_id: str
+    rationale: str
+    proposed_at_τ_a: int
+    status: str = "pending"
+
+
+def _anchor_current_τ_a(
+    anchor: AnchorRef,
+    events: list,
+    descriptions: list,
+) -> Optional[int]:
+    """The τ_a of the anchor referenced by `anchor`, or None if the
+    anchor does not resolve. Used to compute staleness at view time.
+    """
+    if anchor.kind == "event":
+        for e in events:
+            if e.id == anchor.target_id:
+                return e.τ_a
+        return None
+    if anchor.kind == "description":
+        for d in descriptions:
+            if d.id == anchor.target_id:
+                return d.τ_a
+        return None
+    return None
+
+
+def reader_view(
+    branch: Branch,
+    events: list,
+    descriptions: list,
+    all_branches: dict,
+    up_to_τ_s: int,
+    up_to_τ_a: int,
+    attention_filter: Optional[frozenset] = None,
+    anchor_scope: Optional[frozenset] = None,
+) -> ReaderView:
+    """Construct a reader-model view. Deterministic, pure, no side effects.
+
+    Scope rules:
+      - Events are included if they are in fold-scope for `branch` (per
+        the B1 rule), have τ_s ≤ up_to_τ_s, τ_a ≤ up_to_τ_a, and — if
+        `anchor_scope` is set — have an id in that set.
+      - Descriptions are included if they are visible on `branch` (per
+        the D4 branch-semantics rule), have τ_a ≤ up_to_τ_a, pass the
+        attention_filter (if set), and — if `anchor_scope` is set —
+        have id in the set OR have an attached_to target id in the set.
+        (Anchor-scope on a description looks at both directions: the
+        description itself, or its anchor, being in scope.)
+
+    The attention_filter is a frozenset of Attention values; None means
+    no filter. The anchor_scope is a frozenset of anchor ids (event or
+    description ids); None means no filter.
+    """
+    scoped_events = [
+        e for e in events
+        if in_scope(e, branch, all_branches)
+        and e.τ_s <= up_to_τ_s
+        and e.τ_a <= up_to_τ_a
+        and (anchor_scope is None or e.id in anchor_scope)
+    ]
+    scoped_events.sort(key=lambda e: (e.τ_s, e.τ_a))
+
+    event_ids_in_view = {e.id for e in scoped_events}
+    desc_ids_in_descriptions = {d.id for d in descriptions}
+
+    all_desc_on_branch = descriptions_on_branch(
+        branch=branch, descriptions=descriptions, events=events,
+        all_branches=all_branches, up_to_τ_a=up_to_τ_a,
+    )
+
+    def _passes_anchor_scope(d: Description) -> bool:
+        if anchor_scope is None:
+            return True
+        return d.id in anchor_scope or d.attached_to.target_id in anchor_scope
+
+    def _passes_attention(d: Description) -> bool:
+        if attention_filter is None:
+            return True
+        return d.attention in attention_filter
+
+    scoped_descriptions = [
+        d for d in all_desc_on_branch
+        if _passes_anchor_scope(d) and _passes_attention(d)
+    ]
+    scoped_descriptions.sort(key=lambda d: d.τ_a)
+
+    desc_records = []
+    for d in scoped_descriptions:
+        anchor_id = d.attached_to.target_id
+        in_view = (
+            (d.attached_to.kind == "event" and anchor_id in event_ids_in_view)
+            or (d.attached_to.kind == "description" and anchor_id in desc_ids_in_descriptions)
+        )
+        anchor_τ_a = _anchor_current_τ_a(d.attached_to, events, descriptions)
+        if anchor_τ_a is None:
+            eff_unreviewed = True
+            stale_ids = ()
+        else:
+            eff_unreviewed = is_effectively_unreviewed(d, anchor_τ_a)
+            stale_ids = tuple(
+                i for i, entry in enumerate(d.review_states)
+                if is_review_stale(entry, anchor_τ_a)
+            )
+        desc_records.append(ViewDescriptionRecord(
+            description=d,
+            anchor_in_view=in_view,
+            effectively_unreviewed=eff_unreviewed,
+            stale_review_ids=stale_ids,
+        ))
+
+    event_records = tuple(ViewEventRecord(event=e) for e in scoped_events)
+    open_q = tuple(r for r in desc_records if r.description.is_question)
+
+    return ReaderView(
+        branch_label=branch.label,
+        up_to_τ_s=up_to_τ_s,
+        up_to_τ_a=up_to_τ_a,
+        attention_filter=attention_filter,
+        anchor_scope=anchor_scope,
+        events=event_records,
+        descriptions=tuple(desc_records),
+        open_questions=open_q,
+    )
+
+
+# ----------------------------------------------------------------------------
+# Ingest — how reader-model outputs land in the substrate
+# ----------------------------------------------------------------------------
+#
+# The substrate holds descriptions and proposal queues as plain lists.
+# Ingesting a review produces a new immutable Description with the
+# review appended; the caller is responsible for swapping the old
+# record out of its collection (the substrate does not manage the
+# collection). Ingesting a proposal appends to a queue (also the
+# caller's collection).
+
+
+def ingest_review(
+    description: Description,
+    review: ReviewEntry,
+) -> Description:
+    """Append `review` to the description's review_states tuple.
+    Returns a new immutable Description record per descriptions-01's
+    record-level invariants (edits append; the record is not mutated).
+    The caller replaces the old record in whatever collection holds
+    the descriptions.
+    """
+    new_reviews = description.review_states + (review,)
+    return replace(description, review_states=new_reviews)
+
+
+def ingest_proposal(
+    proposal: PromotionProposal,
+    queue: list,
+) -> list:
+    """Append `proposal` to the proposal queue, returning a new list.
+    The queue is kept as a list (not a set) because ordering by
+    proposed_at_τ_a matters for review presentation.
+    """
+    return list(queue) + [proposal]

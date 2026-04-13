@@ -37,11 +37,13 @@ import traceback
 import inspect
 
 from substrate import (
-    Slot, Attention, Description,
+    Slot, Attention, Description, ReviewEntry, ReviewVerdict,
     scope, project_knowledge, project_reader, project_world,
     dramatic_ironies,
     descriptions_for, descriptions_on_branch, by_kind, open_questions,
     effective_branches, anchor_event, anchor_desc,
+    reader_view, ingest_review, ingest_proposal, PromotionProposal,
+    ReaderView, ViewEventRecord, ViewDescriptionRecord,
 )
 from rashomon import (
     EVENTS_ALL, SJUZHET_BY_BRANCH, AGENT_IDS, ALL_BRANCHES,
@@ -531,6 +533,252 @@ def test_fold_outputs_do_not_carry_description_values():
 
 
 # ============================================================================
+# Reader-model probe (reader-model-sketch-01 R1, R2, R5)
+# ============================================================================
+#
+# These tests exercise the tiny probe surface — reader_view, ingest_review,
+# ingest_proposal — against the Rashomon encoding. Question-answer ingestion
+# and refusal/malformed records are deferred to a later probe iteration; the
+# current tests pin view shape, scope declarations, review ingestion
+# producing a new immutable Description, and the structural separation of
+# facts from descriptions in the view.
+
+
+def test_view_separates_events_from_descriptions_structurally():
+    """R2: facts and descriptions are in distinct containers. A
+    reader-model consuming this view cannot receive a description
+    where an event is expected, or vice versa, because they live in
+    different tuples with different record types."""
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+    )
+    # Separate containers.
+    assert isinstance(v.events, tuple)
+    assert isinstance(v.descriptions, tuple)
+    # Distinct types; neither list mixes the other's record kind.
+    for r in v.events:
+        assert isinstance(r, ViewEventRecord), \
+            f"events list contained non-event record {type(r).__name__}"
+    for r in v.descriptions:
+        assert isinstance(r, ViewDescriptionRecord), \
+            f"descriptions list contained non-description record " \
+            f"{type(r).__name__}"
+
+
+def test_view_respects_branch_scope_for_events_and_descriptions():
+    """R5: the view's branch scope is declared and enforced. Events and
+    descriptions visible only on a sibling branch must not leak."""
+    v_wife = reader_view(
+        branch=B_WIFE, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+    )
+    event_ids = {r.event.id for r in v_wife.events}
+    desc_ids  = {r.description.id for r in v_wife.descriptions}
+    # :b-tajomaru events should not appear on :b-wife's view.
+    assert "E_t_duel" not in event_ids, "tajomaru event leaked into wife view"
+    # :b-tajomaru texture description should not appear on :b-wife's view.
+    assert "D_intercourse_tajomaru_texture" not in desc_ids, \
+        "tajomaru texture leaked into wife view"
+    # :b-wife-scoped description should appear.
+    assert "D_intercourse_wife_texture" in desc_ids, \
+        "wife texture missing from wife view"
+
+
+def test_view_respects_τ_s_and_τ_a_bounds():
+    """R5: the view's up_to_τ_s and up_to_τ_a bounds are enforced.
+    Events with τ_s > up_to_τ_s or τ_a > up_to_τ_a are excluded;
+    descriptions with τ_a > up_to_τ_a are excluded."""
+    # Narrow bound — before the intercourse event (τ_s=5, τ_a=6) and
+    # before any authored description (earliest is τ_a=100).
+    v = reader_view(
+        branch=B_WIFE, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=3, up_to_τ_a=5,
+    )
+    event_ids = {r.event.id for r in v.events}
+    desc_ids  = {r.description.id for r in v.descriptions}
+    assert "E_intercourse" not in event_ids, \
+        f"intercourse at τ_s=5 should be out of scope at up_to_τ_s=3"
+    assert len(desc_ids) == 0, \
+        f"no descriptions should be in scope at up_to_τ_a=5; got {desc_ids}"
+
+    # Wide bound — everything in scope.
+    v_wide = reader_view(
+        branch=B_WIFE, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=1000, up_to_τ_a=10_000,
+    )
+    wide_event_ids = {r.event.id for r in v_wide.events}
+    assert "E_intercourse" in wide_event_ids
+
+
+def test_view_applies_attention_filter():
+    """R5: attention_filter declares which attention levels are in
+    scope. A structural-only filter excludes interpretive and flavor
+    descriptions."""
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+        attention_filter=frozenset({Attention.STRUCTURAL}),
+    )
+    for r in v.descriptions:
+        assert r.description.attention == Attention.STRUCTURAL, \
+            f"non-structural description {r.description.id} " \
+            f"leaked through attention_filter"
+
+
+def test_view_applies_anchor_scope():
+    """R5: anchor_scope narrows the view to specific anchor ids.
+    Events not in the scope are excluded; descriptions whose anchor
+    or self is in the scope are included."""
+    scope_ids = frozenset({"E_wc_theft", "D_woodcutter_trust"})
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+        anchor_scope=scope_ids,
+    )
+    event_ids = {r.event.id for r in v.events}
+    desc_ids  = {r.description.id for r in v.descriptions}
+    # Only E_wc_theft from the scope.
+    assert event_ids == {"E_wc_theft"}, \
+        f"anchor_scope did not narrow events as expected: {event_ids}"
+    # D_woodcutter_trust itself (self in scope), plus D_wc_authorial_doubt
+    # (attached_to D_woodcutter_trust, which is in scope).
+    assert "D_woodcutter_trust" in desc_ids
+    assert "D_wc_authorial_doubt" in desc_ids, \
+        "description whose anchor is in scope should surface"
+
+
+def test_view_open_questions_subsets_descriptions():
+    """The view's open_questions is precisely the subset of its
+    descriptions where is_question=True."""
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+    )
+    desc_ids = {r.description.id for r in v.descriptions}
+    question_ids = {r.description.id for r in v.open_questions}
+    assert question_ids.issubset(desc_ids), \
+        "open_questions is not a subset of descriptions"
+    for r in v.open_questions:
+        assert r.description.is_question, \
+            f"non-question in open_questions: {r.description.id}"
+    # The encoding has one question on :b-woodcutter.
+    assert "D_wc_authorial_doubt" in question_ids, \
+        f"expected D_wc_authorial_doubt in open_questions; got {question_ids}"
+
+
+def test_view_flags_effectively_unreviewed_descriptions():
+    """Descriptions with no approving review are flagged
+    effectively_unreviewed=True at view-construction time. The
+    Rashomon encoding has no reviews authored yet, so every
+    description in the view is effectively unreviewed."""
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+    )
+    for r in v.descriptions:
+        assert r.effectively_unreviewed, \
+            f"{r.description.id} flagged reviewed, but no reviews exist " \
+            f"in the encoding"
+
+
+def test_ingest_review_produces_new_immutable_description():
+    """R4 + descriptions-01 record-level invariants: ingesting a
+    review returns a new Description with the review appended to
+    review_states. The original is unchanged (immutability); the new
+    record has exactly one more review than the original."""
+    original = next(d for d in DESCRIPTIONS if d.id == "D_wc_authorial_doubt")
+    assert len(original.review_states) == 0, \
+        "precondition: description has no reviews yet"
+
+    review = ReviewEntry(
+        reviewer_id="llm:mock",
+        reviewed_at_τ_a=10_001,
+        verdict=ReviewVerdict.NOTED,
+        anchor_τ_a=original.τ_a,
+        comment="Mock review for probe test.",
+    )
+    updated = ingest_review(original, review)
+
+    # Original unchanged (immutability).
+    assert len(original.review_states) == 0, \
+        "original description was mutated; immutability violated"
+    # New record has the review.
+    assert len(updated.review_states) == 1
+    assert updated.review_states[0] == review
+    # Other fields preserved.
+    assert updated.id == original.id
+    assert updated.text == original.text
+    assert updated.τ_a == original.τ_a
+
+
+def test_ingest_review_flips_effectively_unreviewed_in_next_view():
+    """After ingesting an approving review at the current anchor τ_a,
+    the description is no longer effectively_unreviewed in a view
+    built over the updated collection. This pins the feedback loop:
+    reader-model output flows back through the view."""
+    target_id = "D_wc_authorial_doubt"
+    original = next(d for d in DESCRIPTIONS if d.id == target_id)
+    review = ReviewEntry(
+        reviewer_id="llm:mock",
+        reviewed_at_τ_a=10_001,
+        verdict=ReviewVerdict.APPROVED,
+        anchor_τ_a=original.τ_a,
+        comment="",
+    )
+    updated = ingest_review(original, review)
+
+    # Swap in the updated record.
+    updated_descriptions = [
+        updated if d.id == target_id else d
+        for d in DESCRIPTIONS
+    ]
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL,
+        descriptions=updated_descriptions,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_001,
+    )
+    match = [r for r in v.descriptions if r.description.id == target_id]
+    assert len(match) == 1
+    assert not match[0].effectively_unreviewed, \
+        "approved review did not flip effectively_unreviewed in the view"
+
+
+def test_ingest_proposal_appends_to_queue_without_mutation():
+    """R3 + D5 + descriptions-01 proposal queue: ingesting a
+    PromotionProposal returns a new queue with the proposal appended.
+    The original queue is unchanged."""
+    queue = []
+    proposal = PromotionProposal(
+        description_id="D_intercourse_wife_texture",
+        proposed_fact=None,  # tooling would supply an Event or Effect here
+        proposer_id="llm:mock",
+        rationale="coercion appears to warrant a coercion event if the "
+                  "story later tracks trauma-state (substrate-05 M1).",
+        proposed_at_τ_a=10_002,
+    )
+    new_queue = ingest_proposal(proposal, queue)
+    assert queue == [], "original queue mutated"
+    assert len(new_queue) == 1
+    assert new_queue[0].status == "pending", \
+        "new proposal should land pending"
+
+
+def test_view_is_reproducible_at_same_bounds():
+    """Determinism: two reader_view calls with the same arguments
+    produce equal results. This is the reproducibility property R5
+    implies — caching the view is safe, and so is diffing views
+    across τ_a."""
+    kwargs = dict(
+        branch=B_WIFE, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+    )
+    v1 = reader_view(**kwargs)
+    v2 = reader_view(**kwargs)
+    assert v1 == v2, "reader_view is not reproducible at identical args"
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -566,6 +814,18 @@ TESTS = [
     # Firewall
     test_fold_function_signatures_do_not_mention_descriptions,
     test_fold_outputs_do_not_carry_description_values,
+    # Reader-model probe (reader-model-sketch-01)
+    test_view_separates_events_from_descriptions_structurally,
+    test_view_respects_branch_scope_for_events_and_descriptions,
+    test_view_respects_τ_s_and_τ_a_bounds,
+    test_view_applies_attention_filter,
+    test_view_applies_anchor_scope,
+    test_view_open_questions_subsets_descriptions,
+    test_view_flags_effectively_unreviewed_descriptions,
+    test_ingest_review_produces_new_immutable_description,
+    test_ingest_review_flips_effectively_unreviewed_in_next_view,
+    test_ingest_proposal_appends_to_queue_without_mutation,
+    test_view_is_reproducible_at_same_bounds,
 ]
 
 
