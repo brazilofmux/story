@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import sys
 import traceback
+from typing import Optional
 
 from substrate import (
     Entity, Prop, Branch, BranchKind, CANONICAL, CANONICAL_LABEL,
@@ -47,9 +48,31 @@ from substrate import (
 def p(predicate, *args) -> Prop:
     return Prop(predicate=predicate, args=tuple(args))
 
+
+# The test-helper convention: a reasonable default Confidence for each Slot.
+#
+# This is NOT a substrate invariant. The substrate's Held record does not
+# enforce any relationship between slot and confidence; see the explicit
+# test_held_accepts_incoherent_slot_confidence_pairs below.
+#
+# The helper applies this default only so that the *common* test case — "I
+# want a Held with slot=X, reasonable confidence" — does not silently pass
+# slot=BELIEVED, confidence=CERTAIN into the suite and hide the looseness.
+_DEFAULT_CONFIDENCE_BY_SLOT = {
+    Slot.KNOWN:     Confidence.CERTAIN,
+    Slot.BELIEVED:  Confidence.BELIEVED,
+    Slot.SUSPECTED: Confidence.SUSPECTED,
+    Slot.GAP:       Confidence.OPEN,
+}
+
+
 def held(prop: Prop, slot: Slot = Slot.KNOWN,
-         conf: Confidence = Confidence.CERTAIN,
+         conf: Optional[Confidence] = None,
          via: str = Diegetic.OBSERVATION.value) -> Held:
+    """Build a Held with a coherent slot/confidence pair by default. Pass
+    `conf` explicitly to construct an incoherent pair deliberately."""
+    if conf is None:
+        conf = _DEFAULT_CONFIDENCE_BY_SLOT[slot]
     return Held(prop=prop, slot=slot, confidence=conf, via=via, provenance=())
 
 def ev(id: str, τ_s: int, τ_a: int,
@@ -100,6 +123,32 @@ def test_counterfactual_requires_explicit_parent():
     except ValueError:
         return
     raise AssertionError("counterfactual without parent should have raised")
+
+
+# ============================================================================
+# Held record — looseness is pinned explicitly
+# ============================================================================
+
+def test_held_accepts_incoherent_slot_confidence_pairs():
+    """The substrate's Held record does not enforce a relationship between
+    Slot and Confidence. Calling code can build Held(slot=BELIEVED,
+    confidence=CERTAIN) or any other combination; nothing raises.
+
+    This is a known design gap. Slot and Confidence currently cover
+    overlapping territory (KNOWN/CERTAIN, BELIEVED/BELIEVED, etc.) and
+    it is not yet settled whether they should be independent axes or
+    collapsed into one. This test pins the current looseness so later
+    cleanup has an explicit target and the suite does not silently
+    normalize around the ambiguity via helper defaults."""
+    h = Held(
+        prop=p("X", "A"),
+        slot=Slot.BELIEVED,
+        confidence=Confidence.CERTAIN,  # deliberately inconsistent with slot
+        via=Diegetic.OBSERVATION.value,
+    )
+    # Construction does not raise. That is the current behavior.
+    assert h.slot == Slot.BELIEVED
+    assert h.confidence == Confidence.CERTAIN
 
 
 # ============================================================================
@@ -355,6 +404,48 @@ def test_project_reader_rejects_event_on_draft_only_branch():
     raise AssertionError("draft-only narrated event should raise")
 
 
+def test_project_reader_rejects_event_on_other_contested_branch_when_reader_is_canonical():
+    """Reader on :canonical, sjuzhet narrates an event on :b-a (a
+    :contested branch). The event is on a shipped branch, so the
+    shipped-branch check alone would pass — but the event is not in
+    fold-scope for :canonical (canonical does not inherit from children),
+    so the in_scope check must catch it."""
+    b_a = Branch(label=":b-a", kind=BranchKind.CONTESTED, parent=CANONICAL_LABEL)
+    all_b = {CANONICAL_LABEL: CANONICAL, ":b-a": b_a}
+    e = ev("e", τ_s=0, τ_a=1, branches=frozenset({":b-a"}))
+    entry = SjuzhetEntry(event_id="e", τ_d=0, focalizer_id=None,
+                         disclosures=())
+    try:
+        project_reader([entry], [e], CANONICAL, all_b, up_to_τ_d=0)
+    except ValueError:
+        return
+    raise AssertionError(
+        "event on a sibling :contested branch should be out of scope "
+        "when reader is on :canonical"
+    )
+
+
+def test_project_reader_rejects_event_on_sibling_contested_branch():
+    """Reader on :b-b (a :contested branch), sjuzhet narrates an event
+    on :b-a (a sibling :contested branch). Both are shipped kinds, but
+    sibling contested branches do not inherit from each other, so the
+    event is out of scope for :b-b and must be rejected."""
+    b_a = Branch(label=":b-a", kind=BranchKind.CONTESTED, parent=CANONICAL_LABEL)
+    b_b = Branch(label=":b-b", kind=BranchKind.CONTESTED, parent=CANONICAL_LABEL)
+    all_b = {CANONICAL_LABEL: CANONICAL, ":b-a": b_a, ":b-b": b_b}
+    e = ev("e", τ_s=0, τ_a=1, branches=frozenset({":b-a"}))
+    entry = SjuzhetEntry(event_id="e", τ_d=0, focalizer_id=None,
+                         disclosures=())
+    try:
+        project_reader([entry], [e], b_b, all_b, up_to_τ_d=0)
+    except ValueError:
+        return
+    raise AssertionError(
+        "event on a sibling :contested branch should be out of scope "
+        "when reader is on a different :contested branch"
+    )
+
+
 def test_disclosure_places_proposition_in_reader_state():
     prop = p("X", "A")
     events, sjuzhet = _one_canonical_event_with_disclosure(prop)
@@ -603,6 +694,8 @@ TESTS = [
     test_contested_explicit_parent_preserved,
     test_draft_requires_explicit_parent,
     test_counterfactual_requires_explicit_parent,
+    # Held record looseness
+    test_held_accepts_incoherent_slot_confidence_pairs,
     # Fold-scope rule
     test_canonical_event_in_scope_on_canonical,
     test_canonical_event_in_scope_on_contested_child,
@@ -622,6 +715,8 @@ TESTS = [
     test_project_reader_rejects_counterfactual_branch,
     test_project_reader_rejects_unknown_event_id,
     test_project_reader_rejects_event_on_draft_only_branch,
+    test_project_reader_rejects_event_on_other_contested_branch_when_reader_is_canonical,
+    test_project_reader_rejects_event_on_sibling_contested_branch,
     test_disclosure_places_proposition_in_reader_state,
     test_later_disclosure_overrides_earlier,
     test_focalization_alone_does_not_mutate_reader_state,
