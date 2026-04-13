@@ -5,26 +5,63 @@ Story content only. No substrate logic. This file defines entities, events,
 sjuzhet entries, and the predicates used in propositions, sufficient to
 exercise the substrate on the Messenger + Shepherd → anagnorisis slice.
 
-Fidelity choices:
+Under identity-and-realization-sketch-01, this encoding has been refactored:
 
-- Pre-play fabula (Laius's prophecy, infant exposure, Oedipus's Corinthian
-  upbringing, the crossroads killing, the marriage) is represented as
-  canonical events at negative τ_s. These are never *narrated* in the play
-  — Sophocles opens in medias res. For the prototype, we disclose the key
-  pre-play facts to the reader at τ_d = 0 on the premise that the original
-  audience knew the myth and came in with the facts already loaded. This
-  is what makes the whole play an exercise in dramatic irony.
+- Realizations no longer rewrite derived truths via `realize_add` /
+  `realize_remove` cascades. A realization asserts one or more
+  `identity(A, B)` propositions into the realizing agent's state;
+  query-time substitution produces the derived beliefs. The literal
+  held set is not rewritten by the realization itself.
 
-- In-play events are a selected slice, not the full play. Minimum required
-  to exercise the substrate's irony, reveal, and realization machinery:
-  Jocasta's mention of the crossroads, the Messenger's two-step disclosure,
-  Jocasta's own anagnorisis, the Shepherd's testimony, and Oedipus's
-  anagnorisis.
+- Named entities stand in for "the person referred to as X from some
+  agent's perspective, but not yet known to be the same as Y." Three
+  such entities in this encoding:
+    - `the-exposed-baby` — the infant Laius and Jocasta exposed on
+      Mount Cithaeron. Canonically identical to Oedipus, but Jocasta
+      does not hold that identity until her anagnorisis.
+    - `the-crossroads-killer` — the unknown killer at the crossroads,
+      from the perspective of Jocasta (and later Oedipus himself, as a
+      suspicion). Canonically identical to Oedipus.
+    - `the-crossroads-victim` — the unknown victim Oedipus killed at
+      the crossroads, from his own perspective. Canonically identical
+      to Laius. Oedipus does not hold that identity until his
+      anagnorisis.
 
-- Some compressions for clarity. Tiresias is cut; Creon's dispatch is
-  cut; the chorus is cut. None of these is substrate-relevant at the grain
-  of this prototype, and including them would drown the irony signal in
-  bookkeeping.
+- The composite arity-1 predicate `killed_stranger_at_crossroads(oedipus)`
+  is retired. In its place: `killed(oedipus, the-crossroads-victim)`.
+  This is the ergonomic shift substrate-sketch-05 flagged — named
+  entities plus identity substitution replace composite predicates as
+  workarounds for existential gaps.
+
+- Factual dislodgements (the messenger's reveal dislodging Oedipus's
+  BELIEVED `child_of(oedipus, polybus)`, Jocasta's realization
+  dislodging her BELIEVED `dead(the-exposed-baby)`, the anagnorisis
+  closing Oedipus's GAP for his parentage) stay as `remove=True`
+  knowledge effects. Those are legitimate factual updates triggered
+  by specific evidence — distinct from the realization-driven rewrite
+  pattern the sketch retires.
+
+Fidelity choices (unchanged from prior iteration):
+
+- Pre-play fabula (Laius's prophecy, infant exposure, Oedipus's
+  Corinthian upbringing, the crossroads killing, the marriage) is
+  represented as canonical events at negative τ_s. These are never
+  *narrated* in the play — Sophocles opens in medias res. For the
+  prototype, we disclose the key pre-play facts to the reader at
+  τ_d = 0 on the premise that the original audience knew the myth.
+  The disclosures include the identity propositions — the reader
+  holds `identity(oedipus, the-exposed-baby)` and
+  `identity(laius, the-crossroads-victim)` KNOWN from the opening,
+  which is the substitution machinery that makes the whole play an
+  exercise in dramatic irony.
+
+- In-play events are a selected slice, not the full play. Minimum
+  required to exercise the substrate's irony, reveal, and realization
+  machinery: Jocasta's mention of the crossroads, the Messenger's
+  two-step disclosure, Jocasta's own anagnorisis, the Shepherd's
+  testimony, and Oedipus's anagnorisis.
+
+- Tiresias, Creon, and the chorus are cut.
 """
 
 from __future__ import annotations
@@ -34,6 +71,7 @@ from substrate import (
     Slot, Confidence, Diegetic, Narrative,
     Held, KnowledgeEffect, WorldEffect,
     SjuzhetEntry, Disclosure,
+    IDENTITY_PREDICATE,
 )
 
 
@@ -49,6 +87,20 @@ merope   = Entity(id="merope",   name="Merope",   kind="agent")
 messenger = Entity(id="messenger", name="Corinthian Messenger", kind="agent")
 shepherd = Entity(id="shepherd", name="Theban Shepherd", kind="agent")
 
+# Identity-placeholder entities. Canonically identical to named characters,
+# but distinct references in the agent states that have not yet realized the
+# identity. Substitution is what wires them together at query time once the
+# realizing agent holds the `identity(…)` proposition at KNOWN.
+the_exposed_baby       = Entity(id="the-exposed-baby",
+                                name="the infant exposed on Cithaeron",
+                                kind="abstract")
+the_crossroads_killer  = Entity(id="the-crossroads-killer",
+                                name="the stranger who killed Laius at the crossroads",
+                                kind="abstract")
+the_crossroads_victim  = Entity(id="the-crossroads-victim",
+                                name="the stranger Oedipus killed at the crossroads",
+                                kind="abstract")
+
 thebes     = Entity(id="thebes",     name="Thebes",     kind="location")
 corinth    = Entity(id="corinth",    name="Corinth",    kind="location")
 crossroads = Entity(id="crossroads", name="the Crossroads", kind="location")
@@ -56,10 +108,12 @@ cithaeron  = Entity(id="cithaeron",  name="Mount Cithaeron", kind="location")
 
 ENTITIES = [
     oedipus, jocasta, laius, polybus, merope, messenger, shepherd,
+    the_exposed_baby, the_crossroads_killer, the_crossroads_victim,
     thebes, corinth, crossroads, cithaeron,
 ]
 
 AGENT_IDS = [e.id for e in ENTITIES if e.kind == "agent"]
+
 
 # ----------------------------------------------------------------------------
 # Proposition constructors
@@ -80,26 +134,22 @@ def married(a: str, b: str) -> Prop:
 def king(who: str, place: str) -> Prop:
     return Prop("king", (who, place))
 
-def killed_stranger_at_crossroads(who: str) -> Prop:
-    return Prop("killed_stranger_at_crossroads", (who,))
+def adopted_by(child: str, parent: str) -> Prop:
+    return Prop("adopted_by", (child, parent))
 
 def prophecy_self() -> Prop:
     # Oedipus's personal prophecy: he will kill his father and marry his mother.
     return Prop("prophecy_will_kill_father_and_marry_mother", ("oedipus",))
 
-def adopted_by(child: str, parent: str) -> Prop:
-    return Prop("adopted_by", (child, parent))
-
-def real_parents_of_oedipus_are(parent: str) -> Prop:
-    # A proposition used as a GAP: Oedipus knows he doesn't know his real parents.
-    # We still need a concrete proposition, so parametrize by candidate.
-    return Prop("real_parent_of_oedipus", (parent,))
+def identity_prop(a: str, b: str) -> Prop:
+    """Construct an identity proposition. Thin wrapper over Prop so story
+    code does not inline the reserved predicate name."""
+    return Prop(IDENTITY_PREDICATE, (a, b))
 
 # A GAP placeholder: Oedipus wonders who his real parents are.
-# This is a GAP, not a concrete proposition. For the prototype we model the
-# gap as the proposition "Oedipus's real parents are identified" being
-# held in the GAP slot on Oedipus's state, with the understanding that
-# filling this gap happens at the anagnorisis.
+# The gap is a proposition held in the GAP slot on Oedipus's state. The
+# anagnorisis closes the gap via an explicit remove=True effect (a
+# factual update, distinct from realization-driven substitution).
 gap_real_parents = Prop("real_parents_identified", ("oedipus",))
 
 
@@ -107,13 +157,15 @@ gap_real_parents = Prop("real_parents_identified", ("oedipus",))
 # Event helpers
 # ----------------------------------------------------------------------------
 
-def observe(agent_id: str, p: Prop, τ: int, confidence: Confidence = Confidence.CERTAIN,
-            slot: Slot = Slot.KNOWN, note: str = "") -> KnowledgeEffect:
+def observe(agent_id: str, p: Prop, τ: int,
+            confidence: Confidence = Confidence.CERTAIN,
+            slot: Slot = Slot.KNOWN, note: str = "",
+            via: str = None) -> KnowledgeEffect:
     return KnowledgeEffect(
         agent_id=agent_id,
         held=Held(
             prop=p, slot=slot, confidence=confidence,
-            via=Diegetic.OBSERVATION.value,
+            via=via or Diegetic.OBSERVATION.value,
             provenance=(f"observed @ τ_s={τ}{(': ' + note) if note else ''}",),
         ),
     )
@@ -130,24 +182,40 @@ def told_by(listener_id: str, speaker_id: str, p: Prop, τ: int,
         ),
     )
 
-def realize_add(agent_id: str, p: Prop, τ: int, note: str = "") -> KnowledgeEffect:
+def assert_identity(agent_id: str, a: str, b: str, τ: int,
+                    note: str = "",
+                    via: str = None) -> KnowledgeEffect:
+    """Place an identity proposition into an agent's state at slot=KNOWN.
+    This is the realization pattern under identity-and-realization-sketch-01:
+    the realization event's payload is an identity assertion. Substitution
+    produces the derived beliefs at query time.
+    """
     return KnowledgeEffect(
         agent_id=agent_id,
         held=Held(
-            prop=p, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-            via=Diegetic.REALIZATION.value,
-            provenance=(f"realized @ τ_s={τ}{(': ' + note) if note else ''}",),
+            prop=identity_prop(a, b),
+            slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+            via=via or Diegetic.REALIZATION.value,
+            provenance=(f"identity asserted @ τ_s={τ}"
+                        f"{(': ' + note) if note else ''}",),
         ),
     )
 
-def realize_remove(agent_id: str, p: Prop, τ: int) -> KnowledgeEffect:
+def remove_held(agent_id: str, p: Prop, slot: Slot,
+                confidence: Confidence, τ: int,
+                via: str = None,
+                note: str = "") -> KnowledgeEffect:
+    """Factual dislodgement — remove a specific Held record that has been
+    superseded by evidence. Distinct from realization-driven rewriting
+    (which identity-and-realization-sketch-01 retires); this pattern is
+    still legitimate for *specific* literal beliefs the story has
+    authored evidence against."""
     return KnowledgeEffect(
         agent_id=agent_id,
-        held=Held(
-            prop=p, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-            via=Diegetic.REALIZATION.value,
-            provenance=(f"realization removed @ τ_s={τ}",),
-        ),
+        held=Held(prop=p, slot=slot, confidence=confidence,
+                  via=via or Diegetic.INFERENCE.value,
+                  provenance=(f"dislodged @ τ_s={τ}"
+                              f"{(': ' + note) if note else ''}",)),
         remove=True,
     )
 
@@ -169,12 +237,23 @@ FABULA = [
         τ_s=-100, τ_a=1,
         participants={"child": "oedipus", "father": "laius", "mother": "jocasta"},
         effects=(
+            # World facts: canonical biological truths PLUS the world-level
+            # identity that makes oedipus and the-exposed-baby co-referential.
             world(child_of("oedipus", "laius")),
             world(child_of("oedipus", "jocasta")),
-            observe("laius",   child_of("oedipus", "laius"),   -100, note="witnessed birth"),
-            observe("laius",   child_of("oedipus", "jocasta"), -100, note="witnessed birth"),
-            observe("jocasta", child_of("oedipus", "laius"),   -100, note="witnessed birth"),
-            observe("jocasta", child_of("oedipus", "jocasta"), -100, note="witnessed birth"),
+            world(identity_prop("oedipus", "the-exposed-baby")),
+            # Laius and Jocasta witness the birth of *their baby* — whom
+            # they refer to as the-exposed-baby in their states until (and
+            # if) they realize the identity. They do NOT hold
+            # child_of(oedipus, …) literally at this τ_s.
+            observe("laius",   child_of("the-exposed-baby", "laius"),   -100,
+                    note="witnessed birth"),
+            observe("laius",   child_of("the-exposed-baby", "jocasta"), -100,
+                    note="witnessed birth"),
+            observe("jocasta", child_of("the-exposed-baby", "laius"),   -100,
+                    note="witnessed birth"),
+            observe("jocasta", child_of("the-exposed-baby", "jocasta"), -100,
+                    note="witnessed birth"),
         ),
     ),
 
@@ -182,21 +261,36 @@ FABULA = [
         id="E_exposure_and_rescue",
         type="exposure",
         τ_s=-99, τ_a=2,
-        participants={"infant": "oedipus", "rescuer": "shepherd", "courier": "messenger"},
+        participants={"infant": "the-exposed-baby",
+                      "rescuer": "shepherd", "courier": "messenger"},
         effects=(
-            # Jocasta and Laius believe the infant died on Cithaeron.
-            observe("jocasta", dead("oedipus"), -99, slot=Slot.BELIEVED,
-                    confidence=Confidence.BELIEVED, note="thinks exposure succeeded"),
-            observe("laius",   dead("oedipus"), -99, slot=Slot.BELIEVED,
-                    confidence=Confidence.BELIEVED, note="thinks exposure succeeded"),
-            # The shepherd knows: baby came from Laius's house, was not killed.
-            observe("shepherd", child_of("oedipus", "laius"), -99,
+            # Jocasta and Laius believe the infant (the-exposed-baby) died
+            # on Cithaeron. The belief is authored as BELIEVED — it is in
+            # fact false, but they hold it sincerely.
+            observe("jocasta", dead("the-exposed-baby"), -99,
+                    slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
+                    note="thinks exposure succeeded"),
+            observe("laius",   dead("the-exposed-baby"), -99,
+                    slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
+                    note="thinks exposure succeeded"),
+            # The shepherd knows the baby came from Laius's house and did
+            # not die — he gave it to the Corinthian messenger. He also
+            # knows (through the later chain: messenger → Polybus raises
+            # as Oedipus) the identity, and he can name it under pressure.
+            observe("shepherd", child_of("the-exposed-baby", "laius"), -99,
                     note="served in Laius's house; knows the baby's parentage"),
-            observe("shepherd", child_of("oedipus", "jocasta"), -99, note="same"),
-            # The Corinthian messenger knows: he received the baby from the
-            # Theban shepherd and delivered him to Polybus.
+            observe("shepherd", child_of("the-exposed-baby", "jocasta"), -99,
+                    note="same"),
+            observe("shepherd", identity_prop("oedipus", "the-exposed-baby"), -99,
+                    note="knows the chain: Laius's house → Cithaeron → "
+                         "messenger → Polybus's household as Oedipus"),
+            # The Corinthian messenger knows he received the baby from the
+            # Theban shepherd and delivered him to Polybus, where the
+            # child was raised as Oedipus. He holds the identity.
             observe("messenger", adopted_by("oedipus", "polybus"), -99,
                     note="delivered the child himself"),
+            observe("messenger", identity_prop("oedipus", "the-exposed-baby"), -99,
+                    note="direct knowledge from delivering the child"),
         ),
     ),
 
@@ -207,10 +301,12 @@ FABULA = [
         participants={"child": "oedipus", "father": "polybus", "mother": "merope"},
         effects=(
             # Oedipus grows up believing Polybus and Merope are his parents.
-            observe("oedipus", child_of("oedipus", "polybus"), -50, slot=Slot.BELIEVED,
-                    confidence=Confidence.BELIEVED, note="raised as their son"),
-            observe("oedipus", child_of("oedipus", "merope"), -50, slot=Slot.BELIEVED,
-                    confidence=Confidence.BELIEVED, note="raised as their son"),
+            observe("oedipus", child_of("oedipus", "polybus"), -50,
+                    slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
+                    note="raised as their son"),
+            observe("oedipus", child_of("oedipus", "merope"), -50,
+                    slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
+                    note="raised as their son"),
         ),
     ),
 
@@ -220,7 +316,8 @@ FABULA = [
         τ_s=-49, τ_a=4,
         participants={"recipient": "oedipus"},
         effects=(
-            observe("oedipus", prophecy_self(), -49, note="hears the oracle at Delphi"),
+            observe("oedipus", prophecy_self(), -49,
+                    note="hears the oracle at Delphi"),
         ),
     ),
 
@@ -230,15 +327,26 @@ FABULA = [
         τ_s=-48, τ_a=5,
         participants={"killer": "oedipus", "victim": "laius"},
         effects=(
+            # World facts: canonical truth about who did what, plus the
+            # world-level identity that makes laius and the-crossroads-
+            # victim co-referential.
             world(killed("oedipus", "laius")),
             world(dead("laius")),
-            # Oedipus knows he killed *someone* at a crossroads, but does not
-            # recognize the man. The identity of the victim is not in Oedipus's
-            # knowledge state.
-            observe("oedipus", killed_stranger_at_crossroads("oedipus"), -48,
+            world(identity_prop("laius", "the-crossroads-victim")),
+            world(identity_prop("oedipus", "the-crossroads-killer")),
+            # Oedipus knows he killed *someone* at the crossroads. The
+            # victim's identity is not yet in his state — he held
+            # killed(oedipus, the-crossroads-victim), not
+            # killed(oedipus, laius).
+            observe("oedipus", killed("oedipus", "the-crossroads-victim"), -48,
                     note="a travel-quarrel, unidentified victim"),
-            # Laius, before dying, knew his killer was a young stranger, but
-            # Laius dies here — his knowledge is moot from this τ_s forward.
+            # Jocasta learns (off-stage, via survivor/messenger) that Laius
+            # was killed by a stranger at the crossroads. She does not
+            # know the stranger's identity — literal record:
+            # killed(the-crossroads-killer, laius).
+            observe("jocasta", killed("the-crossroads-killer", "laius"), -47,
+                    via=Diegetic.UTTERANCE_HEARD.value,
+                    note="reported to her; killer's identity unknown"),
         ),
     ),
 
@@ -265,22 +373,27 @@ FABULA = [
         τ_s=5, τ_a=7,
         participants={"speaker": "jocasta", "listener": "oedipus"},
         effects=(
-            # Jocasta, reassuring Oedipus, mentions that Laius was killed at a
-            # crossroads by strangers. This plants a suspicion in Oedipus.
+            # Jocasta tells Oedipus what she knows: Laius was killed by
+            # a stranger at the crossroads. This is the literal fact she
+            # holds; Oedipus gains it under the same name.
             told_by("oedipus", "jocasta",
-                    Prop("laius_killed_at_crossroads", ()), 5,
+                    killed("the-crossroads-killer", "laius"), 5,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
-            # Oedipus now suspects he might be the one who killed Laius.
-            # Modeled as Oedipus gaining a SUSPECTED proposition about his
-            # own culpability for Laius's death.
+            # Oedipus now suspects he might be the crossroads-killer. Under
+            # the identity-and-realization model, the suspicion lives at
+            # the identity level (per I7, SUSPECTED identity does not fire
+            # substitution — this is precisely the "partial realization"
+            # state). When the identity later promotes to KNOWN at the
+            # anagnorisis, substitution yields killed(oedipus, laius).
             KnowledgeEffect(
                 agent_id="oedipus",
                 held=Held(
-                    prop=killed("oedipus", "laius"),
+                    prop=identity_prop("oedipus", "the-crossroads-killer"),
                     slot=Slot.SUSPECTED,
                     confidence=Confidence.SUSPECTED,
                     via=Diegetic.INFERENCE.value,
-                    provenance=("inferred from Jocasta's mention of the crossroads @ τ_s=5",),
+                    provenance=("suspected after Jocasta mentions the "
+                                "crossroads @ τ_s=5",),
                 ),
             ),
         ),
@@ -306,31 +419,27 @@ FABULA = [
         τ_s=8, τ_a=9,
         participants={"speaker": "messenger", "listener": "oedipus"},
         effects=(
-            # The messenger, trying to reassure Oedipus that the
-            # prophecy-about-Polybus cannot apply, lets slip that he
-            # himself brought the baby Oedipus to Polybus.
+            # The messenger, trying to reassure Oedipus that the prophecy-
+            # about-Polybus cannot apply, lets slip that he himself brought
+            # the baby Oedipus to Polybus.
             told_by("oedipus", "messenger", adopted_by("oedipus", "polybus"), 8,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
             told_by("jocasta", "messenger", adopted_by("oedipus", "polybus"), 8,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
-            # Oedipus's prior beliefs about his parentage are dislodged.
-            KnowledgeEffect(
-                agent_id="oedipus",
-                held=Held(prop=child_of("oedipus", "polybus"),
-                          slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
-                          via=Diegetic.REALIZATION.value,
-                          provenance=("dislodged by adoption revelation @ τ_s=8",)),
-                remove=True,
-            ),
-            KnowledgeEffect(
-                agent_id="oedipus",
-                held=Held(prop=child_of("oedipus", "merope"),
-                          slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
-                          via=Diegetic.REALIZATION.value,
-                          provenance=("dislodged by adoption revelation @ τ_s=8",)),
-                remove=True,
-            ),
-            # Oedipus now has a GAP about his real parents.
+            # Oedipus's prior BELIEVED beliefs about his parentage are
+            # dislodged — this is a factual update (the messenger gave
+            # direct evidence that Polybus is not his biological parent),
+            # not a realization-driven rewrite.
+            remove_held("oedipus", child_of("oedipus", "polybus"),
+                        Slot.BELIEVED, Confidence.BELIEVED, 8,
+                        note="dislodged by adoption revelation"),
+            remove_held("oedipus", child_of("oedipus", "merope"),
+                        Slot.BELIEVED, Confidence.BELIEVED, 8,
+                        note="dislodged by adoption revelation"),
+            # Oedipus now has a GAP about his real parents. The gap is an
+            # authorial marker of an acknowledged open question —
+            # substitution does not auto-close acknowledged gaps per the
+            # sketch's Sternberg-stays-literal commitment.
             KnowledgeEffect(
                 agent_id="oedipus",
                 held=Held(
@@ -349,21 +458,30 @@ FABULA = [
         τ_s=9, τ_a=10,
         participants={"agent": "jocasta"},
         effects=(
-            # Jocasta puts the pieces together: the baby her house exposed
-            # grew up to be the man she married, who killed Laius.
-            realize_add("jocasta", child_of("oedipus", "laius"), 9,
-                        note="already knew she bore Laius a son; now knows that son is Oedipus"),
-            realize_add("jocasta", child_of("oedipus", "jocasta"), 9),
-            realize_add("jocasta", killed("oedipus", "laius"), 9),
-            # Her earlier false belief (dead(oedipus)) is dislodged.
-            KnowledgeEffect(
-                agent_id="jocasta",
-                held=Held(prop=dead("oedipus"),
-                          slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
-                          via=Diegetic.REALIZATION.value,
-                          provenance=("dislodged at τ_s=9",)),
-                remove=True,
-            ),
+            # Jocasta's anagnorisis. She combines the messenger's adoption
+            # reveal with her own memory of exposing her child on
+            # Cithaeron and realizes:
+            #   1. The exposed baby did not die — he was brought to
+            #      Polybus and raised as Oedipus.
+            #   2. Oedipus, whom she married, IS her exposed child.
+            # Under identity-and-realization, the realization payload is
+            # two identity assertions plus one factual dislodgement
+            # (the prior false belief that the baby died).
+            assert_identity("jocasta", "oedipus", "the-exposed-baby", 9,
+                            note="the exposed baby grew up to be Oedipus"),
+            assert_identity("jocasta", "oedipus", "the-crossroads-killer", 9,
+                            note="Oedipus is the stranger who killed Laius"),
+            # Her earlier false belief that the exposed baby died is
+            # dislodged — the exposure did not succeed.
+            remove_held("jocasta", dead("the-exposed-baby"),
+                        Slot.BELIEVED, Confidence.BELIEVED, 9,
+                        via=Diegetic.REALIZATION.value,
+                        note="the exposure did not succeed after all"),
+            # Note what is NOT authored here: no realize_add of
+            # child_of(oedipus, jocasta), killed(oedipus, laius), etc.
+            # Those derive at query time from Jocasta's literal held set
+            # plus the two identity assertions above. This is the
+            # identity-and-realization-sketch-01 refactor in practice.
         ),
     ),
 
@@ -373,11 +491,19 @@ FABULA = [
         τ_s=12, τ_a=11,
         participants={"speaker": "shepherd", "listener": "oedipus"},
         effects=(
-            # The Shepherd, pressured, confirms: the baby came from Laius's house.
-            # This is the final piece Oedipus needs.
-            told_by("oedipus", "shepherd", child_of("oedipus", "laius"), 12,
+            # The Shepherd, pressured, confirms: the baby came from Laius's
+            # house, and he handed it to the Corinthian messenger. The
+            # shepherd names the identity directly — he has held it since
+            # the exposure (he rescued the baby; the messenger brought it
+            # to Polybus; Oedipus is that child).
+            told_by("oedipus", "shepherd",
+                    child_of("the-exposed-baby", "laius"), 12,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
-            told_by("oedipus", "shepherd", child_of("oedipus", "jocasta"), 12,
+            told_by("oedipus", "shepherd",
+                    child_of("the-exposed-baby", "jocasta"), 12,
+                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
+            told_by("oedipus", "shepherd",
+                    identity_prop("oedipus", "the-exposed-baby"), 12,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
         ),
     ),
@@ -388,41 +514,31 @@ FABULA = [
         τ_s=13, τ_a=12,
         participants={"agent": "oedipus"},
         effects=(
-            # The canonical anagnorisis. Authored as an explicit realization
-            # event (the prototype has no general inference model — realizations
-            # of this scope are authored, per sketch 04 open question 2).
-            # Old wrong beliefs dislodged:
-            KnowledgeEffect(
-                agent_id="oedipus",
-                held=Held(prop=killed_stranger_at_crossroads("oedipus"),
-                          slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-                          via=Diegetic.REALIZATION.value, provenance=()),
-                remove=True,
-            ),
-            # Suspected becomes known:
-            KnowledgeEffect(
-                agent_id="oedipus",
-                held=Held(prop=killed("oedipus", "laius"),
-                          slot=Slot.SUSPECTED, confidence=Confidence.SUSPECTED,
-                          via=Diegetic.REALIZATION.value, provenance=()),
-                remove=True,
-            ),
-            # Gap closed:
-            KnowledgeEffect(
-                agent_id="oedipus",
-                held=Held(prop=gap_real_parents,
-                          slot=Slot.GAP, confidence=Confidence.OPEN,
-                          via=Diegetic.REALIZATION.value, provenance=()),
-                remove=True,
-            ),
-            # New known truths:
-            realize_add("oedipus", killed("oedipus", "laius"), 13,
-                        note="the stranger at the crossroads was Laius, my father"),
-            realize_add("oedipus", child_of("oedipus", "laius"), 13),
-            realize_add("oedipus", child_of("oedipus", "jocasta"), 13,
-                        note="my wife is my mother"),
-            realize_add("oedipus", married("oedipus", "jocasta"), 13,
-                        note="held before, now held as incest"),
+            # Oedipus's anagnorisis. The shepherd's testimony already
+            # supplied identity(oedipus, the-exposed-baby) KNOWN. What
+            # this event adds:
+            #   1. Promote identity(oedipus, the-crossroads-killer) from
+            #      SUSPECTED to KNOWN — he now fully owns the identity
+            #      with the crossroads-killer (himself).
+            #   2. Assert identity(laius, the-crossroads-victim) KNOWN —
+            #      he realizes the stranger he killed was Laius, his
+            #      father.
+            #   3. Close the GAP on his real parents (an acknowledged
+            #      open question is now resolved; remove the GAP record).
+            assert_identity("oedipus", "oedipus", "the-crossroads-killer", 13,
+                            note="promotes prior SUSPECTED to KNOWN; by_prop "
+                                 "dict overwrites the SUSPECTED entry"),
+            assert_identity("oedipus", "laius", "the-crossroads-victim", 13,
+                            note="the stranger at the crossroads was Laius"),
+            remove_held("oedipus", gap_real_parents,
+                        Slot.GAP, Confidence.OPEN, 13,
+                        via=Diegetic.REALIZATION.value,
+                        note="gap closed — parentage now known via identity"),
+            # Note what is NOT authored here: no realize_add of
+            # killed(oedipus, laius), child_of(oedipus, laius),
+            # child_of(oedipus, jocasta), married(oedipus, jocasta). All
+            # derive at query time from Oedipus's literal held set plus
+            # the identity assertions.
         ),
     ),
 
@@ -434,8 +550,10 @@ FABULA = [
 # ----------------------------------------------------------------------------
 
 # Pre-play disclosures at τ_d=0: the original audience knew the myth.
-# We disclose the key pre-play world facts to the reader as KNOWN. The
-# reader enters the play with the central irony already loaded.
+# The reader enters the play with the central irony loaded — including
+# the identity propositions that make substitution fire on the reader's
+# state from τ_d=0. This is the substitution-driven reader-outruns-
+# character pattern identity-and-realization-sketch-01 names.
 
 PREPLAY_DISCLOSURES = (
     Disclosure(prop=child_of("oedipus", "laius"),
@@ -459,13 +577,24 @@ PREPLAY_DISCLOSURES = (
     Disclosure(prop=adopted_by("oedipus", "polybus"),
                slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
                via=Narrative.DISCLOSURE.value),
+    # Identity disclosures — the reader knows the myth, so the reader
+    # holds the identities that Jocasta and Oedipus will realize later.
+    # These power substitution-driven irony from τ_d=0.
+    Disclosure(prop=identity_prop("oedipus", "the-exposed-baby"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=identity_prop("laius", "the-crossroads-victim"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=identity_prop("oedipus", "the-crossroads-killer"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
 )
 
 
 SJUZHET = [
 
     # τ_d=0 — the reader enters the play with the myth's facts in hand.
-    # We attach the pre-play disclosures to the opening event nominally.
     SjuzhetEntry(
         event_id="E_marriage_and_crown",  # any pre-play event anchor works here
         τ_d=0,
