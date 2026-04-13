@@ -1,9 +1,12 @@
 # Substrate — sketch 02
 
-**Status:** draft
+**Status:** superseded
 **Date:** 2026-04-13
 **Supersedes:** [substrate-sketch-01.md](substrate-sketch-01.md)
-**Superseded by:** nothing yet
+**Superseded by:** [substrate-sketch-04.md](substrate-sketch-04.md) (via sketch 03, also superseded)
+
+*Kept in place as historical record. [Sketch 04](substrate-sketch-04.md) is the current active substrate sketch. Sketch 03 was an intermediate consolidation that fixed sketch 02's fact/state inconsistency and slot-naming issues but conflated branch uses under one concept and claimed post-contested canonical consistency "by construction"; sketch 04 separates branch kinds and demotes the reconvergence claim to an open question.*
+
 
 ## Purpose
 

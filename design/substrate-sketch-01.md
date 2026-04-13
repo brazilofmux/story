@@ -3,9 +3,9 @@
 **Status:** superseded
 **Date:** 2026-04-13
 **Supersedes:** nothing
-**Superseded by:** [substrate-sketch-02.md](substrate-sketch-02.md)
+**Superseded by:** [substrate-sketch-04.md](substrate-sketch-04.md) (via sketch 03, also superseded)
 
-*Kept in place as the record of initial thinking. Sketch 02 revises T1 (was too strong — excluded ambiguous-narration stories), K2 (same algebra but different update operators for characters vs. reader), and the library claim (prescriptive structures operate over fabula + sjuzhet, not sjuzhet alone). Sketch 02 also adds three open questions (causality-vs-temporal-order, event granularity, focalization/narrator layer) missing here.*
+*Kept in place as the record of initial thinking. [Sketch 04](substrate-sketch-04.md) is the current active substrate sketch; sketches 02 and 03 are intermediate consolidations also superseded.*
 
 
 ## Purpose
