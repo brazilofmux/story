@@ -961,20 +961,40 @@ def _anchor_current_τ_a(
     anchor: AnchorRef,
     events: list,
     descriptions: list,
+    up_to_τ_a: Optional[int] = None,
 ) -> Optional[int]:
     """The τ_a of the anchor referenced by `anchor`, or None if the
-    anchor does not resolve. Used to compute staleness at view time.
+    anchor does not resolve.
+
+    If `up_to_τ_a` is given, returns the latest τ_a ≤ up_to_τ_a among
+    records matching the anchor id — bitemporal retrieval so a
+    historical view sees the anchor as it was at invocation time, not
+    as it is at present. When a caller supplies `up_to_τ_a`, staleness
+    computed against the returned τ_a reflects only edits within the
+    invocation's scope.
+
+    None bound means latest-available; used when the caller does not
+    care about bitemporal snapshotting.
     """
+    best: Optional[int] = None
     if anchor.kind == "event":
         for e in events:
-            if e.id == anchor.target_id:
-                return e.τ_a
-        return None
+            if e.id != anchor.target_id:
+                continue
+            if up_to_τ_a is not None and e.τ_a > up_to_τ_a:
+                continue
+            if best is None or e.τ_a > best:
+                best = e.τ_a
+        return best
     if anchor.kind == "description":
         for d in descriptions:
-            if d.id == anchor.target_id:
-                return d.τ_a
-        return None
+            if d.id != anchor.target_id:
+                continue
+            if up_to_τ_a is not None and d.τ_a > up_to_τ_a:
+                continue
+            if best is None or d.τ_a > best:
+                best = d.τ_a
+        return best
     return None
 
 
@@ -1015,7 +1035,6 @@ def reader_view(
     scoped_events.sort(key=lambda e: (e.τ_s, e.τ_a))
 
     event_ids_in_view = {e.id for e in scoped_events}
-    desc_ids_in_descriptions = {d.id for d in descriptions}
 
     all_desc_on_branch = descriptions_on_branch(
         branch=branch, descriptions=descriptions, events=events,
@@ -1037,15 +1056,23 @@ def reader_view(
         if _passes_anchor_scope(d) and _passes_attention(d)
     ]
     scoped_descriptions.sort(key=lambda d: d.τ_a)
+    # `anchor_in_view` answers "is the anchor also in *this view*?" — not
+    # "does the anchor exist in the collection?" — so it uses the scoped
+    # description set, not the full input. A structural-only view can
+    # legally retain a description whose interpretive-attention anchor
+    # was filtered out; that case must surface as anchor_in_view=False.
+    desc_ids_in_view = {d.id for d in scoped_descriptions}
 
     desc_records = []
     for d in scoped_descriptions:
         anchor_id = d.attached_to.target_id
         in_view = (
             (d.attached_to.kind == "event" and anchor_id in event_ids_in_view)
-            or (d.attached_to.kind == "description" and anchor_id in desc_ids_in_descriptions)
+            or (d.attached_to.kind == "description" and anchor_id in desc_ids_in_view)
         )
-        anchor_τ_a = _anchor_current_τ_a(d.attached_to, events, descriptions)
+        anchor_τ_a = _anchor_current_τ_a(
+            d.attached_to, events, descriptions, up_to_τ_a=up_to_τ_a,
+        )
         if anchor_τ_a is None:
             eff_unreviewed = True
             stale_ids = ()

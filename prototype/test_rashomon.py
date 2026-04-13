@@ -38,6 +38,7 @@ import inspect
 
 from substrate import (
     Slot, Attention, Description, ReviewEntry, ReviewVerdict,
+    Event, Branch, BranchKind, CANONICAL, CANONICAL_LABEL,
     scope, project_knowledge, project_reader, project_world,
     dramatic_ironies,
     descriptions_for, descriptions_on_branch, by_kind, open_questions,
@@ -764,6 +765,109 @@ def test_ingest_proposal_appends_to_queue_without_mutation():
         "new proposal should land pending"
 
 
+def test_anchor_in_view_false_when_description_anchor_is_filtered_out():
+    """The anchor_in_view flag answers 'is the anchor in *this view*?'
+    — not 'does the anchor exist in the collection?'. When a structural-
+    only filter retains a structural description whose interpretive
+    anchor description is filtered out, anchor_in_view must be False
+    so the reader-model knows its context is thin."""
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL, descriptions=DESCRIPTIONS,
+        all_branches=ALL_BRANCHES, up_to_τ_s=100, up_to_τ_a=10_000,
+        attention_filter=frozenset({Attention.STRUCTURAL}),
+    )
+    match = [r for r in v.descriptions
+             if r.description.id == "D_wc_authorial_doubt"]
+    assert len(match) == 1, \
+        "precondition: structural D_wc_authorial_doubt should remain"
+    record = match[0]
+
+    view_ids = {r.description.id for r in v.descriptions}
+    assert "D_woodcutter_trust" not in view_ids, \
+        "precondition: interpretive anchor should be filtered out " \
+        f"under attention=structural; got {view_ids}"
+
+    assert record.anchor_in_view is False, \
+        "anchor_in_view should be False when the anchor description " \
+        "is filtered out of the view, even if it exists in the full " \
+        "description collection"
+
+
+def test_staleness_computed_at_view_τ_a_bound():
+    """R6 + the ReaderView contract: staleness uses the anchor's τ_a
+    as of the view's up_to_τ_a bound, not its present τ_a. A
+    historical view must not classify a review as stale based on
+    anchor edits outside its scope. This test uses synthetic data —
+    an anchor event edited at a later τ_a — because the Rashomon
+    encoding does not yet exercise anchor-edit flows."""
+    # Original anchor event at τ_a=6.
+    E_original = Event(
+        id="E_test",
+        type="test",
+        τ_s=0, τ_a=6,
+        participants={},
+        effects=(),
+        branches=frozenset({CANONICAL_LABEL}),
+    )
+    # Edited anchor event — same id, later τ_a. Represents an author's
+    # revision that would make prior reviews stale under R6.
+    E_edited = Event(
+        id="E_test",
+        type="test",
+        τ_s=0, τ_a=500,
+        participants={},
+        effects=(),
+        branches=frozenset({CANONICAL_LABEL}),
+    )
+    # Description with one approving review; the review was taken
+    # against the original anchor version (anchor_τ_a=6).
+    D_test = Description(
+        id="D_test",
+        attached_to=anchor_event("E_test"),
+        kind="texture",
+        attention=Attention.INTERPRETIVE,
+        text="irrelevant",
+        authored_by="author",
+        τ_a=100,
+        review_states=(ReviewEntry(
+            reviewer_id="llm:mock",
+            reviewed_at_τ_a=120,
+            verdict=ReviewVerdict.APPROVED,
+            anchor_τ_a=6,
+            comment="",
+        ),),
+    )
+    events = [E_original, E_edited]
+    descriptions = [D_test]
+    all_branches = {CANONICAL_LABEL: CANONICAL}
+
+    # View bounded before the edit — the τ_a=500 revision is out of
+    # scope; the anchor's current-in-view τ_a is 6; the review at
+    # anchor_τ_a=6 is NOT stale.
+    v_before = reader_view(
+        branch=CANONICAL, events=events, descriptions=descriptions,
+        all_branches=all_branches, up_to_τ_s=1000, up_to_τ_a=200,
+    )
+    assert len(v_before.descriptions) == 1
+    assert v_before.descriptions[0].stale_review_ids == (), \
+        f"review at anchor_τ_a=6 should NOT be stale when view's " \
+        f"up_to_τ_a=200 excludes the τ_a=500 edit; got " \
+        f"stale_ids={v_before.descriptions[0].stale_review_ids}"
+
+    # View bounded after the edit — the τ_a=500 revision is in scope;
+    # the anchor's current-in-view τ_a is 500; the review at
+    # anchor_τ_a=6 IS stale.
+    v_after = reader_view(
+        branch=CANONICAL, events=events, descriptions=descriptions,
+        all_branches=all_branches, up_to_τ_s=1000, up_to_τ_a=600,
+    )
+    assert len(v_after.descriptions) == 1
+    assert v_after.descriptions[0].stale_review_ids == (0,), \
+        f"review at anchor_τ_a=6 should be stale when view's " \
+        f"up_to_τ_a=600 includes the τ_a=500 edit; got " \
+        f"stale_ids={v_after.descriptions[0].stale_review_ids}"
+
+
 def test_view_is_reproducible_at_same_bounds():
     """Determinism: two reader_view calls with the same arguments
     produce equal results. This is the reproducibility property R5
@@ -825,6 +929,8 @@ TESTS = [
     test_ingest_review_produces_new_immutable_description,
     test_ingest_review_flips_effectively_unreviewed_in_next_view,
     test_ingest_proposal_appends_to_queue_without_mutation,
+    test_anchor_in_view_false_when_description_anchor_is_filtered_out,
+    test_staleness_computed_at_view_τ_a_bound,
     test_view_is_reproducible_at_same_bounds,
 ]
 
