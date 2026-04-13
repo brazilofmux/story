@@ -22,17 +22,17 @@ These are the sketches to read. Each is self-contained within its topic; no need
 **Per topic:**
 
 - [Substrate — sketch 05](substrate-sketch-05.md) — consolidated substrate, aligned with architecture-sketch-01. Retires F1 (emotion/tension as parallel projection); adds M1 (adverbial/modal routing rule); makes event type an extensible categorical tag rather than a dispatch key; applies A3 retroactively to every carried-forward commitment. Current substrate statement; read alone for the substrate's shape.
+- [Descriptions — sketch 01](descriptions-sketch-01.md) — the fold-invisible interpretive peer surface to the substrate's typed facts. Commitments D1–D5 (fold-invisibility, attention affordances, anchor-attachment, branch-default-from-anchor, no-auto-promotion). Specifies the description record, kind vocabulary, attention levels, review state with staleness under anchor edits, promotion mechanics via proposal queue, and tooling obligations. Absorbs substrate provenance.
 
 ## Upcoming sketches
 
 Planned work, in dependency order. Each is a sketch-to-write; filenames are provisional.
 
-1. **Descriptions surface** — *descriptions-sketch-01.md.* Formalizes architecture-sketch-01 A2 and A4. Specifies the description record (kind, attention, review state, attached_to), the promotion rule's operational shape, and tooling obligations. Absorbs and widens the current `provenance` convention. Substrate-sketch-05 defers the description record's shape to this sketch.
-2. **Inference model** — addresses substrate-sketch-05 open question 2. Realization-as-integration needs a bounded inference layer; the shape (forward chaining, proof-carrying, something else) is open.
-3. **Proper focalization semantics** — closes the weakening the prototype flagged. Requires τ_d-scoped reader-state tracking.
-4. **Reader-model integration** — how LLM/human interpretation of descriptions is invoked, cached, reviewed, and integrated with structural queries. Architecture-sketch-01 A5 says this work is in scope; the shape of the integration is open.
+1. **Inference model** — addresses substrate-sketch-05 open question 2. Realization-as-integration needs a bounded inference layer; the shape (forward chaining, proof-carrying, something else) is open.
+2. **Proper focalization semantics** — closes the weakening the prototype flagged. Requires τ_d-scoped reader-state tracking.
+3. **Reader-model integration** — how LLM/human interpretation of descriptions is invoked, cached, reviewed, and integrated with structural queries. Architecture-sketch-01 A5 says this work is in scope; the shape of the integration is open.
 
-After descriptions-sketch-01 lands, the prototype iterates: the Rashomon encoding refactor per substrate-sketch-05's worked example, `provenance` absorbed into the description surface, and tests updated to pin description-attachment invariants. That is the next unit of prototype work.
+The next unit of prototype work is the Rashomon encoding refactor per substrate-sketch-05 plus the description surface from descriptions-sketch-01: `duel_character`, `coerced`/`yielded_willingly`, `begged_to_kill` predicates retired in favor of descriptions; `provenance` tuples absorbed into the description surface; tests updated to pin description-attachment invariants.
 
 ## Superseded sketches
 
