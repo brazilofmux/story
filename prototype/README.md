@@ -25,7 +25,8 @@ test the sketch by making the semantics run.
 
 ```sh
 cd prototype
-python3 demo.py
+python3 demo.py            # narrative report on the Oedipus slice
+python3 test_substrate.py  # permanent tests (30 cases, no framework)
 ```
 
 No dependencies beyond the Python 3.12 standard library. No virtualenv needed.
@@ -42,6 +43,12 @@ No dependencies beyond the Python 3.12 standard library. No virtualenv needed.
 - `demo.py` — the driver. Prints a per-τ_d report showing reader and
   character states, live ironies, and anagnorisis deltas on a set of
   central propositions.
+- `test_substrate.py` — permanent tests pinning sketch-04 invariants
+  and current implementation behavior. No framework, no dependencies;
+  plain assertions with a minimal runner. Each test's docstring flags
+  when it is pinning a convention rather than a sketch commitment
+  (notably: focalization-as-metadata-only, remove-effect's partial use
+  of the Held record).
 
 ## What the demo demonstrates
 
