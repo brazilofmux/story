@@ -76,14 +76,47 @@ class BranchKind(str, Enum):
     COUNTERFACTUAL = "counterfactual"
 
 
+CANONICAL_LABEL = ":canonical"
+
+
 @dataclass(frozen=True)
 class Branch:
+    """A branch label with kind and parent. Parent defaults per sketch 04:
+
+      - :canonical must NOT have a parent (it is root).
+      - :contested defaults to :canonical as parent if none is given.
+      - :draft and :counterfactual MUST name a parent (or source, for
+        counterfactuals) explicitly — they are children of something.
+
+    These defaults and requirements are enforced in __post_init__ rather
+    than left to caller discipline. For a reference implementation, the
+    invariant belongs in the data type, not in documentation.
+    """
     label: str
     kind: BranchKind
-    parent: Optional[str] = None  # label of parent branch, or None for :canonical
+    parent: Optional[str] = None
+
+    def __post_init__(self):
+        if self.kind == BranchKind.CANONICAL:
+            if self.parent is not None:
+                raise ValueError(
+                    f":canonical branch {self.label!r} must not have a parent"
+                )
+            return
+
+        if self.kind == BranchKind.CONTESTED:
+            if self.parent is None:
+                object.__setattr__(self, "parent", CANONICAL_LABEL)
+            return
+
+        # DRAFT or COUNTERFACTUAL
+        if self.parent is None:
+            raise ValueError(
+                f"Branch {self.label!r} of kind {self.kind.value!r} must "
+                f"name a parent (counterfactuals: a source) explicitly"
+            )
 
 
-CANONICAL_LABEL = ":canonical"
 CANONICAL = Branch(label=CANONICAL_LABEL, kind=BranchKind.CANONICAL, parent=None)
 
 
@@ -239,10 +272,16 @@ def in_scope(event: Event, branch: Branch, all_branches: dict) -> bool:
 
 
 def scope(branch: Branch, events: list, all_branches: dict) -> list:
-    """All events in fold-scope for `branch`, in τ_s order."""
+    """All events in fold-scope for `branch`, sorted by (τ_s, τ_a).
+
+    The τ_a tiebreaker is load-bearing: two events at the same story-time
+    can touch the same proposition, and the 'later effects win' fold rule
+    is only well-defined if the ordering is total and deterministic.
+    Story-time alone does not guarantee either. Authorial time does.
+    """
     return sorted(
         (e for e in events if in_scope(e, branch, all_branches)),
-        key=lambda e: e.τ_s,
+        key=lambda e: (e.τ_s, e.τ_a),
     )
 
 
@@ -389,6 +428,11 @@ def project_reader(
     All three conditions raise ValueError. A prototype is a specification;
     silently skipping malformed entries would hide bugs downstream.
 
+    Additionally: the reader branch itself must be a shipped kind
+    (:canonical or :contested). project_reader is not defined on :draft
+    or :counterfactual branches — those are authoring or analytical
+    constructs that readers do not experience.
+
     For each sjuzhet entry with τ_d ≤ up_to_τ_d, in τ_d order:
       - Focalization is recorded as metadata only. See note below.
       - Explicit disclosures are applied with their stated slot/confidence
@@ -413,6 +457,13 @@ def project_reader(
     This is weaker than sketch 04 asserts. Proper focalization semantics
     are a deliberate deferred item for a later sketch/prototype iteration.
     """
+    if branch.kind not in (BranchKind.CANONICAL, BranchKind.CONTESTED):
+        raise ValueError(
+            f"project_reader may only be called on shipped branches "
+            f"(:canonical or :contested); got branch {branch.label!r} "
+            f"of kind {branch.kind.value!r}"
+        )
+
     by_prop = {}  # prop -> Held
     event_by_id = {e.id: e for e in all_events}
     entries_sorted = sorted(sjuzhet, key=lambda s: s.τ_d)
