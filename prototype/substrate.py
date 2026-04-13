@@ -288,21 +288,178 @@ def scope(branch: Branch, events: list, all_branches: dict) -> list:
 # Knowledge state
 # ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Identity substitution helpers (identity-and-realization-sketch-01)
+# ----------------------------------------------------------------------------
+#
+# Identity is a first-class proposition (I1). Predicate name is "identity",
+# arity 2, arguments are entity ids. Substitution happens at query time
+# (I3); the held set is literal. Substitution fires only on KNOWN
+# identities (I7).
+#
+# The helpers here are module-private (underscore-prefixed) because they
+# are consumed by KnowledgeState methods and by world_holds; they are not
+# part of the public surface the sketch documents.
+
+IDENTITY_PREDICATE = "identity"
+
+_SLOT_RANK = {
+    Slot.KNOWN: 3,
+    Slot.BELIEVED: 2,
+    Slot.SUSPECTED: 1,
+    Slot.GAP: 0,
+}
+
+
+def _known_identities_from(held_list) -> list:
+    """Extract the identity/2 propositions held as KNOWN. I7: only KNOWN
+    identities participate in equivalence-class construction."""
+    return [
+        h.prop for h in held_list
+        if h.slot == Slot.KNOWN
+        and h.prop.predicate == IDENTITY_PREDICATE
+        and len(h.prop.args) == 2
+    ]
+
+
+def _build_equivalence_classes(identity_props: list) -> dict:
+    """Union-find over identity propositions. Returns a dict mapping each
+    entity id that appears in any identity to the frozenset of all entities
+    in its equivalence class. Entity ids not in any identity proposition
+    are not in the returned dict — they are trivially singleton classes,
+    and callers treat "not in map" as "equivalent only to self".
+    """
+    parents = {}
+
+    def find(x):
+        # Iterative with path compression.
+        while parents[x] != x:
+            parents[x] = parents[parents[x]]
+            x = parents[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parents[ra] = rb
+
+    for p in identity_props:
+        # Defensive filter — callers are expected to pre-filter, but a
+        # silent wrong answer from unioning non-identity props is worse
+        # than a cheap predicate/arity check here.
+        if p.predicate != IDENTITY_PREDICATE or len(p.args) != 2:
+            continue
+        a, b = p.args
+        parents.setdefault(a, a)
+        parents.setdefault(b, b)
+        union(a, b)
+
+    classes = {}
+    for x in list(parents.keys()):
+        root = find(x)
+        classes.setdefault(root, set()).add(x)
+
+    return {x: frozenset(classes[find(x)]) for x in parents}
+
+
+def _equivalent(a, b, class_map: dict) -> bool:
+    """Two entity references are equivalent if equal, or if both appear
+    in the class_map and share a class."""
+    if a == b:
+        return True
+    if a not in class_map or b not in class_map:
+        return False
+    return class_map[a] is class_map[b] or class_map[a] == class_map[b]
+
+
+def _prop_matches_under_substitution(
+    literal: Prop, query: Prop, class_map: dict,
+) -> bool:
+    """A literal Prop matches a query Prop under substitution iff the
+    predicates match, the arity matches, and each positional arg is
+    equivalent under the equivalence classes.
+    """
+    if literal.predicate != query.predicate:
+        return False
+    if len(literal.args) != len(query.args):
+        return False
+    for la, qa in zip(literal.args, query.args):
+        if not _equivalent(la, qa, class_map):
+            return False
+    return True
+
+
 @dataclass(frozen=True)
 class KnowledgeState:
     """An agent's epistemic state at a specific (branch, τ_s). Essentially a
     set of Held propositions, indexed by proposition for O(1) lookups.
+
+    Under identity-and-realization-sketch-01, query methods on this state
+    are substitution-aware by default — `holds` resolves equivalence
+    classes from KNOWN identity propositions the agent holds and matches
+    against the literal held set. The held set itself stays literal (I3).
     """
     agent_id: str
     by_prop: tuple  # tuple[Held] — effectively a set, kept as tuple for frozen-ness
 
-    def holds(self, p: Prop) -> Optional[Held]:
+    def holds_literal(self, p: Prop) -> Optional[Held]:
+        """Literal match against by_prop. No substitution. Used for
+        debugging, for rendering an agent's un-realized beliefs, and for
+        pinning the literal-set-preservation invariant in tests."""
         for h in self.by_prop:
             if h.prop == p:
                 return h
         return None
 
+    def holds(self, p: Prop) -> Optional[Held]:
+        """Substitution-aware query per identity-and-realization-sketch-01
+        I3 + I7. Returns the strongest-slot match among literal Held
+        records that match `p` under the agent's KNOWN-identity
+        equivalence classes. Tiebreak: the earliest record in by_prop
+        (by_prop is built in τ_s, τ_a event order by project_knowledge,
+        so by_prop order is a proxy for authored-time order).
+        """
+        matches = self.holds_all_matches(p)
+        if not matches:
+            return None
+        return matches[0]
+
+    def holds_all_matches(self, p: Prop) -> list:
+        """All literal Held records matching `p` under substitution, in
+        strongest-slot-then-earliest-by-prop-order. An empty list means
+        the agent does not hold `p` even under substitution."""
+        class_map = self._known_identity_classes()
+        results = [
+            (idx, h) for idx, h in enumerate(self.by_prop)
+            if _prop_matches_under_substitution(h.prop, p, class_map)
+        ]
+        results.sort(key=lambda pair: (-_SLOT_RANK[pair[1].slot], pair[0]))
+        return [h for _, h in results]
+
+    def _known_identity_classes(self) -> dict:
+        """The equivalence-class map induced by this agent's KNOWN
+        identity propositions."""
+        return _build_equivalence_classes(_known_identities_from(self.by_prop))
+
+    def equivalence_classes(self) -> list:
+        """List of non-singleton equivalence classes under the agent's
+        KNOWN identities. Singletons are implicit (any entity not in any
+        returned class is equivalent only to itself)."""
+        class_map = self._known_identity_classes()
+        seen = set()
+        out = []
+        for cls in class_map.values():
+            key = frozenset(cls)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(key)
+        return out
+
     def slot(self, slot: Slot) -> list:
+        """Literal slot introspection: the Held records whose literal slot
+        is `slot`. Substitution does not apply — these methods report what
+        the agent has committed, not what they hold under substitution."""
         return [h for h in self.by_prop if h.slot == slot]
 
     def known(self) -> list:      return self.slot(Slot.KNOWN)
@@ -311,8 +468,49 @@ class KnowledgeState:
     def gaps(self) -> list:       return self.slot(Slot.GAP)
 
     def holds_as(self, p: Prop, slot: Slot) -> bool:
+        """True iff substitution-aware holds(p) returns a Held at the
+        requested slot."""
         h = self.holds(p)
         return h is not None and h.slot == slot
+
+
+# ----------------------------------------------------------------------------
+# World-side substitution query (identity-and-realization-sketch-01 I2)
+# ----------------------------------------------------------------------------
+#
+# project_world returns a set of Props. Substitution over the world set
+# follows the same rule: build equivalence classes from any identity/2
+# props in the set, match queries under the classes. The world set has
+# no slot (world facts are asserted, not believed at a slot), so there
+# is no "strongest match" to pick — world_holds returns a bool.
+
+
+def world_holds(query: Prop, world_props: set) -> bool:
+    """Substitution-aware query over a world-state set (as returned by
+    project_world). Extracts identity/2 propositions from `world_props`,
+    builds equivalence classes, and checks whether any prop in the set
+    matches `query` under those classes.
+
+    Note: world identities do not have a "known" slot — world-state
+    props are assertions, not beliefs. All identity props in the world
+    set participate in substitution.
+    """
+    identity_props = [
+        p for p in world_props
+        if p.predicate == IDENTITY_PREDICATE and len(p.args) == 2
+    ]
+    class_map = _build_equivalence_classes(identity_props)
+    for p in world_props:
+        if _prop_matches_under_substitution(p, query, class_map):
+            return True
+    return False
+
+
+def world_holds_literal(query: Prop, world_props: set) -> bool:
+    """Literal membership — equivalent to `query in world_props`, but
+    provided as a named alias for symmetry with `holds_literal` on
+    KnowledgeState."""
+    return query in world_props
 
 
 # ----------------------------------------------------------------------------
