@@ -18,6 +18,7 @@ import sys
 import traceback
 
 from substrate import (
+    AnswerProposal,
     Attention,
     Description,
     DescStatus,
@@ -26,7 +27,6 @@ from substrate import (
 )
 from reader_model_client import (
     DroppedOutput,
-    ProposedAnswer,
     ReaderAnswer,
     ReaderOutput,
     ReaderReview,
@@ -34,6 +34,7 @@ from reader_model_client import (
     _classify_review,
     _translate_answer,
     _translate_review,
+    invoke_reader_model,
 )
 
 
@@ -252,11 +253,13 @@ def test_translate_review_produces_review_entry():
     assert entry.comment == "grounded in view"
 
 
-def test_translate_answer_produces_proposed_answer():
-    """An accepted ReaderAnswer becomes a ProposedAnswer carrying a
+def test_translate_answer_produces_answer_proposal():
+    """An accepted ReaderAnswer becomes an AnswerProposal carrying a
     constructed Description. The new description inherits the question's
     anchor (D3) and branches, but carries its own kind per the LLM's
-    proposal, with status=provisional and a metadata link back."""
+    proposal, with status=provisional and a metadata link back. The
+    proposal itself starts pending and carries proposer_id and
+    proposed_at_τ_a so it can be queue-ingested directly."""
     descriptions = _make_descriptions()
     raw = ReaderAnswer(
         question_description_id="D_beta",
@@ -269,9 +272,12 @@ def test_translate_answer_produces_proposed_answer():
         reviewer_id="llm:test",
         current_τ_a=100,
     )
-    assert isinstance(pa, ProposedAnswer)
+    assert isinstance(pa, AnswerProposal)
     assert pa.question_description_id == "D_beta"
     assert pa.rationale == "derived"
+    assert pa.proposer_id == "llm:test"
+    assert pa.proposed_at_τ_a == 100
+    assert pa.status == "pending"
 
     d = pa.proposed_description
     # Inherits anchor from the question (D_beta was anchored on E_main).
@@ -292,6 +298,94 @@ def test_translate_answer_produces_proposed_answer():
 # ============================================================================
 # Dropped outputs are auditable
 # ============================================================================
+
+
+class _FakeMessages:
+    def __init__(self, output):
+        self._output = output
+
+    def parse(self, **kwargs):
+        class _R:
+            pass
+        r = _R()
+        r.parsed_output = self._output
+        return r
+
+
+class _FakeClient:
+    """Minimal stand-in for anthropic.Anthropic — exposes .messages.parse()
+    returning the canned ReaderOutput. Everything else is ignored."""
+    def __init__(self, output):
+        self.messages = _FakeMessages(output)
+
+
+def test_review_candidates_paired_correctly_when_raw_reviews_are_dropped():
+    """Regression for the zip-misalignment bug. When the LLM returns
+    reviews where at least one raw record fails scope validation, the
+    dropped record must not shift later records' target_ids. Each
+    translated ReviewEntry is authoritatively paired with its raw
+    description_id at translation time — not by parallel-indexing the
+    full raw.reviews list.
+    """
+    from substrate import ReaderView
+
+    descriptions = _make_descriptions()
+    events = _make_event_list()
+    view = ReaderView(
+        branch_label=":canonical",
+        up_to_τ_s=10,
+        up_to_τ_a=100,
+        attention_filter=None,
+        anchor_scope=None,
+        events=(),
+        descriptions=(),
+        open_questions=(),
+    )
+    # LLM returns three raw reviews, in this order:
+    #   1) valid (D_alpha)
+    #   2) out-of-scope (D_gamma NOT in reviews_for)
+    #   3) valid (D_beta)
+    raw_output = ReaderOutput(
+        reviews=[
+            ReaderReview(description_id="D_alpha", verdict="approved",
+                         rationale="ok"),
+            ReaderReview(description_id="D_gamma", verdict="needs-work",
+                         rationale="should be dropped — not in scope"),
+            ReaderReview(description_id="D_beta",  verdict="rejected",
+                         rationale="nope"),
+        ],
+        answers=[],
+    )
+    client = _FakeClient(raw_output)
+    # D_beta is a question in the test fixtures, but reviewing a question
+    # description is legal — reviews_for controls scope, not is_question.
+    result = invoke_reader_model(
+        view=view,
+        events=events,
+        descriptions=descriptions,
+        current_τ_a=100,
+        reviews_for=["D_alpha", "D_beta"],
+        answers_for=[],
+        client=client,
+    )
+    # Two survived, one dropped.
+    assert len(result.review_candidates) == 2, (
+        f"expected 2 surviving review candidates; got "
+        f"{len(result.review_candidates)}"
+    )
+    assert len(result.dropped) == 1
+    # The pairings are 1:1 with the accepted raw records, preserving
+    # order of arrival. The dropped middle record must NOT cause D_beta
+    # to be paired with D_gamma (the bug this pins).
+    assert result.review_candidates[0][0] == "D_alpha"
+    assert result.review_candidates[0][1].verdict.value == "approved"
+    assert result.review_candidates[0][1].comment == "ok"
+    assert result.review_candidates[1][0] == "D_beta", (
+        f"zip-misalignment bug: expected D_beta paired with the 'rejected' "
+        f"review, got {result.review_candidates[1][0]!r}"
+    )
+    assert result.review_candidates[1][1].verdict.value == "rejected"
+    assert result.review_candidates[1][1].comment == "nope"
 
 
 def test_dropped_output_carries_reason_and_raw_record():
@@ -326,7 +420,9 @@ TESTS = [
     test_answer_for_unknown_id_is_rejected,
     # Translation
     test_translate_review_produces_review_entry,
-    test_translate_answer_produces_proposed_answer,
+    test_translate_answer_produces_answer_proposal,
+    # Zip-misalignment regression
+    test_review_candidates_paired_correctly_when_raw_reviews_are_dropped,
     # Auditability
     test_dropped_output_carries_reason_and_raw_record,
 ]

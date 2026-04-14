@@ -1225,6 +1225,26 @@ class PromotionProposal:
     status: str = "pending"
 
 
+@dataclass(frozen=True)
+class AnswerProposal:
+    """A reader-model's proposed answer to an is_question=True
+    description. Lives in the same queue as PromotionProposal; accept
+    promotes `proposed_description` into the committed collection, with
+    the link back to the question preserved via the proposed
+    description's metadata["answers_question"] pointer (reader-model-
+    sketch-01 §Question-answers).
+
+    The proposed description starts `status=DescStatus.PROVISIONAL`;
+    accept flips it to committed as part of acceptance.
+    """
+    question_description_id: str
+    proposed_description: "Description"
+    proposer_id: str
+    rationale: str
+    proposed_at_τ_a: int
+    status: str = "pending"
+
+
 def _anchor_current_τ_a(
     anchor: AnchorRef,
     events: list,
@@ -1407,3 +1427,84 @@ def ingest_proposal(
     proposed_at_τ_a matters for review presentation.
     """
     return list(queue) + [proposal]
+
+
+def ingest_question_answer(
+    answer: AnswerProposal,
+    queue: list,
+) -> list:
+    """Append an AnswerProposal to the same queue PromotionProposals
+    live in (reader-model-sketch-01 §Question-answers). The queue
+    carries both kinds; tooling distinguishes by record type when
+    walking.
+    """
+    return list(queue) + [answer]
+
+
+def _match_queue_entry(queue: list, proposal) -> int:
+    """Locate `proposal` in `queue` by **identity**, returning its
+    index. Raises ValueError if no match. Callers must supply the
+    exact queue entry reference they want to act on — two structurally-
+    equal-but-distinct proposals would collide under equality matching
+    and silently mutate the wrong entry, which is a contract violation
+    we refuse at the API rather than at the caller.
+    """
+    for i, entry in enumerate(queue):
+        if entry is proposal:
+            return i
+    raise ValueError(
+        f"proposal not found in queue (by identity): "
+        f"{getattr(proposal, 'description_id', None) or getattr(proposal, 'question_description_id', None)!r}"
+    )
+
+
+def accept_answer_proposal(
+    proposal: AnswerProposal,
+    descriptions: list,
+    queue: list,
+) -> tuple:
+    """Accept a pending AnswerProposal. Returns (new_descriptions,
+    new_queue).
+
+    - The proposed description is appended to `descriptions` with
+      `status=DescStatus.COMMITTED`. Its metadata["answers_question"]
+      pointer is preserved from the proposal.
+    - The queue entry's status flips pending → accepted. The entry is
+      not removed; audit trail is preserved.
+
+    An already-accepted or declined proposal cannot be re-accepted
+    (ValueError). This prevents double-commit.
+    """
+    idx = _match_queue_entry(queue, proposal)
+    entry = queue[idx]
+    if entry.status != "pending":
+        raise ValueError(
+            f"cannot accept {entry.status} proposal "
+            f"{entry.question_description_id!r}"
+        )
+    committed = replace(entry.proposed_description, status=DescStatus.COMMITTED)
+    new_descriptions = list(descriptions) + [committed]
+    new_queue = list(queue)
+    new_queue[idx] = replace(entry, status="accepted")
+    return new_descriptions, new_queue
+
+
+def decline_proposal(
+    proposal,
+    queue: list,
+) -> list:
+    """Mark a pending proposal (AnswerProposal | PromotionProposal)
+    declined. Returns a new queue with that entry's status flipped
+    pending → declined. The entry stays for audit.
+
+    Declining a non-pending proposal raises ValueError.
+    """
+    idx = _match_queue_entry(queue, proposal)
+    entry = queue[idx]
+    if entry.status != "pending":
+        raise ValueError(
+            f"cannot decline {entry.status} proposal at index {idx}"
+        )
+    new_queue = list(queue)
+    new_queue[idx] = replace(entry, status="declined")
+    return new_queue

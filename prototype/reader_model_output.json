@@ -38,42 +38,42 @@
       "reviewed_at_τ_a": 20000,
       "verdict": "approved",
       "anchor_τ_a": 6,
-      "comment": "The event E_intercourse records the act canonically without specifying consent. The texture, scoped to :b-woodcutter and attributed to woodcutter-testimony, adds the woodcutter's interpretive coloring: unambiguous coercion followed by Tajomaru's shift toward pleading. Nothing in the events contradicts this, and it reads as a plausible observational layer rather than an unsupported invention."
+      "comment": "The event records intercourse between Tajomaru and wife while the husband is bound to a tree after being lured and restrained—facts that make 'coercion, unambiguously' a well-supported texture reading. The added detail of Tajomaru 'pleading' afterward is plausible woodcutter-testimony coloring that doesn't contradict any event in view."
     },
     {
       "reviewer_id": "llm:claude-opus-4-6",
       "reviewed_at_τ_a": 20000,
-      "verdict": "approved",
+      "verdict": "noted",
       "anchor_τ_a": 6,
-      "comment": "Scoped to :canonical, this reader-frame makes a cross-branch literary claim — that the intercourse is the pivot of all four testimonies and that each account's texture is self-portraiture. The view only exposes the woodcutter branch in detail, but the claim is meta-structural and attributed to the author. It is a defensible critical observation and does not assert any new facts."
+      "comment": "This reader-frame claims that 'all four testimonies' center different agency around the intercourse. Only the woodcutter's texture description is visible in this view; the other three branch testimonies are absent. I cannot verify or falsify a cross-branch comparative claim without seeing the compared items."
     },
     {
       "reviewer_id": "llm:claude-opus-4-6",
       "reviewed_at_τ_a": 20000,
       "verdict": "approved",
       "anchor_τ_a": 81,
-      "comment": "E_wc_wife_goads is an utterance by the wife to both tajomaru and husband at τ_s=7. The motivation description glosses her words as shaming both men into a fight neither wanted, which aligns with the subsequent combat at τ_s=9 being initiated after her speech. The attribution to woodcutter-testimony is appropriate since it is interpretive framing of what he claims to have witnessed."
+      "comment": "E_wc_wife_goads is an utterance by the wife addressed to both tajomaru and husband. The motivation description—that she shames both men into fighting—is consistent with the subsequent event E_wc_fight (combat between tajomaru and husband) and with the woodcutter's perspective of deflecting blame onto the wife."
     },
     {
       "reviewer_id": "llm:claude-opus-4-6",
       "reviewed_at_τ_a": 20000,
       "verdict": "approved",
       "anchor_τ_a": 82,
-      "comment": "E_wc_fight records combat ending in tajomaru killing husband with a sword. The texture describes the fight as cowardly and clumsy, denying both men dignity. This does not contradict the lethal outcome — a clumsy fight can still end in death. The description is well-scoped to :b-woodcutter and correctly notes this is the woodcutter's version of events, not a canonical claim about how the fight went."
+      "comment": "E_wc_fight records tajomaru killing the husband with a sword, but nothing in the event structure prescribes the quality of the combat. Describing it as 'cowardly, clumsy' is a legitimate texture addition from the woodcutter's testimony that deflates both combatants, consistent with the woodcutter's apparent motive of presenting himself as the only honest witness."
     },
     {
       "reviewer_id": "llm:claude-opus-4-6",
       "reviewed_at_τ_a": 20000,
-      "verdict": "needs-work",
+      "verdict": "approved",
       "anchor_τ_a": 84,
-      "comment": "The core tension — self-incrimination as candor versus motive to distort — is well identified and the refusal to adjudicate mirrors the source material. However, the phrase 'the only one without an alibi' is imprecise: on :b-woodcutter the woodcutter was present as a hidden witness (E_wc_fight grants him knowledge via observation), so his issue is not lacking an alibi but concealing his presence and theft. A small revision to 'the only one with something concrete to hide from the court' or similar would sharpen the claim."
+      "comment": "The events support every factual claim: the woodcutter did steal the dagger (E_wc_theft), and he is the only participant whose knowledge of the killing comes via observation as a bystander (E_wc_fight effects). The 'declines to adjudicate' framing is a defensible editorial stance, and the description correctly flags the tension between candor and self-interest."
     },
     {
       "reviewer_id": "llm:claude-opus-4-6",
       "reviewed_at_τ_a": 20000,
       "verdict": "approved",
       "anchor_τ_a": 184,
-      "comment": "This is a well-formed authorial-uncertainty question. It identifies the specific contested critical terrain (the film's stance on the woodcutter's reliability), points to D_woodcutter_trust as the place a revised position would surface, and does not assert a resolution. It is exactly the kind of self-aware annotation the description system is designed to support."
+      "comment": "This is a well-formed authorial-uncertainty marker. It identifies a genuinely contested interpretive crux—the woodcutter's reliability—and explicitly invites future revision. It is correctly scoped to :b-woodcutter and attached to the trust-flag it questions."
     }
   ],
   "proposed_answers": [
@@ -87,7 +87,7 @@
         },
         "kind": "reader-frame",
         "attention": "interpretive",
-        "text": "The current encoding's agnosticism is well-calibrated and should be retained. Within the view, E_wc_theft (the stolen dagger) establishes that the woodcutter has a concrete material motive to shape his testimony — he needs to explain his presence at the grove without admitting the theft. At the same time, D_wc_fight_character's portrait of a clumsy, undignified fight is the most deflating account of the combat across all branches, which lends the woodcutter's version the rhetorical texture of honesty: a liar would more likely aggrandize. These two pressures — self-interest pulling toward distortion, unglamorous detail pulling toward candor — are precisely what the film leaves unresolved. Rather than endorsing or discrediting the woodcutter, the encoding should keep D_woodcutter_trust as a live tension and let readers weigh the branch against its siblings.",
+        "text": "The current framing in D_woodcutter_trust—that self-incrimination reads as candor while the film declines to adjudicate—is defensible and probably the safest encoding choice. However, one tension visible in this view deserves more surface: the canonical event E_body_found (τ_s 30) records the woodcutter 'discovering' the husband's body, yet on :b-woodcutter he already witnessed the killing at τ_s 9 (E_wc_fight). His public act of discovery is itself a deception, which complicates the 'candor' reading—he is candid about the dagger but structurally dishonest about his presence at the crime. The 'declines to adjudicate' stance holds, but the trust-flag could be strengthened by noting this double layer: his confession of theft coexists with his concealment of being an eyewitness, and the encoding already encodes both facts. If a future pass finds stronger evidence that the film privileges his account (e.g., the Rashōmon gate frame narratively endorsing him), the trust-flag is indeed the right place to surface that shift.",
         "authored_by": "llm:claude-opus-4-6",
         "τ_a": 20000,
         "is_question": false,
@@ -99,48 +99,52 @@
           "answers_question": "D_wc_authorial_doubt"
         }
       },
-      "rationale": "E_wc_theft gives the woodcutter a concrete reason to distort, while D_wc_fight_character's unflattering texture argues against pure fabrication; both facts are visible in the view, and their unresolved coexistence supports the current non-adjudicating stance."
+      "proposer_id": "llm:claude-opus-4-6",
+      "rationale": "E_body_found on :canonical and E_wc_fight on :b-woodcutter together show the woodcutter publicly concealing his eyewitness status while privately confessing theft—a structural irony the current trust-flag does not fully surface, which bears directly on whether the 'declines to adjudicate' framing is complete.",
+      "proposed_at_τ_a": 20000,
+      "status": "pending"
     }
   ],
+  "dropped": [],
   "raw_output": {
     "reviews": [
       {
         "description_id": "D_intercourse_woodcutter_texture",
         "verdict": "approved",
-        "rationale": "The event E_intercourse records the act canonically without specifying consent. The texture, scoped to :b-woodcutter and attributed to woodcutter-testimony, adds the woodcutter's interpretive coloring: unambiguous coercion followed by Tajomaru's shift toward pleading. Nothing in the events contradicts this, and it reads as a plausible observational layer rather than an unsupported invention."
+        "rationale": "The event records intercourse between Tajomaru and wife while the husband is bound to a tree after being lured and restrained—facts that make 'coercion, unambiguously' a well-supported texture reading. The added detail of Tajomaru 'pleading' afterward is plausible woodcutter-testimony coloring that doesn't contradict any event in view."
       },
       {
         "description_id": "D_intercourse_frame",
-        "verdict": "approved",
-        "rationale": "Scoped to :canonical, this reader-frame makes a cross-branch literary claim — that the intercourse is the pivot of all four testimonies and that each account's texture is self-portraiture. The view only exposes the woodcutter branch in detail, but the claim is meta-structural and attributed to the author. It is a defensible critical observation and does not assert any new facts."
+        "verdict": "noted",
+        "rationale": "This reader-frame claims that 'all four testimonies' center different agency around the intercourse. Only the woodcutter's texture description is visible in this view; the other three branch testimonies are absent. I cannot verify or falsify a cross-branch comparative claim without seeing the compared items."
       },
       {
         "description_id": "D_wc_wife_goads",
         "verdict": "approved",
-        "rationale": "E_wc_wife_goads is an utterance by the wife to both tajomaru and husband at τ_s=7. The motivation description glosses her words as shaming both men into a fight neither wanted, which aligns with the subsequent combat at τ_s=9 being initiated after her speech. The attribution to woodcutter-testimony is appropriate since it is interpretive framing of what he claims to have witnessed."
+        "rationale": "E_wc_wife_goads is an utterance by the wife addressed to both tajomaru and husband. The motivation description—that she shames both men into fighting—is consistent with the subsequent event E_wc_fight (combat between tajomaru and husband) and with the woodcutter's perspective of deflecting blame onto the wife."
       },
       {
         "description_id": "D_wc_fight_character",
         "verdict": "approved",
-        "rationale": "E_wc_fight records combat ending in tajomaru killing husband with a sword. The texture describes the fight as cowardly and clumsy, denying both men dignity. This does not contradict the lethal outcome — a clumsy fight can still end in death. The description is well-scoped to :b-woodcutter and correctly notes this is the woodcutter's version of events, not a canonical claim about how the fight went."
+        "rationale": "E_wc_fight records tajomaru killing the husband with a sword, but nothing in the event structure prescribes the quality of the combat. Describing it as 'cowardly, clumsy' is a legitimate texture addition from the woodcutter's testimony that deflates both combatants, consistent with the woodcutter's apparent motive of presenting himself as the only honest witness."
       },
       {
         "description_id": "D_woodcutter_trust",
-        "verdict": "needs-work",
-        "rationale": "The core tension — self-incrimination as candor versus motive to distort — is well identified and the refusal to adjudicate mirrors the source material. However, the phrase 'the only one without an alibi' is imprecise: on :b-woodcutter the woodcutter was present as a hidden witness (E_wc_fight grants him knowledge via observation), so his issue is not lacking an alibi but concealing his presence and theft. A small revision to 'the only one with something concrete to hide from the court' or similar would sharpen the claim."
+        "verdict": "approved",
+        "rationale": "The events support every factual claim: the woodcutter did steal the dagger (E_wc_theft), and he is the only participant whose knowledge of the killing comes via observation as a bystander (E_wc_fight effects). The 'declines to adjudicate' framing is a defensible editorial stance, and the description correctly flags the tension between candor and self-interest."
       },
       {
         "description_id": "D_wc_authorial_doubt",
         "verdict": "approved",
-        "rationale": "This is a well-formed authorial-uncertainty question. It identifies the specific contested critical terrain (the film's stance on the woodcutter's reliability), points to D_woodcutter_trust as the place a revised position would surface, and does not assert a resolution. It is exactly the kind of self-aware annotation the description system is designed to support."
+        "rationale": "This is a well-formed authorial-uncertainty marker. It identifies a genuinely contested interpretive crux—the woodcutter's reliability—and explicitly invites future revision. It is correctly scoped to :b-woodcutter and attached to the trust-flag it questions."
       }
     ],
     "answers": [
       {
         "question_description_id": "D_wc_authorial_doubt",
         "answer_kind": "reader-frame",
-        "answer_text": "The current encoding's agnosticism is well-calibrated and should be retained. Within the view, E_wc_theft (the stolen dagger) establishes that the woodcutter has a concrete material motive to shape his testimony — he needs to explain his presence at the grove without admitting the theft. At the same time, D_wc_fight_character's portrait of a clumsy, undignified fight is the most deflating account of the combat across all branches, which lends the woodcutter's version the rhetorical texture of honesty: a liar would more likely aggrandize. These two pressures — self-interest pulling toward distortion, unglamorous detail pulling toward candor — are precisely what the film leaves unresolved. Rather than endorsing or discrediting the woodcutter, the encoding should keep D_woodcutter_trust as a live tension and let readers weigh the branch against its siblings.",
-        "rationale": "E_wc_theft gives the woodcutter a concrete reason to distort, while D_wc_fight_character's unflattering texture argues against pure fabrication; both facts are visible in the view, and their unresolved coexistence supports the current non-adjudicating stance."
+        "answer_text": "The current framing in D_woodcutter_trust—that self-incrimination reads as candor while the film declines to adjudicate—is defensible and probably the safest encoding choice. However, one tension visible in this view deserves more surface: the canonical event E_body_found (τ_s 30) records the woodcutter 'discovering' the husband's body, yet on :b-woodcutter he already witnessed the killing at τ_s 9 (E_wc_fight). His public act of discovery is itself a deception, which complicates the 'candor' reading—he is candid about the dagger but structurally dishonest about his presence at the crime. The 'declines to adjudicate' stance holds, but the trust-flag could be strengthened by noting this double layer: his confession of theft coexists with his concealment of being an eyewitness, and the encoding already encodes both facts. If a future pass finds stronger evidence that the film privileges his account (e.g., the Rashōmon gate frame narratively endorsing him), the trust-flag is indeed the right place to surface that shift.",
+        "rationale": "E_body_found on :canonical and E_wc_fight on :b-woodcutter together show the woodcutter publicly concealing his eyewitness status while privately confessing theft—a structural irony the current trust-flag does not fully surface, which bears directly on whether the 'declines to adjudicate' framing is complete."
       }
     ]
   }

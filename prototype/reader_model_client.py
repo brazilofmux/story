@@ -5,8 +5,8 @@ First live-LLM iteration of reader-model-sketch-01's probe. Takes a
 `ReaderView` (produced by `substrate.reader_view`) and a list of description
 ids to review / questions to answer, and calls Claude Opus 4.6 with a typed
 prompt + structured-output schema. Returns substrate-native `ReviewEntry`
-records (ready for `ingest_review`) and `ProposedAnswer` records (candidate
-new descriptions the author can accept to commit).
+records (ready for `ingest_review`) and `AnswerProposal` records (queue-
+ready candidate descriptions the author can accept to commit).
 
 Architectural placement: this is **tooling**, not substrate. The substrate
 produces the view and ingests results; the LLM call, prompt templating,
@@ -50,6 +50,7 @@ except ImportError as exc:
     ) from exc
 
 from substrate import (
+    AnswerProposal,
     Attention,
     Description,
     DescStatus,
@@ -133,18 +134,6 @@ class ReaderOutput(BaseModel):
 
 
 @dataclass(frozen=True)
-class ProposedAnswer:
-    """A proposed answer from the LLM. The `proposed_description` is a
-    constructed Description not yet in the descriptions collection; an
-    author accepts by adding it (and possibly attaching provenance back
-    to the question via the `metadata["answers_question"]` pointer).
-    """
-    question_description_id: str
-    proposed_description: Description
-    rationale: str
-
-
-@dataclass(frozen=True)
 class DroppedOutput:
     """A raw LLM output record that failed scope or structural validation
     at ingest time. `reason` is a short human-readable explanation;
@@ -162,13 +151,20 @@ class DroppedOutput:
 
 @dataclass
 class ReaderModelResult:
-    """What invoke_reader_model returns. `reviews` and `proposed_answers`
-    are substrate-native and scope-enforced. `dropped` captures outputs
-    that failed validation (for audit and debugging). `raw_output` is
-    the pre-translation LLM response, kept for callers who want the
-    rationale strings without re-parsing."""
-    reviews: list  # list[ReviewEntry] — ready for ingest_review
-    proposed_answers: list  # list[ProposedAnswer]
+    """What invoke_reader_model returns. `review_candidates` and
+    `answer_proposals` are substrate-native and scope-enforced.
+    `dropped` captures outputs that failed validation (for audit and
+    debugging). `raw_output` is the pre-translation LLM response, kept
+    for callers who want the rationale strings without re-parsing.
+
+    `review_candidates` pairs each translated `ReviewEntry` with its
+    target description id. The pair is the authoritative artifact —
+    a `ReviewEntry` alone does not identify which description it
+    reviews, and zipping two parallel lists (translated vs. raw) is
+    unsafe when any raw record was dropped at the validation gate.
+    """
+    review_candidates: list  # list[tuple[str, ReviewEntry]]
+    answer_proposals: list  # list[AnswerProposal] — queue-ready
     dropped: list  # list[DroppedOutput]
     raw_output: ReaderOutput
 
@@ -543,8 +539,8 @@ def _translate_answer(
     descriptions: list,
     reviewer_id: str,
     current_τ_a: int,
-) -> ProposedAnswer:
-    """One accepted ReaderAnswer → one ProposedAnswer. Caller must have
+) -> AnswerProposal:
+    """One accepted ReaderAnswer → one AnswerProposal. Caller must have
     already passed the answer through _classify_answer and seen None
     (accepted); this function assumes the target is a valid question."""
     question = next(d for d in descriptions if d.id == raw.question_description_id)
@@ -565,10 +561,12 @@ def _translate_answer(
         status=DescStatus.PROVISIONAL,
         metadata={"answers_question": raw.question_description_id},
     )
-    return ProposedAnswer(
+    return AnswerProposal(
         question_description_id=raw.question_description_id,
         proposed_description=new_desc,
+        proposer_id=reviewer_id,
         rationale=raw.rationale,
+        proposed_at_τ_a=current_τ_a,
     )
 
 
@@ -619,10 +617,15 @@ def invoke_reader_model(
 
     Returns:
         A `ReaderModelResult` containing:
-          - `reviews`: list[ReviewEntry] ready for
-            `substrate.ingest_review`.
-          - `proposed_answers`: list[ProposedAnswer] the author can
-            accept to commit new descriptions.
+          - `review_candidates`: list[tuple[str, ReviewEntry]] — each
+            tuple is (target_description_id, translated review). Pass
+            directly to `proposal_walker.walk_reviews`, or invoke
+            `substrate.ingest_review(description, review)` yourself
+            against the named target.
+          - `answer_proposals`: list[AnswerProposal] queue-ready via
+            `substrate.ingest_question_answer`; the author accepts or
+            declines via `substrate.accept_answer_proposal` /
+            `substrate.decline_proposal`.
           - `raw_output`: the pre-translation ReaderOutput for
             debugging.
     """
@@ -648,8 +651,8 @@ def invoke_reader_model(
         print("=" * 76)
         print(user_prompt)
         return ReaderModelResult(
-            reviews=[],
-            proposed_answers=[],
+            review_candidates=[],
+            answer_proposals=[],
             dropped=[],
             raw_output=ReaderOutput(),
         )
@@ -678,8 +681,8 @@ def invoke_reader_model(
 
     raw: ReaderOutput = response.parsed_output
 
-    reviews: list = []
-    proposed_answers: list = []
+    review_candidates: list = []
+    answer_proposals: list = []
     dropped: list = []
 
     for rr in raw.reviews:
@@ -687,22 +690,27 @@ def invoke_reader_model(
         if reason is not None:
             dropped.append(DroppedOutput(reason=reason, raw=rr))
             continue
-        reviews.append(
-            _translate_review(rr, descriptions, events, reviewer_id, current_τ_a)
+        # Keep the target_id paired with the translated record at the
+        # moment of translation. Parallel-zipping raw.reviews with a
+        # filtered `reviews` list misaligns when any raw record was
+        # dropped at the validation gate; the pair is authoritative.
+        entry = _translate_review(
+            rr, descriptions, events, reviewer_id, current_τ_a
         )
+        review_candidates.append((rr.description_id, entry))
 
     for ra in raw.answers:
         reason = _classify_answer(ra, descriptions, answers_for)
         if reason is not None:
             dropped.append(DroppedOutput(reason=reason, raw=ra))
             continue
-        proposed_answers.append(
+        answer_proposals.append(
             _translate_answer(ra, descriptions, reviewer_id, current_τ_a)
         )
 
     return ReaderModelResult(
-        reviews=reviews,
-        proposed_answers=proposed_answers,
+        review_candidates=review_candidates,
+        answer_proposals=answer_proposals,
         dropped=dropped,
         raw_output=raw,
     )

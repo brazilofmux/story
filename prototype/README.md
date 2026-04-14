@@ -27,13 +27,25 @@ the sketch by making the semantics run.
 
 ```sh
 cd prototype
-python3 demo.py            # narrative report on the Oedipus slice
-python3 demo_rashomon.py   # branch-indexed report on the Rashomon grove scene
-python3 test_substrate.py  # permanent substrate tests (no framework)
-python3 test_rashomon.py   # permanent contested-branch tests (no framework)
+python3 demo.py                  # narrative report on the Oedipus slice
+python3 demo_rashomon.py         # branch-indexed report on the Rashomon grove scene
+python3 test_substrate.py        # permanent substrate tests (no framework)
+python3 test_identity.py         # identity & realization tests
+python3 test_rashomon.py         # permanent contested-branch tests (no framework)
+python3 test_proposal_walker.py  # walker tests (io.StringIO-driven, no terminal)
+
+# Live reader-model probe — requires ANTHROPIC_API_KEY and the deps in
+# requirements.txt. Use `--dry-run` to print the full prompt without calling
+# the API, or `--walk` to drop into an interactive accept/decline/skip walker
+# over the returned reviews and answer proposals.
+.venv/bin/python3 demo_reader_model.py --dry-run
+.venv/bin/python3 demo_reader_model.py --walk
+.venv/bin/python3 test_reader_model_client.py  # client structural tests
 ```
 
-No dependencies beyond the Python 3.12 standard library. No virtualenv needed.
+The substrate, Oedipus, and Rashomon demos use only the Python 3.12 standard
+library. The reader-model probe adds `anthropic` and `pydantic` (see
+`requirements.txt`); install into a local venv.
 
 ## Files
 
@@ -65,7 +77,28 @@ No dependencies beyond the Python 3.12 standard library. No virtualenv needed.
   `:contested` example: sibling non-inheritance on a live encoding,
   canonical-is-universal propagation, per-branch reader projections,
   sjuzhet rejection for out-of-scope entries, branch-aware query
-  differentiation.
+  differentiation. Also pins the reader-model probe surface:
+  `reader_view` shape and scope, `ingest_review` / `ingest_proposal` /
+  `ingest_question_answer` ingest invariants, `accept_answer_proposal`
+  and `decline_proposal` transition rules.
+- `reader_model_client.py` — live-LLM tooling for reader-model-sketch-01.
+  Wraps Claude Opus 4.6 via the Anthropic SDK; produces substrate-native
+  `ReviewEntry` and `AnswerProposal` records from a `ReaderView`.
+- `demo_reader_model.py` — first LLM-in-the-loop demo. Builds a
+  `:b-woodcutter` view, calls the reader-model, prints reviews and
+  answer proposals. With `--walk`, hands them to the interactive walker.
+- `proposal_walker.py` — terminal walker that turns LLM output into
+  authorial acts: accept / decline / skip / quit over each review and
+  each answer proposal, invoking `ingest_review` and
+  `accept_answer_proposal` / `decline_proposal` on the author's
+  decision. Stream-based (takes `stdin` / `stdout`) so tests can drive
+  it without a terminal.
+- `test_proposal_walker.py` — walker tests. `io.StringIO`-driven; pins
+  accept/decline/skip/quit flow, EOF handling, and the "only-pending"
+  invariant for repeated walks over the queue.
+- `test_reader_model_client.py` — structural tests for the reader-model
+  client: R5 scope enforcement on reviews and answers, the question-only
+  rule, and translation into substrate-native records.
 
 Both test files: no framework, no dependencies, plain assertions with a
 minimal runner. Each test's docstring flags when it pins a convention

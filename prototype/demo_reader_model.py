@@ -30,7 +30,7 @@ import os
 import sys
 from dataclasses import asdict
 
-from substrate import Attention, reader_view
+from substrate import Attention, ingest_question_answer, reader_view
 from rashomon import (
     ALL_BRANCHES,
     B_WOODCUTTER,
@@ -62,10 +62,23 @@ def _cli_args():
         "--save-json",
         metavar="PATH",
         help=(
-            "Save the full structured result (reviews, proposed_answers, "
-            "raw LLM output) as JSON to PATH. Reviews and proposed "
-            "descriptions are serialized in enough detail to round-trip "
-            "back into substrate records."
+            "Save the full structured result (review_candidates, "
+            "answer_proposals, raw LLM output) as JSON to PATH. Each "
+            "review candidate is serialized as (target_description_id, "
+            "translated review fields); answer proposals are queue-"
+            "ready records with their full proposed description body."
+        ),
+    )
+    parser.add_argument(
+        "--walk",
+        action="store_true",
+        help=(
+            "After the LLM call returns, drop into an interactive walker "
+            "that lets you accept / decline / skip each review and each "
+            "answer proposal. Accepted reviews land via ingest_review; "
+            "accepted answer proposals commit new descriptions via "
+            "accept_answer_proposal. Decisions are not persisted beyond "
+            "the walker's lifetime."
         ),
     )
     return parser.parse_args()
@@ -93,8 +106,9 @@ def _serialize_result(result, context: dict) -> dict:
         return data
 
     reviews_dump = []
-    for rv in result.reviews:
+    for target_id, rv in result.review_candidates:
         reviews_dump.append({
+            "target_description_id": target_id,
             "reviewer_id": rv.reviewer_id,
             "reviewed_at_τ_a": rv.reviewed_at_τ_a,
             "verdict": rv.verdict.value,
@@ -103,11 +117,14 @@ def _serialize_result(result, context: dict) -> dict:
         })
 
     answers_dump = []
-    for pa in result.proposed_answers:
+    for pa in result.answer_proposals:
         answers_dump.append({
             "question_description_id": pa.question_description_id,
             "proposed_description": description_to_dict(pa.proposed_description),
+            "proposer_id": pa.proposer_id,
             "rationale": pa.rationale,
+            "proposed_at_τ_a": pa.proposed_at_τ_a,
+            "status": pa.status,
         })
 
     dropped_dump = []
@@ -117,8 +134,8 @@ def _serialize_result(result, context: dict) -> dict:
 
     return {
         "context": context,
-        "reviews": reviews_dump,
-        "proposed_answers": answers_dump,
+        "review_candidates": reviews_dump,
+        "answer_proposals": answers_dump,
         "dropped": dropped_dump,
         "raw_output": result.raw_output.model_dump(),
     }
@@ -202,11 +219,12 @@ def main() -> int:
             )
         print(f"\n[saved full result to {args.save_json}]")
 
-    _print_section(f"REVIEWS ({len(result.reviews)})")
-    if not result.reviews:
+    _print_section(f"REVIEWS ({len(result.review_candidates)})")
+    if not result.review_candidates:
         print("  (none)")
-    for rv in result.reviews:
+    for target_id, rv in result.review_candidates:
         print()
+        print(f"  target: {target_id}")
         print(f"  reviewer: {rv.reviewer_id}")
         print(f"  reviewed_at_τ_a: {rv.reviewed_at_τ_a}")
         print(f"  anchor_τ_a: {rv.anchor_τ_a}")
@@ -225,10 +243,10 @@ def main() -> int:
             raw_repr = d.raw.model_dump() if hasattr(d.raw, "model_dump") else str(d.raw)
             print(f"  raw: {raw_repr}")
 
-    _print_section(f"PROPOSED ANSWERS ({len(result.proposed_answers)})")
-    if not result.proposed_answers:
+    _print_section(f"ANSWER PROPOSALS ({len(result.answer_proposals)})")
+    if not result.answer_proposals:
         print("  (none)")
-    for pa in result.proposed_answers:
+    for pa in result.answer_proposals:
         d = pa.proposed_description
         print()
         print(f"  answers: {pa.question_description_id}")
@@ -248,15 +266,46 @@ def main() -> int:
     # Quick mapping from each reviewed description id to verdict, for scan-
     # ability after scrolling through rationale prose.
     _print_section("SUMMARY")
-    by_id = {rv.reviewer_id: [] for rv in result.reviews}
-    for rv in result.reviews:
-        # One reviewer per probe, so this always collapses to a single row.
-        pass
-    verdicts = {}
-    for rv, raw in zip(result.reviews, result.raw_output.reviews):
-        verdicts[raw.description_id] = rv.verdict.value
-    for desc_id, verdict in verdicts.items():
-        print(f"  {desc_id:<38} {verdict}")
+    for target_id, rv in result.review_candidates:
+        print(f"  {target_id:<38} {rv.verdict.value}")
+
+    if args.walk:
+        from proposal_walker import (
+            print_decision_summary,
+            walk_answer_proposals,
+            walk_reviews,
+        )
+
+        _print_section("WALK — REVIEWS")
+        descriptions_after, review_decisions = walk_reviews(
+            result.review_candidates, list(DESCRIPTIONS),
+        )
+
+        # Stage the answer proposals onto a fresh queue, then walk.
+        queue: list = []
+        for ap in result.answer_proposals:
+            queue = ingest_question_answer(ap, queue)
+
+        _print_section("WALK — ANSWER PROPOSALS")
+        descriptions_after, queue_after, answer_decisions = walk_answer_proposals(
+            queue, descriptions_after,
+        )
+
+        _print_section("WALK — RESULT")
+        all_decisions = review_decisions + answer_decisions
+        print_decision_summary(all_decisions)
+
+        print()
+        print(
+            f"  descriptions: {len(DESCRIPTIONS)} → {len(descriptions_after)}"
+        )
+        print(f"  queue entries: {len(queue_after)} (status per entry:)")
+        for entry in queue_after:
+            q_id = getattr(
+                entry, "question_description_id",
+                getattr(entry, "description_id", "?"),
+            )
+            print(f"    {q_id:<38} {entry.status}")
 
     return 0
 

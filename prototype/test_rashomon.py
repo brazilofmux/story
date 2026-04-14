@@ -37,13 +37,15 @@ import traceback
 import inspect
 
 from substrate import (
-    Slot, Attention, Description, ReviewEntry, ReviewVerdict,
+    Slot, Attention, Description, DescStatus, ReviewEntry, ReviewVerdict,
     Event, Branch, BranchKind, CANONICAL, CANONICAL_LABEL,
     scope, project_knowledge, project_reader, project_world,
     dramatic_ironies,
     descriptions_for, descriptions_on_branch, by_kind, open_questions,
     effective_branches, anchor_event, anchor_desc,
-    reader_view, ingest_review, ingest_proposal, PromotionProposal,
+    reader_view, ingest_review, ingest_proposal, ingest_question_answer,
+    accept_answer_proposal, decline_proposal,
+    PromotionProposal, AnswerProposal,
     ReaderView, ViewEventRecord, ViewDescriptionRecord,
 )
 from rashomon import (
@@ -765,6 +767,160 @@ def test_ingest_proposal_appends_to_queue_without_mutation():
         "new proposal should land pending"
 
 
+def _make_answer_proposal(question_id: str, new_desc_id: str, τ_a: int = 20_000):
+    """Helper: build an AnswerProposal whose proposed_description is a
+    plausible answer to D_wc_authorial_doubt. Used by the accept/decline
+    tests below."""
+    question = next(d for d in DESCRIPTIONS if d.id == question_id)
+    proposed = Description(
+        id=new_desc_id,
+        attached_to=question.attached_to,
+        kind="reader-frame",
+        attention=Attention.INTERPRETIVE,
+        text="test answer text",
+        authored_by="llm:mock",
+        τ_a=τ_a,
+        branches=question.branches,
+        status=DescStatus.PROVISIONAL,
+        metadata={"answers_question": question_id},
+    )
+    return AnswerProposal(
+        question_description_id=question_id,
+        proposed_description=proposed,
+        proposer_id="llm:mock",
+        rationale="test rationale",
+        proposed_at_τ_a=τ_a,
+    )
+
+
+def test_ingest_question_answer_appends_answer_proposal_to_queue():
+    """reader-model-sketch-01 §Question-answers: an AnswerProposal
+    lands in the same queue as PromotionProposals, distinguished by
+    type. The queue carries both kinds; a walker can iterate and
+    dispatch by isinstance."""
+    queue = []
+    ap = _make_answer_proposal(
+        "D_wc_authorial_doubt", "D_wc_authorial_doubt_answer_test"
+    )
+    new_queue = ingest_question_answer(ap, queue)
+    assert queue == [], "original queue mutated"
+    assert len(new_queue) == 1
+    assert isinstance(new_queue[0], AnswerProposal)
+    assert new_queue[0].status == "pending"
+
+
+def test_accept_answer_proposal_commits_new_description():
+    """R3 authorial-act: accepting a pending AnswerProposal appends a
+    committed Description to the descriptions collection and flips the
+    queue entry's status to accepted. The committed description carries
+    the metadata link back to the question (answers_question pointer)."""
+    queue = ingest_question_answer(
+        _make_answer_proposal(
+            "D_wc_authorial_doubt", "D_wc_authorial_doubt_answer_accept"
+        ),
+        [],
+    )
+    proposal = queue[0]
+    new_desc, new_queue = accept_answer_proposal(
+        proposal, list(DESCRIPTIONS), queue
+    )
+
+    # Descriptions grew by exactly one, and the new record is committed.
+    assert len(new_desc) == len(DESCRIPTIONS) + 1
+    committed = new_desc[-1]
+    assert committed.id == "D_wc_authorial_doubt_answer_accept"
+    assert committed.status == DescStatus.COMMITTED, (
+        f"accepted answer should be committed; got {committed.status}"
+    )
+    assert committed.metadata.get("answers_question") == "D_wc_authorial_doubt"
+
+    # Queue entry status flipped; proposal object itself unchanged.
+    assert proposal.status == "pending", "original proposal was mutated"
+    assert new_queue[0].status == "accepted"
+    assert len(new_queue) == 1, "queue length should be stable on accept"
+
+
+def test_accept_answer_proposal_surfaces_in_subsequent_view():
+    """Accepted answer flows back through the view: a reader_view built
+    over the extended descriptions collection includes the committed
+    answer description on :b-woodcutter (the question's branch)."""
+    queue = ingest_question_answer(
+        _make_answer_proposal(
+            "D_wc_authorial_doubt", "D_wc_authorial_doubt_answer_view"
+        ),
+        [],
+    )
+    new_desc, _ = accept_answer_proposal(
+        queue[0], list(DESCRIPTIONS), queue
+    )
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL,
+        descriptions=new_desc,
+        all_branches=ALL_BRANCHES,
+        up_to_τ_s=100, up_to_τ_a=30_000,
+    )
+    desc_ids = {r.description.id for r in v.descriptions}
+    assert "D_wc_authorial_doubt_answer_view" in desc_ids, (
+        "accepted answer description should appear in a subsequent "
+        "reader_view on :b-woodcutter"
+    )
+
+
+def test_decline_answer_proposal_flips_status_no_new_description():
+    """Declining a pending AnswerProposal flips its queue status to
+    declined without touching the descriptions collection."""
+    queue = ingest_question_answer(
+        _make_answer_proposal(
+            "D_wc_authorial_doubt", "D_wc_authorial_doubt_answer_decline"
+        ),
+        [],
+    )
+    new_queue = decline_proposal(queue[0], queue)
+    assert new_queue[0].status == "declined"
+    assert queue[0].status == "pending", "original proposal was mutated"
+
+
+def test_decline_promotion_proposal_also_works():
+    """decline_proposal is generic over AnswerProposal and
+    PromotionProposal; the queue carries both kinds and declining is
+    uniform."""
+    queue = ingest_proposal(
+        PromotionProposal(
+            description_id="D_intercourse_wife_texture",
+            proposed_fact=None,
+            proposer_id="llm:mock",
+            rationale="not worth promoting this round",
+            proposed_at_τ_a=10_003,
+        ),
+        [],
+    )
+    new_queue = decline_proposal(queue[0], queue)
+    assert new_queue[0].status == "declined"
+
+
+def test_accept_declined_proposal_raises():
+    """A proposal that has already been declined cannot be re-accepted.
+    This pins the invariant that status transitions are one-shot:
+    pending → accepted | declined, and neither terminal state flows
+    back to pending."""
+    queue = ingest_question_answer(
+        _make_answer_proposal(
+            "D_wc_authorial_doubt", "D_wc_authorial_doubt_answer_reaccept"
+        ),
+        [],
+    )
+    declined_queue = decline_proposal(queue[0], queue)
+    try:
+        accept_answer_proposal(
+            declined_queue[0], list(DESCRIPTIONS), declined_queue,
+        )
+    except ValueError:
+        return
+    raise AssertionError(
+        "re-accepting a declined proposal should raise ValueError"
+    )
+
+
 def test_anchor_in_view_false_when_description_anchor_is_filtered_out():
     """The anchor_in_view flag answers 'is the anchor in *this view*?'
     — not 'does the anchor exist in the collection?'. When a structural-
@@ -929,6 +1085,12 @@ TESTS = [
     test_ingest_review_produces_new_immutable_description,
     test_ingest_review_flips_effectively_unreviewed_in_next_view,
     test_ingest_proposal_appends_to_queue_without_mutation,
+    test_ingest_question_answer_appends_answer_proposal_to_queue,
+    test_accept_answer_proposal_commits_new_description,
+    test_accept_answer_proposal_surfaces_in_subsequent_view,
+    test_decline_answer_proposal_flips_status_no_new_description,
+    test_decline_promotion_proposal_also_works,
+    test_accept_declined_proposal_raises,
     test_anchor_in_view_false_when_description_anchor_is_filtered_out,
     test_staleness_computed_at_view_τ_a_bound,
     test_view_is_reproducible_at_same_bounds,
