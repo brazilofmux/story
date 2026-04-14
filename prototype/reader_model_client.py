@@ -144,14 +144,32 @@ class ProposedAnswer:
     rationale: str
 
 
+@dataclass(frozen=True)
+class DroppedOutput:
+    """A raw LLM output record that failed scope or structural validation
+    at ingest time. `reason` is a short human-readable explanation;
+    `raw` is the Pydantic record (ReaderReview or ReaderAnswer) so a
+    reviewing author can see exactly what was dropped and why.
+
+    R5 enforcement: the prompt tells the LLM what's in scope, but we
+    verify in code. An LLM that reviews a description outside
+    reviews_for, or proposes an answer for a non-question description,
+    lands here — never in reviews / proposed_answers.
+    """
+    reason: str
+    raw: object  # ReaderReview | ReaderAnswer
+
+
 @dataclass
 class ReaderModelResult:
     """What invoke_reader_model returns. `reviews` and `proposed_answers`
-    are substrate-native. `raw_output` is the pre-translation LLM
-    response, kept for debugging and for callers who want the rationale
-    strings without re-parsing."""
+    are substrate-native and scope-enforced. `dropped` captures outputs
+    that failed validation (for audit and debugging). `raw_output` is
+    the pre-translation LLM response, kept for callers who want the
+    rationale strings without re-parsing."""
     reviews: list  # list[ReviewEntry] — ready for ingest_review
     proposed_answers: list  # list[ProposedAnswer]
+    dropped: list  # list[DroppedOutput]
     raw_output: ReaderOutput
 
 
@@ -249,15 +267,25 @@ substantive answer, 3-6 sentences, grounded in view content.
 - `rationale`: 1-2 sentences explaining how the answer follows from \
 the facts and other descriptions in view.
 
-## Discipline
+## Scope discipline
+
+You see exactly what the view contains. Nothing exists, for your \
+purposes, outside the view.
 
 - Never invent events. If the view contains no evidence for a claim, \
 do not make that claim.
 - Never synthesize identities (claim that two named entities are the \
 same). The substrate forbids automatic identity inference.
+- Do not reason about sibling branches, earlier or later τ_s ranges, \
+or other content you cannot see in this view. Comparative claims \
+("the most X of the Y accounts", "X is better than Y") are licensed \
+only when every item being compared appears in the view. If they do \
+not, make the claim about only the content you see, or do not make \
+it.
 - If a description is on a contested branch (say, :b-wife), evaluate \
 it within that branch's reality. Do not hold it against facts from a \
-sibling :contested branch.
+sibling :contested branch — and do not compare it to descriptions on \
+sibling branches unless those descriptions are in the view.
 - If you cannot make a good-faith judgment on a description, \
 verdict="noted" is correct. "needs-work" is for specific flaws, not \
 general uncertainty.
@@ -427,18 +455,39 @@ def _resolve_anchor_τ_a(anchor, events, descriptions) -> Optional[int]:
     return None
 
 
+def _classify_review(
+    raw: ReaderReview,
+    descriptions: list,
+    reviews_for: list,
+) -> Optional[str]:
+    """Validate a raw review against the declared invocation scope.
+    Returns None if accepted, or a reason string if it should be
+    dropped. R5 enforcement: membership in reviews_for is the
+    authoritative gate, not the prompt."""
+    if raw.description_id not in reviews_for:
+        return (
+            f"description_id {raw.description_id!r} is outside the "
+            f"declared reviews_for scope"
+        )
+    if not any(d.id == raw.description_id for d in descriptions):
+        return (
+            f"description_id {raw.description_id!r} does not resolve "
+            f"to any known description"
+        )
+    return None
+
+
 def _translate_review(
     raw: ReaderReview,
     descriptions: list,
     events: list,
     reviewer_id: str,
     current_τ_a: int,
-) -> Optional[ReviewEntry]:
-    """One ReaderReview → one ReviewEntry. Returns None if the LLM
-    referenced a description id we don't have (caller may log/drop)."""
-    desc = next((d for d in descriptions if d.id == raw.description_id), None)
-    if desc is None:
-        return None
+) -> ReviewEntry:
+    """One accepted ReaderReview → one ReviewEntry. Caller must have
+    already passed the review through _classify_review and seen None
+    (accepted); this function assumes the id resolves."""
+    desc = next(d for d in descriptions if d.id == raw.description_id)
     anchor_τ_a = _resolve_anchor_τ_a(desc.attached_to, events, descriptions)
     return ReviewEntry(
         reviewer_id=reviewer_id,
@@ -449,22 +498,56 @@ def _translate_review(
     )
 
 
-def _translate_answer(
+def _classify_answer(
     raw: ReaderAnswer,
     descriptions: list,
-    reviewer_id: str,
-    current_τ_a: int,
-) -> Optional[ProposedAnswer]:
-    """One ReaderAnswer → one ProposedAnswer. The proposed_description
-    inherits the question's anchor and branches (per sketch 01's
-    worked-example pattern), but carries its own kind per the LLM's
-    proposal."""
+    answers_for: list,
+) -> Optional[str]:
+    """Validate a raw answer against the declared invocation scope.
+    Returns None if accepted, or a reason string if it should be
+    dropped.
+
+    Three gates:
+      - `question_description_id` must be in `answers_for` (R5).
+      - The target description must exist.
+      - The target must have `is_question=True`. A ReaderAnswer naming
+        an ordinary description is a contract violation — answers are
+        for open questions only (descriptions-sketch-01 D3 + the
+        reader-model sketch's answer-shape).
+    """
+    if raw.question_description_id not in answers_for:
+        return (
+            f"question_description_id {raw.question_description_id!r} is "
+            f"outside the declared answers_for scope"
+        )
     question = next(
         (d for d in descriptions if d.id == raw.question_description_id),
         None,
     )
     if question is None:
-        return None
+        return (
+            f"question_description_id {raw.question_description_id!r} "
+            f"does not resolve to any known description"
+        )
+    if not question.is_question:
+        return (
+            f"description {raw.question_description_id!r} is not a "
+            f"question (is_question=False); answers are only valid for "
+            f"is_question=True descriptions"
+        )
+    return None
+
+
+def _translate_answer(
+    raw: ReaderAnswer,
+    descriptions: list,
+    reviewer_id: str,
+    current_τ_a: int,
+) -> ProposedAnswer:
+    """One accepted ReaderAnswer → one ProposedAnswer. Caller must have
+    already passed the answer through _classify_answer and seen None
+    (accepted); this function assumes the target is a valid question."""
+    question = next(d for d in descriptions if d.id == raw.question_description_id)
     safe_reviewer = reviewer_id.replace(":", "_")
     new_id = (
         f"{raw.question_description_id}_answer_"
@@ -567,6 +650,7 @@ def invoke_reader_model(
         return ReaderModelResult(
             reviews=[],
             proposed_answers=[],
+            dropped=[],
             raw_output=ReaderOutput(),
         )
 
@@ -594,27 +678,31 @@ def invoke_reader_model(
 
     raw: ReaderOutput = response.parsed_output
 
-    reviews = [
-        r
-        for r in (
-            _translate_review(
-                rr, descriptions, events, reviewer_id, current_τ_a
-            )
-            for rr in raw.reviews
+    reviews: list = []
+    proposed_answers: list = []
+    dropped: list = []
+
+    for rr in raw.reviews:
+        reason = _classify_review(rr, descriptions, reviews_for)
+        if reason is not None:
+            dropped.append(DroppedOutput(reason=reason, raw=rr))
+            continue
+        reviews.append(
+            _translate_review(rr, descriptions, events, reviewer_id, current_τ_a)
         )
-        if r is not None
-    ]
-    proposed_answers = [
-        p
-        for p in (
+
+    for ra in raw.answers:
+        reason = _classify_answer(ra, descriptions, answers_for)
+        if reason is not None:
+            dropped.append(DroppedOutput(reason=reason, raw=ra))
+            continue
+        proposed_answers.append(
             _translate_answer(ra, descriptions, reviewer_id, current_τ_a)
-            for ra in raw.answers
         )
-        if p is not None
-    ]
 
     return ReaderModelResult(
         reviews=reviews,
         proposed_answers=proposed_answers,
+        dropped=dropped,
         raw_output=raw,
     )

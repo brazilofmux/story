@@ -110,10 +110,16 @@ def _serialize_result(result, context: dict) -> dict:
             "rationale": pa.rationale,
         })
 
+    dropped_dump = []
+    for d in result.dropped:
+        raw_dump = d.raw.model_dump() if hasattr(d.raw, "model_dump") else str(d.raw)
+        dropped_dump.append({"reason": d.reason, "raw": raw_dump})
+
     return {
         "context": context,
         "reviews": reviews_dump,
         "proposed_answers": answers_dump,
+        "dropped": dropped_dump,
         "raw_output": result.raw_output.model_dump(),
     }
 
@@ -209,6 +215,15 @@ def main() -> int:
             print(f"  comment:")
             for line in rv.comment.splitlines() or [""]:
                 print(f"    {line}")
+
+    if result.dropped:
+        _print_section(f"DROPPED OUTPUTS ({len(result.dropped)})")
+        print("  LLM outputs rejected at ingest time (scope / structural "
+              "validation). Not translated into substrate records.")
+        for d in result.dropped:
+            print(f"\n  reason: {d.reason}")
+            raw_repr = d.raw.model_dump() if hasattr(d.raw, "model_dump") else str(d.raw)
+            print(f"  raw: {raw_repr}")
 
     _print_section(f"PROPOSED ANSWERS ({len(result.proposed_answers)})")
     if not result.proposed_answers:
