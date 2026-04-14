@@ -39,7 +39,9 @@ python3 test_proposal_walker.py  # walker tests (io.StringIO-driven, no terminal
 # requirements.txt. Use `--dry-run` to print the full prompt without calling
 # the API, or `--walk` to drop into an interactive accept/decline/skip walker
 # over the returned reviews and answer proposals.
-.venv/bin/python3 demo_reader_model.py --dry-run
+.venv/bin/python3 demo_reader_model.py --dry-run            # Rashomon (:b-woodcutter)
+.venv/bin/python3 demo_reader_model_oedipus.py --dry-run    # Oedipus (:canonical, through anagnorisis)
+.venv/bin/python3 demo_reader_model_macbeth.py --dry-run    # Macbeth (:canonical, full play)
 .venv/bin/python3 demo_reader_model.py --walk
 .venv/bin/python3 test_reader_model_client.py  # client structural tests
 ```

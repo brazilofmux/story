@@ -787,6 +787,30 @@ payoff is narrower than it might appear: it retires the
    or "all proofs"). For rendering anagnorisis chains, "all
    proofs" is informative; for most queries, "shortest" is what
    you want.
+9. **OQ9 — Innocent-civilian tagging for tighter compound
+   derivations.** Surfaced by the Macbeth reader-model probe
+   (provenance: `prototype/reader_model_macbeth_output.json`,
+   answer to `D_compound_predicates_candidate_for_derivation`).
+   Macbeth's tyrant rule as currently authored
+   (`kinslayer(X,_) ∧ regicide(X,_) ∧ king(X,_) ⇒ tyrant(X)`)
+   derives `tyrant(macbeth)` at coronation (τ_s=6) — the moment
+   he is first kinslayer, regicide, AND king. That misses an
+   important shading: the *Macduff-family slaughter* at τ_s=12
+   (`ordered_killing(macbeth, lady_macduff)`,
+   `ordered_killing(macbeth, macduff_son)`) is what canonically
+   *earns* the tyrant label in many readings — it's tyranny
+   targeting innocents, distinct from tyranny by usurpation.
+   The probe's proposed candidate:
+   `ordered_killing(X, Y) ∧ innocent(Y) ∧ king(X, _) ⇒ tyrant(X)`.
+   This requires a typed `innocent(...)` predicate the substrate
+   does not yet have. Inference-02 territory: either add an
+   `innocent` predicate authored per encoding, or generalize
+   to a typed-inequality / NAF-based "Y is not a participant
+   in any rebellion" condition (see OQ1). The probe's deeper
+   point: a rule set should be permissive enough that several
+   derivations of the same head can co-exist as alternative
+   proofs — multi-proof per OQ8 — letting the trajectory
+   verifier read which path actually fired.
 
 ## What happens next
 

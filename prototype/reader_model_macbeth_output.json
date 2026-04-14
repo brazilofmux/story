@@ -1,0 +1,315 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 30000,
+    "branch": ":canonical",
+    "up_to_τ_s": 18,
+    "up_to_τ_a": 1000000,
+    "events_in_view": [
+      "E_macbeth_kinsman_of_duncan",
+      "E_macbeth_thane_of_glamis",
+      "E_duncan_king_of_scotland",
+      "E_macbeth_defends_scotland",
+      "E_prophecy_first",
+      "E_thane_of_cawdor_awarded",
+      "E_letter_to_lady_macbeth",
+      "E_duncan_visits",
+      "E_duncan_killed",
+      "E_duncan_discovered",
+      "E_macbeth_crowned",
+      "E_banquo_killed",
+      "E_banquet_ghost",
+      "E_prophecy_second",
+      "E_macduff_flees",
+      "E_macduff_family_killed",
+      "E_sleepwalking",
+      "E_lady_macbeth_dies",
+      "E_birnam_moves",
+      "E_macduff_reveals_birth",
+      "E_macbeth_killed",
+      "E_malcolm_crowned"
+    ],
+    "descriptions_in_view": [
+      "D_macbeth_moral_trajectory",
+      "D_prophecy_ambiguity",
+      "D_witches_ontology_undecided",
+      "D_banquet_ghost_ontology_undecided",
+      "D_lady_macbeth_inverse_arc",
+      "D_compound_predicates_candidate_for_derivation",
+      "D_cumulative_judgment"
+    ],
+    "open_questions": [
+      "D_witches_ontology_undecided",
+      "D_banquet_ghost_ontology_undecided",
+      "D_compound_predicates_candidate_for_derivation"
+    ]
+  },
+  "review_candidates": [
+    {
+      "target_description_id": "D_macbeth_moral_trajectory",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 30000,
+      "verdict": "approved",
+      "anchor_τ_a": 26,
+      "comment": "Every killing cited is grounded in events: Duncan (E_duncan_killed — kinsman per E_macbeth_kinsman_of_duncan, king per E_duncan_king_of_scotland, guest per E_duncan_visits), Banquo (E_banquo_killed, ordered by Macbeth), Lady Macduff and son (E_macduff_family_killed, ordered by Macbeth). The 'hero of Act 1' claim is supported by E_macbeth_defends_scotland. The trajectory reading is well-grounded and internally consistent."
+    },
+    {
+      "target_description_id": "D_prophecy_ambiguity",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 30000,
+      "verdict": "approved",
+      "anchor_τ_a": 10,
+      "comment": "Each prophecy claim maps to events: 'Thane of Cawdor' → E_thane_of_cawdor_awarded, 'Will be king' → E_macbeth_crowned, 'none of woman born' → E_macduff_reveals_birth (born_not_of_woman(macduff)), 'Birnam Wood moves' → E_birnam_moves. The Caesarean-birth gloss is a reasonable interpretive expansion of born_not_of_woman(macduff). The framing that prophecies are literally true but that Macbeth's interpretations fail is cleanly supported by the event sequence."
+    },
+    {
+      "target_description_id": "D_witches_ontology_undecided",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 30000,
+      "verdict": "approved",
+      "anchor_τ_a": 10,
+      "comment": "The description accurately characterizes the encoding: E_prophecy_first and E_prophecy_second place prophecy content exclusively in agent_knowledge slots (known via utterance-heard), with no world-facts asserting foresight. The question is well-posed and the three candidate ontologies (supernatural, manipulative, projective) are legitimate options the encoding currently avoids choosing among."
+    },
+    {
+      "target_description_id": "D_banquet_ghost_ontology_undecided",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 30000,
+      "verdict": "approved",
+      "anchor_τ_a": 18,
+      "comment": "E_banquet_ghost records the apparition only as an agent_knowledge effect on macbeth, with no world-level assertion that the ghost is present. The description correctly notes the structural parallel to the Witches' encoding. The question is well-framed and identifies a genuine, deliberate gap in the substrate."
+    },
+    {
+      "target_description_id": "D_lady_macbeth_inverse_arc",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 30000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 22,
+      "comment": "Two claims overreach the events. First, 'her suicide' — E_lady_macbeth_dies is type 'death' with no cause specified; calling it suicide is an ungrounded attribution. Second, 'precedes his death by the smallest possible interval' — her death is at τ_s=14, his at τ_s=17, with E_birnam_moves (τ_s=15) and E_macduff_reveals_birth (τ_s=17) between them; three τ_s units and multiple events is not the smallest possible interval. The core inversion argument is strong and well-supported."
+    },
+    {
+      "target_description_id": "D_compound_predicates_candidate_for_derivation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 30000,
+      "verdict": "approved",
+      "anchor_τ_a": 14,
+      "comment": "The rules are verifiable against the event base: killed(macbeth,duncan) ∧ kinsman_of(macbeth,duncan), killed(macbeth,duncan) ∧ king(duncan,scotland), killed(macbeth,duncan) ∧ guest_of(duncan,macbeth) all hold. The tyrant depth-2 derivation chains correctly. The acknowledged gap — that ordered_killing(macbeth, lady_macduff/macduff_son) per E_macduff_family_killed does not yet factor into tyrant — is explicitly flagged for follow-on work."
+    },
+    {
+      "target_description_id": "D_cumulative_judgment",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 30000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 23,
+      "comment": "The description references 'the \"tomorrow\" soliloquy removes the capacity to feel' but no event in the view encodes this soliloquy. The trajectory argument's other anchor-points (Duncan's killing, Banquo's killing, Macduff-family slaughter) are all grounded in events; this one is not. The structural point about trajectory-pattern verification versus single-moment verification is sound."
+    }
+  ],
+  "answer_proposals": [
+    {
+      "question_description_id": "D_witches_ontology_undecided",
+      "proposed_description": {
+        "id": "D_witches_ontology_undecided_answer_by_llm_claude-opus-4-6_τ_a_30000",
+        "attached_to": {
+          "kind": "event",
+          "target_id": "E_prophecy_first"
+        },
+        "kind": "reader-frame",
+        "attention": "interpretive",
+        "text": "The encoding's ontological reticence about the Witches should be preserved as an explicit, permanent commitment rather than treated as a gap awaiting resolution. The event structure records prophecy content as agent_knowledge effects on macbeth and banquo (via utterance-heard) without any world-fact asserting foresight or causal power — and this is the right representation. The play supports at least three readings (genuine supernatural foresight, self-fulfilling manipulation, externalized ambition), and collapsing to one would lose interpretive range that the source material deliberately sustains. A formal marker such as ontology_of(witches) = deliberately_uncommitted would elevate this reticence from an implicit absence to a principled modeling decision. If a future branch wishes to explore a committed ontology, it can do so as a :contested branch (e.g., :b-witches-supernatural adding world-facts for foresight), leaving :canonical uncommitted.",
+        "authored_by": "llm:claude-opus-4-6",
+        "τ_a": 30000,
+        "is_question": false,
+        "branches": null,
+        "review_states": [],
+        "promoted_to": null,
+        "status": "provisional",
+        "metadata": {
+          "answers_question": "D_witches_ontology_undecided"
+        }
+      },
+      "proposer_id": "llm:claude-opus-4-6",
+      "rationale": "E_prophecy_first and E_prophecy_second both use agent_knowledge effects exclusively, never asserting world-facts about the Witches' nature. The description correctly identifies this as a structural choice worth formalizing rather than resolving.",
+      "proposed_at_τ_a": 30000,
+      "status": "pending"
+    },
+    {
+      "question_description_id": "D_banquet_ghost_ontology_undecided",
+      "proposed_description": {
+        "id": "D_banquet_ghost_ontology_undecided_answer_by_llm_claude-opus-4-6_τ_a_30000",
+        "attached_to": {
+          "kind": "event",
+          "target_id": "E_banquet_ghost"
+        },
+        "kind": "reader-frame",
+        "attention": "interpretive",
+        "text": "The ghost's agent-only encoding should be maintained as a deliberate parallel to the Witches' ontological reticence. E_banquet_ghost records the apparition as an agent_knowledge effect on macbeth alone — no other participant gains knowledge of the ghost, and no world-fact asserts its presence. This mirrors the dramatic structure: the ghost is perceptible only to Macbeth, making it structurally ambiguous between visitation and hallucination. Committing a world-fact (ghost-is-real) would invalidate the guilt-projection reading; committing to hallucination-only would lose the supernatural resonance with the Witches' prophecies. The two ontological questions (Witches, ghost) should be resolved — or left unresolved — as a pair, since the substrate treats them with the same pattern and they reinforce each other's interpretive openness.",
+        "authored_by": "llm:claude-opus-4-6",
+        "τ_a": 30000,
+        "is_question": false,
+        "branches": null,
+        "review_states": [],
+        "promoted_to": null,
+        "status": "provisional",
+        "metadata": {
+          "answers_question": "D_banquet_ghost_ontology_undecided"
+        }
+      },
+      "proposer_id": "llm:claude-opus-4-6",
+      "rationale": "E_banquet_ghost places the apparition effect only on macbeth's agent_knowledge, with no world-level assertion. This encoding pattern is structurally identical to E_prophecy_first's treatment of the Witches, as D_witches_ontology_undecided already notes.",
+      "proposed_at_τ_a": 30000,
+      "status": "pending"
+    },
+    {
+      "question_description_id": "D_compound_predicates_candidate_for_derivation",
+      "proposed_description": {
+        "id": "D_compound_predicates_candidate_for_derivation_answer_by_llm_claude-opus-4-6_τ_a_30000",
+        "attached_to": {
+          "kind": "event",
+          "target_id": "E_duncan_killed"
+        },
+        "kind": "provenance",
+        "attention": "interpretive",
+        "text": "The RESOLVED status is well-earned: the four inference rules correctly derive from base facts present in the view. kinslayer(macbeth, duncan) follows from E_duncan_killed + E_macbeth_kinsman_of_duncan; regicide(macbeth, duncan) from E_duncan_killed + E_duncan_king_of_scotland; breach_of_hospitality(macbeth, duncan) from E_duncan_killed + E_duncan_visits. The depth-2 tyrant(macbeth) derivation chains through kinslayer and regicide plus E_macbeth_crowned. The acknowledged gap around the tyrant rule is substantive: E_macduff_family_killed records ordered_killing(macbeth, lady_macduff) and ordered_killing(macbeth, macduff_son), but these facts do not contribute to the tyrant derivation. A candidate refinement for inference-02 would be: ordered_killing(X, Y) ∧ innocent(Y) ∧ king(X, _) ⇒ tyrant(X), which would give the Macduff-family slaughter independent force in the derivation rather than leaving tyrant dependent solely on the Duncan killing's compound breaches.",
+        "authored_by": "llm:claude-opus-4-6",
+        "τ_a": 30000,
+        "is_question": false,
+        "branches": null,
+        "review_states": [],
+        "promoted_to": null,
+        "status": "provisional",
+        "metadata": {
+          "answers_question": "D_compound_predicates_candidate_for_derivation"
+        }
+      },
+      "proposer_id": "llm:claude-opus-4-6",
+      "rationale": "All base predicates consumed by the rules are verifiable in the event list. The gap concerning E_macduff_family_killed is explicit in the description and addressable once the substrate supports innocent-civilian tagging.",
+      "proposed_at_τ_a": 30000,
+      "status": "pending"
+    }
+  ],
+  "edit_proposals": [
+    {
+      "source_description_id": "D_lady_macbeth_inverse_arc",
+      "proposed_description": {
+        "id": "D_lady_macbeth_inverse_arc_edit_by_llm_claude-opus-4-6_τ_a_30000",
+        "attached_to": {
+          "kind": "event",
+          "target_id": "E_sleepwalking"
+        },
+        "kind": "texture",
+        "attention": "interpretive",
+        "text": "Lady Macbeth is the play's driving force in Act 1 and Act 2 — she reads the letter and decides; she chides Macbeth into the killing; she handles the daggers after. Then the arc reverses. Macbeth becomes the calculating one (Banquo, the Macduff family); Lady Macbeth becomes the one who cannot bear it. The sleepwalking is the external symptom of the inversion complete; her death at τ_s=14 precedes his at τ_s=17, the two endpoints nearly adjacent in the play's compressed finale. The Impact Character role's *direction* is not constant across the play; the role itself inverts.",
+        "authored_by": "llm:claude-opus-4-6",
+        "τ_a": 30000,
+        "is_question": false,
+        "branches": null,
+        "review_states": [],
+        "promoted_to": null,
+        "status": "provisional",
+        "metadata": {}
+      },
+      "proposer_id": "llm:claude-opus-4-6",
+      "rationale": "Changed 'her suicide' to 'her death' to match E_lady_macbeth_dies (type 'death', no cause asserted). Replaced 'smallest possible interval' with 'nearly adjacent in the play's compressed finale', which is defensible without overstating proximity given three τ_s units and intervening events.",
+      "proposed_at_τ_a": 30000,
+      "status": "pending"
+    },
+    {
+      "source_description_id": "D_cumulative_judgment",
+      "proposed_description": {
+        "id": "D_cumulative_judgment_edit_by_llm_claude-opus-4-6_τ_a_30000",
+        "attached_to": {
+          "kind": "event",
+          "target_id": "E_lady_macbeth_dies"
+        },
+        "kind": "reader-frame",
+        "attention": "structural",
+        "text": "Under dramatica-complete's DynamicStoryPoint(judgment=bad), Macbeth's Judgment is earned across the trajectory, not at any moment. Duncan's killing is the precipitation that drops him into the descent, but judgment=bad lands cumulatively: Banquo's killing removes the comradeship; the Macduff-family slaughter removes the pretext of political necessity; Lady Macbeth's death severs his last human attachment. A single-moment verifier at τ_s=17 (Macbeth's death) could confirm judgment=bad for the wrong reason (the MC ends dead). A trajectory-pattern verifier that reads the accumulating descent is the right check. This is the forcing case for lowering-sketch-02's F8.",
+        "authored_by": "llm:claude-opus-4-6",
+        "τ_a": 30000,
+        "is_question": false,
+        "branches": null,
+        "review_states": [],
+        "promoted_to": null,
+        "status": "provisional",
+        "metadata": {}
+      },
+      "proposer_id": "llm:claude-opus-4-6",
+      "rationale": "Replaced the 'tomorrow' soliloquy reference (no event in view encodes it) with Lady Macbeth's death (E_lady_macbeth_dies, τ_s=14), which is grounded in the events and preserves the escalating-loss structure of the trajectory argument.",
+      "proposed_at_τ_a": 30000,
+      "status": "pending"
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "reviews": [
+      {
+        "description_id": "D_macbeth_moral_trajectory",
+        "verdict": "approved",
+        "rationale": "Every killing cited is grounded in events: Duncan (E_duncan_killed — kinsman per E_macbeth_kinsman_of_duncan, king per E_duncan_king_of_scotland, guest per E_duncan_visits), Banquo (E_banquo_killed, ordered by Macbeth), Lady Macduff and son (E_macduff_family_killed, ordered by Macbeth). The 'hero of Act 1' claim is supported by E_macbeth_defends_scotland. The trajectory reading is well-grounded and internally consistent."
+      },
+      {
+        "description_id": "D_prophecy_ambiguity",
+        "verdict": "approved",
+        "rationale": "Each prophecy claim maps to events: 'Thane of Cawdor' → E_thane_of_cawdor_awarded, 'Will be king' → E_macbeth_crowned, 'none of woman born' → E_macduff_reveals_birth (born_not_of_woman(macduff)), 'Birnam Wood moves' → E_birnam_moves. The Caesarean-birth gloss is a reasonable interpretive expansion of born_not_of_woman(macduff). The framing that prophecies are literally true but that Macbeth's interpretations fail is cleanly supported by the event sequence."
+      },
+      {
+        "description_id": "D_witches_ontology_undecided",
+        "verdict": "approved",
+        "rationale": "The description accurately characterizes the encoding: E_prophecy_first and E_prophecy_second place prophecy content exclusively in agent_knowledge slots (known via utterance-heard), with no world-facts asserting foresight. The question is well-posed and the three candidate ontologies (supernatural, manipulative, projective) are legitimate options the encoding currently avoids choosing among."
+      },
+      {
+        "description_id": "D_banquet_ghost_ontology_undecided",
+        "verdict": "approved",
+        "rationale": "E_banquet_ghost records the apparition only as an agent_knowledge effect on macbeth, with no world-level assertion that the ghost is present. The description correctly notes the structural parallel to the Witches' encoding. The question is well-framed and identifies a genuine, deliberate gap in the substrate."
+      },
+      {
+        "description_id": "D_lady_macbeth_inverse_arc",
+        "verdict": "needs-work",
+        "rationale": "Two claims overreach the events. First, 'her suicide' — E_lady_macbeth_dies is type 'death' with no cause specified; calling it suicide is an ungrounded attribution. Second, 'precedes his death by the smallest possible interval' — her death is at τ_s=14, his at τ_s=17, with E_birnam_moves (τ_s=15) and E_macduff_reveals_birth (τ_s=17) between them; three τ_s units and multiple events is not the smallest possible interval. The core inversion argument is strong and well-supported."
+      },
+      {
+        "description_id": "D_compound_predicates_candidate_for_derivation",
+        "verdict": "approved",
+        "rationale": "The rules are verifiable against the event base: killed(macbeth,duncan) ∧ kinsman_of(macbeth,duncan), killed(macbeth,duncan) ∧ king(duncan,scotland), killed(macbeth,duncan) ∧ guest_of(duncan,macbeth) all hold. The tyrant depth-2 derivation chains correctly. The acknowledged gap — that ordered_killing(macbeth, lady_macduff/macduff_son) per E_macduff_family_killed does not yet factor into tyrant — is explicitly flagged for follow-on work."
+      },
+      {
+        "description_id": "D_cumulative_judgment",
+        "verdict": "needs-work",
+        "rationale": "The description references 'the \"tomorrow\" soliloquy removes the capacity to feel' but no event in the view encodes this soliloquy. The trajectory argument's other anchor-points (Duncan's killing, Banquo's killing, Macduff-family slaughter) are all grounded in events; this one is not. The structural point about trajectory-pattern verification versus single-moment verification is sound."
+      }
+    ],
+    "answers": [
+      {
+        "question_description_id": "D_witches_ontology_undecided",
+        "answer_kind": "reader-frame",
+        "answer_text": "The encoding's ontological reticence about the Witches should be preserved as an explicit, permanent commitment rather than treated as a gap awaiting resolution. The event structure records prophecy content as agent_knowledge effects on macbeth and banquo (via utterance-heard) without any world-fact asserting foresight or causal power — and this is the right representation. The play supports at least three readings (genuine supernatural foresight, self-fulfilling manipulation, externalized ambition), and collapsing to one would lose interpretive range that the source material deliberately sustains. A formal marker such as ontology_of(witches) = deliberately_uncommitted would elevate this reticence from an implicit absence to a principled modeling decision. If a future branch wishes to explore a committed ontology, it can do so as a :contested branch (e.g., :b-witches-supernatural adding world-facts for foresight), leaving :canonical uncommitted.",
+        "rationale": "E_prophecy_first and E_prophecy_second both use agent_knowledge effects exclusively, never asserting world-facts about the Witches' nature. The description correctly identifies this as a structural choice worth formalizing rather than resolving."
+      },
+      {
+        "question_description_id": "D_banquet_ghost_ontology_undecided",
+        "answer_kind": "reader-frame",
+        "answer_text": "The ghost's agent-only encoding should be maintained as a deliberate parallel to the Witches' ontological reticence. E_banquet_ghost records the apparition as an agent_knowledge effect on macbeth alone — no other participant gains knowledge of the ghost, and no world-fact asserts its presence. This mirrors the dramatic structure: the ghost is perceptible only to Macbeth, making it structurally ambiguous between visitation and hallucination. Committing a world-fact (ghost-is-real) would invalidate the guilt-projection reading; committing to hallucination-only would lose the supernatural resonance with the Witches' prophecies. The two ontological questions (Witches, ghost) should be resolved — or left unresolved — as a pair, since the substrate treats them with the same pattern and they reinforce each other's interpretive openness.",
+        "rationale": "E_banquet_ghost places the apparition effect only on macbeth's agent_knowledge, with no world-level assertion. This encoding pattern is structurally identical to E_prophecy_first's treatment of the Witches, as D_witches_ontology_undecided already notes."
+      },
+      {
+        "question_description_id": "D_compound_predicates_candidate_for_derivation",
+        "answer_kind": "provenance",
+        "answer_text": "The RESOLVED status is well-earned: the four inference rules correctly derive from base facts present in the view. kinslayer(macbeth, duncan) follows from E_duncan_killed + E_macbeth_kinsman_of_duncan; regicide(macbeth, duncan) from E_duncan_killed + E_duncan_king_of_scotland; breach_of_hospitality(macbeth, duncan) from E_duncan_killed + E_duncan_visits. The depth-2 tyrant(macbeth) derivation chains through kinslayer and regicide plus E_macbeth_crowned. The acknowledged gap around the tyrant rule is substantive: E_macduff_family_killed records ordered_killing(macbeth, lady_macduff) and ordered_killing(macbeth, macduff_son), but these facts do not contribute to the tyrant derivation. A candidate refinement for inference-02 would be: ordered_killing(X, Y) ∧ innocent(Y) ∧ king(X, _) ⇒ tyrant(X), which would give the Macduff-family slaughter independent force in the derivation rather than leaving tyrant dependent solely on the Duncan killing's compound breaches.",
+        "rationale": "All base predicates consumed by the rules are verifiable in the event list. The gap concerning E_macduff_family_killed is explicit in the description and addressable once the substrate supports innocent-civilian tagging."
+      }
+    ],
+    "edits": [
+      {
+        "source_description_id": "D_lady_macbeth_inverse_arc",
+        "new_text": "Lady Macbeth is the play's driving force in Act 1 and Act 2 — she reads the letter and decides; she chides Macbeth into the killing; she handles the daggers after. Then the arc reverses. Macbeth becomes the calculating one (Banquo, the Macduff family); Lady Macbeth becomes the one who cannot bear it. The sleepwalking is the external symptom of the inversion complete; her death at τ_s=14 precedes his at τ_s=17, the two endpoints nearly adjacent in the play's compressed finale. The Impact Character role's *direction* is not constant across the play; the role itself inverts.",
+        "new_kind": null,
+        "rationale": "Changed 'her suicide' to 'her death' to match E_lady_macbeth_dies (type 'death', no cause asserted). Replaced 'smallest possible interval' with 'nearly adjacent in the play's compressed finale', which is defensible without overstating proximity given three τ_s units and intervening events."
+      },
+      {
+        "source_description_id": "D_cumulative_judgment",
+        "new_text": "Under dramatica-complete's DynamicStoryPoint(judgment=bad), Macbeth's Judgment is earned across the trajectory, not at any moment. Duncan's killing is the precipitation that drops him into the descent, but judgment=bad lands cumulatively: Banquo's killing removes the comradeship; the Macduff-family slaughter removes the pretext of political necessity; Lady Macbeth's death severs his last human attachment. A single-moment verifier at τ_s=17 (Macbeth's death) could confirm judgment=bad for the wrong reason (the MC ends dead). A trajectory-pattern verifier that reads the accumulating descent is the right check. This is the forcing case for lowering-sketch-02's F8.",
+        "new_kind": null,
+        "rationale": "Replaced the 'tomorrow' soliloquy reference (no event in view encodes it) with Lady Macbeth's death (E_lady_macbeth_dies, τ_s=14), which is grounded in the events and preserves the escalating-loss structure of the trajectory argument."
+      }
+    ]
+  }
+}

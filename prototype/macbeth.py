@@ -82,7 +82,8 @@ from substrate import (
     Slot, Confidence, Diegetic, Narrative,
     Held, KnowledgeEffect, WorldEffect,
     SjuzhetEntry, Disclosure,
-    Description, AnchorRef, Attention, anchor_event, anchor_desc,
+    Description, AnchorRef, Attention, DescStatus,
+    anchor_event, anchor_desc,
     Rule,
 )
 
@@ -1106,6 +1107,39 @@ DESCRIPTIONS = [
               "across the play; the role itself inverts."),
         authored_by="author",
         τ_a=104,
+        status=DescStatus.SUPERSEDED,
+        metadata={
+            "superseded_by": "D_lady_macbeth_inverse_arc_edit_by_llm_claude-opus-4-6_τ_a_30000",
+        },
+    ),
+
+    # Probe-authored edit, accepted at τ_a=30000. Provenance:
+    # reader_model_macbeth_output.json. The probe correctly caught two
+    # ungrounded claims in the prior text: (1) "her suicide" attributes
+    # cause that E_lady_macbeth_dies (typed "death") does not assert;
+    # (2) "smallest possible interval" overstates proximity given
+    # τ_s=14 → τ_s=17 with intervening events.
+    Description(
+        id="D_lady_macbeth_inverse_arc_edit_by_llm_claude-opus-4-6_τ_a_30000",
+        attached_to=anchor_event("E_sleepwalking"),
+        kind="texture",
+        attention=Attention.INTERPRETIVE,
+        text=("Lady Macbeth is the play's driving force in Act 1 and "
+              "Act 2 — she reads the letter and decides; she chides "
+              "Macbeth into the killing; she handles the daggers after. "
+              "Then the arc reverses. Macbeth becomes the calculating "
+              "one (Banquo, the Macduff family); Lady Macbeth becomes "
+              "the one who cannot bear it. The sleepwalking is the "
+              "external symptom of the inversion complete; her death "
+              "at τ_s=14 precedes his at τ_s=17, the two endpoints "
+              "nearly adjacent in the play's compressed finale. The "
+              "Impact Character role's *direction* is not constant "
+              "across the play; the role itself inverts."),
+        authored_by="llm:claude-opus-4-6",
+        τ_a=30_000,
+        metadata={
+            "supersedes": "D_lady_macbeth_inverse_arc",
+        },
     ),
 
     Description(
@@ -1143,6 +1177,10 @@ DESCRIPTIONS = [
         attached_to=anchor_event("E_lady_macbeth_dies"),
         kind="reader-frame",
         attention=Attention.STRUCTURAL,
+        status=DescStatus.SUPERSEDED,
+        metadata={
+            "superseded_by": "D_cumulative_judgment_edit_by_llm_claude-opus-4-6_τ_a_30000",
+        },
         text=("Under dramatica-complete's DynamicStoryPoint(judgment=bad), "
               "Macbeth's Judgment is earned across the trajectory, not "
               "at any moment. Duncan's killing is the precipitation "
@@ -1158,6 +1196,175 @@ DESCRIPTIONS = [
               "lowering-sketch-02's F8."),
         authored_by="author",
         τ_a=106,
+    ),
+
+    # Probe-authored edit, accepted at τ_a=30000. Provenance:
+    # reader_model_macbeth_output.json. The probe correctly caught
+    # that the prior text referenced "the 'tomorrow' soliloquy",
+    # which is not encoded as any event in the view. The corrected
+    # version anchors that step in Lady Macbeth's death (which IS
+    # in the view, E_lady_macbeth_dies at τ_s=14), preserving the
+    # escalating-loss structure of the trajectory argument.
+    Description(
+        id="D_cumulative_judgment_edit_by_llm_claude-opus-4-6_τ_a_30000",
+        attached_to=anchor_event("E_lady_macbeth_dies"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("Under dramatica-complete's DynamicStoryPoint(judgment=bad), "
+              "Macbeth's Judgment is earned across the trajectory, not "
+              "at any moment. Duncan's killing is the precipitation "
+              "that drops him into the descent, but judgment=bad lands "
+              "cumulatively: Banquo's killing removes the comradeship; "
+              "the Macduff-family slaughter removes the pretext of "
+              "political necessity; Lady Macbeth's death severs his "
+              "last human attachment. A single-moment verifier at "
+              "τ_s=17 (Macbeth's death) could confirm judgment=bad for "
+              "the wrong reason (the MC ends dead). A trajectory-"
+              "pattern verifier that reads the accumulating descent is "
+              "the right check. This is the forcing case for "
+              "lowering-sketch-02's F8."),
+        authored_by="llm:claude-opus-4-6",
+        τ_a=30_000,
+        metadata={
+            "supersedes": "D_cumulative_judgment",
+        },
+    ),
+
+    # Probe-authored answer to D_witches_ontology_undecided, accepted
+    # at τ_a=30000. The probe argues for preserving the encoding's
+    # ontological reticence as an explicit, permanent commitment
+    # rather than a gap awaiting resolution; proposes that future
+    # ontology commitments live on :contested branches rather than
+    # on :canonical.
+    Description(
+        id="D_witches_ontology_undecided_answer_by_llm_claude-opus-4-6_τ_a_30000",
+        attached_to=anchor_event("E_prophecy_first"),
+        kind="reader-frame",
+        attention=Attention.INTERPRETIVE,
+        text=("The encoding's ontological reticence about the Witches "
+              "should be preserved as an explicit, permanent commitment "
+              "rather than treated as a gap awaiting resolution. The "
+              "event structure records prophecy content as agent_"
+              "knowledge effects on macbeth and banquo (via utterance-"
+              "heard) without any world-fact asserting foresight or "
+              "causal power — and this is the right representation. "
+              "The play supports at least three readings (genuine "
+              "supernatural foresight, self-fulfilling manipulation, "
+              "externalized ambition), and collapsing to one would "
+              "lose interpretive range that the source material "
+              "deliberately sustains. A formal marker such as "
+              "ontology_of(witches) = deliberately_uncommitted would "
+              "elevate this reticence from an implicit absence to a "
+              "principled modeling decision. If a future branch wishes "
+              "to explore a committed ontology, it can do so as a "
+              ":contested branch (e.g., :b-witches-supernatural adding "
+              "world-facts for foresight), leaving :canonical "
+              "uncommitted."),
+        authored_by="llm:claude-opus-4-6",
+        τ_a=30_000,
+        metadata={
+            "answers_question": "D_witches_ontology_undecided",
+        },
+    ),
+
+    # Probe-authored answer to D_banquet_ghost_ontology_undecided.
+    # Argues that Witches' and ghost's ontology questions should
+    # resolve (or stay open) as a pair, since they share the agent-
+    # only encoding pattern.
+    Description(
+        id="D_banquet_ghost_ontology_undecided_answer_by_llm_claude-opus-4-6_τ_a_30000",
+        attached_to=anchor_event("E_banquet_ghost"),
+        kind="reader-frame",
+        attention=Attention.INTERPRETIVE,
+        text=("The ghost's agent-only encoding should be maintained "
+              "as a deliberate parallel to the Witches' ontological "
+              "reticence. E_banquet_ghost records the apparition as "
+              "an agent_knowledge effect on macbeth alone — no other "
+              "participant gains knowledge of the ghost, and no "
+              "world-fact asserts its presence. This mirrors the "
+              "dramatic structure: the ghost is perceptible only to "
+              "Macbeth, making it structurally ambiguous between "
+              "visitation and hallucination. Committing a world-fact "
+              "(ghost-is-real) would invalidate the guilt-projection "
+              "reading; committing to hallucination-only would lose "
+              "the supernatural resonance with the Witches' "
+              "prophecies. The two ontological questions (Witches, "
+              "ghost) should be resolved — or left unresolved — as a "
+              "pair, since the substrate treats them with the same "
+              "pattern and they reinforce each other's interpretive "
+              "openness."),
+        authored_by="llm:claude-opus-4-6",
+        τ_a=30_000,
+        metadata={
+            "answers_question": "D_banquet_ghost_ontology_undecided",
+        },
+    ),
+
+    # Probe-authored answer to D_compound_predicates_candidate_for_
+    # derivation. Validates the resolved status of the original
+    # question and proposes a substantive inference-02 candidate
+    # rule for tightening tyrant() to the Macduff-family event.
+    Description(
+        id="D_compound_predicates_candidate_for_derivation_answer_by_llm_claude-opus-4-6_τ_a_30000",
+        attached_to=anchor_event("E_duncan_killed"),
+        kind="provenance",
+        attention=Attention.INTERPRETIVE,
+        text=("The RESOLVED status is well-earned: the four inference "
+              "rules correctly derive from base facts present in the "
+              "view. kinslayer(macbeth, duncan) follows from "
+              "E_duncan_killed + E_macbeth_kinsman_of_duncan; "
+              "regicide(macbeth, duncan) from E_duncan_killed + "
+              "E_duncan_king_of_scotland; breach_of_hospitality"
+              "(macbeth, duncan) from E_duncan_killed + E_duncan_"
+              "visits. The depth-2 tyrant(macbeth) derivation chains "
+              "through kinslayer and regicide plus E_macbeth_crowned. "
+              "The acknowledged gap around the tyrant rule is "
+              "substantive: E_macduff_family_killed records ordered_"
+              "killing(macbeth, lady_macduff) and ordered_killing"
+              "(macbeth, macduff_son), but these facts do not "
+              "contribute to the tyrant derivation. A candidate "
+              "refinement for inference-02 would be: ordered_killing"
+              "(X, Y) ∧ innocent(Y) ∧ king(X, _) ⇒ tyrant(X), which "
+              "would give the Macduff-family slaughter independent "
+              "force in the derivation rather than leaving tyrant "
+              "dependent solely on the Duncan killing's compound "
+              "breaches."),
+        authored_by="llm:claude-opus-4-6",
+        τ_a=30_000,
+        metadata={
+            "answers_question": "D_compound_predicates_candidate_for_derivation",
+        },
+    ),
+
+    # Author-authored authorial-uncertainty question banking the
+    # substantive proposal from the probe's witches/ghost answers
+    # (the substrate-level ontology-meta-marker idea). Authored at
+    # τ_a=30001 — just after the probe's records, marking it as a
+    # follow-on consideration.
+    Description(
+        id="D_ontology_meta_marker_proposal",
+        attached_to=anchor_desc(
+            "D_witches_ontology_undecided_answer_by_llm_claude-opus-4-6_τ_a_30000"
+        ),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("The Macbeth probe's witches/ghost answers proposed a "
+              "new substrate-level marker: ontology_of(X) = "
+              "deliberately_uncommitted. This would distinguish "
+              "'we haven't decided' (a gap awaiting work) from 'we "
+              "deliberately won't decide' (an authorial commitment "
+              "to interpretive openness). The substrate today has "
+              "no such marker; an authorial-uncertainty description "
+              "(like D_witches_ontology_undecided itself) is the "
+              "only mechanism for the second case, but it conflates "
+              "the two. Open question: should the substrate add a "
+              "first-class meta-marker for deliberate ontological "
+              "commitment-to-reticence, or is the description "
+              "surface sufficient? Banked for a future descriptions-"
+              "sketch-02 or substrate-sketch-06 pass."),
+        is_question=True,
+        authored_by="author",
+        τ_a=30_001,
     ),
 
 ]
