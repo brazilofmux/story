@@ -683,6 +683,71 @@ def test_oedipus_anagnorisis_collapses_all_central_ironies():
     )
 
 
+def test_oedipus_does_not_query_know_parentage_before_anagnorisis():
+    """Temporal contract: Oedipus's realization of his parentage lands
+    at E_oedipus_anagnorisis (τ_s=13), not at E_shepherd_testimony
+    (τ_s=12). At τ_s=12 the shepherd gives him parentage FACTS about
+    the-exposed-baby, but the identity assertion (oedipus =
+    the-exposed-baby) is Oedipus's own realization — the shepherd
+    does not assert it. So substitution-aware holds must still
+    return None for child_of(oedipus, laius) at τ_s=12."""
+    from oedipus import FABULA, child_of
+    all_b = {CANONICAL_LABEL: CANONICAL}
+    scoped = scope(CANONICAL, FABULA, all_b)
+    pre = project_knowledge("oedipus", scoped, 12)
+    post = project_knowledge("oedipus", scoped, 13)
+    assert pre.holds(child_of("oedipus", "laius")) is None, (
+        "Oedipus query-knows child_of(oedipus, laius) at τ_s=12 — "
+        "the anagnorisis payoff is landing a beat early"
+    )
+    assert pre.holds(child_of("oedipus", "jocasta")) is None, (
+        "Oedipus query-knows child_of(oedipus, jocasta) at τ_s=12 — "
+        "the anagnorisis payoff is landing a beat early"
+    )
+    # After the anagnorisis, both derive via substitution.
+    assert post.holds(child_of("oedipus", "laius")) is not None
+    assert post.holds(child_of("oedipus", "jocasta")) is not None
+
+
+def test_shepherd_and_messenger_do_not_hold_oedipus_identity_at_exposure():
+    """Temporal contract: identity(oedipus, the-exposed-baby) is not
+    lodged into the shepherd's or messenger's state at τ_s=-99. At
+    that story-time 'Oedipus' is not yet a named referent — the baby
+    has just been delivered; the naming and upbringing are decades
+    later. The shepherd never holds the identity in this encoding;
+    the messenger learns it at E_upbringing_in_corinth (τ_s=-50)."""
+    from oedipus import FABULA
+    from substrate import IDENTITY_PREDICATE
+    all_b = {CANONICAL_LABEL: CANONICAL}
+    scoped = scope(CANONICAL, FABULA, all_b)
+
+    def has_identity(agent_id: str, τ_s: int) -> bool:
+        state = project_knowledge(agent_id, scoped, τ_s)
+        target = Prop(IDENTITY_PREDICATE, ("oedipus", "the-exposed-baby"))
+        return state.holds_literal(target) is not None
+
+    # At τ_s=-99 (exposure), neither agent holds the identity literally.
+    assert not has_identity("shepherd", -99), (
+        "shepherd holds identity(oedipus, the-exposed-baby) at τ_s=-99 — "
+        "smuggles later knowledge backward into earlier state"
+    )
+    assert not has_identity("messenger", -99), (
+        "messenger holds identity(oedipus, the-exposed-baby) at τ_s=-99 — "
+        "Oedipus is not yet named at this story-time"
+    )
+    # At τ_s=-50 (upbringing), the messenger forms the identity. The
+    # shepherd still does not hold it (he is isolated in the countryside
+    # and never learns the adopted name in this encoding).
+    assert has_identity("messenger", -50), (
+        "messenger should hold the identity by τ_s=-50, when Oedipus is "
+        "named at Polybus's court"
+    )
+    assert not has_identity("shepherd", 13), (
+        "shepherd should never hold identity(oedipus, the-exposed-baby) "
+        "in this encoding; the combinatorial insight is Oedipus's"
+    )
+
+
 # ============================================================================
 # Runner
 # ============================================================================
@@ -729,6 +794,8 @@ TESTS = [
     test_oedipus_τ_d_0_reader_outruns_oedipus_on_central_props,
     test_jocasta_anagnorisis_collapses_reader_jocasta_killed_irony,
     test_oedipus_anagnorisis_collapses_all_central_ironies,
+    test_oedipus_does_not_query_know_parentage_before_anagnorisis,
+    test_shepherd_and_messenger_do_not_hold_oedipus_identity_at_exposure,
 ]
 
 

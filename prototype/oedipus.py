@@ -274,23 +274,25 @@ FABULA = [
                     slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
                     note="thinks exposure succeeded"),
             # The shepherd knows the baby came from Laius's house and did
-            # not die — he gave it to the Corinthian messenger. He also
-            # knows (through the later chain: messenger → Polybus raises
-            # as Oedipus) the identity, and he can name it under pressure.
+            # not die — he gave it to the Corinthian messenger. He does
+            # NOT hold identity(oedipus, the-exposed-baby) at this τ_s:
+            # Oedipus is not yet named. The shepherd's identity knowledge
+            # comes later (if at all); in this encoding, the shepherd
+            # never directly holds it — he provides parentage facts, and
+            # Oedipus's anagnorisis is what combines them with the
+            # messenger's chain to assert the identity.
             observe("shepherd", child_of("the-exposed-baby", "laius"), -99,
                     note="served in Laius's house; knows the baby's parentage"),
             observe("shepherd", child_of("the-exposed-baby", "jocasta"), -99,
                     note="same"),
-            observe("shepherd", identity_prop("oedipus", "the-exposed-baby"), -99,
-                    note="knows the chain: Laius's house → Cithaeron → "
-                         "messenger → Polybus's household as Oedipus"),
-            # The Corinthian messenger knows he received the baby from the
-            # Theban shepherd and delivered him to Polybus, where the
-            # child was raised as Oedipus. He holds the identity.
-            observe("messenger", adopted_by("oedipus", "polybus"), -99,
-                    note="delivered the child himself"),
-            observe("messenger", identity_prop("oedipus", "the-exposed-baby"), -99,
-                    note="direct knowledge from delivering the child"),
+            # The Corinthian messenger at this τ_s knows he delivered the
+            # baby (the-exposed-baby) to Polybus. He does NOT yet hold
+            # identity(oedipus, the-exposed-baby) — Oedipus is not named
+            # until the upbringing event at τ_s=-50, where the messenger
+            # learns the adopted name and forms the identity.
+            observe("messenger", adopted_by("the-exposed-baby", "polybus"), -99,
+                    note="delivered the child himself; name 'Oedipus' not "
+                         "yet assigned at this τ_s"),
         ),
     ),
 
@@ -307,6 +309,14 @@ FABULA = [
             observe("oedipus", child_of("oedipus", "merope"), -50,
                     slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
                     note="raised as their son"),
+            # The messenger, at the Corinthian court, witnesses the baby
+            # he delivered being named Oedipus and raised by Polybus. This
+            # is when he forms identity(oedipus, the-exposed-baby) — not
+            # at the exposure event, where Oedipus did not yet exist as a
+            # named referent.
+            observe("messenger", identity_prop("oedipus", "the-exposed-baby"), -50,
+                    note="witnesses the baby grow up at Polybus's court and "
+                         "be named Oedipus"),
         ),
     ),
 
@@ -492,18 +502,17 @@ FABULA = [
         participants={"speaker": "shepherd", "listener": "oedipus"},
         effects=(
             # The Shepherd, pressured, confirms: the baby came from Laius's
-            # house, and he handed it to the Corinthian messenger. The
-            # shepherd names the identity directly — he has held it since
-            # the exposure (he rescued the baby; the messenger brought it
-            # to Polybus; Oedipus is that child).
+            # house, and he handed it to the Corinthian messenger. He does
+            # NOT assert identity(oedipus, the-exposed-baby) — the shepherd
+            # does not hold that identity in his own state, and the
+            # combinatorial insight (the messenger's chain ended with this
+            # baby becoming Oedipus) is Oedipus's realization, not the
+            # shepherd's testimony.
             told_by("oedipus", "shepherd",
                     child_of("the-exposed-baby", "laius"), 12,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
             told_by("oedipus", "shepherd",
                     child_of("the-exposed-baby", "jocasta"), 12,
-                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
-            told_by("oedipus", "shepherd",
-                    identity_prop("oedipus", "the-exposed-baby"), 12,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN),
         ),
     ),
@@ -514,17 +523,26 @@ FABULA = [
         τ_s=13, τ_a=12,
         participants={"agent": "oedipus"},
         effects=(
-            # Oedipus's anagnorisis. The shepherd's testimony already
-            # supplied identity(oedipus, the-exposed-baby) KNOWN. What
-            # this event adds:
-            #   1. Promote identity(oedipus, the-crossroads-killer) from
-            #      SUSPECTED to KNOWN — he now fully owns the identity
-            #      with the crossroads-killer (himself).
-            #   2. Assert identity(laius, the-crossroads-victim) KNOWN —
-            #      he realizes the stranger he killed was Laius, his
-            #      father.
-            #   3. Close the GAP on his real parents (an acknowledged
-            #      open question is now resolved; remove the GAP record).
+            # Oedipus's anagnorisis. This event combines the messenger's
+            # prior reveal (the baby went to Polybus, was raised as me)
+            # with the shepherd's testimony (the baby came from Laius's
+            # house) to assert the central identity. Three identities
+            # land at once — this is the combinatorial click:
+            #   1. identity(oedipus, the-exposed-baby) — "I was the
+            #      exposed child; my mother and father are Jocasta and
+            #      Laius."
+            #   2. identity(oedipus, the-crossroads-killer) — promoted
+            #      from SUSPECTED (at τ_s=5) to KNOWN. by_prop dict
+            #      semantics overwrites the SUSPECTED record under the
+            #      same Prop key.
+            #   3. identity(laius, the-crossroads-victim) — "the stranger
+            #      at the crossroads was Laius, my father."
+            # Plus one factual dislodgement: the gap_real_parents GAP
+            # closes.
+            assert_identity("oedipus", "oedipus", "the-exposed-baby", 13,
+                            note="the baby the shepherd rescued, brought by "
+                                 "the messenger to Polybus, raised as me — "
+                                 "I am that child"),
             assert_identity("oedipus", "oedipus", "the-crossroads-killer", 13,
                             note="promotes prior SUSPECTED to KNOWN; by_prop "
                                  "dict overwrites the SUSPECTED entry"),
@@ -538,7 +556,7 @@ FABULA = [
             # killed(oedipus, laius), child_of(oedipus, laius),
             # child_of(oedipus, jocasta), married(oedipus, jocasta). All
             # derive at query time from Oedipus's literal held set plus
-            # the identity assertions.
+            # the three identity assertions above.
         ),
     ),
 
