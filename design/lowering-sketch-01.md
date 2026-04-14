@@ -127,6 +127,63 @@ the base dramatic-sketch-01 Oedipus encoding:
   `D_parricide_incest_authored_not_derived` (+ its accepted
   answer), `D_view_cannot_see_τ_d`.
 
+## Four kinds of upper-to-lower coupling
+
+Before the walk-through: upper-dialect records relate to the
+substrate in more than one way, and separating the kinds is
+load-bearing for the rest of this sketch.
+
+The first draft of this sketch framed every upper record as either
+"lowers" or "doesn't lower," and treated non-lowering as a single
+category. That was too coarse. The exercise actually surfaced at
+least four distinct kinds of coupling, and the Lowering mechanism
+(architecture-02 A7) is appropriate for only one of them:
+
+1. **Realization.** An upper record is *made true by* specific
+   lower records. `Character(C_oedipus)` is realized by
+   `Entity("oedipus")`. `Scene(S_anagnorisis)` is realized by
+   `E_oedipus_anagnorisis` plus its sjuzhet entry plus its
+   descriptions. A Lowering record points at the specific
+   substrate records that realize the upper one. This is the
+   Lowering mechanism's proper scope.
+2. **Characterization.** An upper record is a *pattern-label* —
+   a classification that the substrate either fits or doesn't,
+   evaluated at a point in time or on a set of substrate records.
+   `DomainAssignment(overall-story, situation)` classifies the
+   Throughline's events as external-state-oriented. No specific
+   substrate record *is* the Domain; the Domain is the pattern's
+   name, verifiable against the substrate by running a
+   classification check. A Lowering record is not the right
+   mechanism; a cross-boundary **verifier** (architecture-02 A8)
+   that runs a substrate pattern check is.
+3. **Claim.** An upper record *asserts something about substrate
+   trajectory* — a pattern over time, not at a moment.
+   `Argument.resolution_direction = affirm` claims that the
+   substrate's fold trajectory exhibits the premise's affirmation
+   as narrative time advances. `DynamicStoryPoint(outcome=success)`
+   claims that the Story Goal is satisfied by the end of the
+   narrative. No lowering binds a trajectory-level claim to
+   specific records; verification over the substrate's state
+   trajectory is what confirms or refutes it.
+4. **Flavor.** An upper record is free-form author metadata —
+   a tag, a classification the author finds convenient that has
+   no formal semantic commitment.
+   `Argument.domain = "moral-philosophical"` as I specified it
+   in dramatic-sketch-01 is this: an optional author-free-form
+   label with no verifier, no lowering, no structural claim.
+   Flavor is the only coupling kind that is comment-like — it
+   exists for the reader, participates in no check, and can be
+   ignored without loss to the formal model. It earns its place
+   as `attention = flavor` on the description surface.
+
+These four kinds are not exhaustive — future exercises may find
+more — but they are the kinds this Oedipus exercise produced.
+The walk-through below names the coupling kind for each case
+it examines. The later finding F1 is reframed accordingly: not
+*"some upper records don't lower"* but *"upper records couple to
+substrate in four different kinds of way, and Lowering records
+are the right mechanism for exactly one of them."*
+
 ## The lowering attempt, by finding category
 
 The walk-through below is organized by the *shape* of the
@@ -136,9 +193,9 @@ sub-section names the shape and gives examples.
 
 ### Clean lowerings (1-to-1 or 1-to-small-set)
 
-These are the boring cases — and the sketch should be honest
-that boring is good. A lowering mechanism that handled *only*
-these cases would still be useful.
+*Coupling kind: Realization.* These are the boring cases — and
+the sketch should be honest that boring is good. A lowering
+mechanism that handled *only* these cases would still be useful.
 
 - **`Character(C_oedipus)` → `Entity("oedipus")`.** One-to-one.
   The upper Character's id and name match the substrate Entity's
@@ -168,8 +225,10 @@ targets are natural; the tuple-form covers it.
 
 ### Substrate gaps — lowerings that cannot be authored
 
-These are upper records that *would* lower cleanly except the
-substrate doesn't contain the required records.
+*Coupling kind: Realization (blocked).* These are upper records
+that *would* lower cleanly — realization is the right coupling
+kind — except the substrate doesn't contain the required
+records.
 
 - **`Character(C_tiresias)` → no substrate Entity exists.**
   `oedipus.py` explicitly cuts Tiresias ("Tiresias, Creon, and
@@ -210,84 +269,103 @@ encoding was cut for the identity-and-realization probe, not
 for the full-play encoding a Dramatica lowering wants.
 Extending is a bounded next prototype task.
 
-### Upper records with no lowering target
+### Upper records that characterize substrate patterns
 
-Some upper records do not realize in the substrate, and this is
-fine — they are upper-dialect-only characterizations.
+*Coupling kind: Characterization.* Some upper records are not
+realized by specific substrate records at all — they are
+pattern-labels over substrate state, verifiable but not
+lowerable. The Lowering mechanism is the wrong tool here; a
+cross-boundary verifier running a classification check against
+substrate state is the right tool.
 
 - **`DomainAssignment(T_overall_plague, domain="situation")`.**
-  The Domain choice is a statement about *what kind of pressure
-  the Throughline exerts* (external state). It does not realize
-  as any substrate record or substrate fact. The lowering is
-  empty; the assignment is a pure-upper claim.
+  The Domain choice classifies the Throughline's events as
+  external-state-oriented (vs. activity, manipulation, or
+  fixed-attitude). No specific substrate record *is* the Domain;
+  the Domain is a pattern the substrate's events should exhibit
+  in the aggregate. A verifier can check the pattern (are this
+  Throughline's events state-describing?) without the Domain
+  ever being lowered to a record.
 - **`QuadPick(concern="understanding")` on T_overall_plague.**
-  Same. "Understanding" as a Concern is a characterization of
-  the Throughline's shape. Nothing in the substrate says "this
-  Throughline is about Understanding"; the substrate says what
-  happens, and the upper dialect characterizes it.
+  Another classification. "Understanding" as a Concern claims
+  the Throughline is about the acquisition and closure of
+  knowledge. Verifiable in Oedipus's substrate — every agent's
+  epistemic state trajectory is about closure of GAPs. No
+  single substrate record holds the Concern; the pattern of
+  epistemic state changes across the Throughline's events does.
 - **`QuadPick(issue=...)` and `QuadPick(problem=...)`.** Same
-  pattern. The Dramatica hierarchy of Domain / Concern / Issue
-  / Problem is progressively more specific characterization,
-  but none of it has a direct substrate realization.
-- **`Argument.domain = "moral-philosophical"`.** A thematic tag,
-  no substrate realization.
+  pattern at finer grain. Each level is a more specific
+  characterization of substrate activity within the Throughline.
+- **`Argument.domain = "moral-philosophical"`** (flavor, not
+  characterization). This is the fourth coupling kind — an
+  author-free-form tag with no formal verifier. Technically
+  distinct from Characterization.
 
-A Lowering mechanism that requires every upper record to have a
-lower-side binding would mishandle these. The architecture has
-to admit *empty* lowerings (or explicit "no lowering, by design"
-annotations) as first-class. This is F1 below.
+A Lowering mechanism that required every upper record to have
+a lower-side binding would mishandle both Characterization and
+Flavor records. The architecture has to admit that some upper
+records *only* participate via verification or not at all. This
+is F1 below.
 
 ### Lowerings to substrate queries, not substrate records
 
-Some upper records lower to *patterns* or *queries* over
-substrate state, not to specific substrate records.
+*Coupling kind: Claim (moment-pattern).* These upper records
+couple to substrate via *state-at-a-moment claims* rather than
+record realizations. A verifier evaluates a query against
+substrate state at a specific point in the narrative; no
+specific substrate records *are* the claim. (Whether the
+mechanism that carries this is still called a "Lowering record,"
+or whether Claims deserve their own record type distinct from
+Lowerings, is open — see F2 below and the forcing-functions
+list.)
 
 - **`DynamicStoryPoint(axis=outcome, choice=success)`.** Outcome
   = Success means the Story Goal is achieved. The Story Goal is
   "identify the pollution causing the plague and expel it." The
-  substrate records that realize this: Oedipus's holding
+  substrate condition that satisfies it: Oedipus's holding
   `identity(oedipus, the-crossroads-killer)` at KNOWN, plus
   `parricide(oedipus, laius)` being world-true, at τ_s ≥ 13.
-  Lowering here is not a single substrate record — it is a
-  *state-at-a-moment claim*.
-
-  One way to express it: the lowering binds to the earliest
-  substrate event at which the Goal-satisfaction state first
-  holds. For Oedipus, that is `E_oedipus_anagnorisis`. A second
-  way: the lowering binds to a *query* against the substrate
-  at a moment. The verifier's check would be: does
-  `world_holds(parricide(oedipus, laius)) at τ_s ≥ 13` hold
-  in the substrate? Does `oedipus holds identity(...) at
-  τ_s=13` hold? Binding to a query is richer than binding to
-  records because it can check derived state.
+  The coupling here is a *state-at-a-moment claim*, not a
+  realization: no specific substrate records *are* the Outcome
+  record; a substrate query evaluates to true or false at a
+  specific point. This is Claim coupling, evaluated by the
+  cross-boundary verifier with a check like
+  `world_holds(parricide(oedipus, laius)) at τ_s ≥ 13`. No
+  Lowering record is the right mechanism; a verification check
+  is.
 
 - **`DynamicStoryPoint(axis=judgment, choice=bad)`.** Judgment
   is about the MC's personal-satisfaction outcome. Bad means
-  the MC ends in a worse state. The lowering binds to... what?
-  Oedipus's self-blinding event (which is not in the substrate,
-  see gaps above) or, if we prune, to the state at the
-  anagnorisis where `gap_real_parents` closes into a catastrophe.
-  Either way, lowering is to a substrate *state pattern*: "at
-  the end, `suffering(oedipus)` holds (or is derivable)." For
-  the current substrate encoding there is no `suffering`
-  predicate; for the verifier to work, either the predicate
-  needs to exist or the Judgment dimension doesn't verify.
+  the MC ends in a worse state. Same coupling kind: the
+  verifier would check something like "at the end,
+  `suffering(oedipus)` holds (or is derivable)." The current
+  substrate encoding has no `suffering` predicate — for the
+  Judgment verifier to have anything to check against, either
+  the predicate needs to exist or the Judgment dimension
+  doesn't verify. (This is a substrate-encoding gap, parallel
+  to F5's gaps, but surfaced by a Claim coupling rather than a
+  Realization coupling.)
 
 - **`Outcome=Success × Judgment=Bad = Personal Tragedy`** (the
-  canonical Dramatica derivation). This is an upper-dialect
-  derived fact from two DynamicStoryPoint records. It doesn't
-  lower as such — it emerges from the two lowerings of its
-  constituents. The Personal Tragedy claim is verified by
-  checking *both* Outcome and Judgment's lowerings
-  simultaneously.
+  canonical Dramatica derivation). An upper-dialect derived
+  fact from two DynamicStoryPoint records. It does not couple
+  to the substrate at all — it emerges from the two constituent
+  DSPs' couplings. The Personal Tragedy claim is verified by
+  checking *both* the Outcome and Judgment verifiers
+  simultaneously and reading the Dramatica-level cross-table
+  locally.
 
-F2 below: the Lowering mechanism must admit query/pattern-shaped
-targets, not just record-shaped targets.
+*Implication reflected in F1/F2:* Claim-kind couplings (both
+moment-pattern, as Outcome/Judgment here, and trajectory-pattern,
+as the Argument below) are handled by the verifier surface, not
+by Lowering records.
 
 ### Lowerings to descriptions, not typed facts
 
-Some upper records have no typed-fact realization in substrate
-but have description-surface realizations.
+*Coupling kind: Realization, via description surface.*
+Descriptions are part of the substrate dialect; a realization
+binding to a description is still realization, just targeting
+the interpretive surface rather than the typed-fact surface.
 
 - **`Stakes(Stakes_mc_oedipus)`.** The Stakes record says
   Oedipus's identity, his wife's life, and his sight are at
@@ -319,10 +397,13 @@ and description targets.
 
 ### Verification vs. lowering — not always the same relationship
 
-Some upper records have no *lowering* at all (no substrate
-realization), but have a *verification* relationship with
-substrate state — does the substrate exhibit the signature the
-upper record claims?
+*Coupling kind: Claim (trajectory-pattern).* Where Claim-kind
+records earlier in the walk-through pattern-matched against
+state at a specific moment (Outcome = Success at the end), some
+upper records make claims about the substrate's *trajectory
+across time*. These never lower, and even their verification
+is trajectory-shaped — a single-moment check cannot express
+what they claim.
 
 - **`Argument(A_knowledge_unmakes)`.** No single substrate
   record realizes the Argument. The Argument's *premise*
@@ -413,41 +494,80 @@ record; they compose.
 
 ## Findings
 
-### F1 — Not every upper record lowers
+### F1 — Upper-to-lower coupling comes in four kinds, and Lowering records are right for only one
 
-Many upper records are *characterizations* without substrate
-realizations. Domain assignments, Concern / Issue / Problem
-picks, thematic tags on Arguments — all legitimate upper-dialect
-records with no substrate counterparts. The Lowering mechanism
-must admit "this upper record has no lowering, by design" as a
-first-class state, not a gap.
+Upper-dialect records couple to substrate in at least four
+distinct ways (as described in *Four kinds of upper-to-lower
+coupling* above): **Realization** (the upper record is made
+true by specific substrate records), **Characterization** (the
+upper record classifies a pattern the substrate either exhibits
+or doesn't), **Claim** (the upper record asserts something
+about substrate state at a moment or across the trajectory),
+and **Flavor** (the upper record is free-form author metadata
+with no formal check).
 
-*Implication:* A `Lowering` record should not be mandatory for
-every upper record. A collection of Lowerings for a Story is
-intrinsically partial. A record that specifically affirms
-"no lowering" (distinguished from "lowering not yet authored")
-may be useful for documentation purposes.
+Lowering records — architecture-02 A7's mechanism — are
+appropriate for Realization only. Characterization and Claim
+couple to the substrate via **verification** (architecture-02
+A8): a cross-boundary verifier runs a pattern-check or
+trajectory-check against substrate state. Flavor records don't
+couple formally at all; they exist for the reader.
 
-### F2 — Lowering targets are heterogeneous
+*Implications for the architecture:*
 
-Some upper records lower to:
+- The Lowering record mechanism should admit that many upper
+  records *will not have* Lowering records, by design. This is
+  not a partial Lowering set due to authorial incompleteness
+  (the F5 substrate-gap case); it is the right state for
+  Characterization / Claim / Flavor records.
+- A future `lowering-record-sketch-01` should take care not to
+  over-reach. The temptation is to make Lowering the universal
+  mechanism for upper-to-lower coupling. That temptation is
+  wrong: Characterization and Claim deserve their own
+  mechanisms, and the architecture's A7/A8 split already names
+  them.
+- A future dialect sketch (Dramatic-02 or equivalent) may
+  declare, per upper record type, which coupling kinds apply.
+  `Character` is Realization. `Argument` mixes Claim (about the
+  trajectory) and Flavor (the free-form `domain` tag).
+  `DomainAssignment` is Characterization. Making this
+  first-class in the dialect's schema would let the authoring
+  tool know when a Lowering record is expected vs. when a
+  verification check is what's needed vs. when nothing is.
 
-- specific substrate records (Character → Entity)
+The original framing ("some upper records don't lower") treated
+non-lowering as a gap. The corrected framing names it as a
+feature of a four-kinds-of-coupling architecture: Lowerings are
+exactly right for one kind, and another mechanism (verification)
+exists for two more, and the fourth (Flavor) is honestly outside
+the formal system.
+
+### F2 — Realization targets are heterogeneous; Claims go through verification, not Lowerings
+
+Within the Realization coupling kind, lower-side targets are
+varied:
+
+- specific substrate records (Character → Entity): one-to-one.
 - sets of substrate records (Scene → Event + SjuzhetEntry +
-  Descriptions)
-- substrate queries or state patterns (DynamicStoryPoint(outcome
-  = success) → "world_holds(parricide(oedipus, laius)) at τ_s ≥
-  13")
+  Descriptions): one-to-many.
+- description-surface targets (Stakes → stakes-texture
+  description): realization via the interpretive rather than
+  typed surface.
 
-The first two compose naturally into a tuple of record
-references. The third pressures the Lowering record's
-`lower_records` shape: either the shape admits queries as
-first-class targets (a `lower_query` field alongside
-`lower_records`), or query-style lowerings get expressed
-awkwardly as "every record that would match the query."
+These compose into a tuple of record references; the Lowering
+record's `lower_records` shape handles them. First-draft
+framing of this sketch also categorized `DynamicStoryPoint(outcome =
+success) → "world_holds(parricide(oedipus, laius)) at τ_s ≥ 13"`
+as a heterogeneous Lowering target. Under the four-kinds
+corrective (F1), that case is not a Lowering at all — it is a
+Claim coupling, and the query "does world_holds(...) at τ_s ≥
+13?" is a *verifier check*, not a Lowering target.
 
-*Implication:* The Lowering record's lower-side needs to admit
-both record references and query/pattern targets.
+*Implication:* The Lowering record's lower side handles
+realization targets — records (typed or description) — not
+queries. Query-shaped and pattern-shaped couplings belong to
+the verifier surface, which is a separate mechanism
+(architecture-02 A8).
 
 ### F3 — Some upper records lower to descriptions
 
@@ -502,19 +622,24 @@ play, the substrate encoding needs to be extended to match.
 
 ### F6 — Verification and lowering are different relationships
 
-The Argument has no lowering (no substrate records specifically
-realize it); it has a verification relationship (does the
-substrate's trajectory match the Argument's declared signature?).
-Architecture-02 named Lowering and Verification as separate, and
-this exercise confirms they are genuinely different — they
-are not labor-divisions of the same thing, they are different
-kinds of relationship between upper and lower records.
+The Argument has no Lowering record (no substrate records
+specifically realize it); it has a verification relationship
+(does the substrate's trajectory match the Argument's declared
+signature?). Architecture-02 named Lowering and Verification as
+separate commitments, and this exercise confirms they are
+genuinely different relationships — not labor-divisions of the
+same thing, and not interchangeable. Realization-kind couplings
+use Lowering; Characterization-kind and Claim-kind couplings
+use Verification; Flavor uses neither (F1).
 
 *Implication:* The architecture's split between Lowering
 (author-authored binding; A7) and Verification (automated
-check; A8) is load-bearing. A future lowering-record sketch
-needs to preserve this split; a future verification sketch
-needs to own the verification surface independently.
+check; A8) is load-bearing. A future `lowering-record-sketch-01`
+must resist the temptation to fold verification into the Lowering
+record. A future verification sketch should own the verifier
+surface independently and should probably distinguish
+moment-pattern verifiers (for Characterization) from
+trajectory-pattern verifiers (for Claim).
 
 ### F7 — Derivation composes with lowering
 
@@ -613,14 +738,19 @@ not produce a case where Structural was strictly necessary.
 This exercise hands the record-shape sketch a concrete brief.
 When that sketch is drafted, it will need to address:
 
-1. **Optional lowerings.** Not every upper record lowers.
-   A Lowering collection for a Story is intrinsically partial.
-   Explicit "no-lowering-by-design" records may be useful
-   documentation.
-2. **Heterogeneous lower-side targets.** Lowerings admit
-   tuples of record references *and* query/pattern targets
-   *and* description targets. The record shape must carry all
-   three.
+1. **Respect the four coupling kinds.** Lowering records are
+   for Realization (F1). Characterization and Claim couplings
+   do not use Lowering records; they use verification.
+   The sketch should resist folding everything into Lowering.
+   A Lowering collection for a Story is intrinsically partial
+   because most upper records don't have a Realization coupling
+   to begin with.
+2. **Heterogeneous Realization targets.** Within Realization,
+   lower-side targets are still varied: specific records (one-
+   to-one), record sets (one-to-many), and description-surface
+   targets. The record shape must carry all three. (Query-
+   shaped targets, per the old framing, move to the verifier,
+   not the Lowering record.)
 3. **Position correspondence as first-class.** When upper and
    lower dialects both have positional ordering, their
    correspondence is author-declared and often range-shaped
