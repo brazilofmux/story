@@ -63,6 +63,20 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   the woodcutter's later confession. Per-branch sjuzhets share a
   canonical preamble and a canonical closing panel. No substrate logic;
   content only. Used by `demo_rashomon.py` and `test_rashomon.py`.
+- `macbeth.py` — the encoded *Macbeth*. Canonical-only; 22 fabula events
+  (full arc: pre-play heroism through Macbeth's defeat at Dunsinane and
+  Malcolm's coronation); 19 sjuzhet entries in roughly linear order; 7
+  descriptions including three authorial-uncertainty questions (the
+  Witches' ontology, the banquet ghost's ontology, and the authored-
+  compound-predicate derivation candidates). Parallel in shape to
+  `oedipus.py` — no identity placeholders (Macbeth doesn't confuse who
+  is who), Shakespeare-level encoding of moral trajectory rather than
+  Oedipus's epistemic inversion. Authors the compound predicates
+  `kinslayer`, `regicide`, `breach_of_hospitality`, and `tyrant` as
+  world facts, flagged as candidate derivations for the
+  inference-model-sketch-01 rule engine. Pressure-tests the substrate
+  on the structurally different story that `lowering-sketch-02`
+  sketched.
 - `demo.py` — the Oedipus driver. Prints a per-τ_d report showing
   reader and character states, live ironies, and anagnorisis deltas on
   a set of central propositions.
