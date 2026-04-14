@@ -83,6 +83,7 @@ from substrate import (
     Held, KnowledgeEffect, WorldEffect,
     SjuzhetEntry, Disclosure,
     Description, AnchorRef, Attention, anchor_event, anchor_desc,
+    Rule,
 )
 
 
@@ -483,11 +484,15 @@ FABULA = [
             # at the rule that would derive it.
             world(killed("macbeth", "duncan")),
             world(dead("duncan")),
-            # Authored compound derivations — candidate for the
-            # inference-01 rule engine:
-            world(kinslayer("macbeth", "duncan")),
-            world(regicide("macbeth", "duncan")),
-            world(breach_of_hospitality("macbeth", "duncan")),
+            # The compound predicates kinslayer, regicide, and
+            # breach_of_hospitality are no longer authored here. With
+            # inference-model-sketch-01 implemented in the substrate,
+            # each derives at query time from the rules in RULES
+            # below. Premises: killed (just authored); kinsman_of
+            # (E_macbeth_kinsman_of_duncan); king(duncan, scotland)
+            # (E_duncan_king_of_scotland); guest_of(duncan, macbeth)
+            # (E_duncan_visits). All three derivations land at query
+            # time with depth=1.
             # Macbeth holds the killing at KNOWN. He did it.
             observe("macbeth", killed("macbeth", "duncan"), 5,
                     note="self-witnessed; the dagger-in-his-hand scene"),
@@ -656,10 +661,19 @@ FABULA = [
             world(dead("macduff_son")),
             world(ordered_killing("macbeth", "lady_macduff")),
             world(ordered_killing("macbeth", "macduff_son")),
-            # tyrant(macbeth) — authored at the event that canonically
-            # earns it. A future inference rule would derive this from
-            # the cumulative pattern.
-            world(tyrant("macbeth")),
+            # tyrant(macbeth) is no longer authored here. Under
+            # TYRANT_RULE (see RULES below), it derives at query time
+            # from:
+            #     kinslayer(X, _) ∧ regicide(X, _) ∧ king(X, _)
+            # All three premises hold for Macbeth after E_duncan_killed
+            # (kinslayer and regicide derive there) and E_macbeth_
+            # crowned (king). So tyrant actually derives at τ_s=6
+            # (coronation), which is arguable Shakespeare reading —
+            # tyranny begins with the usurping kinslaying-regicide,
+            # not with the later innocent-killing. A richer inference
+            # model (with innocent-civilian tagging) could tighten
+            # to the Macduff-family event; this sketch's rule is
+            # coarser on purpose.
         ),
     ),
 
@@ -771,8 +785,9 @@ FABULA = [
             # they are not kin. So this is not kinslaying. It IS
             # regicide in the formal sense (Macbeth was king), though
             # the moral weight is reversed — this is the tyrant's
-            # rightful overthrow.
-            world(regicide("macduff", "macbeth")),
+            # rightful overthrow. Derives via REGICIDE_RULE from
+            # killed(macduff, macbeth) + king(macbeth, scotland); no
+            # authored assertion needed.
         ),
     ),
 
@@ -1099,18 +1114,25 @@ DESCRIPTIONS = [
         kind="authorial-uncertainty",
         attention=Attention.STRUCTURAL,
         text=("kinslayer(macbeth, duncan), regicide(macbeth, duncan), "
-              "and breach_of_hospitality(macbeth, duncan) are authored "
-              "as world facts at the killing event. They are the "
-              "conclusions of domain rules the substrate cannot yet "
-              "express — the same pattern as oedipus.py's parricide / "
-              "incest. When the inference-model engine lands "
-              "(inference-model-sketch-01), these authored assertions "
-              "should retire in favor of the rules "
+              "and breach_of_hospitality(macbeth, duncan) were "
+              "originally authored as world facts at this killing "
+              "event, paired with tyrant(macbeth) at E_macduff_family_"
+              "killed. They are the conclusions of domain rules. "
+              "RESOLVED (2026-04-14): the inference engine per "
+              "inference-model-sketch-01 is now implemented in the "
+              "substrate. All four compound predicates derive at "
+              "query time via RULES (see the RULES export at the end "
+              "of this module). The authored assertions have retired. "
+              "Rules: "
               "`killed(X,Y) ∧ kinsman_of(X,Y) ⇒ kinslayer(X,Y)`, "
-              "`killed(X,Y) ∧ king(Y,_) ⇒ regicide(X,Y)`, "
-              "`killed(X,Y) ∧ guest_of(Y,X) ⇒ breach_of_hospitality(X,Y)`. "
-              "Likewise tyrant(macbeth) at E_macduff_family_killed. "
-              "Flagged for the inference-model's first-probe pass."),
+              "`killed(X,Y) ∧ king(Y,R) ⇒ regicide(X,Y)`, "
+              "`killed(X,Y) ∧ guest_of(Y,X) ⇒ breach_of_hospitality(X,Y)`, "
+              "`kinslayer(X,_) ∧ regicide(X,_) ∧ king(X,_) ⇒ tyrant(X)`. "
+              "The tyrant rule is depth-2 (consumes two depth-1 "
+              "derivations); all other rules are depth-1. A follow-"
+              "on inference-02 pass may tighten tyrant to a more "
+              "specific rule once typed inequality / innocent-"
+              "civilian tagging exists."),
         is_question=True,
         authored_by="author",
         τ_a=105,
@@ -1139,3 +1161,71 @@ DESCRIPTIONS = [
     ),
 
 ]
+
+
+# ----------------------------------------------------------------------------
+# Rules — inference-model-sketch-01 N1–N10
+# ----------------------------------------------------------------------------
+#
+# The four compound predicates (kinslayer, regicide,
+# breach_of_hospitality, tyrant) are no longer author-asserted at their
+# canonical events (see E_duncan_killed, E_macduff_family_killed, and
+# E_macbeth_killed for the retirement comments). They derive via these
+# rules at query time.
+#
+# Depth distribution:
+#   - KINSLAYER_RULE, REGICIDE_RULE, BREACH_OF_HOSPITALITY_RULE:
+#     depth 1 (each premise is authored world fact).
+#   - TYRANT_RULE: depth 2 (premises are depth-1 derived predicates
+#     kinslayer and regicide, plus the authored king fact).
+#
+# A depth_cap of 2 is required for this RULES set; the default 3 is
+# sufficient. Rules compose with identity substitution (N4); none of
+# Macbeth's encoding uses identity placeholders, so substitution does
+# not contribute to these particular derivations.
+
+KINSLAYER_RULE = Rule(
+    id="R_kinslayer_from_killed_and_kinsman",
+    head=Prop("kinslayer", ("X", "Y")),
+    body=(
+        Prop("killed",     ("X", "Y")),
+        Prop("kinsman_of", ("X", "Y")),
+    ),
+)
+
+REGICIDE_RULE = Rule(
+    id="R_regicide_from_killed_and_king",
+    head=Prop("regicide", ("X", "Y")),
+    body=(
+        Prop("killed", ("X", "Y")),
+        Prop("king",   ("Y", "R")),  # R is the realm; unused in the head
+                                     # but part of king/2. Range-restricted
+                                     # because R appears in the body.
+    ),
+)
+
+BREACH_OF_HOSPITALITY_RULE = Rule(
+    id="R_breach_of_hospitality_from_killed_and_guest",
+    head=Prop("breach_of_hospitality", ("X", "Y")),
+    body=(
+        Prop("killed",   ("X", "Y")),
+        Prop("guest_of", ("Y", "X")),
+    ),
+)
+
+TYRANT_RULE = Rule(
+    id="R_tyrant_from_kinslayer_regicide_and_king",
+    head=Prop("tyrant", ("X",)),
+    body=(
+        Prop("kinslayer", ("X", "V1")),
+        Prop("regicide",  ("X", "V2")),
+        Prop("king",      ("X", "R")),
+    ),
+)
+
+RULES = (
+    KINSLAYER_RULE,
+    REGICIDE_RULE,
+    BREACH_OF_HOSPITALITY_RULE,
+    TYRANT_RULE,
+)

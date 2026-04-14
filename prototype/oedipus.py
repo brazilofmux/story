@@ -74,6 +74,7 @@ from substrate import (
     SjuzhetEntry, Disclosure,
     Description, AnchorRef, Attention, anchor_event, anchor_desc,
     IDENTITY_PREDICATE,
+    Rule,
 )
 
 
@@ -374,9 +375,13 @@ FABULA = [
             world(identity_prop("laius", "the-crossroads-victim")),
             world(identity_prop("oedipus", "the-crossroads-killer")),
             # parricide(oedipus, laius) is world-true from this τ_s
-            # onward: both premises (killed, child_of) hold at world
-            # scope. Authored here rather than derived.
-            world(parricide("oedipus", "laius")),
+            # onward but is NOT authored here. Under inference-model-
+            # sketch-01 (now implemented in substrate.py), it derives
+            # from PARRICIDE_RULE at query time:
+            #     killed(X, Y) ∧ child_of(X, Y) ⇒ parricide(X, Y)
+            # The premises are both world-true here (killed above,
+            # child_of at E_birth); derivation yields parricide at
+            # query time without an authored world-effect.
             # Oedipus knows he killed *someone* at the crossroads. The
             # victim's identity is not yet in his state — he held
             # killed(oedipus, the-crossroads-victim), not
@@ -402,9 +407,11 @@ FABULA = [
             world(married("oedipus", "jocasta")),
             world(king("oedipus", "thebes")),
             # incest(oedipus, jocasta) is world-true from this τ_s
-            # onward: both premises (married, child_of) hold at world
-            # scope. Authored here rather than derived.
-            world(incest("oedipus", "jocasta")),
+            # onward but is NOT authored here. Under inference-model-
+            # sketch-01, it derives from INCEST_RULE:
+            #     married(X, Y) ∧ child_of(X, Y) ⇒ incest(X, Y)
+            # Both premises are world-true (married here, child_of at
+            # E_birth). Derivation yields incest at query time.
             observe("oedipus", married("oedipus", "jocasta"), -46),
             observe("jocasta", married("oedipus", "jocasta"), -46),
             observe("oedipus", king("oedipus", "thebes"), -46),
@@ -524,43 +531,19 @@ FABULA = [
                         Slot.BELIEVED, Confidence.BELIEVED, 9,
                         via=Diegetic.REALIZATION.value,
                         note="the exposure did not succeed after all"),
-            # parricide / incest — author-asserted onto Jocasta's state
-            # at her realization. Under identity-and-realization,
-            # substitution alone would give her the premises
-            # (killed(oedipus, laius), child_of(oedipus, jocasta)) but
-            # not the compound conclusion. Authoring the conclusion
-            # here is the workaround the inference-model sketch is
-            # expected to retire: at that point these two lines
-            # disappear in favor of a derivation rule.
-            KnowledgeEffect(
-                agent_id="jocasta",
-                held=Held(
-                    prop=parricide("oedipus", "laius"),
-                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-                    via=Diegetic.REALIZATION.value,
-                    provenance=("compound conclusion asserted @ τ_s=9: "
-                                "author-asserted today; derivation "
-                                "candidate",),
-                ),
-            ),
-            KnowledgeEffect(
-                agent_id="jocasta",
-                held=Held(
-                    prop=incest("oedipus", "jocasta"),
-                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-                    via=Diegetic.REALIZATION.value,
-                    provenance=("compound conclusion asserted @ τ_s=9: "
-                                "author-asserted today; derivation "
-                                "candidate",),
-                ),
-            ),
             # Note what is NOT authored here: no realize_add of
             # child_of(oedipus, jocasta), killed(oedipus, laius), etc.
             # Those derive at query time from Jocasta's literal held set
             # plus the two identity assertions above. This is the
             # identity-and-realization-sketch-01 refactor in practice.
-            # parricide and incest *are* authored, for the reason just
-            # given — they would otherwise be invisible in her state.
+            #
+            # Nor are parricide(oedipus, laius) and
+            # incest(oedipus, jocasta) authored: now that inference-
+            # model-sketch-01 is implemented, the rule engine derives
+            # them at query time from the premises Jocasta now holds
+            # (via substitution: killed(oedipus, laius) and
+            # child_of(oedipus, jocasta); married at -46). The earlier
+            # author-asserted workaround retired with this pass.
         ),
     ),
 
@@ -621,40 +604,18 @@ FABULA = [
                         Slot.GAP, Confidence.OPEN, 13,
                         via=Diegetic.REALIZATION.value,
                         note="gap closed — parentage now known via identity"),
-            # parricide / incest — author-asserted onto Oedipus's
-            # state. Same pattern and same caveat as Jocasta's
-            # realization: substitution gets him the premises, but
-            # the compound conclusion has no derivation surface
-            # today. Authoring here is the workaround the inference-
-            # model sketch is expected to retire.
-            KnowledgeEffect(
-                agent_id="oedipus",
-                held=Held(
-                    prop=parricide("oedipus", "laius"),
-                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-                    via=Diegetic.REALIZATION.value,
-                    provenance=("compound conclusion asserted @ τ_s=13: "
-                                "author-asserted today; derivation "
-                                "candidate",),
-                ),
-            ),
-            KnowledgeEffect(
-                agent_id="oedipus",
-                held=Held(
-                    prop=incest("oedipus", "jocasta"),
-                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-                    via=Diegetic.REALIZATION.value,
-                    provenance=("compound conclusion asserted @ τ_s=13: "
-                                "author-asserted today; derivation "
-                                "candidate",),
-                ),
-            ),
             # Note what is NOT authored here: no realize_add of
             # killed(oedipus, laius), child_of(oedipus, laius),
             # child_of(oedipus, jocasta), married(oedipus, jocasta). All
             # derive at query time from Oedipus's literal held set plus
-            # the three identity assertions above. parricide and incest
-            # *are* authored — see the block immediately above.
+            # the three identity assertions above.
+            #
+            # Nor are parricide(oedipus, laius) and
+            # incest(oedipus, jocasta) authored. With inference-model-
+            # sketch-01 implemented, PARRICIDE_RULE and INCEST_RULE
+            # (see RULES export at the bottom of this module) derive
+            # them at query time from Oedipus's post-anagnorisis held
+            # set under identity substitution.
         ),
     ),
 
@@ -705,17 +666,13 @@ PREPLAY_DISCLOSURES = (
     Disclosure(prop=identity_prop("oedipus", "the-crossroads-killer"),
                slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
                via=Narrative.DISCLOSURE.value),
-    # Compound-conclusion disclosures — the reader knows the myth, so
-    # the audience holds parricide and incest from τ_d=0. This is the
-    # reader-outruns-character shape in its sharpest form: the reader
-    # has the conclusion the characters will take the whole play to
-    # reach.
-    Disclosure(prop=parricide("oedipus", "laius"),
-               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-               via=Narrative.DISCLOSURE.value),
-    Disclosure(prop=incest("oedipus", "jocasta"),
-               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
-               via=Narrative.DISCLOSURE.value),
+    # Compound-conclusion disclosures (parricide, incest) are NOT
+    # authored here. The reader still holds them from τ_d=0, but
+    # under inference-model-sketch-01 they derive at query time from
+    # the premises the reader does hold (child_of + killed + married)
+    # plus the RULES below. The reader-outruns-character shape stands:
+    # the audience has the compound conclusions from τ_d=0 via
+    # derivation, not via authored disclosure.
 )
 
 
@@ -846,18 +803,23 @@ DESCRIPTIONS = [
         kind="authorial-uncertainty",
         attention=Attention.STRUCTURAL,
         text=("parricide(oedipus, laius) and incest(oedipus, jocasta) "
-              "are currently authored as world facts at the canonical "
-              "moments (crossroads killing, marriage) and observed "
-              "into both agents' states at their realizations. They "
-              "are the conclusions of domain rules the substrate "
-              "cannot yet express: killed(X,Y) ∧ child_of(X,Y) ⇒ "
+              "were originally authored as world facts at the "
+              "canonical moments (crossroads killing, marriage) and "
+              "observed into both agents' states at their realizations. "
+              "They are the conclusions of domain rules the substrate "
+              "could not yet express: killed(X,Y) ∧ child_of(X,Y) ⇒ "
               "parricide(X,Y), married(X,Y) ∧ child_of(X,Y) ⇒ "
               "incest(X,Y). "
-              "Should the substrate learn to derive them? If so, the "
-              "authored facts here disappear in favor of a forward-"
-              "chaining surface — the inference-model sketch's scope. "
-              "If not, what other compound predicates will also need "
-              "author-assertion, and where does that stop?"),
+              "RESOLVED (2026-04-14): the inference engine per "
+              "inference-model-sketch-01 is now implemented in the "
+              "substrate. Both predicates derive at query time via "
+              "PARRICIDE_RULE and INCEST_RULE (see RULES export at "
+              "end of this module). The authored assertions at "
+              "E_crossroads_killing, E_marriage_and_crown, and both "
+              "anagnoreses, and the compound disclosures at τ_d=0, "
+              "all retired. Kept as a description because the answer "
+              "record (the accepted LLM proposal below) remains "
+              "load-bearing context for the boundary criterion."),
         is_question=True,
         authored_by="author",
         τ_a=102,
@@ -933,3 +895,42 @@ DESCRIPTIONS = [
     ),
 
 ]
+
+
+# ----------------------------------------------------------------------------
+# Rules — inference-model-sketch-01 N1–N10
+# ----------------------------------------------------------------------------
+#
+# The two compound predicates parricide and incest are no longer
+# author-asserted at their canonical events (see E_crossroads_killing,
+# E_marriage_and_crown, E_jocasta_realizes, E_oedipus_anagnorisis for
+# the retirement comments). They derive via these rules at query time.
+#
+# Premises for both rules come from events already authored:
+#     - child_of(X, Y) — authored at E_birth (multiple forms, plus
+#       identity propositions that expand via substitution)
+#     - killed(X, Y)   — authored at E_crossroads_killing
+#     - married(X, Y)  — authored at E_marriage_and_crown
+#
+# Rules compose with identity substitution (N4). Both rules have depth
+# 1 from the premises, so a depth_cap of 1 suffices for this encoding.
+
+PARRICIDE_RULE = Rule(
+    id="R_parricide_from_killed_and_parent",
+    head=Prop("parricide", ("X", "Y")),
+    body=(
+        Prop("killed",   ("X", "Y")),
+        Prop("child_of", ("X", "Y")),
+    ),
+)
+
+INCEST_RULE = Rule(
+    id="R_incest_from_married_and_parent",
+    head=Prop("incest", ("X", "Y")),
+    body=(
+        Prop("married",  ("X", "Y")),
+        Prop("child_of", ("X", "Y")),
+    ),
+)
+
+RULES = (PARRICIDE_RULE, INCEST_RULE)

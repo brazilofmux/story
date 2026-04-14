@@ -522,6 +522,377 @@ def world_holds_literal(query: Prop, world_props: set) -> bool:
 
 
 # ----------------------------------------------------------------------------
+# Rules and derivation — inference-model-sketch-01 (N1-N10)
+# ----------------------------------------------------------------------------
+#
+# A Rule is a Horn clause: a head Prop (possibly with variables) and a
+# non-empty tuple of body Props (possibly with variables). Derivation is
+# query-time; the substrate's held sets and world state remain literal
+# per N3. Rule application composes with identity substitution per N4.
+# Per-fold scoping per N5; weakest-premise slot propagation per N6 with
+# GAP premises failing; bounded fixpoint per N7 (default depth cap 3);
+# proof-carrying derivation per N8; authored facts win per N10.
+#
+# Variable convention per the sketch: a Prop arg is a variable iff it is
+# a non-empty string whose first character is an ASCII uppercase letter.
+# Entity ids are lowercase by convention (oedipus, macbeth, duncan);
+# variables are uppercase (X, Y, Killer). Enforcement happens at
+# rule-registration time (helper `is_variable`); the Prop type itself is
+# unchanged from elsewhere in this module.
+
+
+def is_variable(arg) -> bool:
+    """A Prop arg is a variable iff it is a non-empty string starting with
+    an ASCII uppercase letter. Convention-based, not type-based.
+    """
+    return (
+        isinstance(arg, str)
+        and len(arg) > 0
+        and arg[0].isascii()
+        and arg[0].isupper()
+    )
+
+
+@dataclass(frozen=True)
+class Rule:
+    """A Horn clause: body ⇒ head. N1 commitments:
+    - `head` may contain variables; every variable in head must appear
+      in body (range-restricted).
+    - `body` is non-empty; each body literal may contain variables.
+    - No disjunction, no negation, no existentials, no function symbols.
+    """
+    id: str
+    head: Prop
+    body: tuple  # tuple[Prop, ...]
+    metadata: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        # Empty-body check first — a rule with no body is always
+        # malformed, regardless of head shape.
+        if not self.body:
+            raise ValueError(f"Rule {self.id!r}: empty body")
+        # Range-restriction: every variable in head appears in body.
+        head_vars = {a for a in self.head.args if is_variable(a)}
+        body_vars = set()
+        for lit in self.body:
+            for a in lit.args:
+                if is_variable(a):
+                    body_vars.add(a)
+        escaping = head_vars - body_vars
+        if escaping:
+            raise ValueError(
+                f"Rule {self.id!r}: head variables {sorted(escaping)} "
+                f"do not appear in body (range-restriction violation)"
+            )
+
+
+@dataclass(frozen=True)
+class Proof:
+    """Provenance for a derived or substituted fact. Three kinds:
+
+    - `kind="authored"`: the fact was directly authored (a literal Held
+      on an agent state, or a WorldEffect on the world). Leaf proof.
+    - `kind="identity-substituted"`: the fact follows from an authored
+      fact via identity substitution. `substitution_source` is the
+      authored prop; the substitution itself is determined by the
+      fold's identity equivalence classes.
+    - `kind="derived"`: the fact follows from a rule application.
+      `rule_id`, `bindings`, and `premises` carry the derivation.
+    """
+    kind: str
+    rule_id: Optional[str] = None
+    bindings: tuple = ()   # ((var_name, value), ...) for kind="derived"
+    premises: tuple = ()   # tuple[Proof] for kind="derived"
+    substitution_source: Optional[Prop] = None  # for kind="identity-substituted"
+    depth: int = 0
+
+
+def _substitute(prop: Prop, bindings: dict) -> Prop:
+    """Apply `bindings` (var -> value) to the prop's args, substituting
+    variables. Non-variable args pass through unchanged.
+    """
+    new_args = tuple(
+        bindings[a] if is_variable(a) and a in bindings else a
+        for a in prop.args
+    )
+    return Prop(predicate=prop.predicate, args=new_args)
+
+
+def _try_extend_bindings(
+    pattern: Prop, ground: Prop, bindings: dict,
+) -> Optional[dict]:
+    """Attempt to unify `pattern` (may contain variables) with `ground`
+    (ground fact) given existing `bindings`. Returns extended bindings on
+    success, None on failure. Bindings are mutated conceptually — a new
+    dict is returned so callers can backtrack.
+    """
+    if pattern.predicate != ground.predicate:
+        return None
+    if len(pattern.args) != len(ground.args):
+        return None
+    new_bindings = dict(bindings)
+    for p, g in zip(pattern.args, ground.args):
+        if is_variable(p):
+            if p in new_bindings:
+                if new_bindings[p] != g:
+                    return None
+            else:
+                new_bindings[p] = g
+        else:
+            if p != g:
+                return None
+    return new_bindings
+
+
+def _enumerate_substitutions(prop: Prop, class_map: dict) -> list:
+    """All substitutional variants of `prop` under `class_map`.
+    Returns a list including `prop` itself. Args that don't appear in
+    class_map pass through unchanged.
+
+    Example: prop=killed(oedipus, x), class_map={x: {x, y}}
+             -> [killed(oedipus, x), killed(oedipus, y)]
+    """
+    from itertools import product
+    options = []
+    for arg in prop.args:
+        if arg in class_map:
+            options.append(sorted(class_map[arg]))
+        else:
+            options.append([arg])
+    return [
+        Prop(predicate=prop.predicate, args=tuple(combo))
+        for combo in product(*options)
+    ]
+
+
+def _expand_agent_set_under_identity(
+    by_prop: tuple, class_map: dict,
+) -> dict:
+    """Produce the identity-expanded initial set for agent-level
+    derivation. Each entry maps Prop -> (Slot, Proof).
+
+    The literal authored Held records appear with kind="authored".
+    Substituted variants appear with kind="identity-substituted" and
+    inherit the source Held's slot.
+
+    When a prop appears both as literal-authored and via substitution,
+    the authored record wins (N10).
+    """
+    result = {}
+    # First pass: literal authored.
+    for h in by_prop:
+        result[h.prop] = (h.slot, Proof(kind="authored", depth=0))
+    # Second pass: substitutional variants. Inherit source slot.
+    for h in by_prop:
+        if h.slot == Slot.GAP:
+            continue  # GAP propagation through identity is meaningless
+        for substituted in _enumerate_substitutions(h.prop, class_map):
+            if substituted == h.prop:
+                continue
+            if substituted in result:
+                # Authored wins, or earlier substitution with same-or-stronger slot wins.
+                existing_slot, existing_proof = result[substituted]
+                if existing_proof.kind == "authored":
+                    continue
+                if _SLOT_RANK[existing_slot] >= _SLOT_RANK[h.slot]:
+                    continue
+            result[substituted] = (
+                h.slot,
+                Proof(
+                    kind="identity-substituted",
+                    substitution_source=h.prop,
+                    depth=0,
+                ),
+            )
+    return result
+
+
+def _find_rule_bindings(body: tuple, facts: dict):
+    """Yield every dict of variable bindings under which every body literal
+    matches some ground Prop in `facts`. Simple backtracking over body
+    literals. `facts` is a dict keyed by Prop.
+    """
+    def recurse(idx, bindings):
+        if idx == len(body):
+            yield dict(bindings)
+            return
+        lit = body[idx]
+        for candidate in facts.keys():
+            extended = _try_extend_bindings(lit, candidate, bindings)
+            if extended is not None:
+                yield from recurse(idx + 1, extended)
+    yield from recurse(0, {})
+
+
+def _weakest_slot(slots):
+    """Min slot under KNOWN > BELIEVED > SUSPECTED > GAP. For an empty
+    iterable, returns KNOWN by convention (vacuous truth) — but rule
+    bodies are N1 non-empty so this path should not fire in practice.
+    """
+    ranks = [_SLOT_RANK[s] for s in slots]
+    if not ranks:
+        return Slot.KNOWN
+    min_rank = min(ranks)
+    for s, r in _SLOT_RANK.items():
+        if r == min_rank:
+            return s
+    return Slot.GAP  # defensive; should be unreachable
+
+
+def _apply_rules_once(
+    facts: dict, rules, depth: int,
+) -> dict:
+    """One pass of rule application. `facts` maps Prop -> (Slot, Proof).
+    Returns a new dict with any newly-derived facts added, preserving
+    existing entries. Does not mutate `facts`.
+
+    N6: derived slot is the weakest premise slot (non-GAP).
+    N10: authored facts are preserved; a rule-derived fact never
+    overrides an authored one.
+    """
+    new_facts = dict(facts)
+    for rule in rules:
+        for bindings in _find_rule_bindings(rule.body, facts):
+            # Resolve premise facts and their slots.
+            grounded_body = [_substitute(lit, bindings) for lit in rule.body]
+            premise_slots = [facts[p][0] for p in grounded_body]
+            # N6: GAP premise fails.
+            if any(s == Slot.GAP for s in premise_slots):
+                continue
+            derived_slot = _weakest_slot(premise_slots)
+            head = _substitute(rule.head, bindings)
+            # N10: authored wins.
+            if head in new_facts:
+                existing_slot, existing_proof = new_facts[head]
+                if existing_proof.kind == "authored":
+                    continue
+                if _SLOT_RANK[existing_slot] >= _SLOT_RANK[derived_slot]:
+                    continue  # no improvement
+            # Build the derivation's proof.
+            premise_proofs = tuple(facts[p][1] for p in grounded_body)
+            binding_tuple = tuple(sorted(bindings.items()))
+            proof = Proof(
+                kind="derived",
+                rule_id=rule.id,
+                bindings=binding_tuple,
+                premises=premise_proofs,
+                depth=depth,
+            )
+            new_facts[head] = (derived_slot, proof)
+    return new_facts
+
+
+def derive_all_agent(
+    state: KnowledgeState,
+    rules,
+    depth_cap: int = 3,
+) -> dict:
+    """The full set of derivable ground facts in an agent's state, with
+    slots and proofs. Returns dict keyed by Prop with (Slot, Proof) values.
+
+    Semantics (N3–N8, N10):
+      - Literal authored Held records enter as kind="authored", carrying
+        their own slot. Substitutional variants enter as kind=
+        "identity-substituted" at the source Held's slot (N4).
+      - Rules iterate to fixpoint, capped at `depth_cap`. Derived facts
+        inherit the weakest premise slot (N6); GAP premises fail.
+      - Authored facts are never overridden by derivation (N10).
+      - Identity substitution fires only on KNOWN identities (I7); this
+        is handled by the agent's _known_identity_classes().
+    """
+    class_map = state._known_identity_classes()
+    facts = _expand_agent_set_under_identity(state.by_prop, class_map)
+    for depth in range(1, depth_cap + 1):
+        next_facts = _apply_rules_once(facts, rules, depth)
+        if next_facts == facts:
+            break
+        facts = next_facts
+    return facts
+
+
+def holds_derived(
+    state: KnowledgeState,
+    prop: Prop,
+    rules,
+    depth_cap: int = 3,
+):
+    """Substitution-aware and rule-aware query. Returns (Slot, Proof) if
+    the agent holds `prop` through any combination of literal, identity-
+    substituted, or rule-derived means; None otherwise. The strongest
+    slot wins if multiple derivations produce the same prop.
+
+    Composition order per inference-model-sketch-01: literal, then
+    identity-substitution, then rule derivation — with the caveat that
+    all three are produced in one pass by `derive_all_agent`, which
+    already resolves strength per N10 (authored > derived).
+    """
+    facts = derive_all_agent(state, rules, depth_cap)
+    return facts.get(prop)
+
+
+def derive_all_world(
+    world_props: set,
+    rules,
+    depth_cap: int = 3,
+) -> dict:
+    """World-level derivation. `world_props` is the set of asserted
+    world facts (from project_world). Returns dict keyed by Prop with
+    values = Proof. World has no slot; each fact is either asserted or
+    derived-from-asserted.
+
+    Identity expansion for the world: any identity/2 props in the world
+    set build equivalence classes the same way agent states do (I2).
+    """
+    # Build world-level class map from any identity/2 world props.
+    identity_props = [
+        p for p in world_props
+        if p.predicate == IDENTITY_PREDICATE and len(p.args) == 2
+    ]
+    class_map = _build_equivalence_classes(identity_props)
+
+    # Initial set: authored world props + substitutional variants. For
+    # uniformity with the agent algorithm, we encode each world prop as
+    # (Slot.KNOWN, Proof) — world facts are assertions, which we treat as
+    # KNOWN for weakest-slot arithmetic purposes. Callers should not
+    # read slot from a world-level Proof; use world_holds_derived.
+    facts = {}
+    for p in world_props:
+        facts[p] = (Slot.KNOWN, Proof(kind="authored", depth=0))
+    for p in world_props:
+        for substituted in _enumerate_substitutions(p, class_map):
+            if substituted == p:
+                continue
+            if substituted in facts:
+                continue  # authored or earlier substitution wins
+            facts[substituted] = (
+                Slot.KNOWN,
+                Proof(kind="identity-substituted", substitution_source=p, depth=0),
+            )
+
+    for depth in range(1, depth_cap + 1):
+        next_facts = _apply_rules_once(facts, rules, depth)
+        if next_facts == facts:
+            break
+        facts = next_facts
+
+    # Return {Prop: Proof} — drop the slot since world has none.
+    return {p: proof for p, (_slot, proof) in facts.items()}
+
+
+def world_holds_derived(
+    world_props: set,
+    query: Prop,
+    rules,
+    depth_cap: int = 3,
+):
+    """World-level rule-aware query. Returns Proof if `query` holds in
+    the world under derivation, None otherwise.
+    """
+    facts = derive_all_world(world_props, rules, depth_cap)
+    return facts.get(query)
+
+
+# ----------------------------------------------------------------------------
 # Per-agent knowledge projection (K1)
 # ----------------------------------------------------------------------------
 

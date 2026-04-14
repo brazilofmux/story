@@ -31,6 +31,7 @@ python3 demo.py                  # narrative report on the Oedipus slice
 python3 demo_rashomon.py         # branch-indexed report on the Rashomon grove scene
 python3 test_substrate.py        # permanent substrate tests (no framework)
 python3 test_identity.py         # identity & realization tests
+python3 test_inference.py        # rule-derivation tests (inference-01 N1-N10)
 python3 test_rashomon.py         # permanent contested-branch tests (no framework)
 python3 test_proposal_walker.py  # walker tests (io.StringIO-driven, no terminal)
 
@@ -52,11 +53,20 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
 - `substrate.py` — the engine. Event, Prop, Branch, Held, Effect types;
   the fold-scope rule; knowledge-projection and world-projection folds;
   reader-projection from a sjuzhet; dramatic-irony and Sternberg-curiosity
-  queries.
+  queries; identity substitution machinery (identity-and-realization-01);
+  Rule / Proof / holds_derived / derive_all / world_holds_derived
+  (inference-model-sketch-01 N1–N10) — Horn-clause rules with conjunctive
+  bodies, query-time derivation composed with identity substitution,
+  per-fold scoping, weakest-premise slot propagation, bounded fixpoint
+  with depth cap (default 3), proof-carrying derivation, authored-wins
+  over derivation.
 - `oedipus.py` — the encoded *Oedipus Rex* slice. Entities, proposition
   constructors, the pre-play and in-play fabula, the sjuzhet for the
-  Messenger + Shepherd → anagnorisis slice. No substrate logic; content
-  only. Used by `demo.py`.
+  Messenger + Shepherd → anagnorisis slice. Exports a `RULES` tuple
+  (PARRICIDE_RULE, INCEST_RULE) per inference-model-sketch-01; the
+  compound predicates that were formerly author-asserted at canonical
+  events now derive at query time. No substrate logic; content only.
+  Used by `demo.py`.
 - `rashomon.py` — the encoded *Rashomon* grove scene. Canonical floor
   (travel, lure, binding, bare fact of intercourse, body discovery)
   plus four sibling `:contested` branches — one per testimony, including
@@ -71,12 +81,13 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   compound-predicate derivation candidates). Parallel in shape to
   `oedipus.py` — no identity placeholders (Macbeth doesn't confuse who
   is who), Shakespeare-level encoding of moral trajectory rather than
-  Oedipus's epistemic inversion. Authors the compound predicates
-  `kinslayer`, `regicide`, `breach_of_hospitality`, and `tyrant` as
-  world facts, flagged as candidate derivations for the
-  inference-model-sketch-01 rule engine. Pressure-tests the substrate
-  on the structurally different story that `lowering-sketch-02`
-  sketched.
+  Oedipus's epistemic inversion. Exports a `RULES` tuple (KINSLAYER_RULE,
+  REGICIDE_RULE, BREACH_OF_HOSPITALITY_RULE, TYRANT_RULE) per
+  inference-model-sketch-01; the compound predicates that were formerly
+  author-asserted at the killing events now derive at query time.
+  TYRANT_RULE is the only depth-2 rule (consumes two depth-1 derivations
+  plus an authored king fact). Pressure-tests the substrate on the
+  structurally different story that `lowering-sketch-02` sketched.
 - `demo.py` — the Oedipus driver. Prints a per-τ_d report showing
   reader and character states, live ironies, and anagnorisis deltas on
   a set of central propositions.
@@ -86,6 +97,14 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
 - `test_substrate.py` — permanent substrate tests pinning sketch-04
   invariants and current implementation behavior. Story-agnostic
   (though two oedipus integration tests live at the end).
+- `test_inference.py` — permanent inference-engine tests per
+  inference-model-sketch-01 N1–N10: rule shape and range-restriction;
+  query-time derivation; identity-substitution composition; per-fold
+  scoping; weakest-premise slot propagation and GAP-fails; bounded
+  fixpoint with depth cap; proof-carrying derivation; authored-wins.
+  Integration tests against the Oedipus and Macbeth retirements
+  (authored compounds gone; derivations fire at the expected folds
+  and moments).
 - `test_rashomon.py` — permanent contested-branch tests pinning
   invariants that only become load-bearing with a non-trivial
   `:contested` example: sibling non-inheritance on a live encoding,
