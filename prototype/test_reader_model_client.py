@@ -22,17 +22,21 @@ from substrate import (
     Attention,
     Description,
     DescStatus,
+    EditProposal,
     anchor_event,
     anchor_desc,
 )
 from reader_model_client import (
     DroppedOutput,
     ReaderAnswer,
+    ReaderEdit,
     ReaderOutput,
     ReaderReview,
     _classify_answer,
+    _classify_edit,
     _classify_review,
     _translate_answer,
+    _translate_edit,
     _translate_review,
     invoke_reader_model,
 )
@@ -300,6 +304,174 @@ def test_translate_answer_produces_answer_proposal():
 # ============================================================================
 
 
+# ============================================================================
+# R5 + question-exclusion + supersession: scope enforcement on edits
+# ============================================================================
+
+
+def test_edit_in_edits_for_on_ordinary_description_is_accepted():
+    """An edit targeting a non-question, non-superseded description
+    in edits_for is accepted."""
+    descriptions = _make_descriptions()
+    raw = ReaderEdit(
+        source_description_id="D_alpha",
+        new_text="tighter phrasing",
+        rationale="a specific revision",
+    )
+    reason = _classify_edit(raw, descriptions, edits_for=["D_alpha"])
+    assert reason is None, f"expected accepted; got drop reason: {reason}"
+
+
+def test_edit_outside_edits_for_is_rejected():
+    """R5: out-of-scope edit is dropped even if the target exists and
+    is edit-eligible."""
+    descriptions = _make_descriptions()
+    raw = ReaderEdit(
+        source_description_id="D_alpha",
+        new_text="would-be text",
+        rationale="nope",
+    )
+    reason = _classify_edit(raw, descriptions, edits_for=[])
+    assert reason is not None
+    assert "edits_for" in reason
+
+
+def test_edit_to_question_description_is_rejected():
+    """Questions take ANSWERS, not edits. Editing a question description
+    is a contract violation even if the target is in edits_for — the
+    LLM should produce a ReaderAnswer instead."""
+    descriptions = _make_descriptions()
+    raw = ReaderEdit(
+        source_description_id="D_beta",  # is_question=True
+        new_text="tweaking a question",
+        rationale="shouldn't land",
+    )
+    reason = _classify_edit(raw, descriptions, edits_for=["D_beta"])
+    assert reason is not None
+    assert "question" in reason.lower()
+
+
+def test_edit_to_unknown_source_is_rejected():
+    descriptions = _make_descriptions()
+    raw = ReaderEdit(
+        source_description_id="D_nonexistent",
+        new_text="ghost edit",
+        rationale="ghost",
+    )
+    reason = _classify_edit(raw, descriptions, edits_for=["D_nonexistent"])
+    assert reason is not None
+    assert "does not resolve" in reason
+
+
+def test_edit_to_superseded_source_is_rejected():
+    """An edit to an already-SUPERSEDED source drops at ingest. Edits
+    target the current head; a stale source would silently produce an
+    orphan successor."""
+    descriptions = _make_descriptions()
+    # Swap D_alpha for a superseded copy in the collection.
+    from dataclasses import replace as _replace
+    superseded = _replace(descriptions[0], status=DescStatus.SUPERSEDED)
+    descriptions = [superseded] + descriptions[1:]
+    raw = ReaderEdit(
+        source_description_id="D_alpha",
+        new_text="stale edit",
+        rationale="would orphan",
+    )
+    reason = _classify_edit(raw, descriptions, edits_for=["D_alpha"])
+    assert reason is not None
+    assert "SUPERSEDED" in reason
+
+
+def test_translate_edit_produces_edit_proposal():
+    """An accepted ReaderEdit becomes an EditProposal carrying a
+    proposed Description with PROVISIONAL status, the new text, the
+    source's anchor/branches/attention, and the source's kind (unless
+    new_kind is set)."""
+    descriptions = _make_descriptions()
+    raw = ReaderEdit(
+        source_description_id="D_alpha",
+        new_text="a crisper sentence",
+        rationale="grounded",
+    )
+    ep = _translate_edit(
+        raw, descriptions,
+        reviewer_id="llm:test",
+        current_τ_a=100,
+    )
+    assert isinstance(ep, EditProposal)
+    assert ep.source_description_id == "D_alpha"
+    assert ep.proposer_id == "llm:test"
+    assert ep.proposed_at_τ_a == 100
+    assert ep.status == "pending"
+
+    d = ep.proposed_description
+    assert d.text == "a crisper sentence"
+    assert d.status == DescStatus.PROVISIONAL
+    assert d.authored_by == "llm:test"
+    # Kind preserved from source.
+    assert d.kind == "texture"
+    # Anchor preserved.
+    assert d.attached_to.kind == "event"
+    assert d.attached_to.target_id == "E_main"
+    # The supersedes pointer is NOT set by translation — it's wired by
+    # accept_edit_proposal. Keep the translation pure.
+    assert "supersedes" not in d.metadata
+
+
+def test_translate_edit_preserves_source_metadata():
+    """The translated EditProposal's proposed description carries the
+    source's metadata forward. Load-bearing keys like
+    `answers_question` survive translation so the downstream accept
+    step can preserve semantic links."""
+    descriptions = _make_descriptions()
+    # Give D_alpha load-bearing metadata, simulating a prior
+    # answer-accept that populated `answers_question`.
+    from dataclasses import replace as _replace
+    alpha_with_meta = _replace(
+        descriptions[0],
+        metadata={"answers_question": "D_beta", "custom": "keep"},
+    )
+    descriptions = [alpha_with_meta] + descriptions[1:]
+    raw = ReaderEdit(
+        source_description_id="D_alpha",
+        new_text="new body",
+        rationale="preserve meta",
+    )
+    ep = _translate_edit(
+        raw, descriptions,
+        reviewer_id="llm:test",
+        current_τ_a=100,
+    )
+    d = ep.proposed_description
+    assert d.metadata.get("answers_question") == "D_beta", (
+        f"source metadata not carried by _translate_edit: {d.metadata}"
+    )
+    assert d.metadata.get("custom") == "keep"
+    # Mutating the proposed metadata must not bleed into the source.
+    d.metadata["probe"] = "added-on-proposed"
+    assert "probe" not in alpha_with_meta.metadata, (
+        "metadata dict was shared (not copied) between source and proposed"
+    )
+
+
+def test_translate_edit_respects_new_kind_override():
+    """If the LLM sets new_kind, the proposed description uses it
+    instead of the source's kind."""
+    descriptions = _make_descriptions()
+    raw = ReaderEdit(
+        source_description_id="D_alpha",
+        new_text="new body",
+        new_kind="reader-frame",
+        rationale="re-categorized",
+    )
+    ep = _translate_edit(
+        raw, descriptions,
+        reviewer_id="llm:test",
+        current_τ_a=100,
+    )
+    assert ep.proposed_description.kind == "reader-frame"
+
+
 class _FakeMessages:
     def __init__(self, output):
         self._output = output
@@ -421,6 +593,15 @@ TESTS = [
     # Translation
     test_translate_review_produces_review_entry,
     test_translate_answer_produces_answer_proposal,
+    # R5 + question-exclusion + supersession on edits
+    test_edit_in_edits_for_on_ordinary_description_is_accepted,
+    test_edit_outside_edits_for_is_rejected,
+    test_edit_to_question_description_is_rejected,
+    test_edit_to_unknown_source_is_rejected,
+    test_edit_to_superseded_source_is_rejected,
+    test_translate_edit_produces_edit_proposal,
+    test_translate_edit_preserves_source_metadata,
+    test_translate_edit_respects_new_kind_override,
     # Zip-misalignment regression
     test_review_candidates_paired_correctly_when_raw_reviews_are_dropped,
     # Auditability

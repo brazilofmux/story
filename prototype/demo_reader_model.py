@@ -30,7 +30,12 @@ import os
 import sys
 from dataclasses import asdict
 
-from substrate import Attention, ingest_question_answer, reader_view
+from substrate import (
+    Attention,
+    ingest_edit_proposal,
+    ingest_question_answer,
+    reader_view,
+)
 from rashomon import (
     ALL_BRANCHES,
     B_WOODCUTTER,
@@ -127,6 +132,17 @@ def _serialize_result(result, context: dict) -> dict:
             "status": pa.status,
         })
 
+    edits_dump = []
+    for ep in result.edit_proposals:
+        edits_dump.append({
+            "source_description_id": ep.source_description_id,
+            "proposed_description": description_to_dict(ep.proposed_description),
+            "proposer_id": ep.proposer_id,
+            "rationale": ep.rationale,
+            "proposed_at_τ_a": ep.proposed_at_τ_a,
+            "status": ep.status,
+        })
+
     dropped_dump = []
     for d in result.dropped:
         raw_dump = d.raw.model_dump() if hasattr(d.raw, "model_dump") else str(d.raw)
@@ -136,6 +152,7 @@ def _serialize_result(result, context: dict) -> dict:
         "context": context,
         "review_candidates": reviews_dump,
         "answer_proposals": answers_dump,
+        "edit_proposals": edits_dump,
         "dropped": dropped_dump,
         "raw_output": result.raw_output.model_dump(),
     }
@@ -263,6 +280,22 @@ def main() -> int:
         for line in pa.rationale.splitlines() or [""]:
             print(f"      {line}")
 
+    _print_section(f"EDIT PROPOSALS ({len(result.edit_proposals)})")
+    if not result.edit_proposals:
+        print("  (none)")
+    for ep in result.edit_proposals:
+        d = ep.proposed_description
+        print()
+        print(f"  source: {ep.source_description_id}")
+        print(f"  proposed description id: {d.id}")
+        print(f"    kind: {d.kind}")
+        print(f"    new text:")
+        for line in d.text.splitlines() or [""]:
+            print(f"      {line}")
+        print(f"    rationale:")
+        for line in ep.rationale.splitlines() or [""]:
+            print(f"      {line}")
+
     # Quick mapping from each reviewed description id to verdict, for scan-
     # ability after scrolling through rationale prose.
     _print_section("SUMMARY")
@@ -273,6 +306,7 @@ def main() -> int:
         from proposal_walker import (
             print_decision_summary,
             walk_answer_proposals,
+            walk_edit_proposals,
             walk_reviews,
         )
 
@@ -281,18 +315,27 @@ def main() -> int:
             result.review_candidates, list(DESCRIPTIONS),
         )
 
-        # Stage the answer proposals onto a fresh queue, then walk.
+        # Stage answer and edit proposals onto the same queue. The
+        # walker functions filter by isinstance so a mixed queue is
+        # handled correctly.
         queue: list = []
         for ap in result.answer_proposals:
             queue = ingest_question_answer(ap, queue)
+        for ep in result.edit_proposals:
+            queue = ingest_edit_proposal(ep, queue)
 
         _print_section("WALK — ANSWER PROPOSALS")
         descriptions_after, queue_after, answer_decisions = walk_answer_proposals(
             queue, descriptions_after,
         )
 
+        _print_section("WALK — EDIT PROPOSALS")
+        descriptions_after, queue_after, edit_decisions = walk_edit_proposals(
+            queue_after, descriptions_after,
+        )
+
         _print_section("WALK — RESULT")
-        all_decisions = review_decisions + answer_decisions
+        all_decisions = review_decisions + answer_decisions + edit_decisions
         print_decision_summary(all_decisions)
 
         print()
@@ -301,11 +344,14 @@ def main() -> int:
         )
         print(f"  queue entries: {len(queue_after)} (status per entry:)")
         for entry in queue_after:
-            q_id = getattr(
-                entry, "question_description_id",
-                getattr(entry, "description_id", "?"),
+            q_id = (
+                getattr(entry, "question_description_id", None)
+                or getattr(entry, "source_description_id", None)
+                or getattr(entry, "description_id", None)
+                or "?"
             )
-            print(f"    {q_id:<38} {entry.status}")
+            kind = type(entry).__name__
+            print(f"    {q_id:<38} {kind:<18} {entry.status}")
 
     return 0
 

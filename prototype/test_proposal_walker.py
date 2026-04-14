@@ -30,14 +30,17 @@ from substrate import (
     Attention,
     Description,
     DescStatus,
+    EditProposal,
     ReviewEntry,
     ReviewVerdict,
     anchor_event,
+    ingest_edit_proposal,
     ingest_question_answer,
 )
 from proposal_walker import (
     Decision,
     walk_answer_proposals,
+    walk_edit_proposals,
     walk_reviews,
     summarize_decisions,
 )
@@ -70,6 +73,27 @@ def _make_review(reviewer: str = "llm:test",
         verdict=verdict,
         anchor_τ_a=10,
         comment="test comment",
+    )
+
+
+def _make_edit_proposal(source: Description, new_id: str,
+                        new_text: str = "rewritten body") -> EditProposal:
+    proposed = Description(
+        id=new_id,
+        attached_to=source.attached_to,
+        kind=source.kind,
+        attention=source.attention,
+        text=new_text,
+        authored_by="llm:test",
+        τ_a=300,
+        status=DescStatus.PROVISIONAL,
+    )
+    return EditProposal(
+        source_description_id=source.id,
+        proposed_description=proposed,
+        proposer_id="llm:test",
+        rationale="test rationale",
+        proposed_at_τ_a=300,
     )
 
 
@@ -422,6 +446,97 @@ def test_walk_answers_ignores_non_answer_proposal_entries():
 
 
 # ============================================================================
+# walk_edit_proposals
+# ============================================================================
+
+
+def test_walk_edits_empty_queue_is_noop():
+    d = _make_description("D_alpha")
+    stdin = io.StringIO("")
+    stdout = io.StringIO()
+    new_descs, new_queue, decisions = walk_edit_proposals(
+        [], [d], stdin=stdin, stdout=stdout,
+    )
+    assert new_descs == [d]
+    assert new_queue == []
+    assert decisions == []
+    assert "no pending edit proposals" in stdout.getvalue()
+
+
+def test_walk_edits_accept_supersedes_and_commits_new():
+    """Accept on a pending EditProposal: descriptions gains the new
+    COMMITTED head, source is flipped SUPERSEDED, queue entry flips
+    to accepted."""
+    source = _make_description("D_alpha")
+    ep = _make_edit_proposal(source, "D_alpha_edit_1", "revised body")
+    queue = ingest_edit_proposal(ep, [])
+    stdin = io.StringIO("a\n")
+    stdout = io.StringIO()
+    new_descs, new_queue, decisions = walk_edit_proposals(
+        queue, [source], stdin=stdin, stdout=stdout,
+    )
+    assert len(new_descs) == 2
+    by_id = {d.id: d for d in new_descs}
+    assert by_id["D_alpha"].status == DescStatus.SUPERSEDED
+    assert by_id["D_alpha"].metadata.get("superseded_by") == "D_alpha_edit_1"
+    assert by_id["D_alpha_edit_1"].status == DescStatus.COMMITTED
+    assert by_id["D_alpha_edit_1"].metadata.get("supersedes") == "D_alpha"
+    assert by_id["D_alpha_edit_1"].text == "revised body"
+    assert new_queue[0].status == "accepted"
+    assert decisions == [Decision("edit-proposal", "D_alpha", "accept")]
+
+
+def test_walk_edits_decline_leaves_source_intact():
+    source = _make_description("D_alpha")
+    ep = _make_edit_proposal(source, "D_alpha_edit_2", "would-be body")
+    queue = ingest_edit_proposal(ep, [])
+    stdin = io.StringIO("d\n")
+    stdout = io.StringIO()
+    new_descs, new_queue, decisions = walk_edit_proposals(
+        queue, [source], stdin=stdin, stdout=stdout,
+    )
+    assert len(new_descs) == 1
+    assert new_descs[0].status == DescStatus.COMMITTED, (
+        "declined edit should not touch the source"
+    )
+    assert new_queue[0].status == "declined"
+    assert decisions == [Decision("edit-proposal", "D_alpha", "decline")]
+
+
+def test_walk_edits_skip_leaves_pending():
+    source = _make_description("D_alpha")
+    ep = _make_edit_proposal(source, "D_alpha_edit_3", "body")
+    queue = ingest_edit_proposal(ep, [])
+    stdin = io.StringIO("s\n")
+    stdout = io.StringIO()
+    new_descs, new_queue, decisions = walk_edit_proposals(
+        queue, [source], stdin=stdin, stdout=stdout,
+    )
+    assert new_descs[0].status == DescStatus.COMMITTED
+    assert new_queue[0].status == "pending"
+    assert decisions == [Decision("edit-proposal", "D_alpha", "skip")]
+
+
+def test_walk_edits_ignores_non_edit_entries():
+    """A mixed queue (AnswerProposal + EditProposal) — the edit walker
+    must only prompt on EditProposal pending entries."""
+    source = _make_description("D_alpha")
+    q = _make_description("D_q", is_question=True)
+    ap = _make_answer_proposal("D_q", "D_q_answer_mixed_e")
+    ep = _make_edit_proposal(source, "D_alpha_edit_mixed", "body")
+    queue = [ap, ep]
+    stdin = io.StringIO("a\n")  # one prompt expected, for the edit
+    stdout = io.StringIO()
+    _, new_queue, decisions = walk_edit_proposals(
+        queue, [source, q], stdin=stdin, stdout=stdout,
+    )
+    assert decisions == [Decision("edit-proposal", "D_alpha", "accept")]
+    # AnswerProposal untouched.
+    assert new_queue[0] == ap
+    assert new_queue[1].status == "accepted"
+
+
+# ============================================================================
 # Summary helper
 # ============================================================================
 
@@ -461,6 +576,11 @@ TESTS = [
     test_walk_answers_quit_stops_walk,
     test_walk_answers_acts_on_correct_entry_with_duplicate_pending_proposals,
     test_walk_answers_ignores_non_answer_proposal_entries,
+    test_walk_edits_empty_queue_is_noop,
+    test_walk_edits_accept_supersedes_and_commits_new,
+    test_walk_edits_decline_leaves_source_intact,
+    test_walk_edits_skip_leaves_pending,
+    test_walk_edits_ignores_non_edit_entries,
     test_summarize_decisions_groups_by_kind_and_choice,
 ]
 

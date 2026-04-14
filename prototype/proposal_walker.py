@@ -37,8 +37,10 @@ from typing import Optional
 from substrate import (
     AnswerProposal,
     Description,
+    EditProposal,
     ReviewEntry,
     accept_answer_proposal,
+    accept_edit_proposal,
     decline_proposal,
     ingest_review,
 )
@@ -51,10 +53,10 @@ from substrate import (
 
 @dataclass(frozen=True)
 class Decision:
-    """One walker decision. `kind` is "review" or "answer-proposal";
-    `target_id` identifies the record (description id for reviews, the
-    question id for answer proposals); `choice` is one of
-    "accept" / "decline" / "skip" / "quit".
+    """One walker decision. `kind` is "review", "answer-proposal", or
+    "edit-proposal"; `target_id` identifies the record (description id
+    for reviews and edits, question id for answer proposals);
+    `choice` is one of "accept" / "decline" / "skip" / "quit".
     """
     kind: str
     target_id: str
@@ -128,6 +130,33 @@ def _render_review(
     if review.comment:
         stdout.write(f"  comment:\n")
         stdout.write(_indent(review.comment) + "\n")
+
+
+def _render_edit_proposal(
+    stdout,
+    proposal: EditProposal,
+    source: Optional[Description],
+) -> None:
+    stdout.write(f"edit source: {proposal.source_description_id}\n")
+    d_new = proposal.proposed_description
+    if source is not None:
+        stdout.write(f"  current kind:       {source.kind}\n")
+        stdout.write(f"  current attention:  {source.attention.value}\n")
+        stdout.write(f"  current text:\n")
+        stdout.write(_indent(source.text) + "\n")
+    else:
+        stdout.write(f"  (source description not found in current collection)\n")
+    stdout.write(f"\nproposed id:     {d_new.id}\n")
+    stdout.write(f"  proposed kind: {d_new.kind}")
+    if source is not None and d_new.kind != source.kind:
+        stdout.write(f"   (changed from {source.kind})")
+    stdout.write("\n")
+    stdout.write(f"  author:        {d_new.authored_by}\n")
+    stdout.write(f"  new text:\n")
+    stdout.write(_indent(d_new.text) + "\n")
+    if proposal.rationale:
+        stdout.write(f"\nrationale:\n")
+        stdout.write(_indent(proposal.rationale) + "\n")
 
 
 def _render_answer_proposal(
@@ -225,6 +254,86 @@ def walk_reviews(
             stdout.write(f"  skipped\n")
 
     return working, decisions
+
+
+def walk_edit_proposals(
+    queue: list,
+    descriptions: list,
+    *,
+    stdin=None,
+    stdout=None,
+) -> tuple:
+    """Walk pending EditProposal entries in `queue`. Non-EditProposal
+    entries (PromotionProposal, AnswerProposal) and non-pending entries
+    are left untouched and not shown.
+
+    For each pending EditProposal, the author sees the source
+    description's current text + the proposed replacement text +
+    rationale, and chooses accept / decline / skip / quit.
+
+    Accept calls `accept_edit_proposal`, appending a committed new
+    description and marking the source SUPERSEDED. Decline flips the
+    queue entry's status to declined. Skip leaves it pending. Quit
+    stops the walk early.
+
+    Returns (new_descriptions, new_queue, decisions).
+    """
+    if stdin is None:
+        stdin = sys.stdin
+    if stdout is None:
+        stdout = sys.stdout
+
+    working_desc = list(descriptions)
+    working_queue = list(queue)
+    decisions: list = []
+
+    pending_indices = [
+        i for i, entry in enumerate(working_queue)
+        if isinstance(entry, EditProposal) and entry.status == "pending"
+    ]
+    total = len(pending_indices)
+
+    if total == 0:
+        stdout.write("\n(no pending edit proposals to walk)\n")
+        return working_desc, working_queue, decisions
+
+    stdout.write(f"\n=== walking {total} pending edit proposal(s) ===\n")
+
+    for step, idx in enumerate(pending_indices, start=1):
+        entry = working_queue[idx]
+        source_id = entry.source_description_id
+        source = next(
+            (d for d in working_desc if d.id == source_id),
+            None,
+        )
+
+        _rule(stdout, f"[edit proposal {step}/{total}]")
+        _render_edit_proposal(stdout, entry, source)
+        choice = _read_choice(stdin, stdout, _CHOICE_PROMPT)
+
+        if choice == "q":
+            decisions.append(Decision("edit-proposal", source_id, "quit"))
+            stdout.write("\n(quit; remaining proposals skipped)\n")
+            break
+        if choice == "a":
+            working_desc, working_queue = accept_edit_proposal(
+                entry, working_desc, working_queue,
+            )
+            decisions.append(Decision("edit-proposal", source_id, "accept"))
+            new_id = entry.proposed_description.id
+            stdout.write(
+                f"  accepted — {source_id} superseded; {new_id} "
+                f"committed (queue entry marked accepted)\n"
+            )
+        elif choice == "d":
+            working_queue = decline_proposal(entry, working_queue)
+            decisions.append(Decision("edit-proposal", source_id, "decline"))
+            stdout.write(f"  declined — source description unchanged\n")
+        else:  # "s"
+            decisions.append(Decision("edit-proposal", source_id, "skip"))
+            stdout.write(f"  skipped — queue entry left pending\n")
+
+    return working_desc, working_queue, decisions
 
 
 def walk_answer_proposals(

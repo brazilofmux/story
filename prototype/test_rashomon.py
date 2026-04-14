@@ -44,8 +44,9 @@ from substrate import (
     descriptions_for, descriptions_on_branch, by_kind, open_questions,
     effective_branches, anchor_event, anchor_desc,
     reader_view, ingest_review, ingest_proposal, ingest_question_answer,
-    accept_answer_proposal, decline_proposal,
-    PromotionProposal, AnswerProposal,
+    ingest_edit_proposal, accept_answer_proposal, accept_edit_proposal,
+    decline_proposal,
+    PromotionProposal, AnswerProposal, EditProposal,
     ReaderView, ViewEventRecord, ViewDescriptionRecord,
 )
 from rashomon import (
@@ -898,6 +899,267 @@ def test_decline_promotion_proposal_also_works():
     assert new_queue[0].status == "declined"
 
 
+def _make_edit_proposal(source_id: str, new_desc_id: str, new_text: str,
+                        τ_a: int = 20_000) -> EditProposal:
+    """Build an EditProposal whose proposed_description is a rewrite of
+    an existing description in DESCRIPTIONS. Used by the edit tests
+    below."""
+    source = next(d for d in DESCRIPTIONS if d.id == source_id)
+    proposed = Description(
+        id=new_desc_id,
+        attached_to=source.attached_to,
+        kind=source.kind,
+        attention=source.attention,
+        text=new_text,
+        authored_by="llm:mock",
+        τ_a=τ_a,
+        branches=source.branches,
+        status=DescStatus.PROVISIONAL,
+    )
+    return EditProposal(
+        source_description_id=source_id,
+        proposed_description=proposed,
+        proposer_id="llm:mock",
+        rationale="test rationale",
+        proposed_at_τ_a=τ_a,
+    )
+
+
+def test_ingest_edit_proposal_appends_to_queue():
+    """reader-model-sketch-01 OQ6 + descriptions-sketch-01 OQ1: an
+    EditProposal lands in the same queue as PromotionProposal and
+    AnswerProposal, distinguished by record type."""
+    queue = []
+    ep = _make_edit_proposal(
+        "D_woodcutter_trust", "D_woodcutter_trust_edit_test", "new body"
+    )
+    new_queue = ingest_edit_proposal(ep, queue)
+    assert queue == [], "original queue mutated"
+    assert len(new_queue) == 1
+    assert isinstance(new_queue[0], EditProposal)
+    assert new_queue[0].status == "pending"
+
+
+def test_accept_edit_proposal_supersedes_source_and_commits_new():
+    """Accept an EditProposal: the proposed description is appended
+    as COMMITTED with metadata["supersedes"], and the source
+    description is replaced in-place with a SUPERSEDED copy carrying
+    metadata["superseded_by"]. Original records are not mutated
+    (dataclass replace semantics)."""
+    queue = ingest_edit_proposal(
+        _make_edit_proposal(
+            "D_woodcutter_trust",
+            "D_woodcutter_trust_edit_accept",
+            "sharpened text",
+        ),
+        [],
+    )
+    proposal = queue[0]
+    source_original = next(d for d in DESCRIPTIONS if d.id == "D_woodcutter_trust")
+    assert source_original.status == DescStatus.COMMITTED, \
+        "precondition: source is committed"
+
+    new_descriptions, new_queue = accept_edit_proposal(
+        proposal, list(DESCRIPTIONS), queue
+    )
+
+    # Collection grew by exactly one; source is still there but flipped.
+    assert len(new_descriptions) == len(DESCRIPTIONS) + 1
+    # The source in the new collection is SUPERSEDED and links to the new id.
+    superseded = next(
+        d for d in new_descriptions if d.id == "D_woodcutter_trust"
+    )
+    assert superseded.status == DescStatus.SUPERSEDED
+    assert superseded.metadata.get("superseded_by") == "D_woodcutter_trust_edit_accept"
+    # The new record is COMMITTED and links back to the source.
+    committed_new = next(
+        d for d in new_descriptions if d.id == "D_woodcutter_trust_edit_accept"
+    )
+    assert committed_new.status == DescStatus.COMMITTED
+    assert committed_new.metadata.get("supersedes") == "D_woodcutter_trust"
+    assert committed_new.text == "sharpened text"
+    # Original record untouched (immutability).
+    assert source_original.status == DescStatus.COMMITTED, \
+        "original source description was mutated"
+    # Queue entry flipped.
+    assert new_queue[0].status == "accepted"
+
+
+def test_view_hides_superseded_description_by_default():
+    """After an edit, the default view on :b-woodcutter surfaces the
+    new record but NOT the superseded source — the current head of
+    the edit chain is the only visible version."""
+    queue = ingest_edit_proposal(
+        _make_edit_proposal(
+            "D_woodcutter_trust",
+            "D_woodcutter_trust_edit_view",
+            "sharpened text",
+        ),
+        [],
+    )
+    new_descriptions, _ = accept_edit_proposal(
+        queue[0], list(DESCRIPTIONS), queue
+    )
+    v = reader_view(
+        branch=B_WOODCUTTER, events=EVENTS_ALL,
+        descriptions=new_descriptions,
+        all_branches=ALL_BRANCHES,
+        up_to_τ_s=100, up_to_τ_a=30_000,
+    )
+    desc_ids = {r.description.id for r in v.descriptions}
+    assert "D_woodcutter_trust_edit_view" in desc_ids, (
+        "edited description should be in the view"
+    )
+    assert "D_woodcutter_trust" not in desc_ids, (
+        "superseded source should be hidden from the default view"
+    )
+
+
+def test_descriptions_on_branch_include_superseded_flag_exposes_history():
+    """Audit paths can opt into seeing superseded descriptions by
+    passing include_superseded=True — both the new head and the
+    superseded source appear."""
+    queue = ingest_edit_proposal(
+        _make_edit_proposal(
+            "D_woodcutter_trust",
+            "D_woodcutter_trust_edit_history",
+            "sharpened text",
+        ),
+        [],
+    )
+    new_descriptions, _ = accept_edit_proposal(
+        queue[0], list(DESCRIPTIONS), queue
+    )
+    visible = descriptions_on_branch(
+        branch=B_WOODCUTTER, descriptions=new_descriptions,
+        events=EVENTS_ALL, all_branches=ALL_BRANCHES,
+        up_to_τ_a=30_000,
+    )
+    audit = descriptions_on_branch(
+        branch=B_WOODCUTTER, descriptions=new_descriptions,
+        events=EVENTS_ALL, all_branches=ALL_BRANCHES,
+        up_to_τ_a=30_000,
+        include_superseded=True,
+    )
+    assert "D_woodcutter_trust" not in {d.id for d in visible}
+    assert "D_woodcutter_trust" in {d.id for d in audit}
+
+
+def test_accept_edit_proposal_preserves_load_bearing_source_metadata():
+    """Regression: edit acceptance must carry source metadata into the
+    new head. The concrete case that motivated this: an answer
+    description carries metadata["answers_question"] pointing back at
+    the question it answered. If that answer is edited, the successor
+    must keep the link — losing it orphans the question-answer
+    relationship in the next view.
+
+    This test exercises the full authoring chain: accept an answer
+    proposal (which sets answers_question), then edit the committed
+    answer and confirm the metadata survives alongside the new
+    `supersedes` pointer.
+    """
+    # Step 1: answer D_wc_authorial_doubt, commit the proposed answer.
+    answer_q = ingest_question_answer(
+        _make_answer_proposal(
+            "D_wc_authorial_doubt",
+            "D_wc_authorial_doubt_answer_for_edit",
+        ),
+        [],
+    )
+    new_descriptions, _ = accept_answer_proposal(
+        answer_q[0], list(DESCRIPTIONS), answer_q
+    )
+    committed_answer = new_descriptions[-1]
+    assert committed_answer.metadata.get(
+        "answers_question"
+    ) == "D_wc_authorial_doubt", "precondition: committed answer links back"
+
+    # Step 2: propose an edit to that committed answer.
+    edited_answer = Description(
+        id="D_wc_authorial_doubt_answer_edited",
+        attached_to=committed_answer.attached_to,
+        kind=committed_answer.kind,
+        attention=committed_answer.attention,
+        text="tighter answer text",
+        authored_by="llm:mock",
+        τ_a=30_000,
+        branches=committed_answer.branches,
+        status=DescStatus.PROVISIONAL,
+        # An edit constructed WITHOUT carrying source metadata — this
+        # is the defensive path accept_edit_proposal guards.
+        metadata={},
+    )
+    edit = EditProposal(
+        source_description_id=committed_answer.id,
+        proposed_description=edited_answer,
+        proposer_id="llm:mock",
+        rationale="rewrite",
+        proposed_at_τ_a=30_000,
+    )
+    edit_queue = ingest_edit_proposal(edit, [])
+    new_descriptions2, _ = accept_edit_proposal(
+        edit_queue[0], new_descriptions, edit_queue
+    )
+
+    # Step 3: the new head retains answers_question AND gains supersedes.
+    new_head = next(
+        d for d in new_descriptions2
+        if d.id == "D_wc_authorial_doubt_answer_edited"
+    )
+    assert new_head.metadata.get("answers_question") == "D_wc_authorial_doubt", (
+        f"load-bearing source metadata lost on edit accept: "
+        f"{new_head.metadata}"
+    )
+    assert new_head.metadata.get("supersedes") == committed_answer.id
+
+
+def test_accept_edit_proposal_on_already_superseded_source_raises():
+    """Once a description is SUPERSEDED, it cannot be re-edited.
+    Follow-up edits must target the current head."""
+    # First edit: supersedes D_woodcutter_trust.
+    queue = ingest_edit_proposal(
+        _make_edit_proposal(
+            "D_woodcutter_trust",
+            "D_woodcutter_trust_edit_first",
+            "first edit",
+        ),
+        [],
+    )
+    new_descriptions, new_queue = accept_edit_proposal(
+        queue[0], list(DESCRIPTIONS), queue
+    )
+    # Second edit: attempts to edit the (now-superseded) source again.
+    second = _make_edit_proposal(
+        "D_woodcutter_trust",
+        "D_woodcutter_trust_edit_second",
+        "second edit",
+    )
+    new_queue = ingest_edit_proposal(second, new_queue)
+    try:
+        accept_edit_proposal(new_queue[-1], new_descriptions, new_queue)
+    except ValueError as e:
+        assert "SUPERSEDED" in str(e)
+        return
+    raise AssertionError(
+        "editing a SUPERSEDED source should raise ValueError"
+    )
+
+
+def test_decline_edit_proposal_flips_status():
+    """Declining an EditProposal flips its queue status without
+    touching descriptions."""
+    queue = ingest_edit_proposal(
+        _make_edit_proposal(
+            "D_woodcutter_trust",
+            "D_woodcutter_trust_edit_decline",
+            "new text",
+        ),
+        [],
+    )
+    new_queue = decline_proposal(queue[0], queue)
+    assert new_queue[0].status == "declined"
+
+
 def test_accept_declined_proposal_raises():
     """A proposal that has already been declined cannot be re-accepted.
     This pins the invariant that status transitions are one-shot:
@@ -1090,6 +1352,13 @@ TESTS = [
     test_accept_answer_proposal_surfaces_in_subsequent_view,
     test_decline_answer_proposal_flips_status_no_new_description,
     test_decline_promotion_proposal_also_works,
+    test_ingest_edit_proposal_appends_to_queue,
+    test_accept_edit_proposal_supersedes_source_and_commits_new,
+    test_view_hides_superseded_description_by_default,
+    test_descriptions_on_branch_include_superseded_flag_exposes_history,
+    test_accept_edit_proposal_preserves_load_bearing_source_metadata,
+    test_accept_edit_proposal_on_already_superseded_source_raises,
+    test_decline_edit_proposal_flips_status,
     test_accept_declined_proposal_raises,
     test_anchor_in_view_false_when_description_anchor_is_filtered_out,
     test_staleness_computed_at_view_τ_a_bound,

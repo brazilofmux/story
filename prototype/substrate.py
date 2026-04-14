@@ -914,6 +914,7 @@ class ReviewVerdict(str, Enum):
 class DescStatus(str, Enum):
     COMMITTED = "committed"
     PROVISIONAL = "provisional"
+    SUPERSEDED = "superseded"  # old version of a description that has been edited-over
 
 
 @dataclass(frozen=True)
@@ -1046,6 +1047,7 @@ def descriptions_on_branch(
     events: list,
     all_branches: dict,
     up_to_τ_a: int,
+    include_superseded: bool = False,
 ) -> list:
     """All descriptions visible on `branch` at `up_to_τ_a`, in τ_a order.
 
@@ -1053,10 +1055,18 @@ def descriptions_on_branch(
     visible on `branch` if its effective-branches set contains `branch.label`
     or the label of any ancestor. Sibling :contested branches do not inherit
     from each other — the D4 branch semantics mirror the B1 fold-scope rule.
+
+    Superseded descriptions (status=DescStatus.SUPERSEDED) are excluded
+    by default: the edit chain's current head is the only member of
+    the visible set. Set `include_superseded=True` for audit paths
+    that need to walk the full history (diff rendering, provenance
+    inspection, supersession-chain traversal).
     """
     result = []
     for d in descriptions:
         if d.τ_a > up_to_τ_a:
+            continue
+        if not include_superseded and d.status == DescStatus.SUPERSEDED:
             continue
         eff = effective_branches(d, events, descriptions)
         if not eff:
@@ -1219,6 +1229,29 @@ class PromotionProposal:
     """
     description_id: str
     proposed_fact: object
+    proposer_id: str
+    rationale: str
+    proposed_at_τ_a: int
+    status: str = "pending"
+
+
+@dataclass(frozen=True)
+class EditProposal:
+    """A reader-model's proposed edit to an existing description
+    (reader-model-sketch-01 OQ6, descriptions-sketch-01 OQ1). Lives in
+    the same queue as PromotionProposal and AnswerProposal; accept
+    appends the proposed new description as COMMITTED and marks the
+    source description SUPERSEDED, with bidirectional metadata links
+    (`supersedes` on the new record, `superseded_by` on the old).
+
+    `proposed_description` is a constructed Description not yet in the
+    collection — the caller constructs it with a new id, the edited
+    text, and whatever kind/attention changes the LLM recommends. The
+    source description's id is carried separately as
+    `source_description_id` for ingest-time validation.
+    """
+    source_description_id: str
+    proposed_description: "Description"
     proposer_id: str
     rationale: str
     proposed_at_τ_a: int
@@ -1484,6 +1517,103 @@ def accept_answer_proposal(
         )
     committed = replace(entry.proposed_description, status=DescStatus.COMMITTED)
     new_descriptions = list(descriptions) + [committed]
+    new_queue = list(queue)
+    new_queue[idx] = replace(entry, status="accepted")
+    return new_descriptions, new_queue
+
+
+def ingest_edit_proposal(
+    edit: EditProposal,
+    queue: list,
+) -> list:
+    """Append an EditProposal to the same queue PromotionProposals
+    and AnswerProposals live in. Tooling distinguishes by record type
+    when walking. Returns a new queue; the input is not mutated.
+    """
+    return list(queue) + [edit]
+
+
+def accept_edit_proposal(
+    proposal: EditProposal,
+    descriptions: list,
+    queue: list,
+) -> tuple:
+    """Accept a pending EditProposal. Returns (new_descriptions,
+    new_queue).
+
+    - The proposed description is appended with status=COMMITTED and
+      metadata["supersedes"] = source_description_id.
+    - The source description is replaced in-place in the descriptions
+      list with a copy carrying status=SUPERSEDED and
+      metadata["superseded_by"] = new_id. The original object is not
+      mutated (dataclass replace).
+    - The queue entry's status flips pending → accepted; entry stays
+      in the queue for audit.
+
+    ValueError if:
+      - proposal is not pending (already accepted/declined).
+      - source_description_id does not resolve in `descriptions`.
+      - source description is already SUPERSEDED (supersession chains
+        are sequential; a second edit should target the latest head).
+
+    The sketch (descriptions-sketch-01 OQ1) leaves supersession chain
+    semantics to tooling; this implementation takes the minimal
+    stance: edits only land on the current head, never on a stale
+    version. Callers who want to revise an already-superseded
+    description edit its successor.
+    """
+    idx = _match_queue_entry(queue, proposal)
+    entry = queue[idx]
+    if entry.status != "pending":
+        raise ValueError(
+            f"cannot accept {entry.status} edit proposal "
+            f"for source {entry.source_description_id!r}"
+        )
+
+    source_idx = None
+    for j, d in enumerate(descriptions):
+        if d.id == entry.source_description_id:
+            source_idx = j
+            break
+    if source_idx is None:
+        raise ValueError(
+            f"source description {entry.source_description_id!r} not "
+            f"found; cannot apply edit"
+        )
+    source = descriptions[source_idx]
+    if source.status == DescStatus.SUPERSEDED:
+        raise ValueError(
+            f"source description {source.id!r} is already SUPERSEDED; "
+            f"edits must target the current head"
+        )
+
+    new_id = entry.proposed_description.id
+    # Metadata precedence on accept: source keys under, proposal keys
+    # over (proposal can override), `supersedes` pointer on top.
+    # Preserving source metadata by default is load-bearing: an edit
+    # to a description carrying e.g. `answers_question` must keep the
+    # link, or the successor becomes an orphan. A proposal that
+    # deliberately wants to drop a source key can do so by setting
+    # that key to a sentinel-free fresh value in the proposal.
+    committed_new = replace(
+        entry.proposed_description,
+        status=DescStatus.COMMITTED,
+        metadata={
+            **source.metadata,
+            **entry.proposed_description.metadata,
+            "supersedes": source.id,
+        },
+    )
+    superseded_source = replace(
+        source,
+        status=DescStatus.SUPERSEDED,
+        metadata={**source.metadata, "superseded_by": new_id},
+    )
+
+    new_descriptions = list(descriptions)
+    new_descriptions[source_idx] = superseded_source
+    new_descriptions.append(committed_new)
+
     new_queue = list(queue)
     new_queue[idx] = replace(entry, status="accepted")
     return new_descriptions, new_queue

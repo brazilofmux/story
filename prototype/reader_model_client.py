@@ -54,6 +54,7 @@ from substrate import (
     Attention,
     Description,
     DescStatus,
+    EditProposal,
     KnowledgeEffect,
     Prop,
     ReaderView,
@@ -121,11 +122,48 @@ class ReaderAnswer(BaseModel):
     )
 
 
+class ReaderEdit(BaseModel):
+    """A proposed edit to an existing description — a rewrite the
+    author can accept to replace the current text with an improved
+    version. Produced when a review's rationale names a specific
+    revision and the improvement is concrete enough to offer as a
+    drop-in. Descriptions flagged with is_question=True are NOT
+    edit-eligible (use ReaderAnswer for those)."""
+    source_description_id: str = Field(
+        description=(
+            "id of the description to be replaced. Must be in scope "
+            "(edits_for) and must not be a question."
+        )
+    )
+    new_text: str = Field(
+        description=(
+            "the replacement text for the description's body. Should "
+            "address the specific issue the review identified, keep "
+            "within the source description's kind/attention, and stay "
+            "grounded in view content."
+        )
+    )
+    new_kind: Optional[AnswerKind] = Field(
+        default=None,
+        description=(
+            "optional override if the edit warrants re-categorization. "
+            "Defaults to the source's kind (preserve) when omitted."
+        ),
+    )
+    rationale: str = Field(
+        description=(
+            "1-2 sentences explaining what specifically was changed "
+            "and why, grounded in facts / descriptions in view"
+        )
+    )
+
+
 class ReaderOutput(BaseModel):
     """The full structured response. Empty lists are legal — an LLM with
     nothing to propose or review returns empty collections, not prose."""
     reviews: list[ReaderReview] = Field(default_factory=list)
     answers: list[ReaderAnswer] = Field(default_factory=list)
+    edits: list[ReaderEdit] = Field(default_factory=list)
 
 
 # ============================================================================
@@ -151,11 +189,12 @@ class DroppedOutput:
 
 @dataclass
 class ReaderModelResult:
-    """What invoke_reader_model returns. `review_candidates` and
-    `answer_proposals` are substrate-native and scope-enforced.
-    `dropped` captures outputs that failed validation (for audit and
-    debugging). `raw_output` is the pre-translation LLM response, kept
-    for callers who want the rationale strings without re-parsing.
+    """What invoke_reader_model returns. `review_candidates`,
+    `answer_proposals`, and `edit_proposals` are substrate-native and
+    scope-enforced. `dropped` captures outputs that failed validation
+    (for audit and debugging). `raw_output` is the pre-translation LLM
+    response, kept for callers who want the rationale strings without
+    re-parsing.
 
     `review_candidates` pairs each translated `ReviewEntry` with its
     target description id. The pair is the authoritative artifact —
@@ -164,8 +203,9 @@ class ReaderModelResult:
     unsafe when any raw record was dropped at the validation gate.
     """
     review_candidates: list  # list[tuple[str, ReviewEntry]]
-    answer_proposals: list  # list[AnswerProposal] — queue-ready
-    dropped: list  # list[DroppedOutput]
+    answer_proposals: list   # list[AnswerProposal] — queue-ready
+    edit_proposals: list     # list[EditProposal] — queue-ready
+    dropped: list            # list[DroppedOutput]
     raw_output: ReaderOutput
 
 
@@ -262,6 +302,32 @@ not the question's kind.
 substantive answer, 3-6 sentences, grounded in view content.
 - `rationale`: 1-2 sentences explaining how the answer follows from \
 the facts and other descriptions in view.
+
+## Proposing edits
+
+When a review identifies a concrete revision — a specific better \
+phrasing, a tightened claim, the removal of an inaccuracy the rest of \
+the description otherwise gets right — you may ALSO produce a \
+ReaderEdit alongside the review. Edits are a drop-in replacement for \
+the description's text; accepted edits supersede the source.
+
+One ReaderEdit per description you want to revise:
+
+- `source_description_id`: the description being replaced. Must not be \
+a question (questions take answers, not edits) and must not already \
+be superseded.
+- `new_text`: the replacement body. Keep the source's kind and \
+attention unless you set `new_kind`. Address the specific issue the \
+review identified; preserve anything that was not flagged.
+- `new_kind`: optional — set only when the edit changes what kind of \
+interpretation the description carries (rare).
+- `rationale`: 1-2 sentences naming exactly what you changed and why, \
+grounded in view content.
+
+Edits are OPTIONAL. If your review identified no concrete revision, \
+or only a vague "could be better," do NOT emit an edit. An empty \
+edits list is the common case, and is preferred to a speculative \
+rewrite. An approved-verdict review never needs an accompanying edit.
 
 ## Scope discipline
 
@@ -398,7 +464,11 @@ def _serialize_view(view: ReaderView, events: list, descriptions: list) -> str:
     )
 
 
-def _build_task_section(reviews_for: list[str], answers_for: list[str]) -> str:
+def _build_task_section(
+    reviews_for: list[str],
+    answers_for: list[str],
+    edits_for: list[str],
+) -> str:
     parts: list[str] = ["## Task", ""]
     if reviews_for:
         parts.append("Review these descriptions:")
@@ -411,6 +481,21 @@ def _build_task_section(reviews_for: list[str], answers_for: list[str]) -> str:
         parts.extend(f"- {d}" for d in answers_for)
     else:
         parts.append("(No open questions to answer.)")
+    parts.append("")
+    if edits_for:
+        parts.append(
+            "Edits are permitted (but not required) on these descriptions:"
+        )
+        parts.extend(f"- {d}" for d in edits_for)
+        parts.append("")
+        parts.append(
+            "Only propose an edit when your review identifies a specific, "
+            "concrete revision — a better phrasing, a tightened claim, a "
+            "removed inaccuracy. A general 'this could be better' is not "
+            "enough; an empty edits list is the common case."
+        )
+    else:
+        parts.append("(Edits are not permitted in this invocation.)")
     return "\n".join(parts)
 
 
@@ -420,11 +505,12 @@ def build_user_prompt(
     descriptions: list,
     reviews_for: list[str],
     answers_for: list[str],
+    edits_for: list[str],
 ) -> str:
     """Public helper: assemble the full user message without calling the API.
     Used by the demo's dry-run mode and by structure tests."""
     body = _serialize_view(view, events, descriptions)
-    task = _build_task_section(reviews_for, answers_for)
+    task = _build_task_section(reviews_for, answers_for, edits_for)
     return f"{body}\n\n{task}"
 
 
@@ -534,6 +620,101 @@ def _classify_answer(
     return None
 
 
+def _classify_edit(
+    raw: ReaderEdit,
+    descriptions: list,
+    edits_for: list,
+) -> Optional[str]:
+    """Validate a raw edit against the declared invocation scope.
+    Returns None if accepted, or a reason string if it should be
+    dropped.
+
+    Four gates:
+      - `source_description_id` must be in `edits_for` (R5).
+      - The source must exist in the collection.
+      - The source must not be is_question=True (answers, not edits,
+        are the right response to questions).
+      - The source must not already be SUPERSEDED (edits target the
+        current head of a supersession chain; a stale source would
+        silently produce an orphan successor).
+    """
+    if raw.source_description_id not in edits_for:
+        return (
+            f"source_description_id {raw.source_description_id!r} is "
+            f"outside the declared edits_for scope"
+        )
+    source = next(
+        (d for d in descriptions if d.id == raw.source_description_id),
+        None,
+    )
+    if source is None:
+        return (
+            f"source_description_id {raw.source_description_id!r} does "
+            f"not resolve to any known description"
+        )
+    if source.is_question:
+        return (
+            f"description {raw.source_description_id!r} is a question "
+            f"(is_question=True); questions take answers, not edits"
+        )
+    if source.status == DescStatus.SUPERSEDED:
+        return (
+            f"description {raw.source_description_id!r} is already "
+            f"SUPERSEDED; edits must target the current head"
+        )
+    return None
+
+
+def _translate_edit(
+    raw: ReaderEdit,
+    descriptions: list,
+    reviewer_id: str,
+    current_τ_a: int,
+) -> EditProposal:
+    """One accepted ReaderEdit → one EditProposal. Caller must have
+    already passed the edit through _classify_edit and seen None;
+    this function assumes the source resolves and is edit-eligible.
+
+    The proposed new description inherits the source's anchor, branches,
+    and **metadata** (an edit that changes anchoring is a different
+    operation; re-anchoring is out of scope for this iteration).
+    Preserving source metadata is load-bearing: if an answer description
+    (carrying metadata["answers_question"]) is later edited, the
+    replacement must keep the question link, or the answer becomes an
+    orphan. Kind defaults to the source's kind when `new_kind` is
+    omitted; attention is preserved from the source. The new record
+    starts PROVISIONAL and flips to COMMITTED at accept time;
+    `metadata["supersedes"]` is layered on by accept_edit_proposal.
+    """
+    source = next(d for d in descriptions if d.id == raw.source_description_id)
+    safe_reviewer = reviewer_id.replace(":", "_")
+    new_id = f"{source.id}_edit_by_{safe_reviewer}_τ_a_{current_τ_a}"
+    new_kind = raw.new_kind if raw.new_kind is not None else source.kind
+    new_desc = Description(
+        id=new_id,
+        attached_to=source.attached_to,
+        kind=new_kind,
+        attention=source.attention,
+        text=raw.new_text,
+        authored_by=reviewer_id,
+        τ_a=current_τ_a,
+        is_question=False,
+        branches=source.branches,
+        status=DescStatus.PROVISIONAL,
+        # Inherit source metadata; accept_edit_proposal layers
+        # `supersedes` on top. Copy the dict so mutating the new
+        # description's metadata can't bleed into the source's.
+        metadata=dict(source.metadata),
+    )
+    return EditProposal(
+        source_description_id=source.id,
+        proposed_description=new_desc,
+        proposer_id=reviewer_id,
+        rationale=raw.rationale,
+        proposed_at_τ_a=current_τ_a,
+    )
+
+
 def _translate_answer(
     raw: ReaderAnswer,
     descriptions: list,
@@ -583,6 +764,7 @@ def invoke_reader_model(
     *,
     reviews_for: Optional[list[str]] = None,
     answers_for: Optional[list[str]] = None,
+    edits_for: Optional[list[str]] = None,
     model: str = "claude-opus-4-6",
     reviewer_id: Optional[str] = None,
     effort: str = "high",
@@ -605,6 +787,11 @@ def invoke_reader_model(
             descriptions in the view. Pass `[]` to skip reviews.
         answers_for: ids of is_question descriptions to answer. Default:
             all open_questions in the view. Pass `[]` to skip answers.
+        edits_for: ids of descriptions the LLM may propose edits for.
+            Default: every non-question description in the view.
+            Pass `[]` to forbid edits. Edits are only proposed where
+            a review's rationale names a concrete revision; an empty
+            `edits` list is the common case, not an error.
         model: Claude model id. Default claude-opus-4-6.
         reviewer_id: stamped on produced records. Default "llm:<model>".
         effort: "low" | "medium" | "high" | "max". Default "high" — this
@@ -626,6 +813,10 @@ def invoke_reader_model(
             `substrate.ingest_question_answer`; the author accepts or
             declines via `substrate.accept_answer_proposal` /
             `substrate.decline_proposal`.
+          - `edit_proposals`: list[EditProposal] queue-ready via
+            `substrate.ingest_edit_proposal`; the author accepts or
+            declines via `substrate.accept_edit_proposal` /
+            `substrate.decline_proposal`.
           - `raw_output`: the pre-translation ReaderOutput for
             debugging.
     """
@@ -635,9 +826,17 @@ def invoke_reader_model(
         reviews_for = [r.description.id for r in view.descriptions]
     if answers_for is None:
         answers_for = [r.description.id for r in view.open_questions]
+    if edits_for is None:
+        # Default edits scope is every non-question description in the
+        # view — the same population the reviews target, minus the
+        # questions (which take answers rather than edits).
+        edits_for = [
+            r.description.id for r in view.descriptions
+            if not r.description.is_question
+        ]
 
     user_prompt = build_user_prompt(
-        view, events, descriptions, reviews_for, answers_for
+        view, events, descriptions, reviews_for, answers_for, edits_for
     )
 
     if dry_run:
@@ -653,6 +852,7 @@ def invoke_reader_model(
         return ReaderModelResult(
             review_candidates=[],
             answer_proposals=[],
+            edit_proposals=[],
             dropped=[],
             raw_output=ReaderOutput(),
         )
@@ -683,6 +883,7 @@ def invoke_reader_model(
 
     review_candidates: list = []
     answer_proposals: list = []
+    edit_proposals: list = []
     dropped: list = []
 
     for rr in raw.reviews:
@@ -708,9 +909,19 @@ def invoke_reader_model(
             _translate_answer(ra, descriptions, reviewer_id, current_τ_a)
         )
 
+    for re in raw.edits:
+        reason = _classify_edit(re, descriptions, edits_for)
+        if reason is not None:
+            dropped.append(DroppedOutput(reason=reason, raw=re))
+            continue
+        edit_proposals.append(
+            _translate_edit(re, descriptions, reviewer_id, current_τ_a)
+        )
+
     return ReaderModelResult(
         review_candidates=review_candidates,
         answer_proposals=answer_proposals,
+        edit_proposals=edit_proposals,
         dropped=dropped,
         raw_output=raw,
     )
