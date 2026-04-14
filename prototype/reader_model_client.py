@@ -1,0 +1,620 @@
+"""
+reader_model_client.py — live LLM integration for the reader-model surface.
+
+First live-LLM iteration of reader-model-sketch-01's probe. Takes a
+`ReaderView` (produced by `substrate.reader_view`) and a list of description
+ids to review / questions to answer, and calls Claude Opus 4.6 with a typed
+prompt + structured-output schema. Returns substrate-native `ReviewEntry`
+records (ready for `ingest_review`) and `ProposedAnswer` records (candidate
+new descriptions the author can accept to commit).
+
+Architectural placement: this is **tooling**, not substrate. The substrate
+produces the view and ingests results; the LLM call, prompt templating,
+and response parsing live here. Keeps the fold pure (R5 — every invocation
+is explicit, declared, visible to the caller).
+
+Defaults follow reader-model-sketch-01 and the claude-api skill:
+
+- model: claude-opus-4-6 (user's explicit pick; best-in-class writer)
+- thinking: {"type": "adaptive"} (recommended on Opus 4.6; budget_tokens is
+  deprecated)
+- output_config.effort: "high" — this is interpretive work where quality
+  matters
+- max_tokens: 16_000 (non-streaming; well under SDK timeout limits)
+- cache_control: {"type": "ephemeral"} at top level — caches the largest
+  stable prefix (system prompt + view), which pays off the moment the
+  caller makes a second call against the same view (e.g., re-invoking with
+  a different subset of descriptions to review)
+- typed I/O only (R1): uses `client.messages.parse()` with a Pydantic
+  schema; no free-form prose crosses the boundary
+
+Requires: `pip install -r prototype/requirements.txt`.
+API key: reads `ANTHROPIC_API_KEY` from the environment (SDK default).
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field
+
+try:
+    import anthropic
+except ImportError as exc:
+    raise ImportError(
+        "The reader-model client requires the anthropic SDK. "
+        "Install dependencies via "
+        "`pip install -r prototype/requirements.txt`."
+    ) from exc
+
+from substrate import (
+    Attention,
+    Description,
+    DescStatus,
+    KnowledgeEffect,
+    Prop,
+    ReaderView,
+    ReviewEntry,
+    ReviewVerdict,
+    WorldEffect,
+    effective_branches,
+)
+
+
+# ============================================================================
+# Pydantic schemas — what the LLM returns (typed I/O per R1)
+# ============================================================================
+
+
+# Kind names track the descriptions-sketch-01 starting vocabulary. The
+# Literal constrains the LLM at parse time — a kind outside this set fails
+# validation rather than landing a malformed record in substrate.
+AnswerKind = Literal[
+    "texture",
+    "motivation",
+    "reader-frame",
+    "trust-flag",
+    "authorial-uncertainty",
+    "provenance",
+]
+
+Verdict = Literal["approved", "needs-work", "rejected", "noted"]
+
+
+class ReaderReview(BaseModel):
+    """One reviewer verdict from the LLM on a single description."""
+    description_id: str = Field(description="id of the description being reviewed")
+    verdict: Verdict = Field(description="the reviewer's verdict")
+    rationale: str = Field(
+        description=(
+            "1-3 sentences explaining the verdict, grounded in view content"
+        )
+    )
+
+
+class ReaderAnswer(BaseModel):
+    """A proposed answer to a `is_question=True` description, shaped as a
+    new description the author can accept to commit."""
+    question_description_id: str = Field(
+        description="id of the is_question=True description being answered"
+    )
+    answer_kind: AnswerKind = Field(
+        description=(
+            "kind of the proposed answer — match the answer's content, not "
+            "the question's kind"
+        )
+    )
+    answer_text: str = Field(
+        description=(
+            "body of the proposed new description; 3-6 sentences, grounded "
+            "in view content"
+        )
+    )
+    rationale: str = Field(
+        description=(
+            "1-2 sentences explaining how the answer derives from facts + "
+            "other descriptions in view"
+        )
+    )
+
+
+class ReaderOutput(BaseModel):
+    """The full structured response. Empty lists are legal — an LLM with
+    nothing to propose or review returns empty collections, not prose."""
+    reviews: list[ReaderReview] = Field(default_factory=list)
+    answers: list[ReaderAnswer] = Field(default_factory=list)
+
+
+# ============================================================================
+# Result types — translated into substrate-native records
+# ============================================================================
+
+
+@dataclass(frozen=True)
+class ProposedAnswer:
+    """A proposed answer from the LLM. The `proposed_description` is a
+    constructed Description not yet in the descriptions collection; an
+    author accepts by adding it (and possibly attaching provenance back
+    to the question via the `metadata["answers_question"]` pointer).
+    """
+    question_description_id: str
+    proposed_description: Description
+    rationale: str
+
+
+@dataclass
+class ReaderModelResult:
+    """What invoke_reader_model returns. `reviews` and `proposed_answers`
+    are substrate-native. `raw_output` is the pre-translation LLM
+    response, kept for debugging and for callers who want the rationale
+    strings without re-parsing."""
+    reviews: list  # list[ReviewEntry] — ready for ingest_review
+    proposed_answers: list  # list[ProposedAnswer]
+    raw_output: ReaderOutput
+
+
+# ============================================================================
+# Prompt construction
+# ============================================================================
+
+
+# The system prompt is intentionally frozen across calls. Any per-request
+# content (timestamps, ids, task-specific directives) lives in the user
+# message so the system prompt can be cached per the claude-api skill's
+# silent-invalidator audit. If you need to tweak behavior per call,
+# adjust the task section, not this string.
+SYSTEM_PROMPT = """You are a reader-model — an interpretive peer to a \
+structured story-telling engine. Your role is specified by \
+reader-model-sketch-01 in the project's design/ directory.
+
+Your contract:
+
+R1. Typed I/O only. You produce structured output matching the provided \
+schema. Prose lives inside the `rationale` and `answer_text` fields; \
+never outside them.
+
+R2. The view distinguishes facts from descriptions structurally. Events \
+(facts) are in the `events` section. Descriptions (interpretations) are \
+in the `descriptions` section. These are separate surfaces with different \
+semantics — never treat a description as if it were a derived fact or \
+vice versa.
+
+R3. You propose; the author decides. Your reviews are recommendations. \
+Your answers are candidate descriptions for authorial acceptance, not \
+accepted facts. You do not assert anything into substrate state \
+directly.
+
+R4. Reviews are the same record type a human reviewer would produce — \
+just with `reviewer_id` = "llm:<model>". The substrate does not \
+distinguish LLM and human reviews beyond the identifier.
+
+## The engine's division of labor
+
+The engine separates structural facts (typed events with effects — who \
+is where, who knows what, who killed whom) from interpretive \
+descriptions (motivation, tonal texture, reader-frame commentary). The \
+schema catches drift in facts; an attentive reader catches drift in \
+descriptions. That attentive reader is you.
+
+## What you will see
+
+A ReaderView containing:
+
+- `branch`: the narrative branch (:canonical, or a :contested branch \
+such as :b-wife).
+- `up_to_τ_s`: story-time bound. Events at later τ_s are out of scope.
+- `up_to_τ_a`: authored-time bound.
+- `events`: typed event records with effects. Canonical structural \
+truth on this branch.
+- `descriptions`: typed description records (kind, attention, text, \
+branch scope). Interpretations attached to events or other \
+descriptions.
+- `open_questions`: descriptions where is_question=True. Author-posed \
+questions about the story.
+
+After the view, a task section names which descriptions to review and \
+which questions to answer.
+
+## Reviewing descriptions
+
+For each description you are asked to review, produce one ReaderReview:
+
+- `description_id`: the description being reviewed.
+- `verdict`: one of:
+  - "approved" — consistent with the events in view and a reasonable \
+interpretation.
+  - "needs-work" — has a specific problem: factual tension with events, \
+an unclear claim, or a reading that undermines the scene's effect.
+  - "rejected" — the description should not exist; its claim is wrong \
+in a way editing won't fix.
+  - "noted" — you read it but decline to take a position (missing \
+context, outside your expertise).
+- `rationale`: 1-3 sentences explaining the verdict. Specific, grounded \
+in the view's contents.
+
+## Answering open questions
+
+For each open question, produce one ReaderAnswer:
+
+- `question_description_id`: the is_question description being \
+answered.
+- `answer_kind`: the kind for the proposed answer (texture, \
+motivation, reader-frame, trust-flag, authorial-uncertainty, or \
+provenance). Pick the kind whose semantics match the answer's content, \
+not the question's kind.
+- `answer_text`: the body of the proposed new description. A \
+substantive answer, 3-6 sentences, grounded in view content.
+- `rationale`: 1-2 sentences explaining how the answer follows from \
+the facts and other descriptions in view.
+
+## Discipline
+
+- Never invent events. If the view contains no evidence for a claim, \
+do not make that claim.
+- Never synthesize identities (claim that two named entities are the \
+same). The substrate forbids automatic identity inference.
+- If a description is on a contested branch (say, :b-wife), evaluate \
+it within that branch's reality. Do not hold it against facts from a \
+sibling :contested branch.
+- If you cannot make a good-faith judgment on a description, \
+verdict="noted" is correct. "needs-work" is for specific flaws, not \
+general uncertainty.
+"""
+
+
+def _format_prop(p: Prop) -> str:
+    if not p.args:
+        return p.predicate
+    args_str = ", ".join(str(a) for a in p.args)
+    return f"{p.predicate}({args_str})"
+
+
+def _event_to_dict(event) -> dict:
+    """Convert an Event to a JSON-dumpable dict for the prompt."""
+    effects: list[dict] = []
+    for e in event.effects:
+        if isinstance(e, WorldEffect):
+            effects.append(
+                {
+                    "kind": "world",
+                    "prop": _format_prop(e.prop),
+                    "asserts": e.asserts,
+                }
+            )
+        elif isinstance(e, KnowledgeEffect):
+            effects.append(
+                {
+                    "kind": "agent_knowledge",
+                    "agent": e.agent_id,
+                    "prop": _format_prop(e.held.prop),
+                    "slot": e.held.slot.value,
+                    "via": e.held.via,
+                    "remove": e.remove,
+                }
+            )
+    return {
+        "id": event.id,
+        "type": event.type,
+        "τ_s": event.τ_s,
+        "τ_a": event.τ_a,
+        "branches": sorted(event.branches),
+        "participants": event.participants,
+        "effects": effects,
+    }
+
+
+def _description_to_dict(record, events, descriptions) -> dict:
+    """Convert a ViewDescriptionRecord to a JSON-dumpable dict."""
+    d = record.description
+    anchor = d.attached_to
+    anchor_repr = f"{anchor.kind}:{anchor.target_id}"
+    eff_branches = effective_branches(d, events, descriptions)
+    return {
+        "id": d.id,
+        "attached_to": anchor_repr,
+        "kind": d.kind,
+        "attention": d.attention.value,
+        "text": d.text,
+        "authored_by": d.authored_by,
+        "τ_a": d.τ_a,
+        "is_question": d.is_question,
+        "branches_visible_on": sorted(eff_branches),
+        "effectively_unreviewed": record.effectively_unreviewed,
+        "anchor_in_view": record.anchor_in_view,
+    }
+
+
+def _serialize_view(view: ReaderView, events: list, descriptions: list) -> str:
+    """Render the ReaderView as a readable prompt body. Facts and
+    descriptions live in distinct top-level sections per R2's structural
+    firewall — the LLM can never misread one as the other.
+    """
+    attention_filter_str = (
+        ", ".join(sorted(a.value for a in view.attention_filter))
+        if view.attention_filter
+        else "all"
+    )
+    events_json = json.dumps(
+        [_event_to_dict(r.event) for r in view.events],
+        indent=2,
+        ensure_ascii=False,
+    )
+    descriptions_json = json.dumps(
+        [_description_to_dict(r, events, descriptions) for r in view.descriptions],
+        indent=2,
+        ensure_ascii=False,
+    )
+    open_questions_lines = [
+        f"- {r.description.id}" for r in view.open_questions
+    ] or ["(none)"]
+
+    return "\n".join(
+        [
+            "# ReaderView",
+            "",
+            f"- branch: {view.branch_label}",
+            f"- up_to_τ_s: {view.up_to_τ_s}",
+            f"- up_to_τ_a: {view.up_to_τ_a}",
+            f"- attention_filter: {attention_filter_str}",
+            "",
+            "## Events (facts)",
+            "",
+            events_json,
+            "",
+            "## Descriptions (interpretations)",
+            "",
+            descriptions_json,
+            "",
+            "## Open questions",
+            "",
+            *open_questions_lines,
+        ]
+    )
+
+
+def _build_task_section(reviews_for: list[str], answers_for: list[str]) -> str:
+    parts: list[str] = ["## Task", ""]
+    if reviews_for:
+        parts.append("Review these descriptions:")
+        parts.extend(f"- {d}" for d in reviews_for)
+    else:
+        parts.append("(No descriptions to review.)")
+    parts.append("")
+    if answers_for:
+        parts.append("Answer these open questions:")
+        parts.extend(f"- {d}" for d in answers_for)
+    else:
+        parts.append("(No open questions to answer.)")
+    return "\n".join(parts)
+
+
+def build_user_prompt(
+    view: ReaderView,
+    events: list,
+    descriptions: list,
+    reviews_for: list[str],
+    answers_for: list[str],
+) -> str:
+    """Public helper: assemble the full user message without calling the API.
+    Used by the demo's dry-run mode and by structure tests."""
+    body = _serialize_view(view, events, descriptions)
+    task = _build_task_section(reviews_for, answers_for)
+    return f"{body}\n\n{task}"
+
+
+# ============================================================================
+# Translation: LLM output → substrate-native records
+# ============================================================================
+
+
+def _resolve_anchor_τ_a(anchor, events, descriptions) -> Optional[int]:
+    """Latest τ_a among records matching the anchor's id. Matches the
+    substrate's internal convention for review staleness tracking."""
+    if anchor.kind == "event":
+        best: Optional[int] = None
+        for e in events:
+            if e.id == anchor.target_id and (best is None or e.τ_a > best):
+                best = e.τ_a
+        return best
+    if anchor.kind == "description":
+        best = None
+        for d in descriptions:
+            if d.id == anchor.target_id and (best is None or d.τ_a > best):
+                best = d.τ_a
+        return best
+    return None
+
+
+def _translate_review(
+    raw: ReaderReview,
+    descriptions: list,
+    events: list,
+    reviewer_id: str,
+    current_τ_a: int,
+) -> Optional[ReviewEntry]:
+    """One ReaderReview → one ReviewEntry. Returns None if the LLM
+    referenced a description id we don't have (caller may log/drop)."""
+    desc = next((d for d in descriptions if d.id == raw.description_id), None)
+    if desc is None:
+        return None
+    anchor_τ_a = _resolve_anchor_τ_a(desc.attached_to, events, descriptions)
+    return ReviewEntry(
+        reviewer_id=reviewer_id,
+        reviewed_at_τ_a=current_τ_a,
+        verdict=ReviewVerdict(raw.verdict),
+        anchor_τ_a=anchor_τ_a if anchor_τ_a is not None else 0,
+        comment=raw.rationale,
+    )
+
+
+def _translate_answer(
+    raw: ReaderAnswer,
+    descriptions: list,
+    reviewer_id: str,
+    current_τ_a: int,
+) -> Optional[ProposedAnswer]:
+    """One ReaderAnswer → one ProposedAnswer. The proposed_description
+    inherits the question's anchor and branches (per sketch 01's
+    worked-example pattern), but carries its own kind per the LLM's
+    proposal."""
+    question = next(
+        (d for d in descriptions if d.id == raw.question_description_id),
+        None,
+    )
+    if question is None:
+        return None
+    safe_reviewer = reviewer_id.replace(":", "_")
+    new_id = (
+        f"{raw.question_description_id}_answer_"
+        f"by_{safe_reviewer}_τ_a_{current_τ_a}"
+    )
+    new_desc = Description(
+        id=new_id,
+        attached_to=question.attached_to,
+        kind=raw.answer_kind,
+        attention=Attention.INTERPRETIVE,
+        text=raw.answer_text,
+        authored_by=reviewer_id,
+        τ_a=current_τ_a,
+        branches=question.branches,
+        status=DescStatus.PROVISIONAL,
+        metadata={"answers_question": raw.question_description_id},
+    )
+    return ProposedAnswer(
+        question_description_id=raw.question_description_id,
+        proposed_description=new_desc,
+        rationale=raw.rationale,
+    )
+
+
+# ============================================================================
+# Entry point
+# ============================================================================
+
+
+def invoke_reader_model(
+    view: ReaderView,
+    events: list,
+    descriptions: list,
+    current_τ_a: int,
+    *,
+    reviews_for: Optional[list[str]] = None,
+    answers_for: Optional[list[str]] = None,
+    model: str = "claude-opus-4-6",
+    reviewer_id: Optional[str] = None,
+    effort: str = "high",
+    max_tokens: int = 16_000,
+    dry_run: bool = False,
+    client: Optional["anthropic.Anthropic"] = None,
+) -> ReaderModelResult:
+    """Invoke the reader-model on a `ReaderView`.
+
+    Args:
+        view: the ReaderView to evaluate (from `substrate.reader_view`).
+        events: the full events list (needed to resolve event anchors).
+        descriptions: the full descriptions list (needed for description
+            anchors and for translating LLM output back into substrate
+            records).
+        current_τ_a: authored-time stamp placed on all produced records.
+            The caller picks it; typical choice is "next τ_a after the
+            last commit", whatever the authoring workflow decides.
+        reviews_for: ids of descriptions to review. Default: all
+            descriptions in the view. Pass `[]` to skip reviews.
+        answers_for: ids of is_question descriptions to answer. Default:
+            all open_questions in the view. Pass `[]` to skip answers.
+        model: Claude model id. Default claude-opus-4-6.
+        reviewer_id: stamped on produced records. Default "llm:<model>".
+        effort: "low" | "medium" | "high" | "max". Default "high" — this
+            is interpretive work where quality matters.
+        max_tokens: response cap. Default 16000 (non-streaming).
+        dry_run: if True, return an empty result after printing the
+            full prompt. No API call, no API key needed.
+        client: optional pre-configured `anthropic.Anthropic` instance.
+            Default: construct one from env (`ANTHROPIC_API_KEY`).
+
+    Returns:
+        A `ReaderModelResult` containing:
+          - `reviews`: list[ReviewEntry] ready for
+            `substrate.ingest_review`.
+          - `proposed_answers`: list[ProposedAnswer] the author can
+            accept to commit new descriptions.
+          - `raw_output`: the pre-translation ReaderOutput for
+            debugging.
+    """
+    if reviewer_id is None:
+        reviewer_id = f"llm:{model}"
+    if reviews_for is None:
+        reviews_for = [r.description.id for r in view.descriptions]
+    if answers_for is None:
+        answers_for = [r.description.id for r in view.open_questions]
+
+    user_prompt = build_user_prompt(
+        view, events, descriptions, reviews_for, answers_for
+    )
+
+    if dry_run:
+        print("=" * 76)
+        print("SYSTEM PROMPT")
+        print("=" * 76)
+        print(SYSTEM_PROMPT)
+        print()
+        print("=" * 76)
+        print("USER PROMPT")
+        print("=" * 76)
+        print(user_prompt)
+        return ReaderModelResult(
+            reviews=[],
+            proposed_answers=[],
+            raw_output=ReaderOutput(),
+        )
+
+    if client is None:
+        client = anthropic.Anthropic()
+
+    # `parse()` doesn't accept top-level cache_control. Put the directive
+    # on the system block itself — this caches the system prompt (the
+    # frozen prefix) across calls, which is what we wanted anyway.
+    response = client.messages.parse(
+        model=model,
+        max_tokens=max_tokens,
+        thinking={"type": "adaptive"},
+        output_config={"effort": effort},
+        system=[
+            {
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
+        messages=[{"role": "user", "content": user_prompt}],
+        output_format=ReaderOutput,
+    )
+
+    raw: ReaderOutput = response.parsed_output
+
+    reviews = [
+        r
+        for r in (
+            _translate_review(
+                rr, descriptions, events, reviewer_id, current_τ_a
+            )
+            for rr in raw.reviews
+        )
+        if r is not None
+    ]
+    proposed_answers = [
+        p
+        for p in (
+            _translate_answer(ra, descriptions, reviewer_id, current_τ_a)
+            for ra in raw.answers
+        )
+        if p is not None
+    ]
+
+    return ReaderModelResult(
+        reviews=reviews,
+        proposed_answers=proposed_answers,
+        raw_output=raw,
+    )
