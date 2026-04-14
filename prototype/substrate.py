@@ -311,6 +311,14 @@ _SLOT_RANK = {
 }
 
 
+def _weaker_slot(a: Slot, b: Slot) -> Slot:
+    """Return the weaker of two slots under
+    KNOWN > BELIEVED > SUSPECTED > GAP. Used by focalization per
+    focalization-sketch-01 F1 and by any other caller that needs
+    the 'min' of two epistemic slots."""
+    return a if _SLOT_RANK[a] <= _SLOT_RANK[b] else b
+
+
 def _known_identities_from(held_list) -> list:
     """Extract the identity/2 propositions held as KNOWN. I7: only KNOWN
     identities participate in equivalence-class construction."""
@@ -631,28 +639,45 @@ def project_reader(
     constructs that readers do not experience.
 
     For each sjuzhet entry with τ_d ≤ up_to_τ_d, in τ_d order:
-      - Focalization is recorded as metadata only. See note below.
-      - Explicit disclosures are applied with their stated slot/confidence
-        and operator. A later disclosure overrides any prior disclosure for
-        the same proposition, which is how reveals and foreshadow-payoffs
-        migrate reader state.
+      - Focalization constrains disclosures per focalization-sketch-01
+        F1 (see below).
+      - Explicit disclosures are applied with their (possibly demoted)
+        slot. A later disclosure overrides any prior disclosure for the
+        same proposition, which is how reveals and foreshadow-payoffs
+        migrate reader state — subject to the F2 guard on focalization-
+        driven demotion.
 
-    Note on focalization semantics (prototype-level):
+    Focalization semantics per focalization-sketch-01:
 
-    Sketch 04 K2 defines focalization as a constraint on reader access:
-    propositions the focalizer lacks become reader-gaps; propositions the
-    focalizer misconstrues become reader-believed rather than reader-known.
-    That is subtle to implement correctly — in particular, demotion of
-    prior disclosures requires τ_d-scoped reader-state tracking we do not
-    yet have. Previous drafts of this function folded the focalizer's
-    entire state into the reader's state; that was wrong (it collapses
-    'the scene is routed through X's perspective' into 'the narration
-    dumps X's mind into the reader'). The current implementation records
-    focalization as metadata only: no automatic state mutation occurs.
-    Disclosures remain the only positive-update operator.
+      F1 — If the entry's focalizer_id is set, each disclosure is
+           constrained to min(author_slot, focalizer_slot) under the
+           ordering KNOWN > BELIEVED > SUSPECTED > GAP. If the
+           focalizer does not hold the proposition (not even via
+           identity substitution per F5), the effective slot is GAP.
+           Focalizer access uses substitution-aware holds().
 
-    This is weaker than sketch 04 asserts. Proper focalization semantics
-    are a deliberate deferred item for a later sketch/prototype iteration.
+      F2 — Focalization-driven demotion (effective_slot < author_slot)
+           cannot override stronger prior reader state. The write is
+           skipped when the reader already holds the proposition at a
+           slot equal-to-or-stronger-than the focalization-demoted
+           slot. Explicit author demotion (omniscient entries, or
+           focalized entries where the focalizer is already at the
+           author's slot or weaker) still overrides per the usual
+           later-disclosure-wins convention.
+
+      F3 — Focalizer's reference state is projected at the narrated
+           event's τ_s.
+
+      F4 — Omniscient entries (focalizer_id=None) pass through
+           unchanged.
+
+      F5 — Focalizer's holds() is substitution-aware, so KNOWN
+           identities extend the focalizer's access exactly as they
+           would for any other query.
+
+      F6 — No narrator intrusion; no external focalization in this
+           sketch. All disclosures in a focalized entry are
+           constrained by F1.
     """
     if branch.kind not in (BranchKind.CANONICAL, BranchKind.CONTESTED):
         raise ValueError(
@@ -664,6 +689,11 @@ def project_reader(
     by_prop = {}  # prop -> Held
     event_by_id = {e.id: e for e in all_events}
     entries_sorted = sorted(sjuzhet, key=lambda s: s.τ_d)
+
+    # Events in fold-scope for this branch. Computed once; used to build
+    # focalizer states per entry. Building it once (not per entry) is an
+    # invariant: the branch is fixed across project_reader's lifetime.
+    events_in_scope = scope(branch, all_events, all_branches)
 
     for entry in entries_sorted:
         if entry.τ_d > up_to_τ_d:
@@ -691,17 +721,57 @@ def project_reader(
                 f"draw from :draft or :counterfactual branches"
             )
 
-        # Focalization: metadata only; no positive state update.
-        # (The focalizer_id is preserved on the entry for later inspection
-        # and for a future inference/reader-model layer.)
+        # F1 prep: if focalized, compute the focalizer's state at the
+        # narrated event's τ_s (F3). This projection folds the branch-
+        # scoped events up to τ_s, so the event's own effects on the
+        # focalizer are visible — correct for participants like the
+        # speaker of an utterance or the killer of a killing.
+        focalizer_state = None
+        if entry.focalizer_id is not None:
+            focalizer_state = project_knowledge(
+                entry.focalizer_id, events_in_scope, event.τ_s,
+            )
 
         for d in entry.disclosures:
+            effective_slot = d.slot
+            focalization_demoted = False
+
+            if focalizer_state is not None:
+                # F5: substitution-aware access. holds() consults the
+                # focalizer's KNOWN identities per identity-and-
+                # realization-sketch-01 I7.
+                focalizer_held = focalizer_state.holds(d.prop)
+                focalizer_slot = (
+                    focalizer_held.slot if focalizer_held is not None
+                    else Slot.GAP
+                )
+                # F1: effective slot is the weaker of (author, focalizer).
+                effective_slot = _weaker_slot(d.slot, focalizer_slot)
+                focalization_demoted = (effective_slot != d.slot)
+
+            # F2: focalization-driven demotion must not override stronger
+            # prior reader state. The guard is gated on focalization_
+            # demoted — explicit author demotion (omniscient weaker
+            # disclosure, or focalized-but-not-further-demoted) still
+            # overrides per the later-wins convention.
+            if focalization_demoted:
+                current = by_prop.get(d.prop)
+                if current is not None and \
+                   _SLOT_RANK[current.slot] >= _SLOT_RANK[effective_slot]:
+                    continue
+
+            provenance = (
+                f"disclosed @ τ_d={entry.τ_d}"
+                + (f", focalized through {entry.focalizer_id} at "
+                   f"τ_s={event.τ_s}" if entry.focalizer_id is not None
+                   else ""),
+            )
             by_prop[d.prop] = Held(
                 prop=d.prop,
-                slot=d.slot,
+                slot=effective_slot,
                 confidence=d.confidence,
                 via=d.via,
-                provenance=(f"disclosed @ τ_d={entry.τ_d}",),
+                provenance=provenance,
             )
 
     return KnowledgeState(agent_id="reader", by_prop=tuple(by_prop.values()))

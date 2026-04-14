@@ -418,6 +418,14 @@ TAJOMARU_FABULA = [
         effects=(
             world(killed("tajomaru", "husband")),
             world(killed_with("tajomaru", "husband", "sword")),
+            # The killer observes their own act. Required for
+            # focalization-sketch-01 F1: without this, the sjuzhet
+            # entry focalized through Tajomaru demotes its own
+            # killing-disclosure to GAP (the focalizer wouldn't
+            # literally hold the fact). Also correct on its own —
+            # a killer ought to know they killed.
+            observe("tajomaru", killed("tajomaru", "husband"), 9),
+            observe("tajomaru", killed_with("tajomaru", "husband", "sword"), 9),
         ),
     ),
 
@@ -463,6 +471,13 @@ WIFE_FABULA = [
         effects=(
             world(killed("wife", "husband")),
             world(killed_with("wife", "husband", "dagger")),
+            # The killer observes their own act (see E_t_duel note).
+            # The wife's testimony is vague about whether the act
+            # was conscious — she "faints holding the dagger" —
+            # but the branch asserts the killing, so she holds it
+            # as her own knowledge within this branch's reality.
+            observe("wife", killed("wife", "husband"), 10),
+            observe("wife", killed_with("wife", "husband", "dagger"), 10),
         ),
     ),
 
@@ -544,6 +559,12 @@ HUSBAND_FABULA = [
         effects=(
             world(killed("husband", "husband")),
             world(killed_with("husband", "husband", "dagger")),
+            # The husband observes his own act at τ_s=11 — the dying
+            # moment captures the knowledge. The testimony is
+            # delivered via medium, so "the husband knows he killed
+            # himself" is exactly what the :b-husband branch asserts.
+            observe("husband", killed("husband", "husband"), 11),
+            observe("husband", killed_with("husband", "husband", "dagger"), 11),
         ),
     ),
 
@@ -590,6 +611,16 @@ WOODCUTTER_FABULA = [
         effects=(
             world(killed("tajomaru", "husband")),
             world(killed_with("tajomaru", "husband", "sword")),
+            # The killer observes their own act.
+            observe("tajomaru", killed("tajomaru", "husband"), 9),
+            observe("tajomaru", killed_with("tajomaru", "husband", "sword"), 9),
+            # The woodcutter observes the fight — he's the witness
+            # narrating this branch's reality, and the sjuzhet entry
+            # for this event is focalized through him. Without this
+            # observation, F1 would demote his testimony's
+            # killing-disclosure to GAP.
+            observe("woodcutter", killed("tajomaru", "husband"), 9),
+            observe("woodcutter", killed_with("tajomaru", "husband", "sword"), 9),
         ),
     ),
 

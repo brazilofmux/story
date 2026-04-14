@@ -476,17 +476,15 @@ def test_later_disclosure_overrides_earlier():
 
 
 def test_focalization_alone_does_not_mutate_reader_state():
-    """Focalization is metadata-only in this prototype. A sjuzhet entry
-    that sets a focalizer but has no disclosures must not place any
-    propositions in the reader's state, even if the focalizer's own
-    state is richly populated.
+    """A sjuzhet entry that sets a focalizer but has no disclosures
+    must not place any propositions in the reader's state, even if
+    the focalizer's own state is richly populated.
 
-    Convention flag: sketch 04 defines focalization as a *constraint*
-    on reader access (propositions the focalizer lacks become reader
-    gaps; misconstrued ones become reader-believed). The prototype
-    does neither. When real focalization semantics land, this test
-    will need to change — it is currently pinned to a deliberate
-    weakening, not to a sketch commitment."""
+    Per focalization-sketch-01 F1, focalization constrains the slot
+    of *disclosures* in the entry. It does not invent disclosures
+    from the focalizer's state. This test pins the negative half of
+    that invariant: no disclosures, no state changes, regardless of
+    what the focalizer knows."""
     prop = p("X", "A")
     e = Event(
         id="e", type="test", τ_s=0, τ_a=1,
@@ -501,6 +499,314 @@ def test_focalization_alone_does_not_mutate_reader_state():
     assert reader.holds(prop) is None, (
         "focalization must not leak the focalizer's state into the reader"
     )
+
+
+# ============================================================================
+# Focalization — F1-F5 per focalization-sketch-01
+# ============================================================================
+#
+# F1: disclosure slot is min(author_slot, focalizer_slot) under
+#     KNOWN > BELIEVED > SUSPECTED > GAP; focalizer-absent → GAP.
+# F2: focalization-driven demotion does not override stronger prior
+#     reader state; explicit author demotion still does.
+# F3: focalizer's reference state is at the narrated event's τ_s.
+# F4: focalizer_id=None passes through unchanged (existing tests).
+# F5: focalizer's holds() is substitution-aware.
+
+
+def _two_branch_map():
+    return {CANONICAL_LABEL: CANONICAL}
+
+
+def test_f1_passes_through_when_focalizer_holds_at_author_slot():
+    """F1: if the focalizer holds the proposition at the author's slot
+    or stronger, the disclosure lands at the author's slot (no demotion)."""
+    prop = p("P", "x")
+    e = ev("e1", τ_s=0, τ_a=1, effects=(
+        KnowledgeEffect(agent_id="A", held=held(prop, slot=Slot.KNOWN)),
+    ))
+    entry = SjuzhetEntry(
+        event_id="e1", τ_d=0, focalizer_id="A",
+        disclosures=(Disclosure(
+            prop=prop, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+            via=Narrative.DISCLOSURE.value,
+        ),),
+    )
+    reader = project_reader([entry], [e], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=0)
+    r = reader.holds(prop)
+    assert r is not None and r.slot == Slot.KNOWN
+
+
+def test_f1_demotes_known_disclosure_to_believed_when_focalizer_believes():
+    """F1: min(author=KNOWN, focalizer=BELIEVED) = BELIEVED.
+    Reader receives the disclosure at BELIEVED."""
+    prop = p("P", "x")
+    e = ev("e1", τ_s=0, τ_a=1, effects=(
+        KnowledgeEffect(agent_id="A",
+                        held=held(prop, slot=Slot.BELIEVED)),
+    ))
+    entry = SjuzhetEntry(
+        event_id="e1", τ_d=0, focalizer_id="A",
+        disclosures=(Disclosure(
+            prop=prop, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+            via=Narrative.DISCLOSURE.value,
+        ),),
+    )
+    reader = project_reader([entry], [e], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=0)
+    r = reader.holds(prop)
+    assert r is not None and r.slot == Slot.BELIEVED, \
+        f"expected BELIEVED under F1 demotion; got {r.slot if r else None}"
+
+
+def test_f1_demotes_to_gap_when_focalizer_does_not_hold_prop():
+    """F1: the focalizer-absent case. If the focalizer does not hold
+    the disclosed proposition, the disclosure lands at GAP in the
+    reader's state."""
+    disclosed = p("P", "x")
+    unrelated = p("Q", "y")
+    # Focalizer holds something else entirely; does not hold `disclosed`.
+    e = ev("e1", τ_s=0, τ_a=1, effects=(
+        KnowledgeEffect(agent_id="A", held=held(unrelated)),
+    ))
+    entry = SjuzhetEntry(
+        event_id="e1", τ_d=0, focalizer_id="A",
+        disclosures=(Disclosure(
+            prop=disclosed, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+            via=Narrative.DISCLOSURE.value,
+        ),),
+    )
+    reader = project_reader([entry], [e], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=0)
+    r = reader.holds(disclosed)
+    assert r is not None and r.slot == Slot.GAP, \
+        f"expected focalizer-absent to demote to GAP; got " \
+        f"{r.slot if r else None}"
+
+
+def test_f1_author_weaker_than_focalizer_passes_through_at_author_slot():
+    """F1: min(author=SUSPECTED, focalizer=KNOWN) = SUSPECTED. The
+    focalizer's stronger state does not upgrade the author's choice."""
+    prop = p("P", "x")
+    e = ev("e1", τ_s=0, τ_a=1, effects=(
+        KnowledgeEffect(agent_id="A", held=held(prop, slot=Slot.KNOWN)),
+    ))
+    entry = SjuzhetEntry(
+        event_id="e1", τ_d=0, focalizer_id="A",
+        disclosures=(Disclosure(
+            prop=prop, slot=Slot.SUSPECTED, confidence=Confidence.SUSPECTED,
+            via=Narrative.DISCLOSURE.value,
+        ),),
+    )
+    reader = project_reader([entry], [e], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=0)
+    r = reader.holds(prop)
+    assert r is not None and r.slot == Slot.SUSPECTED
+
+
+def test_f2_focalization_demotion_does_not_override_stronger_prior_state():
+    """F2: the reader already holds P as KNOWN from an earlier
+    omniscient entry. A later focalized entry attempts to disclose P
+    at KNOWN, but the focalizer doesn't hold P — F1 demotes to GAP.
+    The F2 guard fires: the reader's KNOWN persists."""
+    prop = p("P", "x")
+    unrelated = p("Q", "y")
+    # e1: the event the omniscient entry narrates. No relevant effects.
+    e1 = ev("e1", τ_s=0, τ_a=1, effects=())
+    # e2: focalizer A holds only an unrelated prop; does NOT hold P.
+    e2 = ev("e2", τ_s=1, τ_a=2, effects=(
+        KnowledgeEffect(agent_id="A", held=held(unrelated)),
+    ))
+    entries = [
+        SjuzhetEntry(
+            event_id="e1", τ_d=0, focalizer_id=None,
+            disclosures=(Disclosure(
+                prop=prop, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                via=Narrative.DISCLOSURE.value,
+            ),),
+        ),
+        SjuzhetEntry(
+            event_id="e2", τ_d=1, focalizer_id="A",
+            disclosures=(Disclosure(
+                prop=prop, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                via=Narrative.DISCLOSURE.value,
+            ),),
+        ),
+    ]
+    reader = project_reader(entries, [e1, e2], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=10)
+    r = reader.holds(prop)
+    assert r is not None and r.slot == Slot.KNOWN, (
+        f"F2 guard failed: reader state was demoted from KNOWN to "
+        f"{r.slot if r else None} by a later focalization-driven demotion"
+    )
+
+
+def test_f2_explicit_author_demotion_via_omniscient_still_overrides():
+    """F2 is scoped to focalization-driven demotion. An explicit
+    author demotion — a later omniscient disclosure at a weaker slot —
+    still overrides prior stronger state per the existing later-wins
+    convention. Retroactive reframing (unreliable narrator, etc.)
+    must continue to work."""
+    prop = p("P", "x")
+    e1 = ev("e1", τ_s=0, τ_a=1, effects=())
+    e2 = ev("e2", τ_s=1, τ_a=2, effects=())
+    entries = [
+        SjuzhetEntry(
+            event_id="e1", τ_d=0, focalizer_id=None,
+            disclosures=(Disclosure(
+                prop=prop, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                via=Narrative.DISCLOSURE.value,
+            ),),
+        ),
+        SjuzhetEntry(
+            event_id="e2", τ_d=1, focalizer_id=None,
+            disclosures=(Disclosure(
+                prop=prop, slot=Slot.BELIEVED,
+                confidence=Confidence.BELIEVED,
+                via=Narrative.RETROACTIVE_REFRAMING.value,
+            ),),
+        ),
+    ]
+    reader = project_reader(entries, [e1, e2], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=10)
+    r = reader.holds(prop)
+    assert r is not None and r.slot == Slot.BELIEVED, (
+        f"explicit author demotion was not applied; reader slot "
+        f"{r.slot if r else None} (expected BELIEVED)"
+    )
+
+
+def test_f2_focalization_equal_to_prior_is_a_no_op_write():
+    """F2 edge: focalization-demoted effective_slot equals prior
+    reader state's slot. The guard fires (>= check) and the write
+    is skipped. Reader state is unchanged (same slot, but provenance
+    reflects the earlier entry)."""
+    prop = p("P", "x")
+    e1 = ev("e1", τ_s=0, τ_a=1, effects=())
+    e2 = ev("e2", τ_s=1, τ_a=2, effects=(
+        KnowledgeEffect(agent_id="A", held=held(prop, slot=Slot.BELIEVED)),
+    ))
+    entries = [
+        # Reader first gets BELIEVED from omniscient.
+        SjuzhetEntry(
+            event_id="e1", τ_d=0, focalizer_id=None,
+            disclosures=(Disclosure(
+                prop=prop, slot=Slot.BELIEVED,
+                confidence=Confidence.BELIEVED,
+                via=Narrative.DISCLOSURE.value,
+            ),),
+        ),
+        # Later focalized entry: author says KNOWN but focalizer holds
+        # BELIEVED; F1 demotes to BELIEVED. effective == prior → skip.
+        SjuzhetEntry(
+            event_id="e2", τ_d=1, focalizer_id="A",
+            disclosures=(Disclosure(
+                prop=prop, slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                via=Narrative.DISCLOSURE.value,
+            ),),
+        ),
+    ]
+    reader = project_reader(entries, [e1, e2], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=10)
+    r = reader.holds(prop)
+    assert r is not None and r.slot == Slot.BELIEVED
+
+
+def test_f3_focalizer_reference_τ_s_includes_the_narrated_event():
+    """F3: focalizer's reference state is at the narrated event's
+    τ_s. The event's own effects on the focalizer are therefore
+    visible — a participant (e.g., a killer) sees the event's own
+    effects in their state at the reference τ_s."""
+    killed_p = p("killed", "A", "B")
+    # e: A observes their own act at τ_s=5. If focalizer's reference
+    # τ_s excluded the event's effects, the observation wouldn't be
+    # in scope, and F1 would demote the disclosure to GAP.
+    e = ev("e", τ_s=5, τ_a=1, effects=(
+        WorldEffect(prop=killed_p),
+        KnowledgeEffect(agent_id="A", held=held(killed_p, slot=Slot.KNOWN)),
+    ))
+    entry = SjuzhetEntry(
+        event_id="e", τ_d=0, focalizer_id="A",
+        disclosures=(Disclosure(
+            prop=killed_p, slot=Slot.KNOWN,
+            confidence=Confidence.CERTAIN,
+            via=Narrative.DISCLOSURE.value,
+        ),),
+    )
+    reader = project_reader([entry], [e], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=0)
+    r = reader.holds(killed_p)
+    assert r is not None and r.slot == Slot.KNOWN, (
+        f"F3: focalizer's state at the event's τ_s should include "
+        f"the event's own effects; got slot="
+        f"{r.slot if r else 'not-held'}"
+    )
+
+
+def test_f5_focalizer_access_is_substitution_aware():
+    """F5: focalizer's holds() is substitution-aware. If the focalizer
+    holds an identity at KNOWN and a proposition under the identified
+    entity, substitution gives them access — and the disclosure passes
+    through at the author's slot without F1 demotion."""
+    from substrate import IDENTITY_PREDICATE
+    # Focalizer holds P(a) and identity(a, b) — substitution gives P(b).
+    e = ev("e", τ_s=0, τ_a=1, effects=(
+        KnowledgeEffect(agent_id="A",
+                        held=held(p("P", "a"), slot=Slot.KNOWN)),
+        KnowledgeEffect(
+            agent_id="A",
+            held=held(Prop(IDENTITY_PREDICATE, ("a", "b")),
+                      slot=Slot.KNOWN),
+        ),
+    ))
+    # Author discloses P(b) — which A holds only via substitution.
+    entry = SjuzhetEntry(
+        event_id="e", τ_d=0, focalizer_id="A",
+        disclosures=(Disclosure(
+            prop=p("P", "b"), slot=Slot.KNOWN,
+            confidence=Confidence.CERTAIN,
+            via=Narrative.DISCLOSURE.value,
+        ),),
+    )
+    reader = project_reader([entry], [e], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=0)
+    r = reader.holds(p("P", "b"))
+    assert r is not None and r.slot == Slot.KNOWN, (
+        f"F5: substitution-aware focalizer access failed — "
+        f"reader slot={r.slot if r else 'not-held'}"
+    )
+
+
+def test_f5_suspected_identity_does_not_give_focalizer_access():
+    """F5 corollary: per identity-sketch I7, substitution fires only
+    on KNOWN identities. An identity held SUSPECTED by the focalizer
+    does NOT extend their focalization-access, so F1 demotes to GAP."""
+    from substrate import IDENTITY_PREDICATE
+    e = ev("e", τ_s=0, τ_a=1, effects=(
+        KnowledgeEffect(agent_id="A",
+                        held=held(p("P", "a"), slot=Slot.KNOWN)),
+        KnowledgeEffect(
+            agent_id="A",
+            held=held(Prop(IDENTITY_PREDICATE, ("a", "b")),
+                      slot=Slot.SUSPECTED),
+        ),
+    ))
+    entry = SjuzhetEntry(
+        event_id="e", τ_d=0, focalizer_id="A",
+        disclosures=(Disclosure(
+            prop=p("P", "b"), slot=Slot.KNOWN,
+            confidence=Confidence.CERTAIN,
+            via=Narrative.DISCLOSURE.value,
+        ),),
+    )
+    reader = project_reader([entry], [e], CANONICAL, _two_branch_map(),
+                            up_to_τ_d=0)
+    r = reader.holds(p("P", "b"))
+    # Focalizer does not hold P(b) literally (only via SUSPECTED
+    # identity, which I7 excludes). F1 demotes to GAP.
+    assert r is not None and r.slot == Slot.GAP
 
 
 # ============================================================================
@@ -790,6 +1096,17 @@ TESTS = [
     test_reader_over_character_irony_does_not_fire_when_character_knows,
     test_character_over_character_irony_fires_with_reader_aware,
     test_character_over_character_irony_does_not_fire_without_reader_aware,
+    # Focalization (focalization-sketch-01 F1-F5)
+    test_f1_passes_through_when_focalizer_holds_at_author_slot,
+    test_f1_demotes_known_disclosure_to_believed_when_focalizer_believes,
+    test_f1_demotes_to_gap_when_focalizer_does_not_hold_prop,
+    test_f1_author_weaker_than_focalizer_passes_through_at_author_slot,
+    test_f2_focalization_demotion_does_not_override_stronger_prior_state,
+    test_f2_explicit_author_demotion_via_omniscient_still_overrides,
+    test_f2_focalization_equal_to_prior_is_a_no_op_write,
+    test_f3_focalizer_reference_τ_s_includes_the_narrated_event,
+    test_f5_focalizer_access_is_substitution_aware,
+    test_f5_suspected_identity_does_not_give_focalizer_access,
     # Oedipus integration
     test_oedipus_τ_d_0_reader_outruns_oedipus_on_central_props,
     test_jocasta_anagnorisis_collapses_reader_jocasta_killed_irony,
