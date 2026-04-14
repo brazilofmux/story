@@ -67,10 +67,12 @@ Fidelity choices (unchanged from prior iteration):
 from __future__ import annotations
 
 from substrate import (
-    Entity, Prop, Event, EventStatus, CANONICAL_LABEL,
+    Entity, Prop, Event, EventStatus,
+    Branch, BranchKind, CANONICAL, CANONICAL_LABEL,
     Slot, Confidence, Diegetic, Narrative,
     Held, KnowledgeEffect, WorldEffect,
     SjuzhetEntry, Disclosure,
+    Description, AnchorRef, Attention, anchor_event, anchor_desc,
     IDENTITY_PREDICATE,
 )
 
@@ -116,6 +118,16 @@ AGENT_IDS = [e.id for e in ENTITIES if e.kind == "agent"]
 
 
 # ----------------------------------------------------------------------------
+# Branches — canonical-only. The encoding has no contested, draft, or
+# counterfactual branches; every fact sits on :canonical.
+# ----------------------------------------------------------------------------
+
+ALL_BRANCHES = {
+    CANONICAL_LABEL: CANONICAL,
+}
+
+
+# ----------------------------------------------------------------------------
 # Proposition constructors
 # ----------------------------------------------------------------------------
 
@@ -136,6 +148,23 @@ def king(who: str, place: str) -> Prop:
 
 def adopted_by(child: str, parent: str) -> Prop:
     return Prop("adopted_by", (child, parent))
+
+# Currently *authored* as world facts at the canonical moments where the
+# composite relation becomes true (parricide at the crossroads killing;
+# incest at the marriage). Both are candidate derivations for a future
+# inference-model sketch:
+#     killed(X, Y)  ∧ child_of(X, Y) ⇒ parricide(X, Y)
+#     married(X, Y) ∧ child_of(X, Y) ⇒ incest(X, Y)
+# Authoring them explicitly makes the pinch visible: every agent that
+# reaches the premises via identity substitution currently also needs
+# an explicit observe(…) for the conclusion, because the substrate has
+# no forward-chaining surface to derive it.
+
+def parricide(killer: str, victim: str) -> Prop:
+    return Prop("parricide", (killer, victim))
+
+def incest(a: str, b: str) -> Prop:
+    return Prop("incest", (a, b))
 
 def prophecy_self() -> Prop:
     # Oedipus's personal prophecy: he will kill his father and marry his mother.
@@ -344,6 +373,10 @@ FABULA = [
             world(dead("laius")),
             world(identity_prop("laius", "the-crossroads-victim")),
             world(identity_prop("oedipus", "the-crossroads-killer")),
+            # parricide(oedipus, laius) is world-true from this τ_s
+            # onward: both premises (killed, child_of) hold at world
+            # scope. Authored here rather than derived.
+            world(parricide("oedipus", "laius")),
             # Oedipus knows he killed *someone* at the crossroads. The
             # victim's identity is not yet in his state — he held
             # killed(oedipus, the-crossroads-victim), not
@@ -368,6 +401,10 @@ FABULA = [
         effects=(
             world(married("oedipus", "jocasta")),
             world(king("oedipus", "thebes")),
+            # incest(oedipus, jocasta) is world-true from this τ_s
+            # onward: both premises (married, child_of) hold at world
+            # scope. Authored here rather than derived.
+            world(incest("oedipus", "jocasta")),
             observe("oedipus", married("oedipus", "jocasta"), -46),
             observe("jocasta", married("oedipus", "jocasta"), -46),
             observe("oedipus", king("oedipus", "thebes"), -46),
@@ -487,11 +524,43 @@ FABULA = [
                         Slot.BELIEVED, Confidence.BELIEVED, 9,
                         via=Diegetic.REALIZATION.value,
                         note="the exposure did not succeed after all"),
+            # parricide / incest — author-asserted onto Jocasta's state
+            # at her realization. Under identity-and-realization,
+            # substitution alone would give her the premises
+            # (killed(oedipus, laius), child_of(oedipus, jocasta)) but
+            # not the compound conclusion. Authoring the conclusion
+            # here is the workaround the inference-model sketch is
+            # expected to retire: at that point these two lines
+            # disappear in favor of a derivation rule.
+            KnowledgeEffect(
+                agent_id="jocasta",
+                held=Held(
+                    prop=parricide("oedipus", "laius"),
+                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                    via=Diegetic.REALIZATION.value,
+                    provenance=("compound conclusion asserted @ τ_s=9: "
+                                "author-asserted today; derivation "
+                                "candidate",),
+                ),
+            ),
+            KnowledgeEffect(
+                agent_id="jocasta",
+                held=Held(
+                    prop=incest("oedipus", "jocasta"),
+                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                    via=Diegetic.REALIZATION.value,
+                    provenance=("compound conclusion asserted @ τ_s=9: "
+                                "author-asserted today; derivation "
+                                "candidate",),
+                ),
+            ),
             # Note what is NOT authored here: no realize_add of
             # child_of(oedipus, jocasta), killed(oedipus, laius), etc.
             # Those derive at query time from Jocasta's literal held set
             # plus the two identity assertions above. This is the
             # identity-and-realization-sketch-01 refactor in practice.
+            # parricide and incest *are* authored, for the reason just
+            # given — they would otherwise be invisible in her state.
         ),
     ),
 
@@ -552,11 +621,40 @@ FABULA = [
                         Slot.GAP, Confidence.OPEN, 13,
                         via=Diegetic.REALIZATION.value,
                         note="gap closed — parentage now known via identity"),
+            # parricide / incest — author-asserted onto Oedipus's
+            # state. Same pattern and same caveat as Jocasta's
+            # realization: substitution gets him the premises, but
+            # the compound conclusion has no derivation surface
+            # today. Authoring here is the workaround the inference-
+            # model sketch is expected to retire.
+            KnowledgeEffect(
+                agent_id="oedipus",
+                held=Held(
+                    prop=parricide("oedipus", "laius"),
+                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                    via=Diegetic.REALIZATION.value,
+                    provenance=("compound conclusion asserted @ τ_s=13: "
+                                "author-asserted today; derivation "
+                                "candidate",),
+                ),
+            ),
+            KnowledgeEffect(
+                agent_id="oedipus",
+                held=Held(
+                    prop=incest("oedipus", "jocasta"),
+                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                    via=Diegetic.REALIZATION.value,
+                    provenance=("compound conclusion asserted @ τ_s=13: "
+                                "author-asserted today; derivation "
+                                "candidate",),
+                ),
+            ),
             # Note what is NOT authored here: no realize_add of
             # killed(oedipus, laius), child_of(oedipus, laius),
             # child_of(oedipus, jocasta), married(oedipus, jocasta). All
             # derive at query time from Oedipus's literal held set plus
-            # the three identity assertions above.
+            # the three identity assertions above. parricide and incest
+            # *are* authored — see the block immediately above.
         ),
     ),
 
@@ -605,6 +703,17 @@ PREPLAY_DISCLOSURES = (
                slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
                via=Narrative.DISCLOSURE.value),
     Disclosure(prop=identity_prop("oedipus", "the-crossroads-killer"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    # Compound-conclusion disclosures — the reader knows the myth, so
+    # the audience holds parricide and incest from τ_d=0. This is the
+    # reader-outruns-character shape in its sharpest form: the reader
+    # has the conclusion the characters will take the whole play to
+    # reach.
+    Disclosure(prop=parricide("oedipus", "laius"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=incest("oedipus", "jocasta"),
                slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
                via=Narrative.DISCLOSURE.value),
 )
@@ -671,6 +780,156 @@ SJUZHET = [
         τ_d=13,
         focalizer_id="oedipus",
         disclosures=(),
+    ),
+
+]
+
+
+# ----------------------------------------------------------------------------
+# Descriptions — the interpretive peer surface over the fabula.
+# ----------------------------------------------------------------------------
+#
+# Minimal set aimed at exercising the "author-asserted vs. derived"
+# pinch. The anagnorisis texture reads the realization scene as the
+# play's emotional crest; the logical-payload reader-frame names the
+# substrate-level shape (compound conclusions become epistemically
+# reachable); the authorial-uncertainty question asks the probe
+# whether parricide/incest belong as world facts or as derivations.
+#
+# τ_a values are placed after the last fabula τ_a (12) with gaps, so
+# later passes can interleave without renumbering.
+#
+# Attention levels follow descriptions-sketch-01 defaults:
+#   texture              → interpretive
+#   reader-frame         → structural
+#   authorial-uncertainty → structural
+
+DESCRIPTIONS = [
+
+    Description(
+        id="D_oedipus_anagnorisis_texture",
+        attached_to=anchor_event("E_oedipus_anagnorisis"),
+        kind="texture",
+        attention=Attention.INTERPRETIVE,
+        text=("the realization does not import new facts from outside — "
+              "every premise was already on stage. The shepherd's "
+              "testimony collides with the messenger's chain, and the "
+              "three identities click at once: I was the exposed child; "
+              "I killed my father at the crossroads; I am married to my "
+              "mother. The scene's horror is that the facts were all in "
+              "his head already, waiting for the composition."),
+        authored_by="author",
+        τ_a=100,
+    ),
+
+    Description(
+        id="D_anagnorisis_logical_payload",
+        attached_to=anchor_event("E_oedipus_anagnorisis"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("the anagnorisis's logical payload is two compound "
+              "conclusions — parricide(oedipus, laius) and "
+              "incest(oedipus, jocasta) — that both derive from "
+              "premises Oedipus already held plus the identities he "
+              "asserts in this scene. They enter his state here; they "
+              "were world-true from the crossroads killing and the "
+              "marriage respectively. This is the reader-outruns-"
+              "character gap closing: the reader has held both since "
+              "τ_d=0."),
+        authored_by="author",
+        τ_a=101,
+    ),
+
+    Description(
+        id="D_parricide_incest_authored_not_derived",
+        attached_to=anchor_desc("D_anagnorisis_logical_payload"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("parricide(oedipus, laius) and incest(oedipus, jocasta) "
+              "are currently authored as world facts at the canonical "
+              "moments (crossroads killing, marriage) and observed "
+              "into both agents' states at their realizations. They "
+              "are the conclusions of domain rules the substrate "
+              "cannot yet express: killed(X,Y) ∧ child_of(X,Y) ⇒ "
+              "parricide(X,Y), married(X,Y) ∧ child_of(X,Y) ⇒ "
+              "incest(X,Y). "
+              "Should the substrate learn to derive them? If so, the "
+              "authored facts here disappear in favor of a forward-"
+              "chaining surface — the inference-model sketch's scope. "
+              "If not, what other compound predicates will also need "
+              "author-assertion, and where does that stop?"),
+        is_question=True,
+        authored_by="author",
+        τ_a=102,
+    ),
+
+    # Probe-authored answer, accepted via the walker at τ_a=20000.
+    # Provenance: reader-model probe, Claude Opus 4.6, effort=high.
+    # The answer proposes a boundary criterion (definitional over
+    # world-props, no authorial judgment required) intended to seed
+    # the inference-model sketch. It does not retire the question
+    # record — the question stays as the trigger for the sketch work.
+    Description(
+        id="D_parricide_incest_authored_not_derived_answer_by_llm_claude-opus-4-6_τ_a_20000",
+        attached_to=anchor_desc("D_anagnorisis_logical_payload"),
+        kind="reader-frame",
+        attention=Attention.INTERPRETIVE,
+        text=("The case for derivation is strongest when the compound "
+              "predicate is purely definitional — when the rule is "
+              "domain-invariant and its premises are already tracked "
+              "as world-props. Both rules identified here "
+              "(killed ∧ child_of ⇒ parricide; married ∧ child_of ⇒ "
+              "incest) meet that criterion: the substrate already "
+              "carries killed(oedipus, laius), child_of(oedipus, laius), "
+              "married(oedipus, jocasta), and child_of(oedipus, jocasta) "
+              "as world effects. A forward-chaining surface could "
+              "derive parricide and incest the instant both premises "
+              "obtain, without authorial intervention. The practical "
+              "boundary should be: derive a compound predicate when "
+              "(a) its rule can be stated in terms the substrate "
+              "already tracks as world-props, and (b) the compound's "
+              "truth-value is fully determined by those props with no "
+              "authorial judgment required. Predicates that require "
+              "contextual or tonal judgment — say, 'hubris' or "
+              "'tragic irony' — cannot be captured by such rules and "
+              "remain description-layer concerns. Under this boundary, "
+              "author-assertion of parricide and incest becomes "
+              "redundant once the rules exist, but the substrate need "
+              "not attempt to derive open-textured moral or dramatic "
+              "categories."),
+        authored_by="llm:claude-opus-4-6",
+        τ_a=20_000,
+        metadata={
+            "answers_question": "D_parricide_incest_authored_not_derived",
+        },
+    ),
+
+    # Banked from the probe walk at τ_a=20000: the probe proposed an
+    # edit replacing "τ_d=0" with τ_a-authorship coordinates (τ_a=5 /
+    # τ_a=6). The edit was declined — the original claim is about the
+    # audience's disclosure schedule (τ_d), which the ReaderView does
+    # not expose; but narrowing to τ_a loses the reader-outruns-
+    # character point. This question banks the surface tension for a
+    # later sketch pass.
+    Description(
+        id="D_view_cannot_see_τ_d",
+        attached_to=anchor_desc("D_anagnorisis_logical_payload"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("D_anagnorisis_logical_payload claims 'the reader has "
+              "held both since τ_d=0', but ReaderView does not expose "
+              "τ_d — the sjuzhet coordinate lives outside the view. "
+              "A reader-model probe correctly flagged this and "
+              "proposed an edit to τ_a coordinates; the edit was "
+              "declined because τ_a names authorship, not disclosure "
+              "schedule. The two are not the same. Open question for "
+              "a future pass: should ReaderView gain sjuzhet "
+              "visibility, or should descriptions stay inside what "
+              "the view can see? This sits below the inference-model "
+              "sketch on the dependency order."),
+        is_question=True,
+        authored_by="author",
+        τ_a=20_001,
     ),
 
 ]
