@@ -99,6 +99,19 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   intentional Antagonist gap and two missing-Stakes observations
   (T_impact_jocasta and T_relationship_oj have no separate Stakes
   records — a real authoring choice). No id-resolution errors.
+- `macbeth_dramatic.py` — *Macbeth* encoded in the Dramatic dialect.
+  Second encoding at this layer (parallel to `macbeth.py` at the
+  substrate level). One Argument, four Throughlines under the
+  dramatica-8 Template, nine Characters (all dramatica-8 slots
+  filled — Macduff = Antagonist + Skeptic, Macbeth = Protagonist +
+  Emotion, etc.), fourteen Scenes spanning the full play, four
+  Stakes records (one per Throughline; Macbeth's stakes are
+  genuinely separable across Throughlines, unlike Oedipus's),
+  twenty-five Beats. Verifier produces zero observations on this
+  encoding. Multi-antagonist alternatives (Lady Macbeth, the
+  Witches, Macbeth himself) documented but not encoded; a test
+  fixture in `test_dramatic.py` exercises the verifier's overfilled-
+  slot path by adding Antagonist to Lady Macbeth.
 - `macbeth.py` — the encoded *Macbeth*. Canonical-only; 22 fabula events
   (full arc: pre-play heroism through Macbeth's defeat at Dunsinane and
   Malcolm's coronation); 19 sjuzhet entries in roughly linear order; 7

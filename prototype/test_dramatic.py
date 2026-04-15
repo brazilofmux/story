@@ -543,6 +543,73 @@ def test_oedipus_dramatic_argument_resolves_in_view():
 
 
 # ----------------------------------------------------------------------------
+# Integration — the Macbeth dramatic encoding
+# ----------------------------------------------------------------------------
+
+
+def test_macbeth_dramatic_produces_zero_observations():
+    """The encoding's verifier output is the contract: zero
+    observations. Every dramatica-8 slot is filled, all four
+    Throughlines have Stakes, every Scene declares advances, all
+    ids resolve, no orphans, no duplicate positions. Macbeth's
+    encoding is honest about its design choices: where Oedipus
+    leaves the Antagonist deliberately unfilled, Macbeth assigns
+    Macduff; where Oedipus leaves IC and Relationship Stakes
+    entwined with the MC, Macbeth treats them as separable.
+
+    A successful clean run on Macbeth — given that Oedipus produces
+    3 observations on the same dialect — is itself a finding: the
+    dialect admits both encodings without revision, and the
+    verifier's output is sensitive to authorial choices, not noise.
+    """
+    import macbeth_dramatic as m
+    obs = verify(
+        m.STORY,
+        arguments=m.ARGUMENTS, throughlines=m.THROUGHLINES,
+        characters=m.CHARACTERS, scenes=m.SCENES,
+        beats=m.BEATS, stakes=m.STAKES,
+    )
+    assert len(obs) == 0, (
+        f"Macbeth dramatic should produce 0 observations; got "
+        f"{len(obs)}: {[o.code for o in obs]}"
+    )
+
+
+def test_macbeth_dramatic_overfilling_antagonist_surfaces():
+    """If an alternative encoding gives Lady Macbeth the Antagonist
+    label too, the multi-antagonist reading surfaces as a slot
+    overfilled observation. This pins the verifier's behavior on
+    the deliberate authorial choice the canonical encoding declines
+    to make."""
+    import macbeth_dramatic as m
+    # Build a modified Lady Macbeth carrying both Contagonist and
+    # Antagonist; substitute her in the characters tuple.
+    modified_lady = Character(
+        id="C_lady_macbeth", name="Lady Macbeth",
+        function_labels=("Contagonist", "Antagonist"),
+    )
+    modified_characters = tuple(
+        modified_lady if c.id == "C_lady_macbeth" else c
+        for c in m.CHARACTERS
+    )
+    obs = verify(
+        m.STORY,
+        arguments=m.ARGUMENTS, throughlines=m.THROUGHLINES,
+        characters=modified_characters, scenes=m.SCENES,
+        beats=m.BEATS, stakes=m.STAKES,
+    )
+    # Antagonist now has count=2; expected slot_overfilled.
+    overfilled = [
+        o for o in obs
+        if o.code == "slot_overfilled" and "Antagonist" in o.target_id
+    ]
+    assert len(overfilled) == 1, (
+        f"expected one Antagonist slot_overfilled; got "
+        f"{[o.target_id for o in obs if o.code == 'slot_overfilled']}"
+    )
+
+
+# ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
 
@@ -589,9 +656,12 @@ TESTS = [
     # Helpers
     test_group_by_severity_buckets_correctly,
     test_group_by_code_buckets_correctly,
-    # Integration
+    # Integration — Oedipus
     test_oedipus_dramatic_produces_expected_observations,
     test_oedipus_dramatic_argument_resolves_in_view,
+    # Integration — Macbeth
+    test_macbeth_dramatic_produces_zero_observations,
+    test_macbeth_dramatic_overfilling_antagonist_surfaces,
 ]
 
 
