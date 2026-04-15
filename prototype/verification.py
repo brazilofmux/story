@@ -766,6 +766,148 @@ def orchestrate_checks(
 
 
 # ============================================================================
+# Coverage report — registry vs. coupling declarations
+# ============================================================================
+#
+# orchestrate_checks dispatches the registry. coverage_report is the
+# inverse audit: given the dialect's COUPLING_DECLARATIONS and the
+# encoding's records, surface every (record, declaration) pair where
+# *no* registered check would fire. This is the homework-forcer the
+# Expert System framing wants — the gaps are visible, not silent.
+#
+# Coverage matches by (record_type, coupling_kind, applies_to). The
+# `field` on a CheckRegistration is informational only; a registration
+# on (Argument, claim-trajectory, premise) covers both the premise
+# declaration AND the resolution_direction declaration on Argument
+# because both share record_type + kind. The author who wants per-
+# field tracking should write per-field check functions; the gap report
+# would then reflect that granularity.
+
+
+@dataclass(frozen=True)
+class CoverageGap:
+    """A field declared in coupling_declarations that no registered
+    check fires on for a specific record. The expert-system meta-
+    finding: 'this is where you have homework left to do.'
+
+    Realization and Flavor declarations are skipped entirely —
+    Realization has no orchestrator-dispatched primitive yet, and
+    Flavor has no verifier by design — so neither generates gaps.
+    """
+    record_type: str
+    record_id: str
+    record_dialect: str
+    field: Optional[str]
+    coupling_kind: str
+    message: str  # human-readable, suitable for advisory-style output
+
+
+def _registration_covers(
+    registration: "CheckRegistration",
+    record_type: str,
+    coupling_kind: str,
+    record,
+) -> bool:
+    """Does this registration fire on (record_type, coupling_kind,
+    record)? The matching is structural: same record_type, same
+    coupling_kind, applies_to(record) is True."""
+    if registration.record_type != record_type:
+        return False
+    if registration.coupling_kind != coupling_kind:
+        return False
+    try:
+        return bool(registration.applies_to(record))
+    except Exception:
+        # A predicate that errors on a record can't be relied on to
+        # cover it; treat as not-covering. The author's predicate
+        # bug surfaces here rather than being swallowed silently.
+        return False
+
+
+def coverage_report(
+    *,
+    records_by_type: dict,
+    registry: tuple,
+    coupling_declarations: tuple,
+    record_dialect: str = "dramatic",
+) -> tuple:
+    """Compare the orchestrator's registry against the dialect's
+    coupling_declarations. Returns a tuple of CoverageGap records:
+    one per (record, declaration) pair the registry doesn't cover.
+
+    Each input declaration must have at least the attributes
+    `record_type`, `field`, and `kind` — matching the
+    `CouplingDeclaration` shape from dramatic.py (the verification
+    module stays dialect-agnostic by reading those attributes
+    directly rather than importing the dialect's class).
+
+    Only orchestratable kinds (Characterization, Claim-moment,
+    Claim-trajectory) generate gaps; Realization and Flavor
+    declarations are silently skipped.
+    """
+    gaps: list = []
+    for declaration in coupling_declarations:
+        if declaration.kind not in ORCHESTRATABLE_COUPLING_KINDS:
+            continue
+        records = records_by_type.get(declaration.record_type, ())
+        for record in records:
+            covered = any(
+                _registration_covers(
+                    reg, declaration.record_type, declaration.kind, record,
+                )
+                for reg in registry
+            )
+            if covered:
+                continue
+            field_part = (
+                f".{declaration.field}" if declaration.field is not None
+                else " (whole-record)"
+            )
+            message = (
+                f"{declaration.record_type}{field_part} on "
+                f"{record_dialect}:{record.id} is declared as "
+                f"{declaration.kind}, but no registered check fires "
+                f"on this record"
+            )
+            gaps.append(CoverageGap(
+                record_type=declaration.record_type,
+                record_id=record.id,
+                record_dialect=record_dialect,
+                field=declaration.field,
+                coupling_kind=declaration.kind,
+                message=message,
+            ))
+    return tuple(gaps)
+
+
+def group_gaps_by_record(gaps: tuple) -> dict:
+    """Bucket CoverageGaps by record_id. Useful for "show me everything
+    unchecked about S_some_scene" reports."""
+    out: dict = {}
+    for g in gaps:
+        out.setdefault(g.record_id, []).append(g)
+    return out
+
+
+def group_gaps_by_kind(gaps: tuple) -> dict:
+    """Bucket CoverageGaps by coupling_kind. Useful for "how many
+    Claim-moment fields have I left unchecked" summaries."""
+    out: dict = {k: [] for k in ORCHESTRATABLE_COUPLING_KINDS}
+    for g in gaps:
+        out.setdefault(g.coupling_kind, []).append(g)
+    return out
+
+
+def group_gaps_by_record_type(gaps: tuple) -> dict:
+    """Bucket CoverageGaps by record_type. Useful for "what record
+    types have the most unchecked declarations" reports."""
+    out: dict = {}
+    for g in gaps:
+        out.setdefault(g.record_type, []).append(g)
+    return out
+
+
+# ============================================================================
 # Convenience grouping
 # ============================================================================
 

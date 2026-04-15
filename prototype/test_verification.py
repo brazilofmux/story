@@ -36,6 +36,8 @@ from verification import (
     COUPLING_REALIZATION, COUPLING_CHARACTERIZATION,
     COUPLING_CLAIM_MOMENT, COUPLING_CLAIM_TRAJECTORY, COUPLING_FLAVOR,
     ORCHESTRATABLE_COUPLING_KINDS,
+    CoverageGap, coverage_report,
+    group_gaps_by_record, group_gaps_by_kind, group_gaps_by_record_type,
     reviews_only, advisories_only, group_by_verdict,
 )
 from lowering import PositionRange
@@ -963,6 +965,244 @@ def test_orchestrate_macbeth_run_matches_three_results():
     }
 
 
+# ============================================================================
+# Coverage report — gaps between registry and coupling declarations
+# ============================================================================
+#
+# A small fixture declaration class stands in for dramatic.CouplingDeclaration
+# so these tests stay off the dramatic-encoding test path. The real
+# CouplingDeclaration would also work — coverage_report only reads
+# `.record_type`, `.field`, `.kind` attributes.
+
+
+@dataclass(frozen=True)
+class _FakeDeclaration:
+    record_type: str
+    field: Optional[str]
+    kind: str
+
+
+def test_coverage_report_emits_gap_for_declared_uncovered_record():
+    """An orchestratable declaration on a record that no registration
+    fires on produces a CoverageGap. The basic homework-finder."""
+    record = _FakeUpper(id="T_one", role_label="overall-story")
+    decl = _FakeDeclaration(
+        record_type="Throughline", field="role_label",
+        kind=COUPLING_CHARACTERIZATION,
+    )
+    # Empty registry — no checks defined yet.
+    gaps = coverage_report(
+        records_by_type={"Throughline": (record,)},
+        registry=(),
+        coupling_declarations=(decl,),
+    )
+    assert len(gaps) == 1
+    g = gaps[0]
+    assert isinstance(g, CoverageGap)
+    assert g.record_type == "Throughline"
+    assert g.record_id == "T_one"
+    assert g.field == "role_label"
+    assert g.coupling_kind == COUPLING_CHARACTERIZATION
+    assert "T_one" in g.message
+    assert "role_label" in g.message
+
+
+def test_coverage_report_omits_gap_when_registration_covers():
+    """A registration matching (record_type, kind) and whose
+    applies_to returns True for the record covers the declaration —
+    no gap surfaced."""
+    record = _FakeUpper(id="T_one", role_label="main-character")
+    decl = _FakeDeclaration(
+        record_type="Throughline", field="role_label",
+        kind=COUPLING_CHARACTERIZATION,
+    )
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="Throughline", field="role_label",
+        applies_to=lambda t: t.role_label == "main-character",
+        check_fn=_always_approved_check,
+    )
+    gaps = coverage_report(
+        records_by_type={"Throughline": (record,)},
+        registry=(reg,), coupling_declarations=(decl,),
+    )
+    assert gaps == ()
+
+
+def test_coverage_report_emits_gap_when_applies_to_excludes():
+    """Same registration as above, but the record's role_label doesn't
+    match — applies_to returns False, so coverage isn't claimed, gap
+    surfaces. This is the predicate-restricted case the homework
+    framing wants visible."""
+    record = _FakeUpper(id="T_other", role_label="impact-character")
+    decl = _FakeDeclaration(
+        record_type="Throughline", field="role_label",
+        kind=COUPLING_CHARACTERIZATION,
+    )
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="Throughline", field="role_label",
+        applies_to=lambda t: t.role_label == "main-character",
+        check_fn=_always_approved_check,
+    )
+    gaps = coverage_report(
+        records_by_type={"Throughline": (record,)},
+        registry=(reg,), coupling_declarations=(decl,),
+    )
+    assert len(gaps) == 1
+    assert gaps[0].record_id == "T_other"
+
+
+def test_coverage_report_skips_realization_and_flavor():
+    """Realization has no orchestrator dispatch yet; Flavor has no
+    verifier by design. Neither produces gaps regardless of registry
+    state — the gap report only surfaces orchestratable kinds."""
+    record = _FakeUpper(id="C_one")
+    decls = (
+        _FakeDeclaration("Character", None, COUPLING_REALIZATION),
+        _FakeDeclaration("Argument", "domain", COUPLING_FLAVOR),
+    )
+    gaps = coverage_report(
+        records_by_type={"Character": (record,), "Argument": (record,)},
+        registry=(), coupling_declarations=decls,
+    )
+    assert gaps == ()
+
+
+def test_coverage_report_handles_record_type_not_in_inventory():
+    """A declaration on a record_type the encoding didn't supply
+    enumerates over zero records — no gaps from that declaration."""
+    decl = _FakeDeclaration(
+        record_type="UnseenType", field=None,
+        kind=COUPLING_CHARACTERIZATION,
+    )
+    gaps = coverage_report(
+        records_by_type={"OtherType": ()},
+        registry=(), coupling_declarations=(decl,),
+    )
+    assert gaps == ()
+
+
+def test_coverage_report_one_registration_covers_multiple_field_decls():
+    """Two field-level declarations of the same (record_type, kind) are
+    both covered by a single registration on (record_type, kind) —
+    field is informational, not a dispatch key."""
+    record = _FakeUpper(id="A_one")
+    decls = (
+        _FakeDeclaration("Argument", "premise", COUPLING_CLAIM_TRAJECTORY),
+        _FakeDeclaration(
+            "Argument", "resolution_direction", COUPLING_CLAIM_TRAJECTORY,
+        ),
+    )
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CLAIM_TRAJECTORY,
+        record_type="Argument", field="premise",
+        applies_to=lambda a: True,
+        check_fn=_always_approved_trajectory,
+    )
+    gaps = coverage_report(
+        records_by_type={"Argument": (record,)},
+        registry=(reg,), coupling_declarations=decls,
+    )
+    assert gaps == ()
+
+
+def test_coverage_report_predicate_exception_treated_as_uncovered():
+    """If applies_to raises on a record (author bug in the predicate),
+    coverage cannot be relied on — the gap surfaces. This is the
+    safer default; an unhandled exception would otherwise read as
+    'covered' which is a worse silent failure."""
+    record = _FakeUpper(id="T_one", role_label="main-character")
+    decl = _FakeDeclaration(
+        "Throughline", "role_label", COUPLING_CHARACTERIZATION,
+    )
+    def _broken_predicate(record):
+        raise RuntimeError("author bug")
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="Throughline", field="role_label",
+        applies_to=_broken_predicate,
+        check_fn=_always_approved_check,
+    )
+    gaps = coverage_report(
+        records_by_type={"Throughline": (record,)},
+        registry=(reg,), coupling_declarations=(decl,),
+    )
+    assert len(gaps) == 1
+
+
+def test_group_gaps_by_record_buckets_correctly():
+    g1 = CoverageGap(
+        record_type="Throughline", record_id="T_one",
+        record_dialect="dramatic", field="role_label",
+        coupling_kind=COUPLING_CHARACTERIZATION, message="m1",
+    )
+    g2 = CoverageGap(
+        record_type="Throughline", record_id="T_one",
+        record_dialect="dramatic", field="subject",
+        coupling_kind=COUPLING_CHARACTERIZATION, message="m2",
+    )
+    g3 = CoverageGap(
+        record_type="Scene", record_id="S_one",
+        record_dialect="dramatic", field="result",
+        coupling_kind=COUPLING_CLAIM_MOMENT, message="m3",
+    )
+    by_record = group_gaps_by_record((g1, g2, g3))
+    assert len(by_record["T_one"]) == 2
+    assert len(by_record["S_one"]) == 1
+
+
+def test_group_gaps_by_kind_initializes_orchestratable_keys():
+    """The kind-grouped dict starts with all orchestratable kinds as
+    empty lists, so a 'no gaps of kind X' read is unambiguous (the
+    key is present with empty list, not missing)."""
+    by_kind = group_gaps_by_kind(())
+    for kind in ORCHESTRATABLE_COUPLING_KINDS:
+        assert kind in by_kind
+        assert by_kind[kind] == []
+
+
+def test_coverage_report_macbeth_surfaces_gaps_against_real_encoding():
+    """Integration: against the real Macbeth encoding (3 registered
+    checks against the full COUPLING_DECLARATIONS surface), the gap
+    report surfaces dozens of uncovered (record, field) pairs. The
+    exact count is not the point — the contract is that gaps
+    surface, broken down by kind across all four orchestratable
+    declaration types on the encoding."""
+    from macbeth_verification import CHECK_REGISTRY, RECORDS_BY_TYPE
+    from macbeth_dramatic import BEATS, STAKES
+    from dramatic import COUPLING_DECLARATIONS
+
+    records = dict(RECORDS_BY_TYPE)
+    records["Beat"] = BEATS
+    records["Stakes"] = STAKES
+
+    gaps = coverage_report(
+        records_by_type=records,
+        registry=CHECK_REGISTRY,
+        coupling_declarations=COUPLING_DECLARATIONS,
+    )
+    # Macbeth has many uncovered records; loose lower bound.
+    assert len(gaps) >= 50, (
+        f"expected the registry-vs-declaration gap to surface many "
+        f"uncovered records on Macbeth; got only {len(gaps)}"
+    )
+    by_kind = group_gaps_by_kind(gaps)
+    # All three orchestratable kinds should have at least one gap on
+    # Macbeth (the encoding only registers one check per kind).
+    assert len(by_kind[COUPLING_CHARACTERIZATION]) > 0
+    assert len(by_kind[COUPLING_CLAIM_TRAJECTORY]) > 0
+    assert len(by_kind[COUPLING_CLAIM_MOMENT]) > 0
+    by_type = group_gaps_by_record_type(gaps)
+    # Beats are completely uncovered (no Beat registrations on Macbeth).
+    assert len(by_type["Beat"]) == len(BEATS)
+    # Stakes are completely uncovered (no Stakes registrations).
+    assert len(by_type["Stakes"]) == 12, (
+        f"4 Stakes × 3 declarations each = 12 expected; got "
+        f"{len(by_type['Stakes'])}"
+    )
+
+
 # ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
@@ -1026,6 +1266,17 @@ TESTS = [
     test_orchestrate_dispatches_multiple_kinds_in_one_run,
     test_orchestrate_oedipus_run_matches_three_results,
     test_orchestrate_macbeth_run_matches_three_results,
+    # Coverage report
+    test_coverage_report_emits_gap_for_declared_uncovered_record,
+    test_coverage_report_omits_gap_when_registration_covers,
+    test_coverage_report_emits_gap_when_applies_to_excludes,
+    test_coverage_report_skips_realization_and_flavor,
+    test_coverage_report_handles_record_type_not_in_inventory,
+    test_coverage_report_one_registration_covers_multiple_field_decls,
+    test_coverage_report_predicate_exception_treated_as_uncovered,
+    test_group_gaps_by_record_buckets_correctly,
+    test_group_gaps_by_kind_initializes_orchestratable_keys,
+    test_coverage_report_macbeth_surfaces_gaps_against_real_encoding,
 ]
 
 

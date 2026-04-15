@@ -64,9 +64,11 @@ from verification import (
     COUPLING_CHARACTERIZATION,
     COUPLING_CLAIM_TRAJECTORY,
     COUPLING_CLAIM_MOMENT,
+    coverage_report, group_gaps_by_kind, group_gaps_by_record_type,
     reviews_only, group_by_verdict,
 )
-from oedipus_dramatic import ARGUMENTS, SCENES
+from oedipus_dramatic import ARGUMENTS, SCENES, BEATS, STAKES
+from dramatic import COUPLING_DECLARATIONS
 
 
 # ============================================================================
@@ -499,6 +501,11 @@ RECORDS_BY_TYPE = {
     "Throughline": THROUGHLINES,
     "Argument": ARGUMENTS,
     "Scene": SCENES,
+    # Beat and Stakes are included so coverage_report sees them. The
+    # orchestrator silently skips record_types with no matching
+    # registration; the inclusion only affects the gap audit.
+    "Beat": BEATS,
+    "Stakes": STAKES,
 }
 
 
@@ -531,3 +538,19 @@ if __name__ == "__main__":
             print(f"  ADVISORY [{r.severity}] scope={r.scope}")
             print(f"    {r.comment}")
         print()
+
+    gaps = coverage_report(
+        records_by_type=RECORDS_BY_TYPE,
+        registry=CHECK_REGISTRY,
+        coupling_declarations=COUPLING_DECLARATIONS,
+    )
+    print(f"Coverage: {len(gaps)} gaps "
+          f"(declarations with no registered check)")
+    if gaps:
+        print("  by kind:")
+        for kind, group in group_gaps_by_kind(gaps).items():
+            if group:
+                print(f"    {kind:<22} {len(group)}")
+        print("  by record_type:")
+        for rt, group in group_gaps_by_record_type(gaps).items():
+            print(f"    {rt:<22} {len(group)}")
