@@ -14,9 +14,9 @@ Cat's coupling declarations actually support. The declarations in
 save_the_cat.py are weighted differently: characterization is only
 available on StcGenre.archetypes (and the Macbeth encoding's
 declared Genre has no Lowering — genres are dialect-shipped data,
-not authored records). The remaining declarations admit two
-claim-trajectory checks and one claim-moment check, which is the
-three this module authors.
+not authored records). The remaining declarations admit three
+claim-trajectory checks and one claim-moment check, which is what
+this module authors.
 
 - **Claim-trajectory on Strand_A_scotland.description.** The A strand
   claims a political arc: loyal-thane → prophecy → regicide →
@@ -44,6 +44,17 @@ three this module authors.
   primitive does not require a Lowering, per V6) and the check
   supplies its own τ_s.
 
+- **Claim-trajectory on Strand_B_marriage.description.** The B
+  strand claims a marriage arc: partnership → conspiracy → unified
+  execution → isolation → sleepwalking → death. The substrate
+  should exhibit four signatures across τ_s ∈ [2, 14]: lady_macbeth
+  participates in E_letter_to_lady_macbeth (opening); in
+  E_sleepwalking (psyche-break); NOT in E_banquo_killed (the
+  rupture; Macbeth acts without telling her); and dead(lady_macbeth)
+  world-holds at τ_s=14 (terminus). Mixed positive/negative
+  signature set — the rupture is signaled by absence, which the
+  strand description explicitly names.
+
 - **Claim-moment on B_14_finale.description_of_change.** B_14_finale
   lowers to E_macduff_reveals_birth (τ_s=17) and E_macbeth_killed
   (τ_s=17). At that moment, four signatures should hold: Macbeth
@@ -56,15 +67,10 @@ three this module authors.
   the same substrate moment should produce checks of the same shape
   when both describe the same event-set.
 
-Expected verifier output at τ_a=400:
-
-- Review 1 [APPROVED, match_strength=1.0]: Strand_A_scotland's four
-  trajectory signatures all hold.
-- Review 2 [APPROVED, match_strength=1.0]: theme_statement's four
-  inversion signatures all hold.
-- Review 3 [APPROVED, match_strength=1.0]: B_14_finale's four moment
-  signatures all hold (same substrate state as the Dramatic
-  S_macbeth_dies check produces).
+Expected verifier output at τ_a=400: 4 REVIEWs, all APPROVED at
+match_strength=1.0. Coverage: 14 gaps (all on StcBeat.
+description_of_change — one beat covered, 14 others not; candidates
+for burndown when prioritized).
 """
 
 from __future__ import annotations
@@ -325,6 +331,104 @@ def theme_statement_trajectory_check(
 
 
 # ============================================================================
+# Claim-trajectory check: Strand_B_marriage
+# ============================================================================
+#
+# For the B strand ("partnership → conspiracy → unified execution →
+# isolation → sleepwalking → death"), the substrate trajectory should
+# exhibit four signatures spanning the marriage's in-play lifespan
+# (τ_s ∈ [2, 14], matching position_range). Each signature tests a
+# different arc phase using participant-set and world-fact signals:
+#
+#   1. lady_macbeth is a participant in E_letter_to_lady_macbeth
+#      (τ_s=2) — the arc's opening; she receives the prophecy and
+#      chooses for both.
+#   2. lady_macbeth is a participant in E_sleepwalking (τ_s=13) — the
+#      psyche-break phase; conscience surfaces as compulsive speech.
+#   3. lady_macbeth is NOT a participant in E_banquo_killed (τ_s=8) —
+#      the rupture indicator; Macbeth acts without telling her. This
+#      is the negative signature the strand description names
+#      explicitly ("Macbeth acts without his wife").
+#   4. dead(lady_macbeth) world-holds at τ_s=14 — the arc's terminus;
+#      E_lady_macbeth_dies authors the fact.
+
+
+def strand_b_marriage_trajectory_check(
+    upper_ref, lower_refs, position_ranges,
+):
+    """Trajectory check for Strand_B_marriage.description. Returns
+    (verdict, match_strength, comment).
+
+    Four signatures across the marriage arc:
+      - lady_macbeth in E_letter_to_lady_macbeth.participants (open)
+      - lady_macbeth in E_sleepwalking.participants (psyche-break)
+      - lady_macbeth NOT in E_banquo_killed.participants (rupture)
+      - dead(lady_macbeth) world-literal at τ_s=14 (terminus)
+    """
+    end_τ_s = 14
+    if position_ranges:
+        end_τ_s = max(pr.max_value for pr in position_ranges)
+
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    world_facts_end = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=end_τ_s,
+    )
+
+    def _participants(event_id: str) -> set:
+        e = _substrate_event(event_id)
+        out = set()
+        for v in e.participants.values():
+            if isinstance(v, str):
+                out.add(v)
+            elif isinstance(v, (list, tuple)):
+                for item in v:
+                    if isinstance(item, str):
+                        out.add(item)
+        return out
+
+    letter_participants = _participants("E_letter_to_lady_macbeth")
+    sleepwalk_participants = _participants("E_sleepwalking")
+    banquo_participants = _participants("E_banquo_killed")
+
+    opens_with_lm = "lady_macbeth" in letter_participants
+    sleepwalk_focal = "lady_macbeth" in sleepwalk_participants
+    rupture_excludes_lm = "lady_macbeth" not in banquo_participants
+    lm_dead = world_holds_literal(dead("lady_macbeth"), world_facts_end)
+
+    signatures = [
+        opens_with_lm,
+        sleepwalk_focal,
+        rupture_excludes_lm,
+        lm_dead,
+    ]
+    matched = sum(signatures)
+    strength = matched / len(signatures)
+
+    if strength >= 0.99:
+        verdict = VERDICT_APPROVED
+    elif strength >= 0.5:
+        verdict = VERDICT_PARTIAL_MATCH
+    else:
+        verdict = VERDICT_NEEDS_WORK
+
+    comment = (
+        f"Strand_B_marriage trajectory (τ_s ∈ [2, {end_τ_s}]): "
+        f"lady_macbeth in E_letter_to_lady_macbeth.participants "
+        f"(opens): {opens_with_lm}; "
+        f"lady_macbeth in E_sleepwalking.participants "
+        f"(psyche-break): {sleepwalk_focal}; "
+        f"lady_macbeth NOT in E_banquo_killed.participants "
+        f"(rupture): {rupture_excludes_lm}; "
+        f"dead(lady_macbeth) world-literal @{end_τ_s} "
+        f"(terminus): {lm_dead}; "
+        f"{matched}/4 marriage-arc signatures present"
+    )
+    return (verdict, strength, comment)
+
+
+# ============================================================================
 # Claim-moment check: B_14_finale.description_of_change
 # ============================================================================
 #
@@ -430,6 +534,17 @@ CHECK_REGISTRY = (
         description=(
             "Strand_A_scotland: regicide + tyrant + dead(macbeth) + "
             "king(malcolm, scotland) derivable/holding at τ_s ≤ 18"
+        ),
+    ),
+    CheckRegistration(
+        coupling_kind=COUPLING_CLAIM_TRAJECTORY,
+        record_type="StcStrand",
+        field="description",
+        applies_to=lambda s: s.id == "Strand_B_marriage",
+        check_fn=strand_b_marriage_trajectory_check,
+        description=(
+            "Strand_B_marriage: lady_macbeth participant-set across "
+            "letter/sleepwalking/banquo-killing + dead at τ_s=14"
         ),
     ),
     CheckRegistration(
