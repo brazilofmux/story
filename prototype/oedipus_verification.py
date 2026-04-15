@@ -70,64 +70,40 @@ from verification import (
 from oedipus_dramatic import ARGUMENTS, SCENES, BEATS, STAKES
 from dramatic import COUPLING_DECLARATIONS
 
+# Shared cross-boundary verifier helpers (extracted per REVIEW.md
+# Finding 3 once the third encoding's verifier landed).
+from verifier_helpers import (
+    find_substrate_event,
+    find_throughline,
+    is_abstract_throughline_owner,
+    event_participants_flat,
+    entity_id_for_character,
+)
+
 
 # ============================================================================
-# Helpers
+# Encoding-bound helper closures
 # ============================================================================
 
 
 def _throughline(throughline_id: str) -> Throughline:
-    for t in THROUGHLINES:
-        if t.id == throughline_id:
-            return t
-    raise KeyError(throughline_id)
+    return find_throughline(throughline_id, THROUGHLINES)
 
 
 def _substrate_event(event_id: str) -> Event:
-    for e in FABULA:
-        if e.id == event_id:
-            return e
-    raise KeyError(event_id)
+    return find_substrate_event(event_id, FABULA)
 
 
 def _is_abstract_owner(owner_id: str) -> bool:
-    """Sentinel owner ids per dramatic.ABSTRACT_THROUGHLINE_OWNERS."""
-    return owner_id in ("none", "the-situation", "the-relationship")
+    return is_abstract_throughline_owner(owner_id)
 
 
 def _entity_id_for_character(character_id: str, lowerings: tuple) -> str:
-    """Walk Lowerings to find the substrate Entity id that the given
-    Dramatic Character lowers to. Returns the entity id string, or
-    None if no ACTIVE Lowering exists or the lowering targets aren't
-    substrate Entities."""
-    char_ref = cross_ref("dramatic", character_id)
-    for lw in lowerings:
-        if lw.upper_record != char_ref:
-            continue
-        if lw.status != LoweringStatus.ACTIVE:
-            continue
-        for lr in lw.lower_records:
-            if lr.dialect == "substrate":
-                # Verify it's an Entity (vs. an Event); Entity ids
-                # are lowercase agent names without an E_ prefix.
-                if any(e.id == lr.record_id for e in ENTITIES):
-                    return lr.record_id
-    return None
+    return entity_id_for_character(character_id, lowerings, ENTITIES)
 
 
 def _event_participants_flat(event: Event) -> set:
-    """Flatten an Event's participants dict into a set of entity ids.
-    Substrate events sometimes use lists for participants like
-    'targets'; this collapses those."""
-    out = set()
-    for v in event.participants.values():
-        if isinstance(v, str):
-            out.add(v)
-        elif isinstance(v, (list, tuple)):
-            for e in v:
-                if isinstance(e, str):
-                    out.add(e)
-    return out
+    return event_participants_flat(event)
 
 
 # ============================================================================

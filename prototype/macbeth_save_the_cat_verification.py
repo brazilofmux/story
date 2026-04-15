@@ -121,16 +121,18 @@ from verification import (
 )
 
 
+# Shared cross-boundary verifier helpers (extracted per REVIEW.md
+# Finding 3 once this third encoding's verifier landed).
+from verifier_helpers import find_substrate_event
+
+
 # ============================================================================
-# Helpers
+# Encoding-bound helper closures
 # ============================================================================
 
 
 def _substrate_event(event_id: str) -> Event:
-    for e in FABULA:
-        if e.id == event_id:
-            return e
-    raise KeyError(event_id)
+    return find_substrate_event(event_id, FABULA)
 
 
 # ============================================================================
