@@ -78,6 +78,21 @@ VALID_SEVERITIES = frozenset({
 })
 
 
+# Assessments a VerifierCommentary can carry. Distinct vocabulary
+# from VERDICT_* because the question is different — a verdict
+# judges a record; an assessment judges a verdict.
+
+ASSESSMENT_ENDORSES = "endorses"
+ASSESSMENT_QUALIFIES = "qualifies"
+ASSESSMENT_DISSENTS = "dissents"
+ASSESSMENT_NOTED = "noted"
+
+VALID_ASSESSMENTS = frozenset({
+    ASSESSMENT_ENDORSES, ASSESSMENT_QUALIFIES,
+    ASSESSMENT_DISSENTS, ASSESSMENT_NOTED,
+})
+
+
 # ============================================================================
 # Output records (V2)
 # ============================================================================
@@ -127,6 +142,43 @@ class VerificationAnswerProposal:
     rationale: str
     proposed_at_τ_a: int
     status: str = "pending"
+
+
+@dataclass(frozen=True)
+class VerifierCommentary:
+    """A reviewer's read on a VerificationReview — does the verifier's
+    verdict feel right? Is the check well-grounded? Is there a
+    signature the check missed?
+
+    Distinct from VerificationReview itself: VerificationReview is
+    the verifier's verdict on a record; VerifierCommentary is a
+    third-party (human reviewer or LLM probe) reading of the
+    verifier's verdict. Routes through the proposal queue the same
+    way — the author walks and decides whether to act on it (e.g.,
+    extend the check function, accept the dissent and re-run, file
+    away as noted).
+
+    `assessment` ∈ {endorses, qualifies, dissents, noted}:
+      - endorses — verdict is well-grounded; nothing to add.
+      - qualifies — verdict stands but with a clarification, missed
+        nuance, or alternate reading worth capturing alongside.
+      - dissents — commenter disagrees with the verdict, has a
+        specific counter-argument grounded in the records.
+      - noted — read but no position taken.
+
+    `suggested_signature` is an optional concrete signature the
+    commenter thinks the check might add (e.g., "consider also
+    checking that owner Entity appears as `told_by` listener, not
+    just literal participant"). Free-form prose, intended as
+    inspiration for the author who maintains the check function;
+    not actionable code.
+    """
+    commenter_id: str
+    commented_at_τ_a: int
+    assessment: str       # one of ASSESSMENT_*
+    target_review: VerificationReview
+    comment: str
+    suggested_signature: Optional[str] = None
 
 
 # ============================================================================
