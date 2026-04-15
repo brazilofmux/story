@@ -965,6 +965,43 @@ def test_orchestrate_macbeth_run_matches_three_results():
     }
 
 
+def test_orchestrate_ackroyd_run_matches_three_results():
+    """Third-encoding integration check: Ackroyd at Dramatic.
+    Same V3 shape as Oedipus and Macbeth — one characterization,
+    one claim-trajectory, one claim-moment. All three should land
+    as reviews on this encoding (no missing-Lowering advisories)."""
+    from ackroyd_verification import run as run_ackroyd
+    out = run_ackroyd()
+    assert len(out) == 3
+    reviews = reviews_only(out)
+    assert len(reviews) == 3
+    target_ids = {r.target_record.record_id for r in reviews}
+    assert target_ids == {
+        "T_mc_sheppard", "A_truth_recovers", "S_poirot_reveal",
+    }
+
+
+def test_ackroyd_all_reviews_approved_at_full_strength():
+    """Ackroyd encoding's contract: every check's signatures hold.
+    All three reviews APPROVED at match_strength=1.0. Notably the
+    MC-throughline check (characterization on Sheppard) requires the
+    substrate to list Sheppard as an attending_physician participant
+    on E_mrs_ferrars_suicide — the encoding's insistence that the
+    doctor pronouncing death IS a substrate participant, not just
+    narrative context."""
+    from ackroyd_verification import run as run_ackroyd
+    reviews = reviews_only(run_ackroyd())
+    for r in reviews:
+        assert r.verdict == VERDICT_APPROVED, (
+            f"expected {r.target_record.record_id!r} verdict APPROVED; "
+            f"got {r.verdict!r}: {r.comment}"
+        )
+        assert r.match_strength == 1.0, (
+            f"expected {r.target_record.record_id!r} match_strength "
+            f"1.0; got {r.match_strength}: {r.comment}"
+        )
+
+
 def test_orchestrate_macbeth_save_the_cat_run_matches_four_results():
     """Third encoding integration check: Macbeth at Save the Cat.
     Registers four checks (two strand trajectories, one theme
@@ -1336,6 +1373,8 @@ TESTS = [
     test_orchestrate_dispatches_multiple_kinds_in_one_run,
     test_orchestrate_oedipus_run_matches_three_results,
     test_orchestrate_macbeth_run_matches_three_results,
+    test_orchestrate_ackroyd_run_matches_three_results,
+    test_ackroyd_all_reviews_approved_at_full_strength,
     test_orchestrate_macbeth_save_the_cat_run_matches_four_results,
     test_macbeth_save_the_cat_all_reviews_approved_at_full_strength,
     test_coverage_report_macbeth_save_the_cat_surfaces_beat_gaps,

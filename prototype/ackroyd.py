@@ -449,7 +449,8 @@ FABULA = [
         id="E_mrs_ferrars_suicide",
         type="death_by_suicide",
         τ_s=0, τ_a=10,
-        participants={"who": "mrs_ferrars"},
+        participants={"who": "mrs_ferrars",
+                      "attending_physician": "sheppard"},
         effects=(
             # The novel opens with Mrs. Ferrars dead. Sheppard has
             # been summoned in the night (as her doctor) and
