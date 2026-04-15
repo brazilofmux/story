@@ -34,6 +34,7 @@ python3 test_identity.py         # identity & realization tests
 python3 test_inference.py        # rule-derivation tests (inference-01 N1-N10)
 python3 test_dramatic.py         # Dramatic dialect M1-M10 + M8 verifier tests
 python3 test_lowering.py         # Lowering record tests (lowering-record-sketch-01 L1-L10)
+python3 test_verification.py     # Verifier primitive tests (verification-sketch-01 V1-V8; Characterization)
 python3 test_rashomon.py         # permanent contested-branch tests (no framework)
 python3 test_proposal_walker.py  # walker tests (io.StringIO-driven, no terminal)
 
@@ -114,6 +115,33 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   duplicate ids, PENDING-with-records, unknown attentions,
   supersession metadata consistency). Constructor enforces L8 —
   ACTIVE Lowerings must have non-empty `lower_records`.
+- `verification.py` — first verifier primitive
+  (verification-sketch-01 V1-V8). Dialect-agnostic — imports only
+  from `lowering.py`. Output records: `VerificationReview`
+  (review on a target_record with verdict + match_strength),
+  `StructuralAdvisory` (observation that spans multiple records),
+  `VerificationAnswerProposal` (verifier-sourced answer to an
+  upper-dialect open question; parallels reader-model
+  AnswerProposal). One primitive shipped: **Characterization**.
+  `verify_characterization` takes an upper record id + dialect, the
+  full Lowerings tuple, and a caller-supplied check function;
+  filters to ACTIVE Lowerings, unions their lower_records, runs
+  the check, returns a VerificationReview (or None if the upper
+  has no ACTIVE Lowerings). `run_characterization_checks`
+  orchestrates many checks at once and produces both Reviews and
+  Advisories. Defensive: a check returning a non-standard verdict
+  is recorded as 'noted' rather than dropped or crashing. Two
+  other primitives (Claim-moment, Claim-trajectory) deferred.
+- `oedipus_verification.py` — first concrete cross-boundary
+  verifier run. Imports from substrate, oedipus, dramatic,
+  oedipus_dramatic, lowering, oedipus_lowerings, and verification
+  simultaneously. One characterization check:
+  `main_character_throughline_check` verifies that a Throughline
+  with role_label="main-character" has its owner Character's
+  lowered substrate Entity as a participant in most/all of the
+  Lowered substrate events. Result on T_mc_oedipus: APPROVED with
+  match_strength=1.0 (10/10 Lowered events have Oedipus as
+  participant).
 - `oedipus_lowerings.py` — first authored Lowering bindings:
   Oedipus Dramatic ↔ substrate. The project's first cross-dialect
   module — imports from `substrate.py`, `oedipus.py`, `dramatic.py`,
@@ -189,6 +217,19 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   PositionRange on the MC Throughline binding, anchor_τ_a set for
   event targets and None for entity-only targets, every PENDING
   carries `why_pending`.
+- `test_verification.py` — Verifier primitive tests per
+  verification-sketch-01 V1-V8 (Characterization slice).
+  Synthetic-fixture tests for `verify_characterization` (verdicts,
+  match_strength, ACTIVE-only filter, union-of-lower-records
+  semantics, defensive verdict-validation), the
+  `run_characterization_checks` orchestrator (Reviews when checks
+  ran, Advisories when skipped), and the filtering / grouping
+  helpers (`reviews_only`, `advisories_only`, `group_by_verdict`).
+  Per-record-type coupling-kind declaration tests
+  (`coupling_kind_for`, `declarations_for_kind`,
+  `fields_with_coupling`) confirm dramatic.py's V5 amendment.
+  Integration test against `oedipus_verification.run()` pins the
+  APPROVED + 1.0 contract on T_mc_oedipus.
 - `test_rashomon.py` — permanent contested-branch tests pinning
   invariants that only become load-bearing with a non-trivial
   `:contested` example: sibling non-inheritance on a live encoding,

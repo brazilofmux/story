@@ -860,3 +860,145 @@ def group_by_code(observations: list) -> dict:
     for o in observations:
         out.setdefault(o.code, []).append(o)
     return out
+
+
+# ============================================================================
+# Per-record-type coupling-kind declarations (verification-sketch-01 V5)
+# ============================================================================
+#
+# These declarations name, per record type and per field, which coupling
+# kind from the four-coupling-kinds framework (lowering-sketch-01 F1)
+# applies. Verifiers read these declarations to know which check to run
+# for each record/field pair; authors read them to know what to expect.
+#
+# The four coupling kinds (per the framework, repeated here for clarity):
+#
+# - "realization":  upper record made true by specific lower records;
+#                   uses Lowering machinery (lowering-record-sketch-01)
+# - "characterization": upper record classifies a substrate pattern;
+#                   uses verification (verification-sketch-01)
+# - "claim-moment": upper record asserts substrate state at a τ_s;
+#                   uses verification (Claim-moment primitive)
+# - "claim-trajectory": upper record asserts substrate trajectory across
+#                   τ_s range; uses verification (Claim-trajectory primitive)
+# - "flavor":       free-form author metadata; no formal check
+#
+# A record type may admit multiple coupling kinds across different
+# fields (e.g., Argument has trajectory-Claim and Flavor fields); each
+# (record_type, field) pair maps to one coupling kind. field=None means
+# the declaration applies to the whole record.
+
+COUPLING_REALIZATION = "realization"
+COUPLING_CHARACTERIZATION = "characterization"
+COUPLING_CLAIM_MOMENT = "claim-moment"
+COUPLING_CLAIM_TRAJECTORY = "claim-trajectory"
+COUPLING_FLAVOR = "flavor"
+
+VALID_COUPLING_KINDS = frozenset({
+    COUPLING_REALIZATION, COUPLING_CHARACTERIZATION,
+    COUPLING_CLAIM_MOMENT, COUPLING_CLAIM_TRAJECTORY,
+    COUPLING_FLAVOR,
+})
+
+
+@dataclass(frozen=True)
+class CouplingDeclaration:
+    """One per-record-type-or-field coupling-kind declaration. `field`
+    is the optional field name; None means the declaration applies to
+    the whole record. `kind` is a coupling kind string (one of
+    VALID_COUPLING_KINDS)."""
+    record_type: str
+    field: Optional[str]
+    kind: str
+
+
+COUPLING_DECLARATIONS = (
+    # Story root — the whole record realizes (Story binds to the
+    # substrate's branch / fold the story is encoded against).
+    CouplingDeclaration("Story", None, COUPLING_REALIZATION),
+
+    # Argument fields. The premise and resolution_direction are
+    # Claim-trajectory (the substrate trajectory should exhibit
+    # the premise's resolution as authored). The domain tag is
+    # Flavor (free-form classification, no verifier).
+    CouplingDeclaration("Argument", "premise", COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("Argument", "counter_premise", COUPLING_FLAVOR),
+    CouplingDeclaration("Argument", "resolution_direction", COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("Argument", "domain", COUPLING_FLAVOR),
+
+    # Throughline fields. Owners realize (Characters lower to Entities;
+    # the Throughline's owner-set is realized by the Entity-set the
+    # owner Characters lower to). Role_label and subject are
+    # Characterizations (they classify what kind of Throughline this
+    # is; a verifier checks the substrate exhibits the matching
+    # pattern). Argument_contributions are Claim-trajectory
+    # (the throughline's contribution should be visible in the
+    # substrate trajectory). Stakes_id is structural (a within-
+    # dialect link; substrate doesn't see it).
+    CouplingDeclaration("Throughline", "owners", COUPLING_REALIZATION),
+    CouplingDeclaration("Throughline", "role_label", COUPLING_CHARACTERIZATION),
+    CouplingDeclaration("Throughline", "subject", COUPLING_CHARACTERIZATION),
+    CouplingDeclaration("Throughline", "argument_contributions",
+                        COUPLING_CLAIM_TRAJECTORY),
+
+    # Character — the whole record realizes (a Dramatic Character is
+    # made true by a substrate Entity).
+    CouplingDeclaration("Character", None, COUPLING_REALIZATION),
+
+    # Beat fields. description_of_change is a Claim-moment about
+    # what changes at this beat in the substrate.
+    CouplingDeclaration("Beat", "description_of_change", COUPLING_CLAIM_MOMENT),
+
+    # Scene fields. Advances realize via Lowering (Scene → Events).
+    # Result and conflict_shape are Claim-moment (about substrate
+    # state at the scene's bounds).
+    CouplingDeclaration("Scene", "advances", COUPLING_REALIZATION),
+    CouplingDeclaration("Scene", "conflict_shape", COUPLING_CLAIM_MOMENT),
+    CouplingDeclaration("Scene", "result", COUPLING_CLAIM_MOMENT),
+
+    # Stakes fields. at_risk and to_gain are Claim-trajectory (what
+    # could be lost / gained across the trajectory). external_manifestation
+    # is Claim-moment (how the stakes show up to the reader at
+    # specific moments in the substrate).
+    CouplingDeclaration("Stakes", "at_risk", COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("Stakes", "to_gain", COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("Stakes", "external_manifestation",
+                        COUPLING_CLAIM_MOMENT),
+)
+
+
+def coupling_kind_for(record_type: str, field: Optional[str] = None) -> Optional[str]:
+    """Look up the coupling kind for a (record_type, field) pair.
+    Returns the coupling kind string, or None if no declaration
+    applies. If a record-level declaration (field=None) exists for
+    the record_type and the caller asks about a specific field, the
+    record-level declaration falls through (record-level applies to
+    every field unless overridden). Specific field declarations win
+    over record-level when both exist."""
+    # Specific-field match first.
+    for d in COUPLING_DECLARATIONS:
+        if d.record_type == record_type and d.field == field:
+            return d.kind
+    # Fall back to record-level (field=None).
+    if field is not None:
+        for d in COUPLING_DECLARATIONS:
+            if d.record_type == record_type and d.field is None:
+                return d.kind
+    return None
+
+
+def fields_with_coupling(record_type: str, kind: str) -> tuple:
+    """Return the field names of `record_type` that carry coupling
+    kind `kind`. Useful for verifiers that want to enumerate all
+    fields of a given kind on a record type."""
+    return tuple(
+        d.field for d in COUPLING_DECLARATIONS
+        if d.record_type == record_type and d.kind == kind
+    )
+
+
+def declarations_for_kind(kind: str) -> tuple:
+    """All CouplingDeclarations for a given coupling kind, across all
+    record types. Useful when a verifier wants to enumerate every
+    record/field that needs its check run."""
+    return tuple(d for d in COUPLING_DECLARATIONS if d.kind == kind)
