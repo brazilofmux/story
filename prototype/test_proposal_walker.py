@@ -44,6 +44,7 @@ from proposal_walker import (
     walk_edit_proposals,
     walk_reviews,
     walk_verifier_commentaries,
+    walk_verifier_results,
     summarize_decisions,
 )
 from lowering import (
@@ -53,9 +54,11 @@ from lowering import (
     VERDICT_NEEDS_WORK as ANN_VERDICT_NEEDS_WORK,
 )
 from verification import (
-    VerificationReview, VerifierCommentary,
+    StructuralAdvisory, VerificationReview, VerifierCommentary,
     VERDICT_APPROVED as V_APPROVED,
-    ASSESSMENT_ENDORSES, ASSESSMENT_DISSENTS,
+    SEVERITY_NOTED,
+    ASSESSMENT_ENDORSES, ASSESSMENT_QUALIFIES,
+    ASSESSMENT_DISSENTS, ASSESSMENT_NOTED,
 )
 
 
@@ -784,6 +787,241 @@ def test_walk_verifier_commentaries_renders_suggested_signature_when_set():
 
 
 # ============================================================================
+# walk_verifier_results — human-only triage of raw verifier output
+# ============================================================================
+
+
+def _make_verification_review(target_id: str = "T_one") -> VerificationReview:
+    return VerificationReview(
+        reviewer_id="verifier:characterization",
+        reviewed_at_τ_a=200,
+        verdict=V_APPROVED,
+        anchor_τ_a=10,
+        target_record=cross_ref("dramatic", target_id),
+        comment="check ran clean",
+        match_strength=1.0,
+    )
+
+
+def _make_structural_advisory(scope_id: str = "S_other") -> StructuralAdvisory:
+    return StructuralAdvisory(
+        advisor_id="verifier:claim-moment",
+        advised_at_τ_a=200,
+        severity=SEVERITY_NOTED,
+        comment="upper has no ACTIVE Lowerings; check skipped",
+        scope=(cross_ref("dramatic", scope_id),),
+    )
+
+
+def test_walk_verifier_results_empty_is_noop():
+    stdin = io.StringIO("")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        [], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert kept == []
+    assert decisions == []
+    assert "no verifier results" in stdout.getvalue()
+
+
+def test_walk_verifier_results_endorse_records_assessment_endorses():
+    """Typing 'e' produces a VerifierCommentary with assessment=
+    endorses, no rationale prompt — endorsement doesn't require
+    extra text."""
+    vr = _make_verification_review()
+    stdin = io.StringIO("e\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert len(kept) == 1
+    c = kept[0]
+    assert c.commenter_id == "author:test"
+    assert c.commented_at_τ_a == 500
+    assert c.assessment == ASSESSMENT_ENDORSES
+    assert c.target_review is vr
+    assert c.comment == ""
+    assert c.suggested_signature is None
+    assert decisions == [
+        Decision("verifier-triage", "T_one", ASSESSMENT_ENDORSES),
+    ]
+
+
+def test_walk_verifier_results_qualify_prompts_for_rationale_and_signature():
+    """'q' prompts for one-line rationale, then for optional
+    suggested_signature. Both populate the resulting commentary."""
+    vr = _make_verification_review()
+    stdin = io.StringIO(
+        "q\n"
+        "the verdict stands but the partial-match threshold deserves "
+        "re-examination\n"
+        "consider adding a strict-mode that fails on partial-match\n"
+    )
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert len(kept) == 1
+    c = kept[0]
+    assert c.assessment == ASSESSMENT_QUALIFIES
+    assert "threshold" in c.comment
+    assert c.suggested_signature is not None
+    assert "strict-mode" in c.suggested_signature
+
+
+def test_walk_verifier_results_dissent_with_blank_signature_keeps_none():
+    """Suggested signature is genuinely optional — blank input means
+    None on the resulting commentary, not empty string."""
+    vr = _make_verification_review()
+    stdin = io.StringIO(
+        "d\n"
+        "the check missed that the owner Entity isn't actually in the "
+        "lowered events\n"
+        "\n"  # blank line for suggested_signature
+    )
+    stdout = io.StringIO()
+    kept, _ = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert kept[0].assessment == ASSESSMENT_DISSENTS
+    assert kept[0].suggested_signature is None
+
+
+def test_walk_verifier_results_qualify_with_blank_rationale_promotes_to_noted():
+    """Qualify/dissent without rationale isn't substantive — the
+    walker promotes it to 'noted' rather than recording an empty
+    qualification. Surfaces the contract back to the author with a
+    log line."""
+    vr = _make_verification_review()
+    stdin = io.StringIO(
+        "q\n"
+        "\n"  # blank rationale
+        "\n"  # blank signature
+    )
+    stdout = io.StringIO()
+    kept, _ = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert kept[0].assessment == ASSESSMENT_NOTED
+    assert "promoting qualifies to noted" in stdout.getvalue()
+
+
+def test_walk_verifier_results_noted_records_without_rationale_prompt():
+    """'n' bypasses the rationale prompt — noted is the explicit
+    'read but no position' option."""
+    vr = _make_verification_review()
+    stdin = io.StringIO("n\n")
+    stdout = io.StringIO()
+    kept, _ = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert kept[0].assessment == ASSESSMENT_NOTED
+    assert kept[0].comment == ""
+
+
+def test_walk_verifier_results_skip_records_decision_no_kept():
+    vr = _make_verification_review()
+    stdin = io.StringIO("s\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert kept == []
+    assert decisions == [Decision("verifier-triage", "T_one", "skip")]
+
+
+def test_walk_verifier_results_exit_stops_walk_mid_stream():
+    """'x' is the new quit — 'q' is qualify in this walker. Mid-walk
+    exit stops further entries from being shown."""
+    vrs = [_make_verification_review(f"T_{n}") for n in ("one", "two", "three")]
+    stdin = io.StringIO("e\nx\n")  # endorse first, exit on second
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        vrs, commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert len(kept) == 1
+    assert kept[0].target_review is vrs[0]
+    choices = [d.choice for d in decisions]
+    assert choices == [ASSESSMENT_ENDORSES, "exit"]
+
+
+def test_walk_verifier_results_eof_treated_as_exit():
+    """No more input → exit. Same defensive behavior as the other
+    walkers' EOF=quit, but in this walker quit is 'x'."""
+    vr = _make_verification_review()
+    stdin = io.StringIO("")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert kept == []
+    assert decisions == [Decision("verifier-triage", "T_one", "exit")]
+
+
+def test_walk_verifier_results_unknown_input_reprompts():
+    """Junk input doesn't default — the walker re-prompts until a
+    valid choice arrives."""
+    vr = _make_verification_review()
+    stdin = io.StringIO("zzz\n!\ne\n")
+    stdout = io.StringIO()
+    kept, _ = walk_verifier_results(
+        [vr], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert len(kept) == 1
+    assert kept[0].assessment == ASSESSMENT_ENDORSES
+    output = stdout.getvalue()
+    assert "unrecognized input 'zzz'" in output
+    assert "unrecognized input '!'" in output
+
+
+def test_walk_verifier_results_advisory_displays_and_advances():
+    """StructuralAdvisories are display-only in this iteration. Any
+    non-exit input on an advisory advances; no commentary record is
+    produced."""
+    adv = _make_structural_advisory()
+    stdin = io.StringIO("s\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        [adv], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert kept == []
+    assert decisions == [Decision("verifier-triage", "S_other", "skip")]
+    assert "verifier advisory" in stdout.getvalue()
+
+
+def test_walk_verifier_results_mixed_reviews_and_advisories():
+    """A typical verifier output mixes reviews and advisories. The
+    triage walker handles both in input order: produce commentaries
+    for review entries, advance past advisories."""
+    vr1 = _make_verification_review("T_one")
+    adv = _make_structural_advisory("S_orphan")
+    vr2 = _make_verification_review("T_two")
+    stdin = io.StringIO("e\ns\nn\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_results(
+        [vr1, adv, vr2], commenter_id="author:test", current_τ_a=500,
+        stdin=stdin, stdout=stdout,
+    )
+    assert len(kept) == 2
+    assert kept[0].assessment == ASSESSMENT_ENDORSES
+    assert kept[0].target_review is vr1
+    assert kept[1].assessment == ASSESSMENT_NOTED
+    assert kept[1].target_review is vr2
+    assert [d.target_id for d in decisions] == ["T_one", "S_orphan", "T_two"]
+
+
+# ============================================================================
 # Summary helper
 # ============================================================================
 
@@ -844,6 +1082,18 @@ TESTS = [
     test_walk_verifier_commentaries_skip_records_no_keep,
     test_walk_verifier_commentaries_quit_stops_walk_mid_stream,
     test_walk_verifier_commentaries_renders_suggested_signature_when_set,
+    test_walk_verifier_results_empty_is_noop,
+    test_walk_verifier_results_endorse_records_assessment_endorses,
+    test_walk_verifier_results_qualify_prompts_for_rationale_and_signature,
+    test_walk_verifier_results_dissent_with_blank_signature_keeps_none,
+    test_walk_verifier_results_qualify_with_blank_rationale_promotes_to_noted,
+    test_walk_verifier_results_noted_records_without_rationale_prompt,
+    test_walk_verifier_results_skip_records_decision_no_kept,
+    test_walk_verifier_results_exit_stops_walk_mid_stream,
+    test_walk_verifier_results_eof_treated_as_exit,
+    test_walk_verifier_results_unknown_input_reprompts,
+    test_walk_verifier_results_advisory_displays_and_advances,
+    test_walk_verifier_results_mixed_reviews_and_advisories,
     test_summarize_decisions_groups_by_kind_and_choice,
 ]
 
