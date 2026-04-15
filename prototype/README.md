@@ -32,6 +32,7 @@ python3 demo_rashomon.py         # branch-indexed report on the Rashomon grove s
 python3 test_substrate.py        # permanent substrate tests (no framework)
 python3 test_identity.py         # identity & realization tests
 python3 test_inference.py        # rule-derivation tests (inference-01 N1-N10)
+python3 test_dramatic.py         # Dramatic dialect M1-M10 + M8 verifier tests
 python3 test_rashomon.py         # permanent contested-branch tests (no framework)
 python3 test_proposal_walker.py  # walker tests (io.StringIO-driven, no terminal)
 
@@ -75,6 +76,29 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   the woodcutter's later confession. Per-branch sjuzhets share a
   canonical preamble and a canonical closing panel. No substrate logic;
   content only. Used by `demo_rashomon.py` and `test_rashomon.py`.
+- `dramatic.py` — first-pass implementation of the Dramatic dialect
+  (dramatic-sketch-01 M1-M10). Self-contained: no substrate imports.
+  Eight record types (Story, Argument, Throughline, Character, Scene,
+  Beat, Stakes, Template) plus helper records (FunctionSlot,
+  ArgumentContribution, SceneAdvancement, StakesOwner) and four enums
+  (FunctionMultiplicity, ResolutionDirection, ArgumentSide,
+  StakesOwnerKind). Four shipped Templates: dramatica-8 (eight
+  EXACTLY_ONE slots), three-actor (Hero+Obstacle+Helper), two-actor,
+  ensemble. M8 self-verifier with eight checks emitting Observations
+  (id resolution, beat sequencing, scene sequencing, template
+  conformance with multiplicity, soft argument completeness, stakes
+  coverage, scene purpose, orphans). Description surface deferred to
+  a follow-on pass; cross-dialect Lowering integration lives in a
+  separate module yet to be written.
+- `oedipus_dramatic.py` — *Oedipus Rex* encoded in the Dramatic
+  dialect. First encoding at this layer (parallel to `oedipus.py` at
+  the substrate level). One Argument, four Throughlines under the
+  dramatica-8 Template, six Characters (Antagonist deliberately
+  unfilled), ten Scenes, two Stakes records, twenty Beats. Verifier
+  produces exactly three observations on this encoding: the
+  intentional Antagonist gap and two missing-Stakes observations
+  (T_impact_jocasta and T_relationship_oj have no separate Stakes
+  records — a real authoring choice). No id-resolution errors.
 - `macbeth.py` — the encoded *Macbeth*. Canonical-only; 22 fabula events
   (full arc: pre-play heroism through Macbeth's defeat at Dunsinane and
   Malcolm's coronation); 19 sjuzhet entries in roughly linear order; 7
@@ -107,6 +131,12 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   Integration tests against the Oedipus and Macbeth retirements
   (authored compounds gone; derivations fire at the expected folds
   and moments).
+- `test_dramatic.py` — Dramatic dialect tests per dramatic-sketch-01
+  M1-M10. Synthetic-fixture tests pin each M8 check independently
+  (id resolution, beat / scene sequencing, template conformance with
+  multiplicity, soft argument completeness, stakes coverage, scene
+  purpose, orphans). Integration tests against `oedipus_dramatic.py`
+  pin the verifier's three-observation contract on that encoding.
 - `test_rashomon.py` — permanent contested-branch tests pinning
   invariants that only become load-bearing with a non-trivial
   `:contested` example: sibling non-inheritance on a live encoding,
