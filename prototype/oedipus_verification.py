@@ -28,8 +28,15 @@ from __future__ import annotations
 
 # Substrate-side imports (for resolving Entity ids and Event
 # participants).
-from substrate import Entity, Event
-from oedipus import FABULA, ENTITIES
+from substrate import (
+    Entity, Event, CANONICAL,
+    project_knowledge, project_world, in_scope,
+    world_holds_derived,
+)
+from oedipus import (
+    FABULA, ENTITIES, ALL_BRANCHES, RULES,
+    parricide, incest,
+)
 
 # Dramatic-side imports (for resolving Throughline owners and
 # Character ids).
@@ -48,6 +55,7 @@ from oedipus_lowerings import LOWERINGS
 from verification import (
     VerificationReview, StructuralAdvisory,
     verify_characterization, run_characterization_checks,
+    verify_claim_trajectory, run_claim_trajectory_checks,
     VERDICT_APPROVED, VERDICT_NEEDS_WORK, VERDICT_PARTIAL_MATCH,
     VERDICT_NOTED,
     reviews_only, group_by_verdict,
@@ -207,39 +215,167 @@ def main_character_throughline_check(
 
 
 # ============================================================================
-# Driver — run the check
+# Claim-trajectory check: the Argument's affirmation
+# ============================================================================
+#
+# For Oedipus's Argument A_knowledge_unmakes (premise: 'knowledge of
+# self is the unmaking of the self', resolution_direction=AFFIRM), the
+# substrate trajectory should exhibit, by τ_s=13 (the anagnorisis):
+#
+#   1. Oedipus's identity equivalence class has expanded to include
+#      the-exposed-baby (knowledge-of-self gained — he holds the
+#      identity propositions linking himself to his exposed-infant
+#      and crossroads-killer past).
+#   2. parricide(oedipus, laius) is derivable in world (the moral
+#      consequence of his action, derived via inference-01's
+#      PARRICIDE_RULE from killed + child_of premises both world-
+#      true since the canonical events).
+#   3. incest(oedipus, jocasta) is derivable in world (the moral
+#      consequence of his marriage, derived via INCEST_RULE).
+#
+# All three signatures are concrete, structurally-checkable facts
+# the substrate carries (under inference-01, after the parricide /
+# incest authored-compounds were retired). A trajectory-check
+# verdict that affirms the premise requires all three. The check
+# composes with inference-01 (V6) — it uses
+# `world_holds_derived` rather than literal world membership so
+# the rule engine's derivations participate.
+#
+# Note this check has NO Lowerings in oedipus_lowerings.py — Argument
+# is a Claim coupling per the four-coupling-kinds framework
+# (lowering-sketch-01 F1) and Lowering-record-sketch-01 L1 reserves
+# Lowering for Realization. The Claim-trajectory primitive runs even
+# without Lowerings; the check supplies its own substrate scope.
+
+
+def knowledge_unmakes_argument_check(
+    upper_ref, lower_refs, position_ranges,
+):
+    """Trajectory check for A_knowledge_unmakes (resolution=AFFIRM).
+    Returns (verdict, match_strength, comment).
+
+    Three trajectory signatures are checked at τ_s ≤ 13 (the
+    anagnorisis):
+      - Oedipus's identity equivalence class includes the-exposed-baby
+      - parricide(oedipus, laius) is world-derivable
+      - incest(oedipus, jocasta) is world-derivable
+
+    Match strength = (signatures-passing) / 3.
+    Verdict: approved if all three; partial-match if 2; needs-work if
+    fewer.
+    """
+    # The trajectory scope. Default to τ_s=13 (anagnorisis) but use
+    # the position_range if one was authored on a Lowering (no
+    # Lowering exists for the Argument in this encoding, so this
+    # falls through to the default).
+    max_τ_s = 13
+    if position_ranges:
+        max_τ_s = max(pr.max_value for pr in position_ranges)
+
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+
+    # Signature 1: knowledge of self via identity equivalence class.
+    state = project_knowledge(
+        agent_id="oedipus",
+        events_in_scope=events_in_scope,
+        up_to_τ_s=max_τ_s,
+    )
+    classes = state.equivalence_classes()
+    has_self_identity = any(
+        "oedipus" in cls and "the-exposed-baby" in cls
+        for cls in classes
+    )
+
+    # Signature 2 + 3: compound moral consequences derivable in world.
+    world_facts = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=max_τ_s,
+    )
+    parricide_proof = world_holds_derived(
+        world_facts, parricide("oedipus", "laius"), RULES,
+    )
+    incest_proof = world_holds_derived(
+        world_facts, incest("oedipus", "jocasta"), RULES,
+    )
+
+    signatures = [
+        has_self_identity,
+        parricide_proof is not None,
+        incest_proof is not None,
+    ]
+    matched = sum(signatures)
+    strength = matched / len(signatures)
+
+    if strength >= 0.99:
+        verdict = VERDICT_APPROVED
+    elif strength >= 0.5:
+        verdict = VERDICT_PARTIAL_MATCH
+    else:
+        verdict = VERDICT_NEEDS_WORK
+
+    comment = (
+        f"Argument 'knowledge of self is the unmaking of the self' "
+        f"(resolution=AFFIRM): trajectory check at τ_s ≤ {max_τ_s} — "
+        f"identity collapse (oedipus + the-exposed-baby in same "
+        f"equivalence class): {has_self_identity}; "
+        f"parricide(oedipus, laius) world-derivable: "
+        f"{parricide_proof is not None}; "
+        f"incest(oedipus, jocasta) world-derivable: "
+        f"{incest_proof is not None}; "
+        f"{matched}/3 trajectory signatures present"
+    )
+    return (verdict, strength, comment)
+
+
+# ============================================================================
+# Driver — run the checks
 # ============================================================================
 
 
-# The set of (upper_record_id, upper_dialect, check_fn) triples this
-# encoding's verification module exposes. A future orchestrator could
-# enumerate per-record automatically based on
-# dramatic.COUPLING_DECLARATIONS; for now, this is hand-wired.
+# The set of (upper_record_id, upper_dialect, check_fn) triples for
+# Characterization. A future orchestrator could enumerate per-record
+# automatically based on dramatic.COUPLING_DECLARATIONS; for now,
+# this is hand-wired.
 
 CHARACTERIZATION_CHECKS = (
     ("T_mc_oedipus", "dramatic", main_character_throughline_check),
 )
 
+# The set of triples for Claim-trajectory.
+CLAIM_TRAJECTORY_CHECKS = (
+    ("A_knowledge_unmakes", "dramatic", knowledge_unmakes_argument_check),
+)
+
 
 def run() -> tuple:
-    """Run all characterization checks for the Oedipus encoding.
+    """Run all verifier checks for the Oedipus encoding.
     Returns the verifier output tuple (mix of VerificationReview
     and StructuralAdvisory)."""
-    return run_characterization_checks(
+    out = []
+    out.extend(run_characterization_checks(
         CHARACTERIZATION_CHECKS,
         LOWERINGS,
         reviewer_id="verifier:dramatic-substrate-characterization",
         reviewed_at_τ_a=300,
-    )
+    ))
+    out.extend(run_claim_trajectory_checks(
+        CLAIM_TRAJECTORY_CHECKS,
+        LOWERINGS,
+        reviewer_id="verifier:dramatic-substrate-claim-trajectory",
+        reviewed_at_τ_a=300,
+    ))
+    return tuple(out)
 
 
 if __name__ == "__main__":
     results = run()
-    print(f"Characterization verifier: {len(results)} results")
+    print(f"Verifier: {len(results)} results")
     print()
     for r in results:
         if isinstance(r, VerificationReview):
             print(f"  REVIEW [{r.verdict}] target={r.target_record}")
+            print(f"    reviewer: {r.reviewer_id}")
             if r.match_strength is not None:
                 print(f"    match_strength: {r.match_strength:.2f}")
             print(f"    anchor_τ_a: {r.anchor_τ_a}")

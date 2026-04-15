@@ -251,6 +251,127 @@ def run_characterization_checks(
 # ============================================================================
 
 
+# ============================================================================
+# Claim-trajectory primitive (V3, V6)
+# ============================================================================
+
+
+# A trajectory check function takes the upper record's CrossDialectRef,
+# the union of lower records across the upper's ACTIVE Lowerings (which
+# may be empty — see below), and a tuple of PositionRanges authored on
+# those Lowerings (also possibly empty). It returns
+# (verdict_str, Optional[match_strength], comment_str).
+#
+# The check captures substrate context in its closure: events, rules,
+# fold-projection callables. This module stays dialect-agnostic.
+#
+# Per V6, trajectory checks naturally compose with inference-01's
+# derivation surface — the substrate state the check inspects may
+# include facts derived via the rule engine (parricide, regicide, etc.).
+ClaimTrajectoryCheck = Callable[
+    [CrossDialectRef, tuple, tuple],
+    tuple,  # (verdict_str, Optional[float], comment_str)
+]
+
+
+def verify_claim_trajectory(
+    upper_record_id: str,
+    upper_dialect: str,
+    lowerings: tuple,
+    check: ClaimTrajectoryCheck,
+    *,
+    reviewer_id: str = "verifier:claim-trajectory",
+    reviewed_at_τ_a: int = 0,
+) -> VerificationReview:
+    """Run a Claim-trajectory check on an upper record.
+
+    Unlike Characterization, this primitive does NOT short-circuit
+    when the upper has no ACTIVE Lowerings. The Argument's claim
+    (e.g., resolution_direction=AFFIRM) is about the substrate
+    trajectory, which exists regardless of whether any Lowering
+    binds the Argument to specific lower records — Lowering is for
+    Realization, and Argument doesn't realize (lowering-sketch-01
+    F6). The check function supplies its own trajectory scope from
+    its closure.
+
+    When ACTIVE Lowerings DO exist, this primitive collects their
+    lower_records and position_ranges and passes them to the check
+    as additional context. The check decides whether to use them.
+
+    Per V6, the check function may consult substrate state that
+    includes derived facts via the inference engine; the substrate
+    context it captures should expose `world_holds_derived` /
+    `holds_derived` if it wants to.
+    """
+    upper_ref = cross_ref(upper_dialect, upper_record_id)
+    upper_lowerings = [
+        lw for lw in lowerings
+        if lw.upper_record == upper_ref
+        and lw.status == LoweringStatus.ACTIVE
+    ]
+
+    all_lower = tuple(
+        lr for lw in upper_lowerings for lr in lw.lower_records
+    )
+    position_ranges = tuple(
+        lw.position_range for lw in upper_lowerings
+        if lw.position_range is not None
+    )
+
+    verdict, strength, comment = check(upper_ref, all_lower, position_ranges)
+
+    if verdict not in VALID_VERDICTS:
+        comment = (
+            f"check returned non-standard verdict {verdict!r}; "
+            f"recording as 'noted'. Original comment: {comment}"
+        )
+        verdict = VERDICT_NOTED
+
+    anchor_τ_a = max(
+        (lw.anchor_τ_a for lw in upper_lowerings if lw.anchor_τ_a is not None),
+        default=0,
+    )
+
+    return VerificationReview(
+        reviewer_id=reviewer_id,
+        reviewed_at_τ_a=reviewed_at_τ_a,
+        verdict=verdict,
+        anchor_τ_a=anchor_τ_a,
+        target_record=upper_ref,
+        comment=comment,
+        match_strength=strength,
+    )
+
+
+def run_claim_trajectory_checks(
+    checks: tuple,
+    lowerings: tuple,
+    *,
+    reviewer_id: str = "verifier:claim-trajectory",
+    reviewed_at_τ_a: int = 0,
+) -> tuple:
+    """Run a list of (upper_record_id, upper_dialect, check_fn)
+    triples through verify_claim_trajectory. Returns a tuple of
+    VerificationReviews — every check produces a review, including
+    when no Lowerings exist for the upper record (the trajectory
+    check runs against the substrate scope the check function
+    captures)."""
+    out = []
+    for (upper_id, upper_dialect, check) in checks:
+        review = verify_claim_trajectory(
+            upper_id, upper_dialect, lowerings, check,
+            reviewer_id=reviewer_id,
+            reviewed_at_τ_a=reviewed_at_τ_a,
+        )
+        out.append(review)
+    return tuple(out)
+
+
+# ============================================================================
+# Convenience grouping
+# ============================================================================
+
+
 def reviews_only(results: tuple) -> tuple:
     """Filter a verifier result tuple to just VerificationReviews."""
     return tuple(r for r in results if isinstance(r, VerificationReview))

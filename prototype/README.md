@@ -115,33 +115,48 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   duplicate ids, PENDING-with-records, unknown attentions,
   supersession metadata consistency). Constructor enforces L8 —
   ACTIVE Lowerings must have non-empty `lower_records`.
-- `verification.py` — first verifier primitive
+- `verification.py` — verifier primitives
   (verification-sketch-01 V1-V8). Dialect-agnostic — imports only
   from `lowering.py`. Output records: `VerificationReview`
   (review on a target_record with verdict + match_strength),
   `StructuralAdvisory` (observation that spans multiple records),
   `VerificationAnswerProposal` (verifier-sourced answer to an
   upper-dialect open question; parallels reader-model
-  AnswerProposal). One primitive shipped: **Characterization**.
-  `verify_characterization` takes an upper record id + dialect, the
-  full Lowerings tuple, and a caller-supplied check function;
-  filters to ACTIVE Lowerings, unions their lower_records, runs
-  the check, returns a VerificationReview (or None if the upper
-  has no ACTIVE Lowerings). `run_characterization_checks`
-  orchestrates many checks at once and produces both Reviews and
-  Advisories. Defensive: a check returning a non-standard verdict
-  is recorded as 'noted' rather than dropped or crashing. Two
-  other primitives (Claim-moment, Claim-trajectory) deferred.
+  AnswerProposal). Two primitives shipped:
+  **Characterization** — `verify_characterization` takes an upper
+  record id + dialect, the full Lowerings tuple, and a caller-
+  supplied check function; filters to ACTIVE Lowerings, unions
+  their lower_records, runs the check, returns a VerificationReview
+  (or None if the upper has no ACTIVE Lowerings).
+  **Claim-trajectory** — `verify_claim_trajectory` always runs
+  the check (the upper record's Claim is about the substrate
+  trajectory, which exists regardless of Lowerings; per
+  lowering-sketch-01 F1/F6 Argument-style records don't have
+  Lowerings). Returns a Review unconditionally. Composes with
+  inference-01 (V6) — checks may consume `world_holds_derived` /
+  `holds_derived` for rule-derived facts. Both primitives have
+  matching `run_*_checks` orchestrators that produce mixed
+  Review/Advisory tuples (Characterization) or Review-only
+  tuples (Claim-trajectory). Defensive: unknown verdicts fall
+  back to 'noted'. One primitive (Claim-moment) deferred.
 - `oedipus_verification.py` — first concrete cross-boundary
   verifier run. Imports from substrate, oedipus, dramatic,
   oedipus_dramatic, lowering, oedipus_lowerings, and verification
-  simultaneously. One characterization check:
-  `main_character_throughline_check` verifies that a Throughline
-  with role_label="main-character" has its owner Character's
-  lowered substrate Entity as a participant in most/all of the
-  Lowered substrate events. Result on T_mc_oedipus: APPROVED with
-  match_strength=1.0 (10/10 Lowered events have Oedipus as
-  participant).
+  simultaneously. Two checks shipped:
+  **Characterization** — `main_character_throughline_check`
+  verifies that a Throughline with role_label="main-character"
+  has its owner Character's lowered substrate Entity as a
+  participant in most/all of the Lowered substrate events.
+  Result on T_mc_oedipus: APPROVED, strength=1.0 (10/10).
+  **Claim-trajectory** — `knowledge_unmakes_argument_check` for
+  `A_knowledge_unmakes` (resolution=AFFIRM); checks three
+  trajectory signatures at τ_s ≤ 13: Oedipus's identity
+  equivalence class includes the-exposed-baby (knowledge-of-self
+  via identity); parricide(oedipus, laius) world-derivable;
+  incest(oedipus, jocasta) world-derivable. Composes with
+  inference-01 — uses `world_holds_derived` for the rule-derived
+  compound predicates. Result: APPROVED, strength=1.0 (3/3
+  signatures present).
 - `oedipus_lowerings.py` — first authored Lowering bindings:
   Oedipus Dramatic ↔ substrate. The project's first cross-dialect
   module — imports from `substrate.py`, `oedipus.py`, `dramatic.py`,

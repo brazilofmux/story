@@ -30,8 +30,10 @@ from verification import (
     VERDICT_APPROVED, VERDICT_NEEDS_WORK, VERDICT_PARTIAL_MATCH, VERDICT_NOTED,
     SEVERITY_NOTED,
     verify_characterization, run_characterization_checks,
+    verify_claim_trajectory, run_claim_trajectory_checks,
     reviews_only, advisories_only, group_by_verdict,
 )
+from lowering import PositionRange
 
 
 # ----------------------------------------------------------------------------
@@ -355,9 +357,15 @@ def test_oedipus_verification_main_character_check_passes():
     L_mc_throughline binding have Oedipus as a participant."""
     import oedipus_verification as ov
     results = ov.run()
-    assert len(results) == 1
-    r = results[0]
-    assert isinstance(r, VerificationReview)
+    # Find the T_mc_oedipus characterization review specifically
+    # (run() now produces multiple reviews from different primitives).
+    mc_reviews = [
+        r for r in results
+        if isinstance(r, VerificationReview)
+        and r.target_record == cross_ref("dramatic", "T_mc_oedipus")
+    ]
+    assert len(mc_reviews) == 1
+    r = mc_reviews[0]
     assert r.verdict == VERDICT_APPROVED
     assert r.match_strength == 1.0
     assert r.target_record == cross_ref("dramatic", "T_mc_oedipus")
@@ -369,10 +377,174 @@ def test_oedipus_verification_includes_owner_resolution_in_comment():
     can see which Lowering chain produced the verdict."""
     import oedipus_verification as ov
     results = ov.run()
-    r = results[0]
+    mc_reviews = [
+        r for r in results
+        if isinstance(r, VerificationReview)
+        and r.target_record == cross_ref("dramatic", "T_mc_oedipus")
+    ]
+    r = mc_reviews[0]
     assert "C_oedipus" in r.comment
     assert "oedipus" in r.comment  # the resolved entity id
     assert "10/10" in r.comment  # the structural result
+
+
+# ----------------------------------------------------------------------------
+# Claim-trajectory primitive
+# ----------------------------------------------------------------------------
+
+
+def test_claim_trajectory_runs_even_with_no_lowerings():
+    """Unlike Characterization, Claim-trajectory always runs the
+    check; the check supplies its own scope from its closure. This
+    is the F1 / F6 distinction realized in primitive shape — Claim
+    is verified against the substrate, not against Lowerings."""
+    received = []
+    def check(upper_ref, lower_refs, position_ranges):
+        received.append((lower_refs, position_ranges))
+        return (VERDICT_APPROVED, 1.0, "ran without Lowerings")
+
+    review = verify_claim_trajectory(
+        upper_record_id="A_some_argument",
+        upper_dialect="dramatic",
+        lowerings=(),  # no Lowerings at all
+        check=check,
+    )
+    assert review is not None  # verifier returns review, not None
+    assert review.verdict == VERDICT_APPROVED
+    assert received == [((), ())]  # check was called with empty args
+
+
+def test_claim_trajectory_passes_position_ranges_when_present():
+    """When ACTIVE Lowerings carry position_range, the primitive
+    collects them and passes to the check."""
+    pr = PositionRange(coord="τ_s", min_value=0, max_value=13)
+    lw = _lowering(upper_id="A1", position_range=pr)
+
+    received = []
+    def check(upper_ref, lower_refs, position_ranges):
+        received.append(position_ranges)
+        return (VERDICT_APPROVED, 1.0, "")
+
+    verify_claim_trajectory(
+        upper_record_id="A1",
+        upper_dialect="dramatic",
+        lowerings=(lw,),
+        check=check,
+    )
+    assert received == [(pr,)]
+
+
+def test_claim_trajectory_handles_partial_match():
+    """Partial-match verdict + match_strength carried through."""
+    def check(upper_ref, lower_refs, position_ranges):
+        return (VERDICT_PARTIAL_MATCH, 0.66, "two of three signatures")
+
+    review = verify_claim_trajectory(
+        upper_record_id="A1",
+        upper_dialect="dramatic",
+        lowerings=(),
+        check=check,
+    )
+    assert review.verdict == VERDICT_PARTIAL_MATCH
+    assert review.match_strength == 0.66
+
+
+def test_claim_trajectory_unknown_verdict_falls_back_to_noted():
+    def check(upper_ref, lower_refs, position_ranges):
+        return ("garbage", 0.5, "what")
+
+    review = verify_claim_trajectory(
+        upper_record_id="A1",
+        upper_dialect="dramatic",
+        lowerings=(),
+        check=check,
+    )
+    assert review.verdict == VERDICT_NOTED
+    assert "garbage" in review.comment
+
+
+def test_claim_trajectory_orchestrator_returns_one_review_per_check():
+    """run_claim_trajectory_checks always produces a Review per check
+    (no Advisories — there's nothing to skip)."""
+    def ok(upper_ref, lower_refs, prs):
+        return (VERDICT_APPROVED, 1.0, "")
+    def partial(upper_ref, lower_refs, prs):
+        return (VERDICT_PARTIAL_MATCH, 0.5, "")
+
+    results = run_claim_trajectory_checks(
+        checks=(
+            ("A1", "dramatic", ok),
+            ("A2", "dramatic", partial),
+        ),
+        lowerings=(),
+    )
+    assert len(results) == 2
+    assert all(isinstance(r, VerificationReview) for r in results)
+    verdicts = {r.verdict for r in results}
+    assert verdicts == {VERDICT_APPROVED, VERDICT_PARTIAL_MATCH}
+
+
+# ----------------------------------------------------------------------------
+# Integration — Oedipus Argument trajectory check
+# ----------------------------------------------------------------------------
+
+
+def test_oedipus_argument_trajectory_check_passes():
+    """A_knowledge_unmakes (resolution=AFFIRM) trajectory check
+    should return APPROVED with match_strength=1.0: all three
+    signatures (identity collapse, parricide derivable, incest
+    derivable) present at τ_s ≤ 13."""
+    import oedipus_verification as ov
+    results = ov.run()
+    # Find the Argument trajectory review.
+    arg_reviews = [
+        r for r in results
+        if isinstance(r, VerificationReview)
+        and r.target_record == cross_ref("dramatic", "A_knowledge_unmakes")
+    ]
+    assert len(arg_reviews) == 1
+    r = arg_reviews[0]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    # The comment should name all three signatures.
+    assert "identity collapse" in r.comment
+    assert "parricide" in r.comment
+    assert "incest" in r.comment
+    assert "3/3" in r.comment
+
+
+def test_oedipus_argument_trajectory_check_uses_inference_engine():
+    """Per V6, the trajectory check composes with inference-01.
+    parricide and incest are not literal world facts — they
+    derive from PARRICIDE_RULE / INCEST_RULE on the substrate's
+    authored premises. The check should return their derivability
+    via world_holds_derived (not literal membership)."""
+    # We verify this by inspecting the comment, which names whether
+    # each derivation succeeded. If the inference engine were not
+    # consulted, parricide_proof would be None (the predicates are
+    # not authored as world facts since the inference-01 retirement).
+    import oedipus_verification as ov
+    results = ov.run()
+    arg_review = next(
+        r for r in results
+        if isinstance(r, VerificationReview)
+        and r.target_record == cross_ref("dramatic", "A_knowledge_unmakes")
+    )
+    assert "parricide(oedipus, laius) world-derivable: True" in arg_review.comment
+    assert "incest(oedipus, jocasta) world-derivable: True" in arg_review.comment
+
+
+def test_oedipus_run_produces_two_reviews():
+    """The full Oedipus verifier run produces two VerificationReviews
+    — one Characterization (T_mc_oedipus) and one Claim-trajectory
+    (A_knowledge_unmakes). Both APPROVED with strength=1.0 in this
+    encoding."""
+    import oedipus_verification as ov
+    results = ov.run()
+    reviews = reviews_only(results)
+    assert len(reviews) == 2
+    assert all(r.verdict == VERDICT_APPROVED for r in reviews)
+    assert all(r.match_strength == 1.0 for r in reviews)
 
 
 # ----------------------------------------------------------------------------
@@ -403,9 +575,19 @@ TESTS = [
     test_coupling_kind_for_unknown_record_returns_none,
     test_declarations_for_kind_returns_only_matching,
     test_fields_with_coupling_for_argument,
-    # Integration — Oedipus
+    # Integration — Oedipus Characterization
     test_oedipus_verification_main_character_check_passes,
     test_oedipus_verification_includes_owner_resolution_in_comment,
+    # Claim-trajectory primitive
+    test_claim_trajectory_runs_even_with_no_lowerings,
+    test_claim_trajectory_passes_position_ranges_when_present,
+    test_claim_trajectory_handles_partial_match,
+    test_claim_trajectory_unknown_verdict_falls_back_to_noted,
+    test_claim_trajectory_orchestrator_returns_one_review_per_check,
+    # Integration — Oedipus Argument trajectory
+    test_oedipus_argument_trajectory_check_passes,
+    test_oedipus_argument_trajectory_check_uses_inference_engine,
+    test_oedipus_run_produces_two_reviews,
 ]
 
 
