@@ -1039,6 +1039,41 @@ def test_macbeth_save_the_cat_all_reviews_approved_at_full_strength():
         )
 
 
+def test_orchestrate_ackroyd_save_the_cat_run_matches_four_results():
+    """Fourth encoding-verifier integration: Ackroyd at Save the
+    Cat. Four checks (two strand trajectories, one theme trajectory,
+    one finale-beat moment); all four should land as APPROVED
+    reviews."""
+    from ackroyd_save_the_cat_verification import run as run_astc
+    out = run_astc()
+    assert len(out) == 4
+    reviews = reviews_only(out)
+    assert len(reviews) == 4
+    target_ids = {r.target_record.record_id for r in reviews}
+    assert target_ids == {
+        "Strand_A_case", "Strand_B_flora_ralph",
+        "S_ackroyd_stc", "B_14_finale",
+    }
+
+
+def test_ackroyd_save_the_cat_all_reviews_approved_at_full_strength():
+    """Ackroyd STC encoding's contract: every check's signatures hold
+    against the substrate. The cross-dialect convergence at the
+    finale — same four cast-KNOWN signatures as the Dramatic
+    dialect's S_poirot_reveal check — is part of the contract."""
+    from ackroyd_save_the_cat_verification import run as run_astc
+    reviews = reviews_only(run_astc())
+    for r in reviews:
+        assert r.verdict == VERDICT_APPROVED, (
+            f"expected {r.target_record.record_id!r} verdict APPROVED; "
+            f"got {r.verdict!r}: {r.comment}"
+        )
+        assert r.match_strength == 1.0, (
+            f"expected {r.target_record.record_id!r} match_strength "
+            f"1.0; got {r.match_strength}: {r.comment}"
+        )
+
+
 def test_coverage_report_macbeth_save_the_cat_surfaces_beat_gaps():
     """Integration: the Save the Cat encoding registers four checks
     against save_the_cat.COUPLING_DECLARATIONS. Coverage report
@@ -1378,6 +1413,8 @@ TESTS = [
     test_orchestrate_macbeth_save_the_cat_run_matches_four_results,
     test_macbeth_save_the_cat_all_reviews_approved_at_full_strength,
     test_coverage_report_macbeth_save_the_cat_surfaces_beat_gaps,
+    test_orchestrate_ackroyd_save_the_cat_run_matches_four_results,
+    test_ackroyd_save_the_cat_all_reviews_approved_at_full_strength,
     # Coverage report
     test_coverage_report_emits_gap_for_declared_uncovered_record,
     test_coverage_report_omits_gap_when_registration_covers,
