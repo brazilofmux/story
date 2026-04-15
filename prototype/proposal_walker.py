@@ -44,6 +44,12 @@ from substrate import (
     decline_proposal,
     ingest_review,
 )
+from lowering import (
+    AnnotationReview,
+    Lowering,
+    ingest_annotation_review,
+)
+from verification import VerifierCommentary
 
 
 # ----------------------------------------------------------------------------
@@ -53,10 +59,13 @@ from substrate import (
 
 @dataclass(frozen=True)
 class Decision:
-    """One walker decision. `kind` is "review", "answer-proposal", or
-    "edit-proposal"; `target_id` identifies the record (description id
-    for reviews and edits, question id for answer proposals);
-    `choice` is one of "accept" / "decline" / "skip" / "quit".
+    """One walker decision. `kind` is one of "review", "answer-proposal",
+    "edit-proposal", "annotation-review", or "verifier-commentary".
+    `target_id` identifies the record (description id for reviews and
+    edits, question id for answer proposals, lowering id for
+    annotation reviews, target verifier review's record id for
+    verifier commentaries). `choice` is one of "accept" / "decline" /
+    "skip" / "quit".
     """
     kind: str
     target_id: str
@@ -157,6 +166,61 @@ def _render_edit_proposal(
     if proposal.rationale:
         stdout.write(f"\nrationale:\n")
         stdout.write(_indent(proposal.rationale) + "\n")
+
+
+def _render_annotation_review(
+    stdout,
+    target: Lowering,
+    review: AnnotationReview,
+) -> None:
+    stdout.write(f"lowering: {target.id}\n")
+    stdout.write(f"  upper: {target.upper_record.dialect}:"
+                 f"{target.upper_record.record_id}\n")
+    if target.lower_records:
+        stdout.write(f"  lower:\n")
+        for lr in target.lower_records:
+            stdout.write(f"    - {lr.dialect}:{lr.record_id}\n")
+    else:
+        stdout.write(f"  lower: (none — Lowering is "
+                     f"{target.status.value})\n")
+    stdout.write(f"  status: {target.status.value}\n")
+    stdout.write(f"  annotation:\n")
+    stdout.write(_indent(target.annotation.text) + "\n")
+    if target.annotation.review_states:
+        stdout.write(f"  prior reviews on annotation: "
+                     f"{len(target.annotation.review_states)}\n")
+    stdout.write(f"\nreviewer:  {review.reviewer_id}\n")
+    stdout.write(f"  verdict:    {review.verdict}\n")
+    stdout.write(f"  anchor_τ_a: {review.anchor_τ_a}\n")
+    if review.comment:
+        stdout.write(f"  comment:\n")
+        stdout.write(_indent(review.comment) + "\n")
+
+
+def _render_verifier_commentary(
+    stdout,
+    commentary: VerifierCommentary,
+) -> None:
+    target = commentary.target_review
+    stdout.write(
+        f"verifier review on: {target.target_record.dialect}:"
+        f"{target.target_record.record_id}\n"
+    )
+    stdout.write(f"  reviewer:  {target.reviewer_id}\n")
+    stdout.write(f"  verdict:   {target.verdict}")
+    if target.match_strength is not None:
+        stdout.write(f"  (match_strength={target.match_strength:.2f})")
+    stdout.write("\n")
+    if target.comment:
+        stdout.write(f"  comment:\n")
+        stdout.write(_indent(target.comment) + "\n")
+    stdout.write(f"\ncommenter: {commentary.commenter_id}\n")
+    stdout.write(f"  assessment: {commentary.assessment}\n")
+    stdout.write(f"  comment:\n")
+    stdout.write(_indent(commentary.comment) + "\n")
+    if commentary.suggested_signature:
+        stdout.write(f"  suggested_signature:\n")
+        stdout.write(_indent(commentary.suggested_signature) + "\n")
 
 
 def _render_answer_proposal(
@@ -418,6 +482,172 @@ def walk_answer_proposals(
             stdout.write(f"  skipped — queue entry left pending\n")
 
     return working_desc, working_queue, decisions
+
+
+def walk_annotation_reviews(
+    candidates: list,
+    lowerings: list,
+    *,
+    stdin=None,
+    stdout=None,
+) -> tuple:
+    """Walk LLM annotation-review candidates from the cross-boundary
+    probe. `candidates` is a list of (lowering_id, AnnotationReview)
+    pairs.
+
+    For each pair, the author sees the target Lowering (upper/lower
+    references, status, annotation text) + the LLM's review and
+    chooses accept / decline / skip / quit.
+
+    Accept calls `ingest_annotation_review` and replaces the Lowering
+    in `lowerings` by id. Decline and skip leave state unchanged.
+    Quit stops the walk early.
+
+    Returns (new_lowerings, decisions).
+    """
+    if stdin is None:
+        stdin = sys.stdin
+    if stdout is None:
+        stdout = sys.stdout
+
+    working = list(lowerings)
+    decisions: list = []
+
+    total = len(candidates)
+    if total == 0:
+        stdout.write("\n(no annotation reviews to walk)\n")
+        return working, decisions
+
+    stdout.write(
+        f"\n=== walking {total} annotation-review candidate(s) ===\n"
+    )
+
+    for i, (lowering_id, review) in enumerate(candidates, start=1):
+        target = next((lw for lw in working if lw.id == lowering_id), None)
+        if target is None:
+            stdout.write(
+                f"\n[annotation review {i}/{total}] target id "
+                f"{lowering_id!r} not found in lowerings; skipping.\n"
+            )
+            decisions.append(Decision(
+                "annotation-review", lowering_id, "skip",
+            ))
+            continue
+
+        _rule(stdout, f"[annotation review {i}/{total}]")
+        _render_annotation_review(stdout, target, review)
+        choice = _read_choice(stdin, stdout, _CHOICE_PROMPT)
+
+        if choice == "q":
+            decisions.append(Decision(
+                "annotation-review", lowering_id, "quit",
+            ))
+            stdout.write("\n(quit; remaining annotation reviews skipped)\n")
+            break
+        if choice == "a":
+            updated = ingest_annotation_review(target, review)
+            working = [
+                updated if lw.id == lowering_id else lw for lw in working
+            ]
+            decisions.append(Decision(
+                "annotation-review", lowering_id, "accept",
+            ))
+            stdout.write(
+                f"  accepted — review appended to {lowering_id} "
+                f"annotation\n"
+            )
+        elif choice == "d":
+            decisions.append(Decision(
+                "annotation-review", lowering_id, "decline",
+            ))
+            stdout.write(f"  declined — review dropped\n")
+        else:  # "s"
+            decisions.append(Decision(
+                "annotation-review", lowering_id, "skip",
+            ))
+            stdout.write(f"  skipped\n")
+
+    return working, decisions
+
+
+def walk_verifier_commentaries(
+    commentaries: list,
+    *,
+    stdin=None,
+    stdout=None,
+) -> tuple:
+    """Walk LLM verifier-commentary records from the cross-boundary
+    probe. `commentaries` is a list of VerifierCommentary records.
+
+    Each commentary is the LLM's read on a single VerificationReview;
+    `target_review` is already populated, so no separate lookup is
+    needed. The author sees both the verifier review being commented
+    on and the commentary itself, and chooses accept / decline /
+    skip / quit.
+
+    Accept appends the commentary to a returned `kept` list — the
+    walker does not directly mutate Lowerings or verifier output
+    (VerificationReview is frozen and there's no native "review of
+    a review" attachment point yet). The caller decides what to do
+    with kept commentaries: file as documentation, extend a check
+    function inspired by `suggested_signature`, etc. Decline and
+    skip just record the decision. Quit stops the walk early.
+
+    Returns (kept, decisions).
+    """
+    if stdin is None:
+        stdin = sys.stdin
+    if stdout is None:
+        stdout = sys.stdout
+
+    kept: list = []
+    decisions: list = []
+
+    total = len(commentaries)
+    if total == 0:
+        stdout.write("\n(no verifier commentaries to walk)\n")
+        return kept, decisions
+
+    stdout.write(
+        f"\n=== walking {total} verifier commentary record(s) ===\n"
+    )
+
+    for i, commentary in enumerate(commentaries, start=1):
+        target_id = commentary.target_review.target_record.record_id
+
+        _rule(stdout, f"[verifier commentary {i}/{total}]")
+        _render_verifier_commentary(stdout, commentary)
+        choice = _read_choice(stdin, stdout, _CHOICE_PROMPT)
+
+        if choice == "q":
+            decisions.append(Decision(
+                "verifier-commentary", target_id, "quit",
+            ))
+            stdout.write(
+                "\n(quit; remaining verifier commentaries skipped)\n"
+            )
+            break
+        if choice == "a":
+            kept.append(commentary)
+            decisions.append(Decision(
+                "verifier-commentary", target_id, "accept",
+            ))
+            stdout.write(
+                f"  accepted — commentary kept "
+                f"({commentary.assessment})\n"
+            )
+        elif choice == "d":
+            decisions.append(Decision(
+                "verifier-commentary", target_id, "decline",
+            ))
+            stdout.write(f"  declined — commentary dropped\n")
+        else:  # "s"
+            decisions.append(Decision(
+                "verifier-commentary", target_id, "skip",
+            ))
+            stdout.write(f"  skipped\n")
+
+    return kept, decisions
 
 
 # ----------------------------------------------------------------------------

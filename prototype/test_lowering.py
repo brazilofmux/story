@@ -24,6 +24,7 @@ from lowering import (
     index_by_upper, index_by_lower, by_status,
     staleness_signal,
     validate_lowerings,
+    ingest_annotation_review,
     group_observations_by_severity, group_observations_by_code,
 )
 
@@ -217,6 +218,55 @@ def test_annotation_with_unknown_attention_surfaces_observation():
     )
     obs = validate_lowerings((lw,))
     assert "annotation_attention_unknown" in _codes(obs)
+
+
+def test_ingest_annotation_review_appends_and_does_not_mutate():
+    """ingest_annotation_review returns a new Lowering with the review
+    appended to annotation.review_states; the original is unchanged
+    (frozen dataclass invariant). Mirrors substrate.ingest_review one
+    tier up."""
+    lw = _trivial_lowering()
+    assert len(lw.annotation.review_states) == 0
+    review = AnnotationReview(
+        reviewer_id="llm:test",
+        reviewed_at_τ_a=300,
+        verdict=VERDICT_APPROVED,
+        anchor_τ_a=lw.τ_a,
+        comment="annotation reads honestly against the binding",
+    )
+    new_lw = ingest_annotation_review(lw, review)
+    # Original untouched.
+    assert len(lw.annotation.review_states) == 0
+    # New Lowering carries the review.
+    assert len(new_lw.annotation.review_states) == 1
+    assert new_lw.annotation.review_states[0] is review
+    # Annotation text and other fields are preserved.
+    assert new_lw.annotation.text == lw.annotation.text
+    assert new_lw.annotation.attention == lw.annotation.attention
+    # Lowering-level fields preserved.
+    assert new_lw.id == lw.id
+    assert new_lw.upper_record == lw.upper_record
+    assert new_lw.lower_records == lw.lower_records
+
+
+def test_ingest_annotation_review_appends_to_existing_reviews():
+    """A second ingest preserves the prior review and appends the new
+    one in order — the review_states tuple is append-only."""
+    first = AnnotationReview(
+        reviewer_id="reviewer:a", reviewed_at_τ_a=300,
+        verdict=VERDICT_APPROVED, anchor_τ_a=100, comment="first",
+    )
+    second = AnnotationReview(
+        reviewer_id="reviewer:b", reviewed_at_τ_a=400,
+        verdict=VERDICT_NEEDS_WORK, anchor_τ_a=100, comment="second",
+    )
+    lw = _trivial_lowering(
+        annotation=Annotation(text="x", review_states=(first,)),
+    )
+    new_lw = ingest_annotation_review(lw, second)
+    assert len(new_lw.annotation.review_states) == 2
+    assert new_lw.annotation.review_states[0] is first
+    assert new_lw.annotation.review_states[1] is second
 
 
 # ----------------------------------------------------------------------------
@@ -468,6 +518,8 @@ TESTS = [
     test_annotation_default_attention_is_structural,
     test_annotation_can_carry_review_states,
     test_annotation_with_unknown_attention_surfaces_observation,
+    test_ingest_annotation_review_appends_and_does_not_mutate,
+    test_ingest_annotation_review_appends_to_existing_reviews,
     # L6 — staleness
     test_staleness_signal_none_when_anchor_undefined,
     test_staleness_signal_zero_when_no_drift,

@@ -59,7 +59,7 @@ Deferred to follow-on passes:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Optional
 
@@ -296,6 +296,33 @@ def staleness_signal(
         if drift > max_drift:
             max_drift = drift
     return max_drift
+
+
+# ============================================================================
+# Annotation-review ingest (parallels substrate.ingest_review)
+# ============================================================================
+
+
+def ingest_annotation_review(
+    lowering: Lowering,
+    review: AnnotationReview,
+) -> Lowering:
+    """Append `review` to the Lowering's annotation.review_states
+    tuple. Returns a new immutable Lowering record (and a new
+    Annotation inside it) per the same record-level invariants the
+    substrate uses for `ingest_review` on Descriptions — appends, no
+    mutation. The caller replaces the old Lowering in whatever
+    collection holds it.
+
+    Mirrors substrate.ingest_review one tier up: the substrate's
+    review attaches to a Description's review_states; this attaches
+    to an Annotation's review_states. The two registers are kept
+    independent (a substrate description and a Lowering's annotation
+    are different things; no review record crosses between them).
+    """
+    new_reviews = lowering.annotation.review_states + (review,)
+    new_annotation = replace(lowering.annotation, review_states=new_reviews)
+    return replace(lowering, annotation=new_annotation)
 
 
 # ============================================================================

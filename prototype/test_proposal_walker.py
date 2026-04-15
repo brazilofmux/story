@@ -39,10 +39,23 @@ from substrate import (
 )
 from proposal_walker import (
     Decision,
+    walk_annotation_reviews,
     walk_answer_proposals,
     walk_edit_proposals,
     walk_reviews,
+    walk_verifier_commentaries,
     summarize_decisions,
+)
+from lowering import (
+    Annotation, AnnotationReview, Lowering,
+    cross_ref,
+    VERDICT_APPROVED as ANN_VERDICT_APPROVED,
+    VERDICT_NEEDS_WORK as ANN_VERDICT_NEEDS_WORK,
+)
+from verification import (
+    VerificationReview, VerifierCommentary,
+    VERDICT_APPROVED as V_APPROVED,
+    ASSESSMENT_ENDORSES, ASSESSMENT_DISSENTS,
 )
 
 
@@ -537,6 +550,240 @@ def test_walk_edits_ignores_non_edit_entries():
 
 
 # ============================================================================
+# walk_annotation_reviews — cross-boundary probe output (Lowering side)
+# ============================================================================
+
+
+def _make_lowering(id: str, text: str = "binding annotation") -> Lowering:
+    return Lowering(
+        id=id,
+        upper_record=cross_ref("dramatic", f"U_{id}"),
+        lower_records=(cross_ref("substrate", f"l_{id}"),),
+        annotation=Annotation(text=text),
+        τ_a=100,
+    )
+
+
+def _make_annotation_review(verdict=ANN_VERDICT_APPROVED,
+                            comment="reads honestly") -> AnnotationReview:
+    return AnnotationReview(
+        reviewer_id="llm:test",
+        reviewed_at_τ_a=300,
+        verdict=verdict,
+        anchor_τ_a=100,
+        comment=comment,
+    )
+
+
+def test_walk_annotation_reviews_empty_is_noop():
+    """No candidates → no decisions, lowerings unchanged, walker
+    does not prompt."""
+    lws = [_make_lowering("L_alpha")]
+    stdin = io.StringIO("")
+    stdout = io.StringIO()
+    new_lws, decisions = walk_annotation_reviews(
+        [], lws, stdin=stdin, stdout=stdout,
+    )
+    assert new_lws == lws
+    assert decisions == []
+    assert "no annotation reviews" in stdout.getvalue()
+
+
+def test_walk_annotation_reviews_accept_appends_to_lowering():
+    """Typing 'a' invokes ingest_annotation_review: the Lowering's
+    annotation.review_states grows by one; the original is preserved."""
+    lw = _make_lowering("L_alpha")
+    review = _make_annotation_review()
+    stdin = io.StringIO("a\n")
+    stdout = io.StringIO()
+    new_lws, decisions = walk_annotation_reviews(
+        [("L_alpha", review)], [lw], stdin=stdin, stdout=stdout,
+    )
+    assert len(new_lws) == 1
+    updated = new_lws[0]
+    assert updated.id == "L_alpha"
+    assert len(updated.annotation.review_states) == 1
+    assert updated.annotation.review_states[0] is review
+    # Original untouched.
+    assert len(lw.annotation.review_states) == 0
+    assert decisions == [Decision("annotation-review", "L_alpha", "accept")]
+
+
+def test_walk_annotation_reviews_decline_leaves_lowering_unchanged():
+    lw = _make_lowering("L_alpha")
+    review = _make_annotation_review(verdict=ANN_VERDICT_NEEDS_WORK)
+    stdin = io.StringIO("d\n")
+    stdout = io.StringIO()
+    new_lws, decisions = walk_annotation_reviews(
+        [("L_alpha", review)], [lw], stdin=stdin, stdout=stdout,
+    )
+    assert len(new_lws[0].annotation.review_states) == 0
+    assert decisions == [Decision("annotation-review", "L_alpha", "decline")]
+
+
+def test_walk_annotation_reviews_skip_records_decision():
+    lw = _make_lowering("L_alpha")
+    review = _make_annotation_review()
+    stdin = io.StringIO("s\n")
+    stdout = io.StringIO()
+    new_lws, decisions = walk_annotation_reviews(
+        [("L_alpha", review)], [lw], stdin=stdin, stdout=stdout,
+    )
+    assert len(new_lws[0].annotation.review_states) == 0
+    assert decisions == [Decision("annotation-review", "L_alpha", "skip")]
+
+
+def test_walk_annotation_reviews_quit_stops_walk_mid_stream():
+    lws = [_make_lowering(f"L_{n}") for n in ("one", "two", "three")]
+    rs = [_make_annotation_review() for _ in range(3)]
+    stdin = io.StringIO("a\nq\n")
+    stdout = io.StringIO()
+    new_lws, decisions = walk_annotation_reviews(
+        [("L_one", rs[0]), ("L_two", rs[1]), ("L_three", rs[2])],
+        lws, stdin=stdin, stdout=stdout,
+    )
+    kinds = [d.choice for d in decisions]
+    assert kinds == ["accept", "quit"]
+    by_id = {lw.id: lw for lw in new_lws}
+    assert len(by_id["L_one"].annotation.review_states) == 1
+    assert len(by_id["L_two"].annotation.review_states) == 0
+    assert len(by_id["L_three"].annotation.review_states) == 0
+
+
+def test_walk_annotation_reviews_missing_target_is_auto_skipped():
+    """If the candidate's lowering_id doesn't resolve, the walker
+    auto-skips and does not prompt — same defensive behavior as
+    walk_reviews."""
+    review = _make_annotation_review()
+    stdin = io.StringIO("")  # should not be consumed
+    stdout = io.StringIO()
+    new_lws, decisions = walk_annotation_reviews(
+        [("L_ghost", review)], [], stdin=stdin, stdout=stdout,
+    )
+    assert decisions == [Decision("annotation-review", "L_ghost", "skip")]
+    assert "not found in lowerings" in stdout.getvalue()
+
+
+# ============================================================================
+# walk_verifier_commentaries — cross-boundary probe output (verifier side)
+# ============================================================================
+
+
+def _make_verifier_commentary(
+    target_record_id: str = "T_one",
+    assessment: str = ASSESSMENT_ENDORSES,
+    suggested_signature: str | None = None,
+) -> VerifierCommentary:
+    target = VerificationReview(
+        reviewer_id="verifier:characterization",
+        reviewed_at_τ_a=200,
+        verdict=V_APPROVED,
+        anchor_τ_a=10,
+        target_record=cross_ref("dramatic", target_record_id),
+        comment="check ran clean",
+        match_strength=1.0,
+    )
+    return VerifierCommentary(
+        commenter_id="llm:test",
+        commented_at_τ_a=300,
+        assessment=assessment,
+        target_review=target,
+        comment="grounded reading of the verifier verdict",
+        suggested_signature=suggested_signature,
+    )
+
+
+def test_walk_verifier_commentaries_empty_is_noop():
+    stdin = io.StringIO("")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_commentaries(
+        [], stdin=stdin, stdout=stdout,
+    )
+    assert kept == []
+    assert decisions == []
+    assert "no verifier commentaries" in stdout.getvalue()
+
+
+def test_walk_verifier_commentaries_accept_keeps_in_returned_list():
+    """Accept does not mutate any frozen record; instead the commentary
+    lands in the returned `kept` list. The author/caller decides what
+    to do with it (file as documentation, extend a check, etc.)."""
+    c = _make_verifier_commentary()
+    stdin = io.StringIO("a\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_commentaries(
+        [c], stdin=stdin, stdout=stdout,
+    )
+    assert len(kept) == 1
+    assert kept[0] is c
+    assert decisions == [
+        Decision("verifier-commentary", "T_one", "accept"),
+    ]
+
+
+def test_walk_verifier_commentaries_decline_drops():
+    c = _make_verifier_commentary(assessment=ASSESSMENT_DISSENTS)
+    stdin = io.StringIO("d\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_commentaries(
+        [c], stdin=stdin, stdout=stdout,
+    )
+    assert kept == []
+    assert decisions == [
+        Decision("verifier-commentary", "T_one", "decline"),
+    ]
+
+
+def test_walk_verifier_commentaries_skip_records_no_keep():
+    c = _make_verifier_commentary()
+    stdin = io.StringIO("s\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_commentaries(
+        [c], stdin=stdin, stdout=stdout,
+    )
+    assert kept == []
+    assert decisions == [
+        Decision("verifier-commentary", "T_one", "skip"),
+    ]
+
+
+def test_walk_verifier_commentaries_quit_stops_walk_mid_stream():
+    cs = [
+        _make_verifier_commentary(target_record_id="T_one"),
+        _make_verifier_commentary(target_record_id="T_two"),
+        _make_verifier_commentary(target_record_id="T_three"),
+    ]
+    stdin = io.StringIO("a\nq\n")
+    stdout = io.StringIO()
+    kept, decisions = walk_verifier_commentaries(
+        cs, stdin=stdin, stdout=stdout,
+    )
+    kinds = [d.choice for d in decisions]
+    assert kinds == ["accept", "quit"]
+    # Only the first (accepted) commentary was kept; the second's quit
+    # decision is recorded but the commentary is not kept; the third
+    # was never shown.
+    assert len(kept) == 1
+    assert kept[0] is cs[0]
+
+
+def test_walk_verifier_commentaries_renders_suggested_signature_when_set():
+    """The render helper surfaces suggested_signature when the LLM
+    populated it — so the author sees the concrete extension proposal
+    while deciding."""
+    c = _make_verifier_commentary(
+        suggested_signature="check that owner Entity also appears as "
+                            "told_by listener",
+    )
+    stdin = io.StringIO("s\n")
+    stdout = io.StringIO()
+    walk_verifier_commentaries([c], stdin=stdin, stdout=stdout)
+    output = stdout.getvalue()
+    assert "suggested_signature:" in output
+    assert "told_by listener" in output
+
+
+# ============================================================================
 # Summary helper
 # ============================================================================
 
@@ -547,11 +794,15 @@ def test_summarize_decisions_groups_by_kind_and_choice():
         Decision("review", "D_b", "accept"),
         Decision("review", "D_c", "decline"),
         Decision("answer-proposal", "D_q", "skip"),
+        Decision("annotation-review", "L_x", "accept"),
+        Decision("verifier-commentary", "T_y", "decline"),
     ]
     counts = summarize_decisions(decisions)
     assert counts[("review", "accept")] == 2
     assert counts[("review", "decline")] == 1
     assert counts[("answer-proposal", "skip")] == 1
+    assert counts[("annotation-review", "accept")] == 1
+    assert counts[("verifier-commentary", "decline")] == 1
 
 
 # ============================================================================
@@ -581,6 +832,18 @@ TESTS = [
     test_walk_edits_decline_leaves_source_intact,
     test_walk_edits_skip_leaves_pending,
     test_walk_edits_ignores_non_edit_entries,
+    test_walk_annotation_reviews_empty_is_noop,
+    test_walk_annotation_reviews_accept_appends_to_lowering,
+    test_walk_annotation_reviews_decline_leaves_lowering_unchanged,
+    test_walk_annotation_reviews_skip_records_decision,
+    test_walk_annotation_reviews_quit_stops_walk_mid_stream,
+    test_walk_annotation_reviews_missing_target_is_auto_skipped,
+    test_walk_verifier_commentaries_empty_is_noop,
+    test_walk_verifier_commentaries_accept_keeps_in_returned_list,
+    test_walk_verifier_commentaries_decline_drops,
+    test_walk_verifier_commentaries_skip_records_no_keep,
+    test_walk_verifier_commentaries_quit_stops_walk_mid_stream,
+    test_walk_verifier_commentaries_renders_suggested_signature_when_set,
     test_summarize_decisions_groups_by_kind_and_choice,
 ]
 

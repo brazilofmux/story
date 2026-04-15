@@ -106,6 +106,14 @@ def _cli_args():
         metavar="PATH",
         help="Save the full structured result as JSON to PATH.",
     )
+    parser.add_argument(
+        "--walk",
+        action="store_true",
+        help=(
+            "After the LLM call returns, drop into the interactive "
+            "walker for annotation reviews and verifier commentaries."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -308,6 +316,32 @@ def main() -> int:
     for c in result.verifier_commentaries:
         target_id = c.target_review.target_record.record_id
         print(f"  verifier    {target_id:<32} {c.assessment}")
+
+    if args.walk:
+        from proposal_walker import (
+            print_decision_summary,
+            walk_annotation_reviews,
+            walk_verifier_commentaries,
+        )
+
+        _print_section("WALK — ANNOTATION REVIEWS")
+        lowerings_after, annotation_decisions = walk_annotation_reviews(
+            result.annotation_review_candidates, list(LOWERINGS),
+        )
+
+        _print_section("WALK — VERIFIER COMMENTARIES")
+        kept_commentaries, commentary_decisions = walk_verifier_commentaries(
+            result.verifier_commentaries,
+        )
+
+        _print_section("WALK — RESULT")
+        all_decisions = annotation_decisions + commentary_decisions
+        print_decision_summary(all_decisions)
+
+        print()
+        print(f"  lowerings: {len(LOWERINGS)} → {len(lowerings_after)} "
+              f"(annotation review_states grew on accepts)")
+        print(f"  kept verifier commentaries: {len(kept_commentaries)}")
 
     return 0
 
