@@ -33,6 +33,7 @@ python3 test_substrate.py        # permanent substrate tests (no framework)
 python3 test_identity.py         # identity & realization tests
 python3 test_inference.py        # rule-derivation tests (inference-01 N1-N10)
 python3 test_dramatic.py         # Dramatic dialect M1-M10 + M8 verifier tests
+python3 test_lowering.py         # Lowering record tests (lowering-record-sketch-01 L1-L10)
 python3 test_rashomon.py         # permanent contested-branch tests (no framework)
 python3 test_proposal_walker.py  # walker tests (io.StringIO-driven, no terminal)
 
@@ -99,6 +100,30 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   intentional Antagonist gap and two missing-Stakes observations
   (T_impact_jocasta and T_relationship_oj have no separate Stakes
   records — a real authoring choice). No id-resolution errors.
+- `lowering.py` — first-pass implementation of lowering-record-sketch-01
+  (L1-L10). Dialect-agnostic — does not import from any specific
+  dialect module. Records: `CrossDialectRef` (dialect string +
+  record id, hashable), `Annotation` (text + attention +
+  review_states), `AnnotationReview`, `PositionRange`, `Lowering`
+  (id, upper_record, lower_records, annotation, status, τ_a,
+  optional anchor_τ_a + position_range + metadata).
+  `LoweringStatus` enum (ACTIVE / PENDING). Helpers:
+  `index_by_upper`, `index_by_lower`, `by_status`,
+  `staleness_signal` (computes drift from anchor_τ_a vs current
+  τ_a per a caller-provided lookup), `validate_lowerings` (checks
+  duplicate ids, PENDING-with-records, unknown attentions,
+  supersession metadata consistency). Constructor enforces L8 —
+  ACTIVE Lowerings must have non-empty `lower_records`.
+- `oedipus_lowerings.py` — first authored Lowering bindings:
+  Oedipus Dramatic ↔ substrate. The project's first cross-dialect
+  module — imports from `substrate.py`, `oedipus.py`, `dramatic.py`,
+  `oedipus_dramatic.py`, and `lowering.py` simultaneously. 18
+  Lowerings: 10 ACTIVE (4 Character→Entity 1-to-1, 5 Scene→Event
+  1-to-1-or-1-to-many, 1 Throughline→event-set with PositionRange
+  on τ_s∈[-100, 13]) + 8 PENDING (Tiresias and Creon Characters
+  + the Scenes that have no substrate event because the substrate
+  encoding is the identity-probe slice). Every PENDING Lowering
+  carries `metadata["why_pending"]`.
 - `macbeth_dramatic.py` — *Macbeth* encoded in the Dramatic dialect.
   Second encoding at this layer (parallel to `macbeth.py` at the
   substrate level). One Argument, four Throughlines under the
@@ -149,7 +174,21 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   (id resolution, beat / scene sequencing, template conformance with
   multiplicity, soft argument completeness, stakes coverage, scene
   purpose, orphans). Integration tests against `oedipus_dramatic.py`
-  pin the verifier's three-observation contract on that encoding.
+  pin the verifier's three-observation contract on that encoding,
+  plus tests against `macbeth_dramatic.py` (zero observations on the
+  base encoding; multi-antagonist fixture mutation surfaces
+  slot_overfilled).
+- `test_lowering.py` — Lowering record tests per
+  lowering-record-sketch-01 L1-L10. Synthetic-fixture tests for
+  CrossDialectRef equality / hashability, ACTIVE/PENDING status
+  invariants, many-to-many binding via index helpers, mixed
+  typed-fact / description targets, annotation attention,
+  staleness_signal across drift cases, position_range, supersession
+  metadata consistency, duplicate id detection. Integration tests
+  against `oedipus_lowerings.py`: 10 ACTIVE + 8 PENDING contract,
+  PositionRange on the MC Throughline binding, anchor_τ_a set for
+  event targets and None for entity-only targets, every PENDING
+  carries `why_pending`.
 - `test_rashomon.py` — permanent contested-branch tests pinning
   invariants that only become load-bearing with a non-trivial
   `:contested` example: sibling non-inheritance on a live encoding,
