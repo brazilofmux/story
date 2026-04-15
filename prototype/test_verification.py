@@ -31,6 +31,7 @@ from verification import (
     SEVERITY_NOTED,
     verify_characterization, run_characterization_checks,
     verify_claim_trajectory, run_claim_trajectory_checks,
+    verify_claim_moment, run_claim_moment_checks,
     reviews_only, advisories_only, group_by_verdict,
 )
 from lowering import PositionRange
@@ -534,17 +535,136 @@ def test_oedipus_argument_trajectory_check_uses_inference_engine():
     assert "incest(oedipus, jocasta) world-derivable: True" in arg_review.comment
 
 
-def test_oedipus_run_produces_two_reviews():
-    """The full Oedipus verifier run produces two VerificationReviews
-    — one Characterization (T_mc_oedipus) and one Claim-trajectory
-    (A_knowledge_unmakes). Both APPROVED with strength=1.0 in this
-    encoding."""
+def test_oedipus_run_produces_three_reviews():
+    """The full Oedipus verifier run produces three
+    VerificationReviews — one per V3 primitive: Characterization
+    (T_mc_oedipus), Claim-trajectory (A_knowledge_unmakes),
+    Claim-moment (S_anagnorisis). All APPROVED with strength=1.0
+    in this encoding."""
     import oedipus_verification as ov
     results = ov.run()
     reviews = reviews_only(results)
-    assert len(reviews) == 2
+    assert len(reviews) == 3
     assert all(r.verdict == VERDICT_APPROVED for r in reviews)
     assert all(r.match_strength == 1.0 for r in reviews)
+
+
+# ----------------------------------------------------------------------------
+# Claim-moment primitive
+# ----------------------------------------------------------------------------
+
+
+def test_claim_moment_runs_with_active_lowering():
+    """Claim-moment requires ACTIVE Lowerings (the moment-pattern
+    claim depends on knowing which lower records locate the moment).
+    With at least one ACTIVE Lowering, the check runs."""
+    lw = _lowering(upper_id="S1")
+    received = []
+    def check(upper_ref, lower_refs, position_ranges):
+        received.append((lower_refs, position_ranges))
+        return (VERDICT_APPROVED, 1.0, "ok")
+    review = verify_claim_moment(
+        upper_record_id="S1", upper_dialect="dramatic",
+        lowerings=(lw,), check=check,
+    )
+    assert review is not None
+    assert review.verdict == VERDICT_APPROVED
+    assert len(received) == 1
+
+
+def test_claim_moment_skips_with_no_active_lowerings():
+    """Without ACTIVE Lowerings the moment check has no anchor and
+    returns None. Same semantics as Characterization."""
+    def check(upper_ref, lower_refs, position_ranges):
+        raise AssertionError("should not be called")
+    review = verify_claim_moment(
+        upper_record_id="S1", upper_dialect="dramatic",
+        lowerings=(), check=check,
+    )
+    assert review is None
+
+
+def test_claim_moment_orchestrator_returns_advisory_for_skipped():
+    """The orchestrator surfaces skipped checks as Advisories with
+    code matching what the comment carries — same shape as
+    Characterization."""
+    def check(upper_ref, lower_refs, position_ranges):
+        raise AssertionError("should not be called")
+    results = run_claim_moment_checks(
+        checks=(("S_no_lowering", "dramatic", check),),
+        lowerings=(),
+    )
+    assert len(results) == 1
+    assert isinstance(results[0], StructuralAdvisory)
+    assert "no ACTIVE Lowerings" in results[0].comment
+
+
+def test_claim_moment_passes_position_ranges_through():
+    pr = PositionRange(coord="τ_s", min_value=10, max_value=13)
+    lw = _lowering(upper_id="S1", position_range=pr)
+    received = []
+    def check(upper_ref, lower_refs, position_ranges):
+        received.append(position_ranges)
+        return (VERDICT_APPROVED, 1.0, "")
+    verify_claim_moment(
+        upper_record_id="S1", upper_dialect="dramatic",
+        lowerings=(lw,), check=check,
+    )
+    assert received == [(pr,)]
+
+
+def test_claim_moment_unknown_verdict_falls_back_to_noted():
+    lw = _lowering(upper_id="S1")
+    def check(upper_ref, lower_refs, position_ranges):
+        return ("garbage", 0.5, "what")
+    review = verify_claim_moment(
+        upper_record_id="S1", upper_dialect="dramatic",
+        lowerings=(lw,), check=check,
+    )
+    assert review.verdict == VERDICT_NOTED
+    assert "garbage" in review.comment
+
+
+# ----------------------------------------------------------------------------
+# Integration — Oedipus S_anagnorisis moment check
+# ----------------------------------------------------------------------------
+
+
+def test_oedipus_anagnorisis_moment_check_passes():
+    """S_anagnorisis result check should APPROVE at strength=1.0:
+    all four moment signatures present at τ_s=13 — three identity
+    propositions at KNOWN and the gap_real_parents GAP closed."""
+    import oedipus_verification as ov
+    results = ov.run()
+    moment_reviews = [
+        r for r in results
+        if isinstance(r, VerificationReview)
+        and r.target_record == cross_ref("dramatic", "S_anagnorisis")
+    ]
+    assert len(moment_reviews) == 1
+    r = moment_reviews[0]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+
+
+def test_oedipus_anagnorisis_moment_check_names_signatures():
+    """The comment names all four signatures so an author reviewing
+    the verifier output sees what was checked."""
+    import oedipus_verification as ov
+    results = ov.run()
+    moment_review = next(
+        r for r in results
+        if isinstance(r, VerificationReview)
+        and r.target_record == cross_ref("dramatic", "S_anagnorisis")
+    )
+    c = moment_review.comment
+    assert "identity(oedipus, the-exposed-baby) KNOWN: True" in c
+    assert "identity(oedipus, the-crossroads-killer) KNOWN: True" in c
+    assert "identity(laius, the-crossroads-victim) KNOWN: True" in c
+    assert "gap_real_parents closed" in c
+    assert "4/4" in c
+    # Moment is at τ_s=13 (E_oedipus_anagnorisis's τ_s).
+    assert "τ_s=13" in c
 
 
 # ----------------------------------------------------------------------------
@@ -587,7 +707,16 @@ TESTS = [
     # Integration — Oedipus Argument trajectory
     test_oedipus_argument_trajectory_check_passes,
     test_oedipus_argument_trajectory_check_uses_inference_engine,
-    test_oedipus_run_produces_two_reviews,
+    test_oedipus_run_produces_three_reviews,
+    # Claim-moment primitive
+    test_claim_moment_runs_with_active_lowering,
+    test_claim_moment_skips_with_no_active_lowerings,
+    test_claim_moment_orchestrator_returns_advisory_for_skipped,
+    test_claim_moment_passes_position_ranges_through,
+    test_claim_moment_unknown_verdict_falls_back_to_noted,
+    # Integration — Oedipus S_anagnorisis moment check
+    test_oedipus_anagnorisis_moment_check_passes,
+    test_oedipus_anagnorisis_moment_check_names_signatures,
 ]
 
 

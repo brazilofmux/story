@@ -368,6 +368,144 @@ def run_claim_trajectory_checks(
 
 
 # ============================================================================
+# Claim-moment primitive (V3, V6)
+# ============================================================================
+
+
+# A moment check function takes the upper record's CrossDialectRef,
+# the union of lower records across the upper's ACTIVE Lowerings,
+# and a tuple of PositionRanges authored on those Lowerings. It
+# returns (verdict_str, Optional[match_strength], comment_str).
+#
+# Operationally identical to ClaimTrajectoryCheck in signature; the
+# semantic difference is what the check does — Claim-moment checks
+# query substrate state at a specific moment (typically derived
+# from the lower records' τ_s or the position_range), while
+# Claim-trajectory checks iterate substrate state across a range.
+#
+# The framework keeps the two as separate primitives (per V3) so
+# verifier-id provenance and check-shape expectations stay
+# distinct, even though the orchestration code is structurally
+# parallel.
+ClaimMomentCheck = Callable[
+    [CrossDialectRef, tuple, tuple],
+    tuple,  # (verdict_str, Optional[float], comment_str)
+]
+
+
+def verify_claim_moment(
+    upper_record_id: str,
+    upper_dialect: str,
+    lowerings: tuple,
+    check: ClaimMomentCheck,
+    *,
+    reviewer_id: str = "verifier:claim-moment",
+    reviewed_at_τ_a: int = 0,
+) -> Optional[VerificationReview]:
+    """Run a Claim-moment check on an upper record.
+
+    Returns None when the upper has no ACTIVE Lowerings — the
+    moment-pattern claim depends on knowing *which* lower records
+    locate the moment. Without Lowerings the check has no anchor.
+    This differs from `verify_claim_trajectory` (which always runs
+    because trajectory claims have substrate-wide scope) and
+    matches `verify_characterization` (which also short-circuits
+    on no-Lowerings since pattern-classification needs records to
+    classify).
+
+    The check function receives the upper ref, the union of lower
+    records across ACTIVE Lowerings, and the tuple of
+    PositionRanges authored on those Lowerings. Most moment checks
+    derive a τ_s from the lower records (e.g., the max τ_s of the
+    lowered substrate events) and query substrate state at that
+    moment.
+
+    Per V6, moment checks may consume substrate state derived via
+    the inference engine (`world_holds_derived`,
+    `holds_derived`); this module is dialect-agnostic and the
+    check captures whatever substrate context it needs in its
+    closure.
+    """
+    upper_ref = cross_ref(upper_dialect, upper_record_id)
+    upper_lowerings = [
+        lw for lw in lowerings
+        if lw.upper_record == upper_ref
+        and lw.status == LoweringStatus.ACTIVE
+    ]
+    if not upper_lowerings:
+        return None
+
+    all_lower = tuple(
+        lr for lw in upper_lowerings for lr in lw.lower_records
+    )
+    position_ranges = tuple(
+        lw.position_range for lw in upper_lowerings
+        if lw.position_range is not None
+    )
+
+    verdict, strength, comment = check(upper_ref, all_lower, position_ranges)
+
+    if verdict not in VALID_VERDICTS:
+        comment = (
+            f"check returned non-standard verdict {verdict!r}; "
+            f"recording as 'noted'. Original comment: {comment}"
+        )
+        verdict = VERDICT_NOTED
+
+    anchor_τ_a = max(
+        (lw.anchor_τ_a for lw in upper_lowerings if lw.anchor_τ_a is not None),
+        default=0,
+    )
+
+    return VerificationReview(
+        reviewer_id=reviewer_id,
+        reviewed_at_τ_a=reviewed_at_τ_a,
+        verdict=verdict,
+        anchor_τ_a=anchor_τ_a,
+        target_record=upper_ref,
+        comment=comment,
+        match_strength=strength,
+    )
+
+
+def run_claim_moment_checks(
+    checks: tuple,
+    lowerings: tuple,
+    *,
+    reviewer_id: str = "verifier:claim-moment",
+    reviewed_at_τ_a: int = 0,
+) -> tuple:
+    """Run a list of (upper_record_id, upper_dialect, check_fn)
+    triples through verify_claim_moment. Returns a tuple of
+    (VerificationReview | StructuralAdvisory) — Reviews when the
+    check ran (the upper had ACTIVE Lowerings); Advisories with
+    code='no_active_lowerings' when the check was skipped.
+
+    Same orchestration shape as run_characterization_checks; the
+    two share the no-Lowerings-skipped semantics.
+    """
+    out = []
+    for (upper_id, upper_dialect, check) in checks:
+        review = verify_claim_moment(
+            upper_id, upper_dialect, lowerings, check,
+            reviewer_id=reviewer_id,
+            reviewed_at_τ_a=reviewed_at_τ_a,
+        )
+        if review is None:
+            out.append(StructuralAdvisory(
+                advisor_id=reviewer_id,
+                advised_at_τ_a=reviewed_at_τ_a,
+                severity=SEVERITY_NOTED,
+                comment=(f"upper record {upper_dialect}:{upper_id} has no "
+                         f"ACTIVE Lowerings; claim-moment check skipped"),
+                scope=(cross_ref(upper_dialect, upper_id),),
+            ))
+        else:
+            out.append(review)
+    return tuple(out)
+
+
+# ============================================================================
 # Convenience grouping
 # ============================================================================
 

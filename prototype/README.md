@@ -122,27 +122,32 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   `StructuralAdvisory` (observation that spans multiple records),
   `VerificationAnswerProposal` (verifier-sourced answer to an
   upper-dialect open question; parallels reader-model
-  AnswerProposal). Two primitives shipped:
+  AnswerProposal). All three V3 primitives shipped:
   **Characterization** — `verify_characterization` takes an upper
   record id + dialect, the full Lowerings tuple, and a caller-
   supplied check function; filters to ACTIVE Lowerings, unions
   their lower_records, runs the check, returns a VerificationReview
-  (or None if the upper has no ACTIVE Lowerings).
+  (or None if no ACTIVE Lowerings).
   **Claim-trajectory** — `verify_claim_trajectory` always runs
   the check (the upper record's Claim is about the substrate
   trajectory, which exists regardless of Lowerings; per
   lowering-sketch-01 F1/F6 Argument-style records don't have
-  Lowerings). Returns a Review unconditionally. Composes with
-  inference-01 (V6) — checks may consume `world_holds_derived` /
-  `holds_derived` for rule-derived facts. Both primitives have
-  matching `run_*_checks` orchestrators that produce mixed
-  Review/Advisory tuples (Characterization) or Review-only
-  tuples (Claim-trajectory). Defensive: unknown verdicts fall
-  back to 'noted'. One primitive (Claim-moment) deferred.
+  Lowerings). Returns a Review unconditionally.
+  **Claim-moment** — `verify_claim_moment` requires ACTIVE
+  Lowerings (the moment-pattern claim depends on knowing which
+  lower records locate the moment). Same skip-or-Advisory
+  semantics as Characterization. The check derives a τ_s from
+  the lower records (typically the max τ_s of lowered substrate
+  events) and queries substrate state at that moment.
+  Composes with inference-01 (V6) — any check may consume
+  `world_holds_derived` / `holds_derived` for rule-derived
+  facts. All three primitives have matching `run_*_checks`
+  orchestrators. Defensive: unknown verdicts fall back to
+  'noted'.
 - `oedipus_verification.py` — first concrete cross-boundary
   verifier run. Imports from substrate, oedipus, dramatic,
   oedipus_dramatic, lowering, oedipus_lowerings, and verification
-  simultaneously. Two checks shipped:
+  simultaneously. One check per V3 primitive:
   **Characterization** — `main_character_throughline_check`
   verifies that a Throughline with role_label="main-character"
   has its owner Character's lowered substrate Entity as a
@@ -157,6 +162,16 @@ library. The reader-model probe adds `anthropic` and `pydantic` (see
   inference-01 — uses `world_holds_derived` for the rule-derived
   compound predicates. Result: APPROVED, strength=1.0 (3/3
   signatures present).
+  **Claim-moment** — `anagnorisis_scene_result_check` for
+  `S_anagnorisis` Scene's `result` field; checks four moment
+  signatures at τ_s=13 (E_oedipus_anagnorisis): three identity
+  propositions held at KNOWN by Oedipus (the realization's
+  authored payload); gap_real_parents closed (the GAP removed
+  by the realization). Result: APPROVED, strength=1.0 (4/4
+  signatures present).
+  Full `run()` produces three APPROVED reviews demonstrating
+  the architecture-02 stack end-to-end across all three V3
+  primitives.
 - `oedipus_lowerings.py` — first authored Lowering bindings:
   Oedipus Dramatic ↔ substrate. The project's first cross-dialect
   module — imports from `substrate.py`, `oedipus.py`, `dramatic.py`,

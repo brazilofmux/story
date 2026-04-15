@@ -35,8 +35,9 @@ from substrate import (
 )
 from oedipus import (
     FABULA, ENTITIES, ALL_BRANCHES, RULES,
-    parricide, incest,
+    parricide, incest, identity_prop, gap_real_parents,
 )
+from substrate import Slot
 
 # Dramatic-side imports (for resolving Throughline owners and
 # Character ids).
@@ -56,6 +57,7 @@ from verification import (
     VerificationReview, StructuralAdvisory,
     verify_characterization, run_characterization_checks,
     verify_claim_trajectory, run_claim_trajectory_checks,
+    verify_claim_moment, run_claim_moment_checks,
     VERDICT_APPROVED, VERDICT_NEEDS_WORK, VERDICT_PARTIAL_MATCH,
     VERDICT_NOTED,
     reviews_only, group_by_verdict,
@@ -329,6 +331,114 @@ def knowledge_unmakes_argument_check(
 
 
 # ============================================================================
+# Claim-moment check: the anagnorisis Scene's result
+# ============================================================================
+#
+# S_anagnorisis (narrative_position=7 in the Dramatic encoding)
+# claims at its `result` field: "the Argument's premise lands in
+# the MC's own perception; knowledge of self has unmade him." The
+# Scene Lowers to E_oedipus_anagnorisis (τ_s=13). At that moment,
+# the substrate should exhibit the specific epistemic effects the
+# realization performs:
+#
+#   1. Oedipus holds identity(oedipus, the-exposed-baby) at KNOWN —
+#      the anagnorisis's first identity assertion.
+#   2. Oedipus holds identity(oedipus, the-crossroads-killer) at
+#      KNOWN — the anagnorisis promotes the SUSPECTED identity to
+#      KNOWN (the realization composes prior suspicion with the
+#      newly-arriving evidence).
+#   3. Oedipus holds identity(laius, the-crossroads-victim) at KNOWN —
+#      the realization's third identity assertion.
+#   4. Oedipus's gap_real_parents GAP has been removed — the
+#      anagnorisis closes his acknowledged gap about parentage.
+#
+# All four signatures are literal substrate facts the realization
+# event authors. A moment check at τ_s=13 verifies they all hold
+# at the right slots; if so, the Scene's claim about its result is
+# vindicated by the substrate.
+#
+# This check uses literal `holds_literal` / absence checks rather
+# than rule-derived facts — the signatures are about the
+# substrate's own authoring, not derivation chains. (Compare with
+# the Argument's trajectory check, which uses `world_holds_derived`
+# for the compound consequences.)
+
+
+def anagnorisis_scene_result_check(
+    upper_ref, lower_refs, position_ranges,
+):
+    """Claim-moment check for S_anagnorisis.result. Returns
+    (verdict, match_strength, comment).
+
+    Four moment signatures verified at the max τ_s of the Lowered
+    substrate events (τ_s=13 for E_oedipus_anagnorisis):
+      - Oedipus holds identity(oedipus, the-exposed-baby) at KNOWN
+      - Oedipus holds identity(oedipus, the-crossroads-killer) at KNOWN
+      - Oedipus holds identity(laius, the-crossroads-victim) at KNOWN
+      - Oedipus no longer holds gap_real_parents (the GAP closed)
+
+    Match strength = signatures-passing / 4. Verdict: approved if all
+    four; partial-match if 2-3; needs-work if fewer.
+    """
+    # Determine the moment from the lower records' max τ_s. For
+    # S_anagnorisis lowered to E_oedipus_anagnorisis, this is τ_s=13.
+    max_τ_s = 0
+    for lr in lower_refs:
+        if lr.dialect != "substrate":
+            continue
+        for e in FABULA:
+            if e.id == lr.record_id:
+                if e.τ_s > max_τ_s:
+                    max_τ_s = e.τ_s
+
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    state = project_knowledge(
+        agent_id="oedipus",
+        events_in_scope=events_in_scope,
+        up_to_τ_s=max_τ_s,
+    )
+
+    identity_signatures = [
+        identity_prop("oedipus", "the-exposed-baby"),
+        identity_prop("oedipus", "the-crossroads-killer"),
+        identity_prop("laius", "the-crossroads-victim"),
+    ]
+    identity_results = []
+    for p in identity_signatures:
+        held = state.holds_literal(p)
+        identity_results.append(held is not None and held.slot == Slot.KNOWN)
+
+    gap_closed = state.holds_literal(gap_real_parents) is None
+
+    signatures = identity_results + [gap_closed]
+    matched = sum(signatures)
+    strength = matched / len(signatures)
+
+    if strength >= 0.99:
+        verdict = VERDICT_APPROVED
+    elif strength >= 0.5:
+        verdict = VERDICT_PARTIAL_MATCH
+    else:
+        verdict = VERDICT_NEEDS_WORK
+
+    comment = (
+        f"S_anagnorisis result check at τ_s={max_τ_s}: "
+        f"identity(oedipus, the-exposed-baby) KNOWN: "
+        f"{identity_results[0]}; "
+        f"identity(oedipus, the-crossroads-killer) KNOWN: "
+        f"{identity_results[1]}; "
+        f"identity(laius, the-crossroads-victim) KNOWN: "
+        f"{identity_results[2]}; "
+        f"gap_real_parents closed (absent from held set): "
+        f"{gap_closed}; "
+        f"{matched}/{len(signatures)} moment signatures present"
+    )
+    return (verdict, strength, comment)
+
+
+# ============================================================================
 # Driver — run the checks
 # ============================================================================
 
@@ -347,6 +457,11 @@ CLAIM_TRAJECTORY_CHECKS = (
     ("A_knowledge_unmakes", "dramatic", knowledge_unmakes_argument_check),
 )
 
+# The set of triples for Claim-moment.
+CLAIM_MOMENT_CHECKS = (
+    ("S_anagnorisis", "dramatic", anagnorisis_scene_result_check),
+)
+
 
 def run() -> tuple:
     """Run all verifier checks for the Oedipus encoding.
@@ -363,6 +478,12 @@ def run() -> tuple:
         CLAIM_TRAJECTORY_CHECKS,
         LOWERINGS,
         reviewer_id="verifier:dramatic-substrate-claim-trajectory",
+        reviewed_at_τ_a=300,
+    ))
+    out.extend(run_claim_moment_checks(
+        CLAIM_MOMENT_CHECKS,
+        LOWERINGS,
+        reviewer_id="verifier:dramatic-substrate-claim-moment",
         reviewed_at_τ_a=300,
     ))
     return tuple(out)
