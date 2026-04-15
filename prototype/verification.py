@@ -93,6 +93,24 @@ VALID_ASSESSMENTS = frozenset({
 })
 
 
+# Coupling-kind vocabulary, mirroring dramatic.COUPLING_*. Verification
+# is dialect-agnostic so it can't import dramatic.py; the same strings
+# are duplicated here. An encoding's verifier module can import either
+# set — they resolve to the same string values.
+
+COUPLING_REALIZATION = "realization"
+COUPLING_CHARACTERIZATION = "characterization"
+COUPLING_CLAIM_MOMENT = "claim-moment"
+COUPLING_CLAIM_TRAJECTORY = "claim-trajectory"
+COUPLING_FLAVOR = "flavor"
+
+ORCHESTRATABLE_COUPLING_KINDS = frozenset({
+    COUPLING_CHARACTERIZATION,
+    COUPLING_CLAIM_MOMENT,
+    COUPLING_CLAIM_TRAJECTORY,
+})
+
+
 # ============================================================================
 # Output records (V2)
 # ============================================================================
@@ -554,6 +572,196 @@ def run_claim_moment_checks(
             ))
         else:
             out.append(review)
+    return tuple(out)
+
+
+# ============================================================================
+# Per-record-type orchestrator (V5 — auto-enumerate from declarations)
+# ============================================================================
+#
+# The hand-wired pattern that oedipus_verification.py and
+# macbeth_verification.py both use today is:
+#
+#   CHARACTERIZATION_CHECKS = (("T_mc_X", "dramatic", check_fn), ...)
+#   CLAIM_TRAJECTORY_CHECKS = ...
+#   CLAIM_MOMENT_CHECKS = ...
+#   def run(): out = []; out.extend(run_X_checks(...)); ...
+#
+# Each (record_id, dialect, check_fn) triple has to be paired with the
+# right primitive runner manually — the author keeps three parallel
+# tuples and three parallel run_* calls in lockstep. As encodings grow
+# and as more checks land on each record type, the bookkeeping
+# multiplies and silent gaps become easy.
+#
+# The orchestrator below replaces all three of those tuples with a
+# single CHECK_REGISTRY of CheckRegistrations, plus a `records_by_type`
+# dict the encoding builds from its Story aggregate. Dispatch by
+# coupling kind happens here; the encoding only declares which check
+# fires on which records.
+
+
+@dataclass(frozen=True)
+class CheckRegistration:
+    """Binds a check function to records the orchestrator should run
+    it against.
+
+    The orchestrator iterates records of `record_type` from the
+    encoding's enumeration. For each record where `applies_to(record)`
+    returns True, the check function fires through the appropriate
+    verification primitive (Characterization / Claim-moment /
+    Claim-trajectory) selected by `coupling_kind`.
+
+    `field` is informational — it names the record field this check
+    is grounded in (e.g., "role_label" on a Throughline, "result" on
+    a Scene). It does not affect dispatch in this iteration; the
+    primitive runners take a record reference and let the check
+    function decide what to read. A future iteration could use
+    `field` to cross-reference dramatic.COUPLING_DECLARATIONS for
+    coverage reports.
+
+    `coupling_kind` must be one of:
+      - COUPLING_CHARACTERIZATION
+      - COUPLING_CLAIM_MOMENT
+      - COUPLING_CLAIM_TRAJECTORY
+    Realization and Flavor are not orchestratable here (Realization
+    has no primitive yet; Flavor has no verifier by design).
+
+    `applies_to` is a predicate `(record) -> bool`. The orchestrator
+    silent-skips records where it returns False — this is how the
+    encoding restricts a check to specific records (e.g.,
+    `lambda t: t.role_label == "main-character"`). A registration
+    with a vacuous `applies_to=lambda r: True` fires on every record
+    of its `record_type`; a check function that should run on
+    multiple records but conditionalize on something specific can use
+    a more restrictive `applies_to`.
+
+    `description` is a human-readable label, surfaced in coverage
+    reports and walker output.
+    """
+    coupling_kind: str
+    record_type: str
+    field: Optional[str]
+    applies_to: Callable
+    check_fn: Callable
+    description: str = ""
+
+    def __post_init__(self):
+        if self.coupling_kind not in ORCHESTRATABLE_COUPLING_KINDS:
+            raise ValueError(
+                f"CheckRegistration coupling_kind {self.coupling_kind!r} "
+                f"is not orchestratable; expected one of "
+                f"{sorted(ORCHESTRATABLE_COUPLING_KINDS)}"
+            )
+
+
+def orchestrate_checks(
+    *,
+    records_by_type: dict,
+    registry: tuple,
+    lowerings: tuple,
+    record_dialect: str,
+    reviewed_at_τ_a: int = 0,
+    reviewer_id_prefix: str = "verifier",
+) -> tuple:
+    """Dispatch registered checks against an encoding's records.
+    Returns a tuple of (VerificationReview | StructuralAdvisory).
+
+    For each CheckRegistration in `registry`:
+      - Iterate `records_by_type[registration.record_type]`.
+      - For each record where `applies_to(record)` is True, fire the
+        check through the primitive matching `coupling_kind`.
+
+    The result mix matches what the existing per-primitive runners
+    produce: VerificationReviews when the check ran and a verdict
+    landed; StructuralAdvisories when a Characterization or
+    Claim-moment was skipped because the upper had no ACTIVE
+    Lowerings (Claim-trajectory always runs, so it never produces
+    a skip-advisory).
+
+    `reviewer_id_prefix` is composed with the coupling kind to form
+    the per-result reviewer_id, e.g.,
+    'verifier:dramatic-substrate-characterization'. Encoding modules
+    that want to override per-primitive can pass their own prefix or
+    re-stamp results after the fact; the prefix here is the common
+    case.
+    """
+    out: list = []
+    for registration in registry:
+        records = records_by_type.get(registration.record_type, ())
+        for record in records:
+            if not registration.applies_to(record):
+                continue
+            record_id = record.id
+            kind = registration.coupling_kind
+
+            if kind == COUPLING_CHARACTERIZATION:
+                reviewer_id = (
+                    f"{reviewer_id_prefix}:{record_dialect}-substrate-"
+                    f"characterization"
+                )
+                review = verify_characterization(
+                    record_id, record_dialect, lowerings,
+                    registration.check_fn,
+                    reviewer_id=reviewer_id,
+                    reviewed_at_τ_a=reviewed_at_τ_a,
+                )
+                if review is None:
+                    out.append(StructuralAdvisory(
+                        advisor_id=reviewer_id,
+                        advised_at_τ_a=reviewed_at_τ_a,
+                        severity=SEVERITY_NOTED,
+                        comment=(
+                            f"upper record {record_dialect}:{record_id} "
+                            f"has no ACTIVE Lowerings; characterization "
+                            f"check {registration.description!r} skipped"
+                        ),
+                        scope=(cross_ref(record_dialect, record_id),),
+                    ))
+                else:
+                    out.append(review)
+
+            elif kind == COUPLING_CLAIM_TRAJECTORY:
+                reviewer_id = (
+                    f"{reviewer_id_prefix}:{record_dialect}-substrate-"
+                    f"claim-trajectory"
+                )
+                review = verify_claim_trajectory(
+                    record_id, record_dialect, lowerings,
+                    registration.check_fn,
+                    reviewer_id=reviewer_id,
+                    reviewed_at_τ_a=reviewed_at_τ_a,
+                )
+                # Claim-trajectory always returns a review.
+                out.append(review)
+
+            elif kind == COUPLING_CLAIM_MOMENT:
+                reviewer_id = (
+                    f"{reviewer_id_prefix}:{record_dialect}-substrate-"
+                    f"claim-moment"
+                )
+                review = verify_claim_moment(
+                    record_id, record_dialect, lowerings,
+                    registration.check_fn,
+                    reviewer_id=reviewer_id,
+                    reviewed_at_τ_a=reviewed_at_τ_a,
+                )
+                if review is None:
+                    out.append(StructuralAdvisory(
+                        advisor_id=reviewer_id,
+                        advised_at_τ_a=reviewed_at_τ_a,
+                        severity=SEVERITY_NOTED,
+                        comment=(
+                            f"upper record {record_dialect}:{record_id} "
+                            f"has no ACTIVE Lowerings; claim-moment "
+                            f"check {registration.description!r} skipped"
+                        ),
+                        scope=(cross_ref(record_dialect, record_id),),
+                    ))
+                else:
+                    out.append(review)
+            # CheckRegistration.__post_init__ rejects any other kind, so
+            # no fall-through case is reachable here.
+
     return tuple(out)
 
 

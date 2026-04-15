@@ -32,6 +32,10 @@ from verification import (
     verify_characterization, run_characterization_checks,
     verify_claim_trajectory, run_claim_trajectory_checks,
     verify_claim_moment, run_claim_moment_checks,
+    CheckRegistration, orchestrate_checks,
+    COUPLING_REALIZATION, COUPLING_CHARACTERIZATION,
+    COUPLING_CLAIM_MOMENT, COUPLING_CLAIM_TRAJECTORY, COUPLING_FLAVOR,
+    ORCHESTRATABLE_COUPLING_KINDS,
     reviews_only, advisories_only, group_by_verdict,
 )
 from lowering import PositionRange
@@ -667,6 +671,298 @@ def test_oedipus_anagnorisis_moment_check_names_signatures():
     assert "τ_s=13" in c
 
 
+# ============================================================================
+# Per-record-type orchestrator (V5)
+# ============================================================================
+#
+# A small fixture record type stands in for the dialect records the
+# orchestrator iterates. Real Throughline / Argument / Scene records
+# would work too, but a synthetic record keeps these tests off the
+# dramatic-encoding test path so failures localize to the orchestrator.
+
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class _FakeUpper:
+    id: str
+    role_label: str = ""
+
+
+def _always_approved_check(upper_ref, lower_refs):
+    return (VERDICT_APPROVED, 1.0, "always-approved")
+
+
+def _always_approved_trajectory(upper_ref, lower_refs, position_ranges):
+    return (VERDICT_APPROVED, 1.0, "always-approved-trajectory")
+
+
+def _always_approved_moment(upper_ref, lower_refs, position_ranges):
+    return (VERDICT_APPROVED, 1.0, "always-approved-moment")
+
+
+def test_check_registration_rejects_non_orchestratable_kind():
+    """REALIZATION and FLAVOR are not orchestratable in this iteration
+    (no primitive dispatch). Constructing a registration with one
+    raises at __post_init__."""
+    for bad_kind in (COUPLING_REALIZATION, COUPLING_FLAVOR, "made-up"):
+        try:
+            CheckRegistration(
+                coupling_kind=bad_kind,
+                record_type="X", field=None,
+                applies_to=lambda r: True,
+                check_fn=_always_approved_check,
+            )
+        except ValueError:
+            continue
+        raise AssertionError(
+            f"CheckRegistration accepted non-orchestratable kind {bad_kind!r}"
+        )
+
+
+def test_check_registration_accepts_orchestratable_kinds():
+    for kind in ORCHESTRATABLE_COUPLING_KINDS:
+        # Should not raise.
+        CheckRegistration(
+            coupling_kind=kind, record_type="X", field=None,
+            applies_to=lambda r: True, check_fn=_always_approved_check,
+        )
+
+
+def test_orchestrate_dispatches_characterization_with_active_lowering():
+    record = _FakeUpper(id="U_one")
+    lw = _lowering(upper_id="U_one")
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="Throughline", field=None,
+        applies_to=lambda r: True,
+        check_fn=_always_approved_check,
+        description="test",
+    )
+    out = orchestrate_checks(
+        records_by_type={"Throughline": (record,)},
+        registry=(reg,), lowerings=(lw,),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    assert len(out) == 1
+    review = out[0]
+    assert isinstance(review, VerificationReview)
+    assert review.verdict == VERDICT_APPROVED
+    assert review.target_record.record_id == "U_one"
+    assert "characterization" in review.reviewer_id
+
+
+def test_orchestrate_emits_advisory_when_characterization_has_no_lowering():
+    """A registered Characterization on a record with no ACTIVE
+    Lowerings produces a StructuralAdvisory, not a silent skip — the
+    gap surfaces."""
+    record = _FakeUpper(id="U_orphan")
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="Throughline", field=None,
+        applies_to=lambda r: True,
+        check_fn=_always_approved_check,
+        description="orphan-test",
+    )
+    out = orchestrate_checks(
+        records_by_type={"Throughline": (record,)},
+        registry=(reg,), lowerings=(),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    assert len(out) == 1
+    adv = out[0]
+    assert isinstance(adv, StructuralAdvisory)
+    assert adv.severity == SEVERITY_NOTED
+    assert "no ACTIVE Lowerings" in adv.comment
+    assert "orphan-test" in adv.comment, (
+        "advisory should name the registration's description so the "
+        "author can find which check was skipped"
+    )
+
+
+def test_orchestrate_dispatches_claim_trajectory_without_lowering():
+    """Claim-trajectory always runs even without Lowerings (the
+    trajectory claim has substrate-wide scope). orchestrate_checks
+    must produce a VerificationReview, not an advisory."""
+    record = _FakeUpper(id="A_one")
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CLAIM_TRAJECTORY,
+        record_type="Argument", field=None,
+        applies_to=lambda r: True,
+        check_fn=_always_approved_trajectory,
+    )
+    out = orchestrate_checks(
+        records_by_type={"Argument": (record,)},
+        registry=(reg,), lowerings=(),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    assert len(out) == 1
+    assert isinstance(out[0], VerificationReview)
+    assert "claim-trajectory" in out[0].reviewer_id
+
+
+def test_orchestrate_dispatches_claim_moment_with_active_lowering():
+    record = _FakeUpper(id="S_one")
+    lw = _lowering(upper_id="S_one")
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CLAIM_MOMENT,
+        record_type="Scene", field=None,
+        applies_to=lambda r: True,
+        check_fn=_always_approved_moment,
+    )
+    out = orchestrate_checks(
+        records_by_type={"Scene": (record,)},
+        registry=(reg,), lowerings=(lw,),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    assert len(out) == 1
+    assert isinstance(out[0], VerificationReview)
+    assert "claim-moment" in out[0].reviewer_id
+
+
+def test_orchestrate_emits_advisory_when_claim_moment_has_no_lowering():
+    record = _FakeUpper(id="S_orphan")
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CLAIM_MOMENT,
+        record_type="Scene", field=None,
+        applies_to=lambda r: True,
+        check_fn=_always_approved_moment,
+        description="orphan-moment",
+    )
+    out = orchestrate_checks(
+        records_by_type={"Scene": (record,)},
+        registry=(reg,), lowerings=(),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    assert len(out) == 1
+    assert isinstance(out[0], StructuralAdvisory)
+    assert "orphan-moment" in out[0].comment
+
+
+def test_orchestrate_skips_records_where_applies_to_returns_false():
+    """A registration with a restrictive applies_to silently skips
+    non-matching records — no advisory, no review for those. This
+    is how "this check is for a specific record" is expressed."""
+    matching = _FakeUpper(id="U_match", role_label="main-character")
+    non_matching = _FakeUpper(id="U_other", role_label="impact-character")
+    lw_match = _lowering(upper_id="U_match")
+    lw_other = _lowering(upper_id="U_other")
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="Throughline", field="role_label",
+        applies_to=lambda t: t.role_label == "main-character",
+        check_fn=_always_approved_check,
+    )
+    out = orchestrate_checks(
+        records_by_type={"Throughline": (matching, non_matching)},
+        registry=(reg,), lowerings=(lw_match, lw_other),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    # Only one result: the matching record. The non-matching record
+    # was silent-skipped (no review, no advisory).
+    assert len(out) == 1
+    assert out[0].target_record.record_id == "U_match"
+
+
+def test_orchestrate_handles_record_type_missing_from_inventory():
+    """If a registration's record_type isn't in records_by_type at all,
+    the orchestrator silently produces no output for it (the encoding
+    didn't supply records of that type — nothing to iterate)."""
+    reg = CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="UnseenType", field=None,
+        applies_to=lambda r: True,
+        check_fn=_always_approved_check,
+    )
+    out = orchestrate_checks(
+        records_by_type={"Throughline": ()},  # no UnseenType key
+        registry=(reg,), lowerings=(),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    assert out == ()
+
+
+def test_orchestrate_dispatches_multiple_kinds_in_one_run():
+    """A registry with all three orchestratable kinds produces one
+    result per registration that matches a record. Order-of-results
+    follows registry order then record order — predictable for
+    walker / display consumers."""
+    t = _FakeUpper(id="T_one", role_label="main-character")
+    a = _FakeUpper(id="A_one")
+    s = _FakeUpper(id="S_one")
+    lw_t = _lowering(upper_id="T_one")
+    lw_s = _lowering(upper_id="S_one")
+    registry = (
+        CheckRegistration(
+            coupling_kind=COUPLING_CHARACTERIZATION,
+            record_type="Throughline", field="role_label",
+            applies_to=lambda r: True,
+            check_fn=_always_approved_check,
+        ),
+        CheckRegistration(
+            coupling_kind=COUPLING_CLAIM_TRAJECTORY,
+            record_type="Argument", field=None,
+            applies_to=lambda r: True,
+            check_fn=_always_approved_trajectory,
+        ),
+        CheckRegistration(
+            coupling_kind=COUPLING_CLAIM_MOMENT,
+            record_type="Scene", field=None,
+            applies_to=lambda r: True,
+            check_fn=_always_approved_moment,
+        ),
+    )
+    out = orchestrate_checks(
+        records_by_type={
+            "Throughline": (t,), "Argument": (a,), "Scene": (s,),
+        },
+        registry=registry, lowerings=(lw_t, lw_s),
+        record_dialect="dramatic", reviewed_at_τ_a=500,
+    )
+    assert len(out) == 3
+    # Order: registry order then record order. Throughline first,
+    # Argument second, Scene third.
+    assert out[0].target_record.record_id == "T_one"
+    assert "characterization" in out[0].reviewer_id
+    assert out[1].target_record.record_id == "A_one"
+    assert "claim-trajectory" in out[1].reviewer_id
+    assert out[2].target_record.record_id == "S_one"
+    assert "claim-moment" in out[2].reviewer_id
+
+
+def test_orchestrate_oedipus_run_matches_three_results():
+    """Integration: oedipus_verification.run() now goes through the
+    orchestrator. It should still produce exactly three results (one
+    per registration that fires on the encoding) — same shape as
+    when the runner was hand-wired."""
+    from oedipus_verification import run as run_oedipus
+    out = run_oedipus()
+    assert len(out) == 3
+    reviews = reviews_only(out)
+    assert len(reviews) == 3, (
+        "all three Oedipus checks should land as reviews on this "
+        "encoding (no missing-Lowering advisories)"
+    )
+    target_ids = {r.target_record.record_id for r in reviews}
+    assert target_ids == {
+        "T_mc_oedipus", "A_knowledge_unmakes", "S_anagnorisis",
+    }
+
+
+def test_orchestrate_macbeth_run_matches_three_results():
+    """Same integration check on Macbeth."""
+    from macbeth_verification import run as run_macbeth
+    out = run_macbeth()
+    assert len(out) == 3
+    reviews = reviews_only(out)
+    assert len(reviews) == 3
+    target_ids = {r.target_record.record_id for r in reviews}
+    assert target_ids == {
+        "T_mc_macbeth", "A_ambition_unmakes", "S_macbeth_dies",
+    }
+
+
 # ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
@@ -717,6 +1013,19 @@ TESTS = [
     # Integration — Oedipus S_anagnorisis moment check
     test_oedipus_anagnorisis_moment_check_passes,
     test_oedipus_anagnorisis_moment_check_names_signatures,
+    # Per-record-type orchestrator (V5)
+    test_check_registration_rejects_non_orchestratable_kind,
+    test_check_registration_accepts_orchestratable_kinds,
+    test_orchestrate_dispatches_characterization_with_active_lowering,
+    test_orchestrate_emits_advisory_when_characterization_has_no_lowering,
+    test_orchestrate_dispatches_claim_trajectory_without_lowering,
+    test_orchestrate_dispatches_claim_moment_with_active_lowering,
+    test_orchestrate_emits_advisory_when_claim_moment_has_no_lowering,
+    test_orchestrate_skips_records_where_applies_to_returns_false,
+    test_orchestrate_handles_record_type_missing_from_inventory,
+    test_orchestrate_dispatches_multiple_kinds_in_one_run,
+    test_orchestrate_oedipus_run_matches_three_results,
+    test_orchestrate_macbeth_run_matches_three_results,
 ]
 
 

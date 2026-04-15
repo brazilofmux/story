@@ -60,8 +60,13 @@ from verification import (
     verify_claim_moment, run_claim_moment_checks,
     VERDICT_APPROVED, VERDICT_NEEDS_WORK, VERDICT_PARTIAL_MATCH,
     VERDICT_NOTED,
+    CheckRegistration, orchestrate_checks,
+    COUPLING_CHARACTERIZATION,
+    COUPLING_CLAIM_TRAJECTORY,
+    COUPLING_CLAIM_MOMENT,
     reviews_only, group_by_verdict,
 )
+from oedipus_dramatic import ARGUMENTS, SCENES
 
 
 # ============================================================================
@@ -439,54 +444,75 @@ def anagnorisis_scene_result_check(
 
 
 # ============================================================================
-# Driver — run the checks
+# Driver — orchestrated check registry
 # ============================================================================
+#
+# Single CHECK_REGISTRY replaces the three hand-wired tuples
+# (CHARACTERIZATION_CHECKS / CLAIM_TRAJECTORY_CHECKS /
+# CLAIM_MOMENT_CHECKS) and the three parallel run_X_checks calls in
+# run(). The orchestrator dispatches by coupling kind, enumerates
+# records per type, and applies each registered check function where
+# its `applies_to` predicate matches.
 
 
-# The set of (upper_record_id, upper_dialect, check_fn) triples for
-# Characterization. A future orchestrator could enumerate per-record
-# automatically based on dramatic.COUPLING_DECLARATIONS; for now,
-# this is hand-wired.
-
-CHARACTERIZATION_CHECKS = (
-    ("T_mc_oedipus", "dramatic", main_character_throughline_check),
+CHECK_REGISTRY = (
+    CheckRegistration(
+        coupling_kind=COUPLING_CHARACTERIZATION,
+        record_type="Throughline",
+        field="role_label",
+        applies_to=lambda t: t.role_label == "main-character",
+        check_fn=main_character_throughline_check,
+        description=(
+            "main-character Throughline: owner Character's substrate "
+            "Entity must appear as participant in lowered events"
+        ),
+    ),
+    CheckRegistration(
+        coupling_kind=COUPLING_CLAIM_TRAJECTORY,
+        record_type="Argument",
+        field="resolution_direction",
+        applies_to=lambda a: a.id == "A_knowledge_unmakes",
+        check_fn=knowledge_unmakes_argument_check,
+        description=(
+            "A_knowledge_unmakes (AFFIRM): identity collapse + "
+            "parricide + incest derivable at τ_s ≤ 13"
+        ),
+    ),
+    CheckRegistration(
+        coupling_kind=COUPLING_CLAIM_MOMENT,
+        record_type="Scene",
+        field="result",
+        applies_to=lambda s: s.id == "S_anagnorisis",
+        check_fn=anagnorisis_scene_result_check,
+        description=(
+            "S_anagnorisis result: identity propositions KNOWN + "
+            "gap_real_parents closed at τ_s=13"
+        ),
+    ),
 )
 
-# The set of triples for Claim-trajectory.
-CLAIM_TRAJECTORY_CHECKS = (
-    ("A_knowledge_unmakes", "dramatic", knowledge_unmakes_argument_check),
-)
 
-# The set of triples for Claim-moment.
-CLAIM_MOMENT_CHECKS = (
-    ("S_anagnorisis", "dramatic", anagnorisis_scene_result_check),
-)
+# Per-record-type record collections the orchestrator iterates. The
+# encoding builds this; the orchestrator stays dialect-agnostic.
+
+RECORDS_BY_TYPE = {
+    "Throughline": THROUGHLINES,
+    "Argument": ARGUMENTS,
+    "Scene": SCENES,
+}
 
 
 def run() -> tuple:
-    """Run all verifier checks for the Oedipus encoding.
-    Returns the verifier output tuple (mix of VerificationReview
-    and StructuralAdvisory)."""
-    out = []
-    out.extend(run_characterization_checks(
-        CHARACTERIZATION_CHECKS,
-        LOWERINGS,
-        reviewer_id="verifier:dramatic-substrate-characterization",
+    """Run all verifier checks for the Oedipus encoding via the
+    per-record-type orchestrator. Returns the verifier output tuple
+    (mix of VerificationReview and StructuralAdvisory)."""
+    return orchestrate_checks(
+        records_by_type=RECORDS_BY_TYPE,
+        registry=CHECK_REGISTRY,
+        lowerings=LOWERINGS,
+        record_dialect="dramatic",
         reviewed_at_τ_a=300,
-    ))
-    out.extend(run_claim_trajectory_checks(
-        CLAIM_TRAJECTORY_CHECKS,
-        LOWERINGS,
-        reviewer_id="verifier:dramatic-substrate-claim-trajectory",
-        reviewed_at_τ_a=300,
-    ))
-    out.extend(run_claim_moment_checks(
-        CLAIM_MOMENT_CHECKS,
-        LOWERINGS,
-        reviewer_id="verifier:dramatic-substrate-claim-moment",
-        reviewed_at_τ_a=300,
-    ))
-    return tuple(out)
+    )
 
 
 if __name__ == "__main__":
