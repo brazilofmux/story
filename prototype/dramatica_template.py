@@ -628,3 +628,173 @@ def canonical_ending(outcome: str, judgment: str) -> str:
         (Outcome.FAILURE.value, Judgment.BAD.value): "tragedy",
     }
     return table.get((outcome, judgment), "unknown")
+
+
+# ============================================================================
+# Character Element decomposition — Motivation Elements
+# ============================================================================
+#
+# In Dramatica, the 8 archetypes decompose into pairs of Motivation
+# Elements (16 total). Each element may be assigned to exactly one
+# character — this is the "nope, you can't do that" rule with the
+# most authorial bite: if Pursue is on your Protagonist, no other
+# character may carry Pursue. The archetype is just a preset pairing;
+# complex characters can reassign elements, but uniqueness holds.
+#
+# Dramatica has three additional element sets (Methodology, Evaluation,
+# Purpose — 16 each, 48 more). They follow the same pattern. This
+# module ships the Motivation set first; the others extend uniformly.
+
+
+class MotivationElement(str, Enum):
+    """The 16 Motivation Elements from Dramatica theory. Arranged as
+    the motivations quad of quads:
+
+    Protagonist quad:   Pursue / Consider
+    Antagonist quad:    Prevent / Reconsider
+    Reason quad:        Logic / Control
+    Emotion quad:       Feeling / Uncontrolled
+    Sidekick quad:      Faith / Support
+    Skeptic quad:       Disbelief / Oppose
+    Guardian quad:      Conscience / Help
+    Contagonist quad:   Temptation / Hinder
+    """
+    PURSUE = "pursue"
+    CONSIDER = "consider"
+    PREVENT = "prevent"
+    RECONSIDER = "reconsider"
+    LOGIC = "logic"
+    CONTROL = "control"
+    FEELING = "feeling"
+    UNCONTROLLED = "uncontrolled"
+    FAITH = "faith"
+    SUPPORT = "support"
+    DISBELIEF = "disbelief"
+    OPPOSE = "oppose"
+    CONSCIENCE = "conscience"
+    HELP = "help"
+    TEMPTATION = "temptation"
+    HINDER = "hinder"
+
+
+# The canonical archetype → motivation-element mapping. Each archetype
+# gets exactly two motivation elements. 8 archetypes × 2 = 16 elements.
+# If the author uses archetypes as-is, these are the assignments. If
+# they build complex characters, they can reassign, but uniqueness
+# across the cast must hold.
+
+ARCHETYPE_MOTIVATION_ELEMENTS: dict = {
+    "Protagonist": (MotivationElement.PURSUE, MotivationElement.CONSIDER),
+    "Antagonist": (MotivationElement.PREVENT, MotivationElement.RECONSIDER),
+    "Reason": (MotivationElement.LOGIC, MotivationElement.CONTROL),
+    "Emotion": (MotivationElement.FEELING, MotivationElement.UNCONTROLLED),
+    "Sidekick": (MotivationElement.FAITH, MotivationElement.SUPPORT),
+    "Skeptic": (MotivationElement.DISBELIEF, MotivationElement.OPPOSE),
+    "Guardian": (MotivationElement.CONSCIENCE, MotivationElement.HELP),
+    "Contagonist": (MotivationElement.TEMPTATION, MotivationElement.HINDER),
+}
+
+
+MOTIVATION_ELEMENT_QUAD = Quad(
+    id="motivation_element_quad",
+    kind="motivation-quad",
+    element_A="pursue",
+    element_B="prevent",
+    element_C="consider",
+    element_D="reconsider",
+    authored_by="dramatica-theory",
+)
+
+
+@dataclass(frozen=True)
+class CharacterElementAssignment:
+    """Assigns a Motivation Element to a Character. Per Dramatica,
+    each element must be assigned to exactly one character in the
+    encoding. Uniqueness is enforced by the template verifier."""
+    id: str
+    character_id: str
+    element: MotivationElement
+    authored_by: str = "author"
+
+
+def _check_character_element_uniqueness(
+    assignments: tuple,
+) -> list:
+    """Each Motivation Element may appear on at most one character.
+    Duplicates are Dramatica's hardest character-level rule."""
+    out = []
+    element_to_chars: dict = {}
+    for a in assignments:
+        element_to_chars.setdefault(a.element, []).append(
+            a.character_id
+        )
+    for element, chars in element_to_chars.items():
+        if len(chars) > 1:
+            out.append(DramaticaObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="element_assigned_to_multiple_characters",
+                target_id=element.value,
+                message=(
+                    f"Motivation Element {element.value!r} is "
+                    f"assigned to {len(chars)} characters: "
+                    f"{chars}. Dramatica requires each element on "
+                    f"exactly one character."
+                ),
+            ))
+    return out
+
+
+def _check_archetype_element_conformance(
+    assignments: tuple,
+    characters: tuple,
+) -> list:
+    """If a character carries an archetype function label AND has
+    element assignments, check whether the assignments match the
+    archetype's canonical elements. Divergence is an observation,
+    not an error (complex characters diverge intentionally)."""
+    out = []
+    by_char: dict = {}
+    for a in assignments:
+        by_char.setdefault(a.character_id, set()).add(a.element)
+    for char in characters:
+        if not hasattr(char, "function_labels"):
+            continue
+        for fn in char.function_labels:
+            if fn not in ARCHETYPE_MOTIVATION_ELEMENTS:
+                continue
+            canonical = set(ARCHETYPE_MOTIVATION_ELEMENTS[fn])
+            actual = by_char.get(char.id, set())
+            if not actual:
+                continue  # no assignments yet — observation elsewhere
+            if actual != canonical:
+                out.append(DramaticaObservation(
+                    severity=SEVERITY_NOTED,
+                    code="archetype_element_divergence",
+                    target_id=char.id,
+                    message=(
+                        f"Character {char.id!r} carries function "
+                        f"{fn!r} whose canonical Motivation "
+                        f"Elements are "
+                        f"{sorted(e.value for e in canonical)}, "
+                        f"but actual assignments are "
+                        f"{sorted(e.value for e in actual)}. "
+                        f"Divergence from archetype is valid for "
+                        f"complex characters; verify intentional."
+                    ),
+                ))
+    return out
+
+
+def verify_character_elements(
+    assignments: tuple = (),
+    characters: tuple = (),
+) -> list:
+    """Run Character Element checks. Returns a list of
+    DramaticaObservation records. Composes with
+    verify_dramatica_complete — call both."""
+    out: list = []
+    out.extend(_check_character_element_uniqueness(assignments))
+    out.extend(_check_archetype_element_conformance(
+        assignments, characters,
+    ))
+    return out
