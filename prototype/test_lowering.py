@@ -435,27 +435,31 @@ def test_oedipus_lowerings_validates_clean():
 
 
 def test_oedipus_lowerings_split_by_status():
-    """10 ACTIVE + 8 PENDING is the encoding's contract; it
-    documents which Dramatic records have substrate realizations
-    and which await substrate extension."""
+    """After the F5 substrate extension (2026-04-16), 16 ACTIVE + 2
+    PENDING is the encoding's contract. Tiresias/Creon Characters are
+    now ACTIVE (Entities added), and the Scene lowerings for
+    Tiresias-accusation / Jocasta-hangs / Self-blinding / Exile are
+    ACTIVE (new events added). The two remaining PENDING are the
+    prologue (still cut from substrate) and the discovery-and-crown
+    placeholder (no Oedipus Scene corresponds)."""
     import oedipus_lowerings as ol
     active = by_status(ol.LOWERINGS, LoweringStatus.ACTIVE)
     pending = by_status(ol.LOWERINGS, LoweringStatus.PENDING)
-    assert len(active) == 10, f"expected 10 ACTIVE, got {len(active)}"
-    assert len(pending) == 8, f"expected 8 PENDING, got {len(pending)}"
+    assert len(active) == 16, f"expected 16 ACTIVE, got {len(active)}"
+    assert len(pending) == 2, f"expected 2 PENDING, got {len(pending)}"
 
 
 def test_oedipus_lowerings_throughline_realization_uses_position_range():
     """The MC Throughline Lowering carries a PositionRange spanning
-    fabula τ_s."""
+    fabula τ_s from birth (-100) through exile (17)."""
     import oedipus_lowerings as ol
     mc = next(l for l in ol.LOWERINGS if l.id == "L_mc_throughline")
     assert mc.position_range is not None
     assert mc.position_range.coord == "τ_s"
     assert mc.position_range.min_value == -100
-    assert mc.position_range.max_value == 13
-    # And it spans many lower records.
-    assert len(mc.lower_records) >= 8
+    assert mc.position_range.max_value == 17
+    # And it spans many lower records (13 after F5 extension).
+    assert len(mc.lower_records) >= 13
 
 
 def test_oedipus_lowerings_anchor_τ_a_set_for_event_targets():

@@ -109,8 +109,19 @@ corinth    = Entity(id="corinth",    name="Corinth",    kind="location")
 crossroads = Entity(id="crossroads", name="the Crossroads", kind="location")
 cithaeron  = Entity(id="cithaeron",  name="Mount Cithaeron", kind="location")
 
+# Added 2026-04-16 per F5 follow-on: Tiresias (the blind seer of
+# Apollo who confronts Oedipus in Act 1) and Creon (Jocasta's brother,
+# who brings the Delphic oracle's answer at the play's open and takes
+# authority at its close). The earlier substrate cut both for the
+# identity-probe slice; the dramatica-complete verifier's DA_mc /
+# DSP_approach NEEDS_WORK verdicts made the cost of the cut numeric.
+tiresias = Entity(id="tiresias", name="Tiresias (the seer)",
+                  kind="agent")
+creon    = Entity(id="creon",    name="Creon", kind="agent")
+
 ENTITIES = [
     oedipus, jocasta, laius, polybus, merope, messenger, shepherd,
+    tiresias, creon,
     the_exposed_baby, the_crossroads_killer, the_crossroads_victim,
     thebes, corinth, crossroads, cithaeron,
 ]
@@ -149,6 +160,15 @@ def king(who: str, place: str) -> Prop:
 
 def adopted_by(child: str, parent: str) -> Prop:
     return Prop("adopted_by", (child, parent))
+
+# Post-anagnorisis predicates (added with the F5 substrate extension
+# 2026-04-16). The world's resolution beats: Jocasta's hanging,
+# Oedipus's self-blinding, Oedipus's banishment from Thebes.
+def blinded(who: str) -> Prop:
+    return Prop("blinded", (who,))
+
+def exiled(who: str) -> Prop:
+    return Prop("exiled", (who,))
 
 # Currently *authored* as world facts at the canonical moments where the
 # composite relation becomes true (parricide at the crossroads killing;
@@ -422,6 +442,31 @@ FABULA = [
     # --- Play (τ_s ≥ 0) ---
 
     Event(
+        id="E_tiresias_accusation",
+        type="utterance",
+        τ_s=3, τ_a=6,
+        participants={"speaker": "tiresias", "listener": "oedipus"},
+        effects=(
+            # Tiresias, compelled, names Oedipus as the killer of Laius.
+            # The riddling accusation lands in Oedipus's state at SUSPECTED
+            # — he rejects it as a Creon-backed plot, but the suspicion is
+            # seeded. Sophocles: "I say you are the murderer you hunt."
+            # The identity assertion the prophet makes lands via told_by;
+            # slot=SUSPECTED preserves the fact that Oedipus does not take
+            # it as KNOWN.
+            told_by("oedipus", "tiresias",
+                    identity_prop("oedipus", "the-crossroads-killer"), 3,
+                    slot=Slot.SUSPECTED, confidence=Confidence.BELIEVED),
+            # Tiresias is the substrate's first source of the identity;
+            # the shepherd's testimony + messenger's chain at τ_s=12 will
+            # later promote it to KNOWN at τ_s=13. The world fact
+            # identity(oedipus, the-crossroads-killer) was already asserted
+            # at E_crossroads_killing; Tiresias's accusation is the first
+            # time it enters Oedipus's literal state at any strength.
+        ),
+    ),
+
+    Event(
         id="E_jocasta_mentions_crossroads",
         type="utterance",
         τ_s=5, τ_a=7,
@@ -619,6 +664,64 @@ FABULA = [
         ),
     ),
 
+    # --- Post-anagnorisis (τ_s > 13) — the play's resolution beats.
+    # Added 2026-04-16 as part of the F5 substrate extension. The
+    # earlier encoding cut Jocasta's suicide, Oedipus's self-blinding,
+    # and the exile; the dramatica-complete verifier's 0.20 NEEDS_WORK
+    # verdicts for DA_mc / DSP_approach were the forcing function.
+
+    Event(
+        id="E_jocasta_suicide",
+        type="death",
+        τ_s=14, τ_a=13,
+        participants={"agent": "jocasta", "location": "thebes"},
+        effects=(
+            world(dead("jocasta")),
+            # Oedipus learns of her death when he finds her body (see
+            # E_self_blinding at τ_s=15, where the discovery is folded
+            # into his motivation for the blinding). No agent-side
+            # held-record here: the death is the world fact; downstream
+            # events thread the knowledge.
+        ),
+    ),
+
+    Event(
+        id="E_self_blinding",
+        type="blinding",
+        τ_s=15, τ_a=14,
+        participants={"agent": "oedipus", "location": "thebes"},
+        effects=(
+            # Oedipus, finding Jocasta hanged, takes the brooches from
+            # her robe and blinds himself. The world fact blinded(oedipus)
+            # holds from this τ_s on; Oedipus's knowledge of his own
+            # blinding is authored explicitly.
+            world(blinded("oedipus")),
+            observe("oedipus", blinded("oedipus"), 15,
+                    note="self-inflicted with Jocasta's brooches"),
+            # Oedipus also registers Jocasta's death as KNOWN here,
+            # since finding her body is how he comes to know.
+            observe("oedipus", dead("jocasta"), 15,
+                    note="found hanged"),
+        ),
+    ),
+
+    Event(
+        id="E_exile",
+        type="exile",
+        τ_s=17, τ_a=15,
+        participants={"agent": "creon", "subject": "oedipus",
+                      "location": "thebes"},
+        effects=(
+            # Creon, now regent, enacts Oedipus's banishment — or rather,
+            # Oedipus asks for it and Creon grants it. The world fact
+            # exiled(oedipus) holds from this τ_s on; Oedipus's and
+            # Creon's literal states register it.
+            world(exiled("oedipus")),
+            observe("oedipus", exiled("oedipus"), 17),
+            observe("creon", exiled("oedipus"), 17),
+        ),
+    ),
+
 ]
 
 
@@ -686,6 +789,17 @@ SJUZHET = [
         disclosures=PREPLAY_DISCLOSURES,
     ),
 
+    # τ_d=3 — Tiresias's accusation. The first onstage confrontation;
+    # the prophet names Oedipus as the killer. The play discloses the
+    # identity at SUSPECTED strength for Oedipus (he rejects it); the
+    # audience hears it as a loaded-hint from the prophet.
+    SjuzhetEntry(
+        event_id="E_tiresias_accusation",
+        τ_d=3,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
     # τ_d=5 — Jocasta's reassurance, including the crossroads detail.
     SjuzhetEntry(
         event_id="E_jocasta_mentions_crossroads",
@@ -737,6 +851,46 @@ SJUZHET = [
         τ_d=13,
         focalizer_id="oedipus",
         disclosures=(),
+    ),
+
+    # τ_d=14 — Messenger reports Jocasta's suicide. The play narrates
+    # this offstage via the messenger's speech; the disclosure lands
+    # in the reader's state at KNOWN strength.
+    SjuzhetEntry(
+        event_id="E_jocasta_suicide",
+        τ_d=14,
+        focalizer_id=None,
+        disclosures=(
+            Disclosure(prop=dead("jocasta"), slot=Slot.KNOWN,
+                       confidence=Confidence.CERTAIN,
+                       via=Narrative.DISCLOSURE.value),
+        ),
+    ),
+
+    # τ_d=15 — Oedipus reappears onstage, blinded. The messenger has
+    # already narrated the act; the onstage reveal makes it present.
+    SjuzhetEntry(
+        event_id="E_self_blinding",
+        τ_d=15,
+        focalizer_id=None,
+        disclosures=(
+            Disclosure(prop=blinded("oedipus"), slot=Slot.KNOWN,
+                       confidence=Confidence.CERTAIN,
+                       via=Narrative.DISCLOSURE.value),
+        ),
+    ),
+
+    # τ_d=17 — Creon enacts the exile. The play's closing beat: Oedipus
+    # asks to be cast out; Creon grants it.
+    SjuzhetEntry(
+        event_id="E_exile",
+        τ_d=17,
+        focalizer_id=None,
+        disclosures=(
+            Disclosure(prop=exiled("oedipus"), slot=Slot.KNOWN,
+                       confidence=Confidence.CERTAIN,
+                       via=Narrative.DISCLOSURE.value),
+        ),
     ),
 
 ]

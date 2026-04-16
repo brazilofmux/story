@@ -135,7 +135,7 @@ ACTIVITY_ACTION_KINDS = frozenset({
     "discovery", "death", "standing", "meeting", "approach",
     "visit", "crossing",
     # Oedipus-specific:
-    "marriage",
+    "marriage", "blinding", "exile",
 })
 
 INTERNAL_STATE_KINDS = frozenset({

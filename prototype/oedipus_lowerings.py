@@ -159,34 +159,31 @@ L_messenger = Lowering(
     τ_a=203,
 )
 
-L_tiresias_pending = Lowering(
-    id="L_tiresias_pending",
+L_tiresias = Lowering(
+    id="L_tiresias",
     upper_record=_dramatic("C_tiresias"),
-    lower_records=(),
+    lower_records=(_substrate("tiresias"),),
     annotation=Annotation(
-        text=("C_tiresias has no substrate Entity yet — oedipus.py's "
-              "encoding cuts Tiresias for the identity-probe slice. "
-              "The Lowering is PENDING; once the substrate is extended "
-              "with a 'tiresias' Entity, this can flip to ACTIVE."),
-        attention=ATTENTION_INTERPRETIVE,
+        text=("Dramatic Character C_tiresias (the blind prophet, "
+              "IC Throughline participant) realizes as substrate Entity "
+              "'tiresias'. Flipped from PENDING → ACTIVE 2026-04-16 "
+              "when the F5 substrate extension added the Entity."),
+        attention=ATTENTION_STRUCTURAL,
     ),
     τ_a=204,
-    status=LoweringStatus.PENDING,
-    metadata={"why_pending": "substrate cuts Tiresias"},
 )
 
-L_creon_pending = Lowering(
-    id="L_creon_pending",
+L_creon = Lowering(
+    id="L_creon",
     upper_record=_dramatic("C_creon"),
-    lower_records=(),
+    lower_records=(_substrate("creon"),),
     annotation=Annotation(
-        text=("C_creon has no substrate Entity yet — same reason as "
-              "Tiresias. PENDING until oedipus.py is extended."),
-        attention=ATTENTION_INTERPRETIVE,
+        text=("Dramatic Character C_creon (Jocasta's brother; takes "
+              "authority after Oedipus's fall) realizes as substrate "
+              "Entity 'creon'. Flipped from PENDING → ACTIVE 2026-04-16."),
+        attention=ATTENTION_STRUCTURAL,
     ),
     τ_a=205,
-    status=LoweringStatus.PENDING,
-    metadata={"why_pending": "substrate cuts Creon"},
 )
 
 
@@ -307,19 +304,21 @@ L_prologue_plague_pending = Lowering(
     metadata={"why_pending": "substrate slice cuts the prologue"},
 )
 
-L_tiresias_accusation_pending = Lowering(
-    id="L_tiresias_accusation_pending",
+L_tiresias_accusation = Lowering(
+    id="L_tiresias_accusation",
     upper_record=_dramatic("S_tiresias_accusation"),
-    lower_records=(),
+    lower_records=(_substrate("E_tiresias_accusation"),),
     annotation=Annotation(
-        text=("S_tiresias_accusation has no substrate event — both "
-              "Tiresias the character and the accusation event are "
-              "cut from the substrate slice. PENDING until extension."),
-        attention=ATTENTION_INTERPRETIVE,
+        text=("Dramatic Scene S_tiresias_accusation (the prophet names "
+              "Oedipus as Laius's killer; Oedipus rejects) realizes as "
+              "substrate event E_tiresias_accusation at τ_s=3. The "
+              "substrate event carries the identity-assertion landing "
+              "at SUSPECTED in Oedipus's state — Tiresias's accusation "
+              "is the first source of that identity in his literal "
+              "held set, later promoted to KNOWN at the anagnorisis."),
     ),
     τ_a=221,
-    status=LoweringStatus.PENDING,
-    metadata={"why_pending": "substrate cuts Tiresias and the accusation"},
+    anchor_τ_a=_substrate_event("E_tiresias_accusation").τ_a,
 )
 
 L_discovery_and_crown_pending = Lowering(
@@ -339,46 +338,46 @@ L_discovery_and_crown_pending = Lowering(
     metadata={"why_pending": "no Oedipus Scene corresponds; placeholder"},
 )
 
-L_jocasta_hangs_pending = Lowering(
-    id="L_jocasta_hangs_pending",
+L_jocasta_hangs = Lowering(
+    id="L_jocasta_hangs",
     upper_record=_dramatic("S_jocasta_hangs"),
-    lower_records=(),
+    lower_records=(_substrate("E_jocasta_suicide"),),
     annotation=Annotation(
-        text=("S_jocasta_hangs has no substrate event — Jocasta's "
-              "death is part of the post-anagnorisis play that the "
-              "substrate slice cuts. PENDING."),
-        attention=ATTENTION_INTERPRETIVE,
+        text=("Dramatic Scene S_jocasta_hangs realizes as substrate "
+              "event E_jocasta_suicide at τ_s=14. Offstage in the play, "
+              "reported by the messenger; the substrate event carries "
+              "the world fact dead(jocasta)."),
     ),
     τ_a=223,
-    status=LoweringStatus.PENDING,
-    metadata={"why_pending": "substrate cuts post-anagnorisis events"},
+    anchor_τ_a=_substrate_event("E_jocasta_suicide").τ_a,
 )
 
-L_self_blinding_pending = Lowering(
-    id="L_self_blinding_pending",
+L_self_blinding = Lowering(
+    id="L_self_blinding",
     upper_record=_dramatic("S_self_blinding"),
-    lower_records=(),
+    lower_records=(_substrate("E_self_blinding"),),
     annotation=Annotation(
-        text=("S_self_blinding has no substrate event — same reason "
-              "as S_jocasta_hangs. PENDING."),
-        attention=ATTENTION_INTERPRETIVE,
+        text=("Dramatic Scene S_self_blinding realizes as substrate "
+              "event E_self_blinding at τ_s=15. Oedipus, finding "
+              "Jocasta hanged, blinds himself with her brooches. The "
+              "world fact blinded(oedipus) holds from this τ_s on."),
     ),
     τ_a=224,
-    status=LoweringStatus.PENDING,
-    metadata={"why_pending": "substrate cuts post-anagnorisis events"},
+    anchor_τ_a=_substrate_event("E_self_blinding").τ_a,
 )
 
-L_exile_pending = Lowering(
-    id="L_exile_pending",
+L_exile = Lowering(
+    id="L_exile",
     upper_record=_dramatic("S_exile"),
-    lower_records=(),
+    lower_records=(_substrate("E_exile"),),
     annotation=Annotation(
-        text=("S_exile has no substrate event. PENDING."),
-        attention=ATTENTION_INTERPRETIVE,
+        text=("Dramatic Scene S_exile realizes as substrate event "
+              "E_exile at τ_s=17. Creon, now regent, enacts Oedipus's "
+              "banishment from Thebes; exiled(oedipus) holds from here "
+              "onward."),
     ),
     τ_a=225,
-    status=LoweringStatus.PENDING,
-    metadata={"why_pending": "substrate cuts post-anagnorisis events"},
+    anchor_τ_a=_substrate_event("E_exile").τ_a,
 )
 
 
@@ -399,33 +398,45 @@ L_mc_throughline = Lowering(
         _substrate("E_oracle_to_oedipus"),
         _substrate("E_crossroads_killing"),
         _substrate("E_marriage_and_crown"),
+        _substrate("E_tiresias_accusation"),
         _substrate("E_jocasta_mentions_crossroads"),
         _substrate("E_messenger_polybus_dead"),
         _substrate("E_messenger_adoption_reveal"),
         _substrate("E_shepherd_testimony"),
         _substrate("E_oedipus_anagnorisis"),
+        # Post-anagnorisis aftermath. Added with the F5 substrate
+        # extension; they extend the MC's arc from anagnorisis through
+        # self-blinding and exile. E_jocasta_suicide is omitted —
+        # it's in the IC Throughline (T_impact_jocasta), not the MC's.
+        _substrate("E_self_blinding"),
+        _substrate("E_exile"),
     ),
     annotation=Annotation(
-        text=("Dramatic Throughline T_mc_oedipus (the MC's epistemic "
-              "descent from confident king to anagnorisis) realizes "
-              "across the substrate events that define Oedipus's "
-              "epistemic trajectory — birth and upbringing (background), "
-              "oracle (the prophecy's plant), crossroads killing and "
-              "marriage (the actions), then the in-play discovery "
-              "events. The position_range frames this as fabula τ_s "
-              "from -100 (birth) to 13 (anagnorisis). E_jocasta_realizes "
-              "is omitted: that's Jocasta's anagnorisis, which "
-              "advances T_impact_jocasta, not the MC's."),
+        text=("Dramatic Throughline T_mc_oedipus (the MC's arc from "
+              "confident king through anagnorisis to blinding and "
+              "exile) realizes across the substrate events that "
+              "define Oedipus's trajectory — birth and upbringing "
+              "(background), oracle (the prophecy's plant), "
+              "crossroads killing and marriage (the pre-play actions), "
+              "Tiresias's accusation (early play), the in-play "
+              "discovery events, the anagnorisis, and the "
+              "post-anagnorisis resolution (self-blinding, exile). "
+              "The position_range frames this as fabula τ_s from "
+              "-100 (birth) through 17 (exile). E_jocasta_realizes "
+              "and E_jocasta_suicide are omitted: those are in the "
+              "IC Throughline (T_impact_jocasta), not the MC's."),
         attention=ATTENTION_INTERPRETIVE,
     ),
     τ_a=230,
-    position_range=PositionRange(coord="τ_s", min_value=-100, max_value=13),
+    position_range=PositionRange(coord="τ_s", min_value=-100, max_value=17),
     anchor_τ_a=_max_event_τ_a(
         "E_birth", "E_upbringing_in_corinth", "E_oracle_to_oedipus",
         "E_crossroads_killing", "E_marriage_and_crown",
+        "E_tiresias_accusation",
         "E_jocasta_mentions_crossroads", "E_messenger_polybus_dead",
         "E_messenger_adoption_reveal", "E_shepherd_testimony",
         "E_oedipus_anagnorisis",
+        "E_self_blinding", "E_exile",
     ),
 )
 
@@ -435,16 +446,16 @@ L_mc_throughline = Lowering(
 # ============================================================================
 
 LOWERINGS = (
-    # Character → Entity (active + pending)
+    # Character → Entity
     L_oedipus, L_jocasta, L_shepherd, L_messenger,
-    L_tiresias_pending, L_creon_pending,
+    L_tiresias, L_creon,
     # Scene → Event(s) (active)
     L_jocasta_doubt_speech, L_messenger_arrives, L_jocasta_realizes,
     L_shepherd_testimony, L_anagnorisis,
-    # Scene → no-substrate-event (pending)
-    L_prologue_plague_pending, L_tiresias_accusation_pending,
-    L_discovery_and_crown_pending, L_jocasta_hangs_pending,
-    L_self_blinding_pending, L_exile_pending,
+    L_tiresias_accusation, L_jocasta_hangs, L_self_blinding, L_exile,
+    # Scene → no-substrate-event (still pending; these cover the
+    # prologue and a placeholder-only Scene the substrate still cuts)
+    L_prologue_plague_pending, L_discovery_and_crown_pending,
     # Throughline → many-events (with position_range)
     L_mc_throughline,
 )

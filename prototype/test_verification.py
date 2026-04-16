@@ -392,7 +392,10 @@ def test_oedipus_verification_includes_owner_resolution_in_comment():
     r = mc_reviews[0]
     assert "C_oedipus" in r.comment
     assert "oedipus" in r.comment  # the resolved entity id
-    assert "10/10" in r.comment  # the structural result
+    # "13/13" after the F5 substrate extension added
+    # E_tiresias_accusation + E_self_blinding + E_exile to the MC
+    # Throughline's lower_records. Was "10/10" pre-extension.
+    assert "13/13" in r.comment
 
 
 # ----------------------------------------------------------------------------
