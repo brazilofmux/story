@@ -52,12 +52,17 @@ from dramatica_template import (
     CONCERN_MANIPULATION_QUAD,
     CONCERN_FIXED_ATTITUDE_QUAD,
     ARCHETYPE_MOTIVATION_ELEMENTS,
+    # Shipped Issue Quads
+    ISSUE_QUAD_UNDERSTANDING,
+    ISSUE_QUAD_THE_PAST,
+    ISSUE_QUAD_CONTEMPLATION,
+    ISSUE_QUAD_PLAYING_A_ROLE,
     verify_dramatica_complete,
     verify_character_elements,
     verify_thematic_picks,
     canonical_ending,
     ISSUE_QUADS_BY_CONCERN,
-    register_issue_quad,
+    register_element_quad,
     Quad,
 )
 
@@ -328,14 +333,18 @@ CHARACTER_ELEMENT_ASSIGNMENTS = (
 
 
 # ============================================================================
-# ThematicPicks — MC Throughline (others deferred to full Issue data)
+# ThematicPicks — all four Throughlines
 # ============================================================================
 #
-# MC Oedipus in Activity Domain.
-# Concern pick: "understanding" (from Activity's Concern Quad at
-# position A). Oedipus's activity-domain concern is about
-# Understanding — specifically, understanding who he is and what
-# he has done.
+# Each Throughline picks Concern → Issue → Problem through its
+# Domain's hierarchy. Issue Quads are now shipped as canonical
+# theory data in dramatica_template.py.
+
+# -- MC Oedipus in Activity Domain --
+#
+# Concern: "understanding" (Activity Concern Quad, position A).
+# Oedipus's activity-domain concern is about Understanding —
+# specifically, understanding who he is and what he has done.
 
 MC_CONCERN_PICK = QuadPick(
     id="CP_mc_oedipus",
@@ -345,42 +354,22 @@ MC_CONCERN_PICK = QuadPick(
     attached_to_id="T_mc_oedipus",
 )
 
-# Issue pick: from the "understanding" Issue Quad.
-# This Quad is registered in test_dramatica_template.py for testing;
-# we re-register here to be explicit (idempotent — same id).
-ISSUE_QUAD_UNDERSTANDING = Quad(
-    id="issue_understanding",
-    kind="issue-quad",
-    element_A="instinct",
-    element_B="senses",
-    element_C="interpretation",
-    element_D="conditioning",
-    authored_by="dramatica-theory",
-)
-register_issue_quad("understanding", ISSUE_QUAD_UNDERSTANDING)
-
+# Issue: "interpretation" from the Understanding Issue Quad.
+# The play turns on how each piece of evidence is interpreted,
+# and Oedipus's (mis)interpretation of his own identity.
 MC_ISSUE_PICK = QuadPick(
     id="IP_mc_oedipus",
     quad_id=ISSUE_QUAD_UNDERSTANDING.id,
     chosen_position=QuadPosition.C,  # "interpretation"
-    # Oedipus's Issue is Interpretation — the play turns on how
-    # each piece of evidence is interpreted, and Oedipus's
-    # (mis)interpretation of his own identity.
     attached_to_kind="throughline",
     attached_to_id="T_mc_oedipus",
 )
 
-# Problem pick: would come from an Element Quad under "interpretation".
-# For now, use the test Element Quad (which has Pursue/Consider/Avoid/
-# Reconsider). Oedipus's Problem is Pursuit — he cannot stop pursuing.
+# Problem: Oedipus's Problem is Pursuit — he cannot stop pursuing.
 # The Solution (Avoid) is the thing he cannot do.
 #
-# Note: the exact Element Quad labels at this level need canonical
-# Dramatica verification. The structural machinery (pick, derive,
-# validate) works regardless of the exact labels.
-
-from dramatica_template import register_element_quad
-
+# Note: Element Quad labels at this level need canonical Dramatica
+# verification. The structural machinery works regardless.
 ELEMENT_QUAD_INTERPRETATION = Quad(
     id="element_interpretation",
     kind="element-quad",
@@ -395,7 +384,7 @@ register_element_quad("interpretation", ELEMENT_QUAD_INTERPRETATION)
 MC_PROBLEM_PICK = QuadPick(
     id="PP_mc_oedipus",
     quad_id=ELEMENT_QUAD_INTERPRETATION.id,
-    chosen_position=QuadPosition.A,  # "pursue" — Oedipus's Problem
+    chosen_position=QuadPosition.A,  # "pursue"
     attached_to_kind="throughline",
     attached_to_id="T_mc_oedipus",
 )
@@ -405,10 +394,178 @@ MC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=MC_CONCERN_PICK,
     issue_pick=MC_ISSUE_PICK,
     problem_pick=MC_PROBLEM_PICK,
-    solution_override="avoid",  # derived from dynamic pair of "pursue"
+    solution_override="avoid",  # dynamic pair of "pursue"
 )
 
-ALL_THEMATIC_PICKS = (MC_THEMATIC_PICKS,)
+# -- OS (plague investigation) in Situation Domain --
+#
+# Concern: "the-past" (Situation Concern Quad, position A).
+# The overall story is concerned with uncovering The Past — the
+# murder of Laius, the oracle's history, the infant's exposure.
+
+OS_CONCERN_PICK = QuadPick(
+    id="CP_os_plague",
+    quad_id=CONCERN_SITUATION_QUAD.id,
+    chosen_position=QuadPosition.A,  # "the-past"
+    attached_to_kind="throughline",
+    attached_to_id="T_overall_plague",
+)
+
+# Issue: "fate" from The Past Issue Quad. The OS issue is Fate —
+# the inescapable events that have already happened and now must
+# be uncovered. Laius's death was fated; the oracle said so.
+OS_ISSUE_PICK = QuadPick(
+    id="IP_os_plague",
+    quad_id=ISSUE_QUAD_THE_PAST.id,
+    chosen_position=QuadPosition.A,  # "fate"
+    attached_to_kind="throughline",
+    attached_to_id="T_overall_plague",
+)
+
+# Problem: placeholder Element Quad — the OS Problem is not yet
+# assigned a canonical Element Quad (would require one of the
+# 256 Element Quads under "fate"). Use a structural placeholder
+# that exercises the pick-chain machinery.
+ELEMENT_QUAD_FATE = Quad(
+    id="element_fate",
+    kind="element-quad",
+    element_A="faith",
+    element_B="support",
+    element_C="disbelief",
+    element_D="oppose",
+    authored_by="dramatica-theory",
+)
+register_element_quad("fate", ELEMENT_QUAD_FATE)
+
+OS_PROBLEM_PICK = QuadPick(
+    id="PP_os_plague",
+    quad_id=ELEMENT_QUAD_FATE.id,
+    chosen_position=QuadPosition.A,  # "faith"
+    attached_to_kind="throughline",
+    attached_to_id="T_overall_plague",
+)
+
+OS_THEMATIC_PICKS = ThematicPicks(
+    throughline_id="T_overall_plague",
+    concern_pick=OS_CONCERN_PICK,
+    issue_pick=OS_ISSUE_PICK,
+    problem_pick=OS_PROBLEM_PICK,
+    solution_override="disbelief",  # dynamic pair of "faith"
+)
+
+# -- IC Jocasta in Fixed Attitude Domain --
+#
+# Concern: "contemplation" (Fixed Attitude Concern Quad, position C).
+# Jocasta's impact stems from her contemplative stance toward the
+# oracles — she contemplates (and dismisses) prophecy, and this
+# fixed attitude drives her actions and her challenge to Oedipus.
+
+IC_CONCERN_PICK = QuadPick(
+    id="CP_ic_jocasta",
+    quad_id=CONCERN_FIXED_ATTITUDE_QUAD.id,
+    chosen_position=QuadPosition.C,  # "contemplation"
+    attached_to_kind="throughline",
+    attached_to_id="T_impact_jocasta",
+)
+
+# Issue: "doubt" from the Contemplation Issue Quad. Jocasta's
+# contemplative stance IS doubt — doubt about the oracles, doubt
+# about fate, doubt that becomes tragically ironic.
+IC_ISSUE_PICK = QuadPick(
+    id="IP_ic_jocasta",
+    quad_id=ISSUE_QUAD_CONTEMPLATION.id,
+    chosen_position=QuadPosition.D,  # "doubt"
+    attached_to_kind="throughline",
+    attached_to_id="T_impact_jocasta",
+)
+
+ELEMENT_QUAD_DOUBT = Quad(
+    id="element_doubt",
+    kind="element-quad",
+    element_A="temptation",
+    element_B="hinder",
+    element_C="conscience",
+    element_D="help",
+    authored_by="dramatica-theory",
+)
+register_element_quad("doubt", ELEMENT_QUAD_DOUBT)
+
+IC_PROBLEM_PICK = QuadPick(
+    id="PP_ic_jocasta",
+    quad_id=ELEMENT_QUAD_DOUBT.id,
+    chosen_position=QuadPosition.A,  # "temptation"
+    attached_to_kind="throughline",
+    attached_to_id="T_impact_jocasta",
+)
+
+IC_THEMATIC_PICKS = ThematicPicks(
+    throughline_id="T_impact_jocasta",
+    concern_pick=IC_CONCERN_PICK,
+    issue_pick=IC_ISSUE_PICK,
+    problem_pick=IC_PROBLEM_PICK,
+    solution_override="conscience",  # dynamic pair of "temptation"
+)
+
+# -- RS (Oedipus-Jocasta marriage) in Manipulation Domain --
+#
+# Concern: "playing-a-role" (Manipulation Concern Quad, position B).
+# The relationship IS about playing roles — husband/wife concealing
+# the son/mother reality. The manipulation is structural, not
+# deliberate.
+
+RS_CONCERN_PICK = QuadPick(
+    id="CP_rs_oj",
+    quad_id=CONCERN_MANIPULATION_QUAD.id,
+    chosen_position=QuadPosition.B,  # "playing-a-role"
+    attached_to_kind="throughline",
+    attached_to_id="T_relationship_oj",
+)
+
+# Issue: "desire" from the Playing A Role Issue Quad.
+# The relationship's issue is Desire — Jocasta's desire to
+# protect the marriage by stopping the investigation, Oedipus's
+# desire to know the truth regardless.
+RS_ISSUE_PICK = QuadPick(
+    id="IP_rs_oj",
+    quad_id=ISSUE_QUAD_PLAYING_A_ROLE.id,
+    chosen_position=QuadPosition.C,  # "desire"
+    attached_to_kind="throughline",
+    attached_to_id="T_relationship_oj",
+)
+
+ELEMENT_QUAD_DESIRE = Quad(
+    id="element_desire",
+    kind="element-quad",
+    element_A="logic",
+    element_B="control",
+    element_C="feeling",
+    element_D="uncontrolled",
+    authored_by="dramatica-theory",
+)
+register_element_quad("desire", ELEMENT_QUAD_DESIRE)
+
+RS_PROBLEM_PICK = QuadPick(
+    id="PP_rs_oj",
+    quad_id=ELEMENT_QUAD_DESIRE.id,
+    chosen_position=QuadPosition.C,  # "feeling"
+    attached_to_kind="throughline",
+    attached_to_id="T_relationship_oj",
+)
+
+RS_THEMATIC_PICKS = ThematicPicks(
+    throughline_id="T_relationship_oj",
+    concern_pick=RS_CONCERN_PICK,
+    issue_pick=RS_ISSUE_PICK,
+    problem_pick=RS_PROBLEM_PICK,
+    solution_override="logic",  # dynamic pair of "feeling"
+)
+
+ALL_THEMATIC_PICKS = (
+    MC_THEMATIC_PICKS,
+    OS_THEMATIC_PICKS,
+    IC_THEMATIC_PICKS,
+    RS_THEMATIC_PICKS,
+)
 
 
 # ============================================================================

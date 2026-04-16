@@ -13,11 +13,16 @@ import traceback
 from dramatica_template import (
     # Record types
     Quad, QuadPick, DomainAssignment, DynamicStoryPoint, Signpost,
-    CharacterElementAssignment, ThematicPicks,
+    CharacterElementAssignment,
+    MethodologyElementAssignment,
+    EvaluationElementAssignment,
+    PurposeElementAssignment,
+    ThematicPicks,
     # Enums
     Domain, DSPAxis, QuadPosition,
     Resolve, Growth, Approach, Limit, Outcome, Judgment,
-    MotivationElement,
+    MotivationElement, MethodologyElement,
+    EvaluationElement, PurposeElement,
     DSP_VALID_CHOICES,
     # Shipped data
     DOMAIN_QUAD, CONCERN_QUADS_BY_DOMAIN,
@@ -25,7 +30,12 @@ from dramatica_template import (
     CONCERN_MANIPULATION_QUAD, CONCERN_FIXED_ATTITUDE_QUAD,
     ALL_SHIPPED_QUADS,
     ARCHETYPE_MOTIVATION_ELEMENTS,
+    ARCHETYPE_METHODOLOGY_ELEMENTS,
+    ARCHETYPE_EVALUATION_ELEMENTS,
+    ARCHETYPE_PURPOSE_ELEMENTS,
+    ALL_METHODOLOGY_QUADS, ALL_EVALUATION_QUADS, ALL_PURPOSE_QUADS,
     ISSUE_QUADS_BY_CONCERN, ELEMENT_QUADS_BY_ISSUE,
+    ISSUE_QUAD_UNDERSTANDING,
     register_issue_quad, register_element_quad,
     # Observation types
     DramaticaObservation, SEVERITY_NOTED, SEVERITY_ADVISES_REVIEW,
@@ -202,6 +212,28 @@ def test_each_concern_quad_has_four_distinct_elements():
 
 def test_shipped_quads_total_five():
     assert len(ALL_SHIPPED_QUADS) == 5
+
+
+def test_issue_quads_registered_for_all_sixteen_concerns():
+    """Every Concern label across all 4 Domains should have an
+    Issue Quad registered."""
+    for domain in Domain:
+        cq = CONCERN_QUADS_BY_DOMAIN[domain]
+        for pos in (QuadPosition.A, QuadPosition.B,
+                    QuadPosition.C, QuadPosition.D):
+            label = cq.element_at(pos)
+            assert label in ISSUE_QUADS_BY_CONCERN, (
+                f"No Issue Quad registered for Concern "
+                f"{label!r} in Domain {domain.value!r}"
+            )
+            iq = ISSUE_QUADS_BY_CONCERN[label]
+            # Each Issue Quad should have 4 distinct elements
+            elements = {iq.element_A, iq.element_B,
+                        iq.element_C, iq.element_D}
+            assert len(elements) == 4, (
+                f"Issue Quad for {label!r} has duplicate "
+                f"elements: {elements}"
+            )
 
 
 # ============================================================================
@@ -567,18 +599,10 @@ def test_oedipus_partial_encoding_surfaces_expected_gaps():
 # ============================================================================
 
 
-# A test Issue Quad registered for the Activity Domain's "understanding"
-# Concern. Lets us test the chain validation without needing the full
-# 64-Variation data set.
-_TEST_ISSUE_QUAD_UNDERSTANDING = Quad(
-    id="issue_understanding_test",
-    kind="issue-quad",
-    element_A="instinct",
-    element_B="senses",
-    element_C="interpretation",
-    element_D="conditioning",
-)
-register_issue_quad("understanding", _TEST_ISSUE_QUAD_UNDERSTANDING)
+# The Issue Quad for "understanding" is now shipped as canonical
+# theory data in dramatica_template.py. Use the template's quad
+# for chain-validation tests.
+_TEST_ISSUE_QUAD_UNDERSTANDING = ISSUE_QUAD_UNDERSTANDING
 
 # A test Element Quad registered under the Issue "instinct".
 _TEST_ELEMENT_QUAD_INSTINCT = Quad(
@@ -862,6 +886,337 @@ def test_archetype_divergence_noted():
 
 
 # ============================================================================
+# Methodology Elements
+# ============================================================================
+
+
+def test_methodology_elements_count_sixteen():
+    assert len(MethodologyElement) == 16
+
+
+def test_archetype_methodology_elements_cover_all_sixteen():
+    """Each of the 16 Methodology Elements should appear exactly once
+    across the 8 archetypes' canonical mappings."""
+    all_elements = set()
+    for fn, elements in ARCHETYPE_METHODOLOGY_ELEMENTS.items():
+        for e in elements:
+            assert e not in all_elements, (
+                f"Element {e.value!r} appears in multiple "
+                f"archetypes (found in {fn!r})"
+            )
+            all_elements.add(e)
+    assert all_elements == set(MethodologyElement), (
+        f"Archetype mappings should cover all 16 Methodology "
+        f"Elements; missing: "
+        f"{set(MethodologyElement) - all_elements}"
+    )
+
+
+def test_methodology_uniqueness_clean_passes():
+    assignments = (
+        MethodologyElementAssignment(
+            id="M1", character_id="C_hero",
+            element=MethodologyElement.PROACTION),
+        MethodologyElementAssignment(
+            id="M2", character_id="C_villain",
+            element=MethodologyElement.REACTION),
+    )
+    obs = verify_character_elements(
+        methodology_assignments=assignments,
+    )
+    assert "element_assigned_to_multiple_characters" not in _codes(obs)
+
+
+def test_methodology_duplicate_flagged():
+    assignments = (
+        MethodologyElementAssignment(
+            id="M1", character_id="C_hero",
+            element=MethodologyElement.PROACTION),
+        MethodologyElementAssignment(
+            id="M2", character_id="C_villain",
+            element=MethodologyElement.PROACTION),
+    )
+    obs = verify_character_elements(
+        methodology_assignments=assignments,
+    )
+    assert "element_assigned_to_multiple_characters" in _codes(obs)
+
+
+def test_methodology_conformance_clean_passes():
+    char = Character(id="C_hero", name="Hero",
+                     function_labels=("Protagonist",))
+    assignments = (
+        MethodologyElementAssignment(
+            id="M1", character_id="C_hero",
+            element=MethodologyElement.PROACTION),
+        MethodologyElementAssignment(
+            id="M2", character_id="C_hero",
+            element=MethodologyElement.CERTAINTY),
+    )
+    obs = verify_character_elements(
+        methodology_assignments=assignments, characters=(char,),
+    )
+    assert "archetype_element_divergence" not in _codes(obs)
+
+
+def test_methodology_divergence_noted():
+    char = Character(id="C_complex", name="Complex Hero",
+                     function_labels=("Protagonist",))
+    assignments = (
+        MethodologyElementAssignment(
+            id="M1", character_id="C_complex",
+            element=MethodologyElement.PROACTION),
+        MethodologyElementAssignment(
+            id="M2", character_id="C_complex",
+            element=MethodologyElement.DEDUCTION),
+    )
+    obs = verify_character_elements(
+        methodology_assignments=assignments, characters=(char,),
+    )
+    assert "archetype_element_divergence" in _codes(obs)
+
+
+def test_methodology_quads_count_four():
+    assert len(ALL_METHODOLOGY_QUADS) == 4
+
+
+# ============================================================================
+# Evaluation Elements
+# ============================================================================
+
+
+def test_evaluation_elements_count_sixteen():
+    assert len(EvaluationElement) == 16
+
+
+def test_archetype_evaluation_elements_cover_all_sixteen():
+    all_elements = set()
+    for fn, elements in ARCHETYPE_EVALUATION_ELEMENTS.items():
+        for e in elements:
+            assert e not in all_elements, (
+                f"Element {e.value!r} appears in multiple "
+                f"archetypes (found in {fn!r})"
+            )
+            all_elements.add(e)
+    assert all_elements == set(EvaluationElement), (
+        f"Archetype mappings should cover all 16 Evaluation "
+        f"Elements; missing: "
+        f"{set(EvaluationElement) - all_elements}"
+    )
+
+
+def test_evaluation_uniqueness_clean_passes():
+    assignments = (
+        EvaluationElementAssignment(
+            id="E1", character_id="C_hero",
+            element=EvaluationElement.EFFECT),
+        EvaluationElementAssignment(
+            id="E2", character_id="C_villain",
+            element=EvaluationElement.CAUSE),
+    )
+    obs = verify_character_elements(
+        evaluation_assignments=assignments,
+    )
+    assert "element_assigned_to_multiple_characters" not in _codes(obs)
+
+
+def test_evaluation_duplicate_flagged():
+    assignments = (
+        EvaluationElementAssignment(
+            id="E1", character_id="C_hero",
+            element=EvaluationElement.EFFECT),
+        EvaluationElementAssignment(
+            id="E2", character_id="C_villain",
+            element=EvaluationElement.EFFECT),
+    )
+    obs = verify_character_elements(
+        evaluation_assignments=assignments,
+    )
+    assert "element_assigned_to_multiple_characters" in _codes(obs)
+
+
+def test_evaluation_conformance_clean_passes():
+    char = Character(id="C_hero", name="Hero",
+                     function_labels=("Protagonist",))
+    assignments = (
+        EvaluationElementAssignment(
+            id="E1", character_id="C_hero",
+            element=EvaluationElement.EFFECT),
+        EvaluationElementAssignment(
+            id="E2", character_id="C_hero",
+            element=EvaluationElement.PROVEN),
+    )
+    obs = verify_character_elements(
+        evaluation_assignments=assignments, characters=(char,),
+    )
+    assert "archetype_element_divergence" not in _codes(obs)
+
+
+def test_evaluation_divergence_noted():
+    char = Character(id="C_complex", name="Complex Hero",
+                     function_labels=("Protagonist",))
+    assignments = (
+        EvaluationElementAssignment(
+            id="E1", character_id="C_complex",
+            element=EvaluationElement.EFFECT),
+        EvaluationElementAssignment(
+            id="E2", character_id="C_complex",
+            element=EvaluationElement.THEORY),
+    )
+    obs = verify_character_elements(
+        evaluation_assignments=assignments, characters=(char,),
+    )
+    assert "archetype_element_divergence" in _codes(obs)
+
+
+def test_evaluation_quads_count_four():
+    assert len(ALL_EVALUATION_QUADS) == 4
+
+
+# ============================================================================
+# Purpose Elements
+# ============================================================================
+
+
+def test_purpose_elements_count_sixteen():
+    assert len(PurposeElement) == 16
+
+
+def test_archetype_purpose_elements_cover_all_sixteen():
+    all_elements = set()
+    for fn, elements in ARCHETYPE_PURPOSE_ELEMENTS.items():
+        for e in elements:
+            assert e not in all_elements, (
+                f"Element {e.value!r} appears in multiple "
+                f"archetypes (found in {fn!r})"
+            )
+            all_elements.add(e)
+    assert all_elements == set(PurposeElement), (
+        f"Archetype mappings should cover all 16 Purpose "
+        f"Elements; missing: "
+        f"{set(PurposeElement) - all_elements}"
+    )
+
+
+def test_purpose_uniqueness_clean_passes():
+    assignments = (
+        PurposeElementAssignment(
+            id="P1", character_id="C_hero",
+            element=PurposeElement.KNOWLEDGE),
+        PurposeElementAssignment(
+            id="P2", character_id="C_villain",
+            element=PurposeElement.THOUGHT),
+    )
+    obs = verify_character_elements(
+        purpose_assignments=assignments,
+    )
+    assert "element_assigned_to_multiple_characters" not in _codes(obs)
+
+
+def test_purpose_duplicate_flagged():
+    assignments = (
+        PurposeElementAssignment(
+            id="P1", character_id="C_hero",
+            element=PurposeElement.KNOWLEDGE),
+        PurposeElementAssignment(
+            id="P2", character_id="C_villain",
+            element=PurposeElement.KNOWLEDGE),
+    )
+    obs = verify_character_elements(
+        purpose_assignments=assignments,
+    )
+    assert "element_assigned_to_multiple_characters" in _codes(obs)
+
+
+def test_purpose_conformance_clean_passes():
+    char = Character(id="C_hero", name="Hero",
+                     function_labels=("Protagonist",))
+    assignments = (
+        PurposeElementAssignment(
+            id="P1", character_id="C_hero",
+            element=PurposeElement.KNOWLEDGE),
+        PurposeElementAssignment(
+            id="P2", character_id="C_hero",
+            element=PurposeElement.ACTUALITY),
+    )
+    obs = verify_character_elements(
+        purpose_assignments=assignments, characters=(char,),
+    )
+    assert "archetype_element_divergence" not in _codes(obs)
+
+
+def test_purpose_divergence_noted():
+    char = Character(id="C_complex", name="Complex Hero",
+                     function_labels=("Protagonist",))
+    assignments = (
+        PurposeElementAssignment(
+            id="P1", character_id="C_complex",
+            element=PurposeElement.KNOWLEDGE),
+        PurposeElementAssignment(
+            id="P2", character_id="C_complex",
+            element=PurposeElement.DESIRE),
+    )
+    obs = verify_character_elements(
+        purpose_assignments=assignments, characters=(char,),
+    )
+    assert "archetype_element_divergence" in _codes(obs)
+
+
+def test_purpose_quads_count_four():
+    assert len(ALL_PURPOSE_QUADS) == 4
+
+
+# ============================================================================
+# Cross-dimension: verify_character_elements handles all four
+# ============================================================================
+
+
+def test_multi_dimension_clean_passes():
+    """All four dimensions assigned cleanly produces no observations."""
+    char = Character(id="C_hero", name="Hero",
+                     function_labels=("Protagonist",))
+    obs = verify_character_elements(
+        assignments=(
+            CharacterElementAssignment(
+                id="A1", character_id="C_hero",
+                element=MotivationElement.PURSUE),
+            CharacterElementAssignment(
+                id="A2", character_id="C_hero",
+                element=MotivationElement.CONSIDER),
+        ),
+        methodology_assignments=(
+            MethodologyElementAssignment(
+                id="M1", character_id="C_hero",
+                element=MethodologyElement.PROACTION),
+            MethodologyElementAssignment(
+                id="M2", character_id="C_hero",
+                element=MethodologyElement.CERTAINTY),
+        ),
+        evaluation_assignments=(
+            EvaluationElementAssignment(
+                id="E1", character_id="C_hero",
+                element=EvaluationElement.EFFECT),
+            EvaluationElementAssignment(
+                id="E2", character_id="C_hero",
+                element=EvaluationElement.PROVEN),
+        ),
+        purpose_assignments=(
+            PurposeElementAssignment(
+                id="P1", character_id="C_hero",
+                element=PurposeElement.KNOWLEDGE),
+            PurposeElementAssignment(
+                id="P2", character_id="C_hero",
+                element=PurposeElement.ACTUALITY),
+        ),
+        characters=(char,),
+    )
+    assert len(obs) == 0, (
+        f"expected 0 observations; got {len(obs)}: "
+        f"{[o.code for o in obs]}"
+    )
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -878,6 +1233,7 @@ TESTS = [
     test_concern_quads_cover_all_domains,
     test_each_concern_quad_has_four_distinct_elements,
     test_shipped_quads_total_five,
+    test_issue_quads_registered_for_all_sixteen_concerns,
     # DSP construction (Q5)
     test_dsp_valid_choice_accepted,
     test_dsp_invalid_choice_rejected,
@@ -922,13 +1278,39 @@ TESTS = [
     test_pick_chain_wrong_concern_quad_flagged,
     test_pick_chain_solution_override_mismatch_flagged,
     test_pick_chain_correct_override_passes,
-    # Character Elements
+    # Character Elements — Motivation
     test_motivation_elements_count_sixteen,
     test_archetype_elements_cover_all_sixteen,
     test_element_uniqueness_clean_passes,
     test_element_duplicate_flagged,
     test_archetype_conformance_clean_passes,
     test_archetype_divergence_noted,
+    # Character Elements — Methodology
+    test_methodology_elements_count_sixteen,
+    test_archetype_methodology_elements_cover_all_sixteen,
+    test_methodology_uniqueness_clean_passes,
+    test_methodology_duplicate_flagged,
+    test_methodology_conformance_clean_passes,
+    test_methodology_divergence_noted,
+    test_methodology_quads_count_four,
+    # Character Elements — Evaluation
+    test_evaluation_elements_count_sixteen,
+    test_archetype_evaluation_elements_cover_all_sixteen,
+    test_evaluation_uniqueness_clean_passes,
+    test_evaluation_duplicate_flagged,
+    test_evaluation_conformance_clean_passes,
+    test_evaluation_divergence_noted,
+    test_evaluation_quads_count_four,
+    # Character Elements — Purpose
+    test_purpose_elements_count_sixteen,
+    test_archetype_purpose_elements_cover_all_sixteen,
+    test_purpose_uniqueness_clean_passes,
+    test_purpose_duplicate_flagged,
+    test_purpose_conformance_clean_passes,
+    test_purpose_divergence_noted,
+    test_purpose_quads_count_four,
+    # Cross-dimension
+    test_multi_dimension_clean_passes,
 ]
 
 

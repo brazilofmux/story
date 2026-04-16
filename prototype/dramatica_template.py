@@ -328,6 +328,257 @@ CONCERN_QUADS_BY_DOMAIN = {
     Domain.FIXED_ATTITUDE: CONCERN_FIXED_ATTITUDE_QUAD,
 }
 
+# ============================================================================
+# Issue / Element Quad registries
+# ============================================================================
+#
+# These registries map Concern-label → Issue Quad and Issue-label →
+# Element Quad. They're populated below with shipped theory data.
+
+# Issue Quad registry: maps Concern-label → Issue Quad.
+ISSUE_QUADS_BY_CONCERN: dict = {}
+
+
+def register_issue_quad(concern_label: str, quad: Quad) -> None:
+    """Register an Issue Quad for a specific Concern label. Called
+    during module initialization as theory data is authored."""
+    ISSUE_QUADS_BY_CONCERN[concern_label] = quad
+
+
+# Element Quad registry: maps Issue-label → Element (Problem) Quad.
+ELEMENT_QUADS_BY_ISSUE: dict = {}
+
+
+def register_element_quad(issue_label: str, quad: Quad) -> None:
+    """Register an Element Quad for a specific Issue label."""
+    ELEMENT_QUADS_BY_ISSUE[issue_label] = quad
+
+
+# ============================================================================
+# Issue Quads — Variations under each Concern (Type)
+# ============================================================================
+#
+# Dramatica ships canonical Variation labels for each Concern (Type)
+# in each Domain. 4 Domains × 4 Concerns × 4 Variations = 64 total.
+#
+# Source: Dramatica Table of Story Elements (Screenplay Systems,
+# 1995/1999). Quad position assignments (A/B/C/D) follow the chart's
+# spatial layout: A=top-left, B=top-right, C=bottom-left,
+# D=bottom-right.
+
+# -- Activity (Physics) Domain --
+
+ISSUE_QUAD_UNDERSTANDING = Quad(
+    id="issue_understanding",
+    kind="issue-quad",
+    element_A="instinct",
+    element_B="senses",
+    element_C="interpretation",
+    element_D="conditioning",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_DOING = Quad(
+    id="issue_doing",
+    kind="issue-quad",
+    element_A="wisdom",
+    element_B="skill",
+    element_C="enlightenment",
+    element_D="experience",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_OBTAINING = Quad(
+    id="issue_obtaining",
+    kind="issue-quad",
+    element_A="approach",
+    element_B="self-interest",
+    element_C="morality",
+    element_D="attitude",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_LEARNING = Quad(
+    id="issue_learning",
+    kind="issue-quad",
+    element_A="prerequisites",
+    element_B="strategy",
+    element_C="analysis",
+    element_D="preconditions",
+    authored_by="dramatica-theory",
+)
+
+# -- Situation (Universe) Domain --
+
+ISSUE_QUAD_THE_PAST = Quad(
+    id="issue_the-past",
+    kind="issue-quad",
+    element_A="fate",
+    element_B="prediction",
+    element_C="interdiction",
+    element_D="destiny",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_HOW_THINGS_ARE_CHANGING = Quad(
+    id="issue_how-things-are-changing",
+    kind="issue-quad",
+    element_A="fact",
+    element_B="security",
+    element_C="threat",
+    element_D="fantasy",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_THE_FUTURE = Quad(
+    id="issue_the-future",
+    kind="issue-quad",
+    element_A="openness",
+    element_B="delay",
+    element_C="choice",
+    element_D="preconception",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_THE_PRESENT = Quad(
+    id="issue_the-present",
+    kind="issue-quad",
+    element_A="work",
+    element_B="attract",
+    element_C="repel",
+    element_D="attempt",
+    authored_by="dramatica-theory",
+)
+
+# -- Manipulation (Psychology) Domain --
+
+ISSUE_QUAD_DEVELOPING_A_PLAN = Quad(
+    id="issue_developing-a-plan",
+    kind="issue-quad",
+    element_A="state-of-being",
+    element_B="situation",
+    element_C="circumstances",
+    element_D="sense-of-self",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_PLAYING_A_ROLE = Quad(
+    id="issue_playing-a-role",
+    kind="issue-quad",
+    element_A="knowledge",
+    element_B="ability",
+    element_C="desire",
+    element_D="thought",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_CHANGING_ONES_NATURE = Quad(
+    id="issue_changing-ones-nature",
+    kind="issue-quad",
+    element_A="rationalization",
+    element_B="obligation",
+    element_C="commitment",
+    element_D="responsibility",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_CONCEIVING_AN_IDEA = Quad(
+    id="issue_conceiving-an-idea",
+    kind="issue-quad",
+    element_A="permission",
+    element_B="need",
+    element_C="expediency",
+    element_D="deficiency",
+    authored_by="dramatica-theory",
+)
+
+# -- Fixed Attitude (Mind) Domain --
+
+ISSUE_QUAD_MEMORIES = Quad(
+    id="issue_memories",
+    kind="issue-quad",
+    element_A="truth",
+    element_B="evidence",
+    element_C="suspicion",
+    element_D="falsehood",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_IMPULSIVE_RESPONSES = Quad(
+    id="issue_impulsive-responses",
+    kind="issue-quad",
+    element_A="value",
+    element_B="confidence",
+    element_C="worry",
+    element_D="worth",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_INNERMOST_DESIRES = Quad(
+    id="issue_innermost-desires",
+    kind="issue-quad",
+    element_A="closure",
+    element_B="hope",
+    element_C="dream",
+    element_D="denial",
+    authored_by="dramatica-theory",
+)
+
+ISSUE_QUAD_CONTEMPLATION = Quad(
+    id="issue_contemplation",
+    kind="issue-quad",
+    element_A="investigation",
+    element_B="appraisal",
+    element_C="reappraisal",
+    element_D="doubt",
+    authored_by="dramatica-theory",
+)
+
+# -- Register all Issue Quads --
+
+_ALL_ISSUE_QUADS = (
+    # Activity
+    (CONCERN_ACTIVITY_QUAD, (
+        ISSUE_QUAD_UNDERSTANDING,
+        ISSUE_QUAD_DOING,
+        ISSUE_QUAD_OBTAINING,
+        ISSUE_QUAD_LEARNING,
+    )),
+    # Situation
+    (CONCERN_SITUATION_QUAD, (
+        ISSUE_QUAD_THE_PAST,
+        ISSUE_QUAD_HOW_THINGS_ARE_CHANGING,
+        ISSUE_QUAD_THE_FUTURE,
+        ISSUE_QUAD_THE_PRESENT,
+    )),
+    # Manipulation
+    (CONCERN_MANIPULATION_QUAD, (
+        ISSUE_QUAD_DEVELOPING_A_PLAN,
+        ISSUE_QUAD_PLAYING_A_ROLE,
+        ISSUE_QUAD_CHANGING_ONES_NATURE,
+        ISSUE_QUAD_CONCEIVING_AN_IDEA,
+    )),
+    # Fixed Attitude (A=innermost-desires, B=impulsive-responses,
+    #                  C=contemplation, D=memories)
+    (CONCERN_FIXED_ATTITUDE_QUAD, (
+        ISSUE_QUAD_INNERMOST_DESIRES,
+        ISSUE_QUAD_IMPULSIVE_RESPONSES,
+        ISSUE_QUAD_CONTEMPLATION,
+        ISSUE_QUAD_MEMORIES,
+    )),
+)
+
+for _cq, _iquads in _ALL_ISSUE_QUADS:
+    for _iq in _iquads:
+        # The concern label is the element in the Concern Quad whose
+        # position matches the Issue Quad's position in the list.
+        _concern_label = {
+            0: _cq.element_A, 1: _cq.element_B,
+            2: _cq.element_C, 3: _cq.element_D,
+        }[_iquads.index(_iq)]
+        register_issue_quad(_concern_label, _iq)
+
+
 ALL_SHIPPED_QUADS = (
     DOMAIN_QUAD,
     CONCERN_ACTIVITY_QUAD,
@@ -641,9 +892,17 @@ def canonical_ending(outcome: str, judgment: str) -> str:
 # character may carry Pursue. The archetype is just a preset pairing;
 # complex characters can reassign elements, but uniqueness holds.
 #
-# Dramatica has three additional element sets (Methodology, Evaluation,
-# Purpose — 16 each, 48 more). They follow the same pattern. This
-# module ships the Motivation set first; the others extend uniformly.
+# Dramatica has four character element dimensions (Motivation,
+# Methodology, Evaluation, Purpose — 16 each, 64 total). Each
+# archetype gets a companion pair from one quad per dimension.
+# All four dimensions follow the same structural pattern.
+#
+# Source: Dramatica Weekend Workshop Syllabus (storymind.com),
+# cross-referenced with the Lost Theory Book. The Lost Theory Book
+# notes that the Methodology/Evaluation/Purpose material was "never
+# fully developed" — the element labels are consistent across both
+# sources, but canonical verification against the Dramatica software
+# is advised.
 
 
 class MotivationElement(str, Enum):
@@ -748,6 +1007,288 @@ ALL_MOTIVATION_QUADS = (
 )
 
 
+# --------------------------------------------------------------------
+# Methodology Elements — how characters approach problems
+# --------------------------------------------------------------------
+
+class MethodologyElement(str, Enum):
+    """The 16 Methodology Elements from Dramatica theory. Arranged as
+    the methodology quad of quads:
+
+    Protagonist quad:   Proaction / Certainty
+    Antagonist quad:    Reaction / Potentiality
+    Reason quad:        Inaction / Probability
+    Emotion quad:       Protection / Possibility
+    Sidekick quad:      Deduction / Acceptance
+    Skeptic quad:       Induction / Non-Acceptance
+    Guardian quad:      Reduction / Evaluation
+    Contagonist quad:   Production / Re-evaluation
+    """
+    PROACTION = "proaction"
+    CERTAINTY = "certainty"
+    REACTION = "reaction"
+    POTENTIALITY = "potentiality"
+    INACTION = "inaction"
+    PROBABILITY = "probability"
+    PROTECTION = "protection"
+    POSSIBILITY = "possibility"
+    DEDUCTION = "deduction"
+    ACCEPTANCE = "acceptance"
+    INDUCTION = "induction"
+    NON_ACCEPTANCE = "non-acceptance"
+    REDUCTION = "reduction"
+    EVALUATION = "evaluation"
+    PRODUCTION = "production"
+    RE_EVALUATION = "re-evaluation"
+
+
+ARCHETYPE_METHODOLOGY_ELEMENTS: dict = {
+    "Protagonist": (MethodologyElement.PROACTION, MethodologyElement.CERTAINTY),
+    "Antagonist": (MethodologyElement.REACTION, MethodologyElement.POTENTIALITY),
+    "Reason": (MethodologyElement.INACTION, MethodologyElement.PROBABILITY),
+    "Emotion": (MethodologyElement.PROTECTION, MethodologyElement.POSSIBILITY),
+    "Sidekick": (MethodologyElement.DEDUCTION, MethodologyElement.ACCEPTANCE),
+    "Skeptic": (MethodologyElement.INDUCTION, MethodologyElement.NON_ACCEPTANCE),
+    "Guardian": (MethodologyElement.REDUCTION, MethodologyElement.EVALUATION),
+    "Contagonist": (MethodologyElement.PRODUCTION, MethodologyElement.RE_EVALUATION),
+}
+
+METHODOLOGY_QUAD_APPROACH = Quad(
+    id="methodology_quad_approach",
+    kind="methodology-quad",
+    element_A="proaction",       # Protagonist's initiative
+    element_B="certainty",       # Protagonist's conviction
+    element_C="reaction",        # Antagonist's responsiveness
+    element_D="potentiality",    # Antagonist's openness
+    authored_by="dramatica-theory",
+)
+
+METHODOLOGY_QUAD_ATTITUDE = Quad(
+    id="methodology_quad_attitude",
+    kind="methodology-quad",
+    element_A="inaction",        # Reason's restraint
+    element_B="probability",     # Reason's likelihood assessment
+    element_C="protection",      # Emotion's defensiveness
+    element_D="possibility",     # Emotion's openness to chance
+    authored_by="dramatica-theory",
+)
+
+METHODOLOGY_QUAD_REASONING = Quad(
+    id="methodology_quad_reasoning",
+    kind="methodology-quad",
+    element_A="deduction",       # Sidekick's logical derivation
+    element_B="acceptance",      # Sidekick's willingness
+    element_C="induction",       # Skeptic's empirical inference
+    element_D="non-acceptance",  # Skeptic's refusal
+    authored_by="dramatica-theory",
+)
+
+METHODOLOGY_QUAD_PROCESS = Quad(
+    id="methodology_quad_process",
+    kind="methodology-quad",
+    element_A="reduction",       # Guardian's simplification
+    element_B="evaluation",      # Guardian's assessment
+    element_C="production",      # Contagonist's generation
+    element_D="re-evaluation",   # Contagonist's reassessment
+    authored_by="dramatica-theory",
+)
+
+ALL_METHODOLOGY_QUADS = (
+    METHODOLOGY_QUAD_APPROACH,
+    METHODOLOGY_QUAD_ATTITUDE,
+    METHODOLOGY_QUAD_REASONING,
+    METHODOLOGY_QUAD_PROCESS,
+)
+
+
+# --------------------------------------------------------------------
+# Evaluation Elements — how characters measure progress
+# --------------------------------------------------------------------
+
+class EvaluationElement(str, Enum):
+    """The 16 Evaluation (Means of Evaluation) Elements from
+    Dramatica theory. Arranged as the evaluation quad of quads:
+
+    Protagonist quad:   Effect / Proven
+    Antagonist quad:    Cause / Unproven
+    Reason quad:        Trust / Theory
+    Emotion quad:       Test / Hunch
+    Sidekick quad:      Result / Accurate
+    Skeptic quad:       Process / Non-Accurate
+    Guardian quad:      Ending / Expectation
+    Contagonist quad:   Unending / Determination
+    """
+    EFFECT = "effect"
+    PROVEN = "proven"
+    CAUSE = "cause"
+    UNPROVEN = "unproven"
+    TRUST = "trust"
+    THEORY = "theory"
+    TEST = "test"
+    HUNCH = "hunch"
+    RESULT = "result"
+    ACCURATE = "accurate"
+    PROCESS = "process"
+    NON_ACCURATE = "non-accurate"
+    ENDING = "ending"
+    EXPECTATION = "expectation"
+    UNENDING = "unending"
+    DETERMINATION = "determination"
+
+
+ARCHETYPE_EVALUATION_ELEMENTS: dict = {
+    "Protagonist": (EvaluationElement.EFFECT, EvaluationElement.PROVEN),
+    "Antagonist": (EvaluationElement.CAUSE, EvaluationElement.UNPROVEN),
+    "Reason": (EvaluationElement.TRUST, EvaluationElement.THEORY),
+    "Emotion": (EvaluationElement.TEST, EvaluationElement.HUNCH),
+    "Sidekick": (EvaluationElement.RESULT, EvaluationElement.ACCURATE),
+    "Skeptic": (EvaluationElement.PROCESS, EvaluationElement.NON_ACCURATE),
+    "Guardian": (EvaluationElement.ENDING, EvaluationElement.EXPECTATION),
+    "Contagonist": (EvaluationElement.UNENDING, EvaluationElement.DETERMINATION),
+}
+
+EVALUATION_QUAD_EVIDENCE = Quad(
+    id="evaluation_quad_evidence",
+    kind="evaluation-quad",
+    element_A="effect",          # Protagonist's impact measure
+    element_B="proven",          # Protagonist's verification
+    element_C="cause",           # Antagonist's origin measure
+    element_D="unproven",        # Antagonist's doubt
+    authored_by="dramatica-theory",
+)
+
+EVALUATION_QUAD_JUDGMENT = Quad(
+    id="evaluation_quad_judgment",
+    kind="evaluation-quad",
+    element_A="trust",           # Reason's confidence
+    element_B="theory",          # Reason's framework
+    element_C="test",            # Emotion's trial
+    element_D="hunch",           # Emotion's intuition
+    authored_by="dramatica-theory",
+)
+
+EVALUATION_QUAD_MEASUREMENT = Quad(
+    id="evaluation_quad_measurement",
+    kind="evaluation-quad",
+    element_A="result",          # Sidekick's outcome
+    element_B="accurate",        # Sidekick's precision
+    element_C="process",         # Skeptic's means
+    element_D="non-accurate",    # Skeptic's imprecision
+    authored_by="dramatica-theory",
+)
+
+EVALUATION_QUAD_EXPECTATION = Quad(
+    id="evaluation_quad_expectation",
+    kind="evaluation-quad",
+    element_A="ending",          # Guardian's terminus
+    element_B="expectation",     # Guardian's anticipation
+    element_C="unending",        # Contagonist's perpetuation
+    element_D="determination",   # Contagonist's resolve
+    authored_by="dramatica-theory",
+)
+
+ALL_EVALUATION_QUADS = (
+    EVALUATION_QUAD_EVIDENCE,
+    EVALUATION_QUAD_JUDGMENT,
+    EVALUATION_QUAD_MEASUREMENT,
+    EVALUATION_QUAD_EXPECTATION,
+)
+
+
+# --------------------------------------------------------------------
+# Purpose Elements — what characters seek to achieve
+# --------------------------------------------------------------------
+
+class PurposeElement(str, Enum):
+    """The 16 Purpose Elements from Dramatica theory. Arranged as
+    the purpose quad of quads:
+
+    Protagonist quad:   Knowledge / Actuality
+    Antagonist quad:    Thought / Perception
+    Reason quad:        Ability / Aware
+    Emotion quad:       Desire / Self-Aware
+    Sidekick quad:      Order / Inertia
+    Skeptic quad:       Chaos / Change
+    Guardian quad:      Equity / Projection
+    Contagonist quad:   Inequity / Speculation
+    """
+    KNOWLEDGE = "knowledge"
+    ACTUALITY = "actuality"
+    THOUGHT = "thought"
+    PERCEPTION = "perception"
+    ABILITY = "ability"
+    AWARE = "aware"
+    DESIRE = "desire"
+    SELF_AWARE = "self-aware"
+    ORDER = "order"
+    INERTIA = "inertia"
+    CHAOS = "chaos"
+    CHANGE = "change"
+    EQUITY = "equity"
+    PROJECTION = "projection"
+    INEQUITY = "inequity"
+    SPECULATION = "speculation"
+
+
+ARCHETYPE_PURPOSE_ELEMENTS: dict = {
+    "Protagonist": (PurposeElement.KNOWLEDGE, PurposeElement.ACTUALITY),
+    "Antagonist": (PurposeElement.THOUGHT, PurposeElement.PERCEPTION),
+    "Reason": (PurposeElement.ABILITY, PurposeElement.AWARE),
+    "Emotion": (PurposeElement.DESIRE, PurposeElement.SELF_AWARE),
+    "Sidekick": (PurposeElement.ORDER, PurposeElement.INERTIA),
+    "Skeptic": (PurposeElement.CHAOS, PurposeElement.CHANGE),
+    "Guardian": (PurposeElement.EQUITY, PurposeElement.PROJECTION),
+    "Contagonist": (PurposeElement.INEQUITY, PurposeElement.SPECULATION),
+}
+
+PURPOSE_QUAD_KNOWLEDGE = Quad(
+    id="purpose_quad_knowledge",
+    kind="purpose-quad",
+    element_A="knowledge",       # Protagonist's information goal
+    element_B="actuality",       # Protagonist's reality goal
+    element_C="thought",         # Antagonist's contemplation goal
+    element_D="perception",      # Antagonist's viewpoint goal
+    authored_by="dramatica-theory",
+)
+
+PURPOSE_QUAD_ABILITY = Quad(
+    id="purpose_quad_ability",
+    kind="purpose-quad",
+    element_A="ability",         # Reason's capability goal
+    element_B="aware",           # Reason's awareness goal
+    element_C="desire",          # Emotion's want
+    element_D="self-aware",      # Emotion's introspection goal
+    authored_by="dramatica-theory",
+)
+
+PURPOSE_QUAD_ORDER = Quad(
+    id="purpose_quad_order",
+    kind="purpose-quad",
+    element_A="order",           # Sidekick's stability goal
+    element_B="inertia",         # Sidekick's continuity goal
+    element_C="chaos",           # Skeptic's disruption goal
+    element_D="change",          # Skeptic's transformation goal
+    authored_by="dramatica-theory",
+)
+
+PURPOSE_QUAD_EQUITY = Quad(
+    id="purpose_quad_equity",
+    kind="purpose-quad",
+    element_A="equity",          # Guardian's fairness goal
+    element_B="projection",     # Guardian's foresight goal
+    element_C="inequity",       # Contagonist's imbalance goal
+    element_D="speculation",    # Contagonist's conjecture goal
+    authored_by="dramatica-theory",
+)
+
+ALL_PURPOSE_QUADS = (
+    PURPOSE_QUAD_KNOWLEDGE,
+    PURPOSE_QUAD_ABILITY,
+    PURPOSE_QUAD_ORDER,
+    PURPOSE_QUAD_EQUITY,
+)
+
+
 @dataclass(frozen=True)
 class CharacterElementAssignment:
     """Assigns a Motivation Element to a Character. Per Dramatica,
@@ -759,11 +1300,41 @@ class CharacterElementAssignment:
     authored_by: str = "author"
 
 
-def _check_character_element_uniqueness(
+@dataclass(frozen=True)
+class MethodologyElementAssignment:
+    """Assigns a Methodology Element to a Character."""
+    id: str
+    character_id: str
+    element: MethodologyElement
+    authored_by: str = "author"
+
+
+@dataclass(frozen=True)
+class EvaluationElementAssignment:
+    """Assigns an Evaluation Element to a Character."""
+    id: str
+    character_id: str
+    element: EvaluationElement
+    authored_by: str = "author"
+
+
+@dataclass(frozen=True)
+class PurposeElementAssignment:
+    """Assigns a Purpose Element to a Character."""
+    id: str
+    character_id: str
+    element: PurposeElement
+    authored_by: str = "author"
+
+
+def _check_element_uniqueness(
     assignments: tuple,
+    dimension_name: str,
 ) -> list:
-    """Each Motivation Element may appear on at most one character.
-    Duplicates are Dramatica's hardest character-level rule."""
+    """Each element within a dimension may appear on at most one
+    character. Duplicates are Dramatica's hardest character-level
+    rule. Works for any dimension (Motivation, Methodology,
+    Evaluation, Purpose)."""
     out = []
     element_to_chars: dict = {}
     for a in assignments:
@@ -777,7 +1348,7 @@ def _check_character_element_uniqueness(
                 code="element_assigned_to_multiple_characters",
                 target_id=element.value,
                 message=(
-                    f"Motivation Element {element.value!r} is "
+                    f"{dimension_name} Element {element.value!r} is "
                     f"assigned to {len(chars)} characters: "
                     f"{chars}. Dramatica requires each element on "
                     f"exactly one character."
@@ -786,14 +1357,17 @@ def _check_character_element_uniqueness(
     return out
 
 
-def _check_archetype_element_conformance(
+def _check_archetype_conformance(
     assignments: tuple,
     characters: tuple,
+    archetype_elements: dict,
+    dimension_name: str,
 ) -> list:
     """If a character carries an archetype function label AND has
     element assignments, check whether the assignments match the
     archetype's canonical elements. Divergence is an observation,
-    not an error (complex characters diverge intentionally)."""
+    not an error (complex characters diverge intentionally).
+    Works for any dimension."""
     out = []
     by_char: dict = {}
     for a in assignments:
@@ -802,9 +1376,9 @@ def _check_archetype_element_conformance(
         if not hasattr(char, "function_labels"):
             continue
         for fn in char.function_labels:
-            if fn not in ARCHETYPE_MOTIVATION_ELEMENTS:
+            if fn not in archetype_elements:
                 continue
-            canonical = set(ARCHETYPE_MOTIVATION_ELEMENTS[fn])
+            canonical = set(archetype_elements[fn])
             actual = by_char.get(char.id, set())
             if not actual:
                 continue  # no assignments yet — observation elsewhere
@@ -815,7 +1389,7 @@ def _check_archetype_element_conformance(
                     target_id=char.id,
                     message=(
                         f"Character {char.id!r} carries function "
-                        f"{fn!r} whose canonical Motivation "
+                        f"{fn!r} whose canonical {dimension_name} "
                         f"Elements are "
                         f"{sorted(e.value for e in canonical)}, "
                         f"but actual assignments are "
@@ -846,32 +1420,9 @@ def _check_archetype_element_conformance(
 # verifier checks that any explicitly-authored Solution/Symptom/
 # Response agrees with the derivation.
 #
-# Issue Quads (Variations under each Type/Concern): Dramatica ships
-# canonical labels for each. A mapping from Concern-label → Issue
-# Quad is needed for chain validation. The full 64 labels require
-# canonical Dramatica reference; this module ships the mapping
-# structure with selected entries and validates the chain where
-# data is available.
-
-
-# Issue Quad registry: maps Concern-label → Issue Quad.
-# Entries are added as theory data is authored.
-ISSUE_QUADS_BY_CONCERN: dict = {}
-
-
-def register_issue_quad(concern_label: str, quad: Quad) -> None:
-    """Register an Issue Quad for a specific Concern label. Called
-    during module initialization as theory data is authored."""
-    ISSUE_QUADS_BY_CONCERN[concern_label] = quad
-
-
-# Element Quad registry: maps Issue-label → Element (Problem) Quad.
-ELEMENT_QUADS_BY_ISSUE: dict = {}
-
-
-def register_element_quad(issue_label: str, quad: Quad) -> None:
-    """Register an Element Quad for a specific Issue label."""
-    ELEMENT_QUADS_BY_ISSUE[issue_label] = quad
+# Issue Quads are shipped as canonical theory data above; Element
+# Quads are registered by encodings as needed (256 total — deferred
+# until pressured by a third encoding).
 
 
 @dataclass(frozen=True)
@@ -1078,14 +1629,33 @@ def verify_thematic_picks(
 
 def verify_character_elements(
     assignments: tuple = (),
+    methodology_assignments: tuple = (),
+    evaluation_assignments: tuple = (),
+    purpose_assignments: tuple = (),
     characters: tuple = (),
 ) -> list:
-    """Run Character Element checks. Returns a list of
-    DramaticaObservation records. Composes with
-    verify_dramatica_complete — call both."""
+    """Run Character Element checks across all four dimensions.
+    Returns a list of DramaticaObservation records. Composes with
+    verify_dramatica_complete — call both.
+
+    The ``assignments`` parameter carries Motivation assignments
+    (backward-compatible name)."""
     out: list = []
-    out.extend(_check_character_element_uniqueness(assignments))
-    out.extend(_check_archetype_element_conformance(
-        assignments, characters,
-    ))
+    dimensions = (
+        (assignments, ARCHETYPE_MOTIVATION_ELEMENTS, "Motivation"),
+        (methodology_assignments, ARCHETYPE_METHODOLOGY_ELEMENTS,
+         "Methodology"),
+        (evaluation_assignments, ARCHETYPE_EVALUATION_ELEMENTS,
+         "Evaluation"),
+        (purpose_assignments, ARCHETYPE_PURPOSE_ELEMENTS, "Purpose"),
+    )
+    for dim_assignments, archetype_map, dim_name in dimensions:
+        if not dim_assignments:
+            continue
+        out.extend(_check_element_uniqueness(
+            dim_assignments, dim_name,
+        ))
+        out.extend(_check_archetype_conformance(
+            dim_assignments, characters, archetype_map, dim_name,
+        ))
     return out
