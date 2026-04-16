@@ -47,6 +47,11 @@ from dramatica_template import (
     derive_from_problem,
     # Convenience
     canonical_ending,
+    # Coupling declarations (V5)
+    TEMPLATE_COUPLING_DECLARATIONS, DSP_COUPLING_KIND_BY_AXIS,
+    template_coupling_kind_for, dsp_coupling_kind,
+    COUPLING_CHARACTERIZATION, COUPLING_CLAIM_MOMENT,
+    COUPLING_CLAIM_TRAJECTORY, COUPLING_FLAVOR, COUPLING_REALIZATION,
 )
 
 from dramatic import (
@@ -1217,6 +1222,90 @@ def test_multi_dimension_clean_passes():
 
 
 # ============================================================================
+# Per-record-type coupling-kind declarations (V5)
+# ============================================================================
+
+
+def test_template_coupling_declarations_cover_new_record_types():
+    """Every dramatica-complete record type should have at least one
+    declaration in TEMPLATE_COUPLING_DECLARATIONS."""
+    declared_types = {d.record_type for d in TEMPLATE_COUPLING_DECLARATIONS}
+    expected = {
+        "DomainAssignment", "DynamicStoryPoint", "Signpost",
+        "CharacterElementAssignment", "MethodologyElementAssignment",
+        "EvaluationElementAssignment", "PurposeElementAssignment",
+        "ThematicPicks", "Quad", "QuadPick",
+    }
+    missing = expected - declared_types
+    assert not missing, f"missing coupling declarations for {missing}"
+
+
+def test_template_coupling_no_realization_at_template_layer():
+    """Finding of record: the Template layer introduces no Realization
+    couplings. Every declaration is Characterization, Claim-*, or
+    Flavor. Pinning this so a future encoding drift surfaces."""
+    kinds = {d.kind for d in TEMPLATE_COUPLING_DECLARATIONS}
+    assert COUPLING_REALIZATION not in kinds, (
+        f"unexpected Realization coupling at Template layer: "
+        f"{[d for d in TEMPLATE_COUPLING_DECLARATIONS if d.kind == COUPLING_REALIZATION]}"
+    )
+
+
+def test_dsp_coupling_kind_dispatches_per_axis():
+    """DSP's coupling kind varies by axis; dsp_coupling_kind dispatches
+    on the record's axis value."""
+    dsp_outcome = DynamicStoryPoint(
+        id="t1", axis=DSPAxis.OUTCOME,
+        choice=Outcome.SUCCESS.value, story_id="s",
+    )
+    dsp_approach = DynamicStoryPoint(
+        id="t2", axis=DSPAxis.APPROACH,
+        choice=Approach.DO_ER.value, story_id="s",
+    )
+    dsp_judgment = DynamicStoryPoint(
+        id="t3", axis=DSPAxis.JUDGMENT,
+        choice=Judgment.BAD.value, story_id="s",
+    )
+    assert dsp_coupling_kind(dsp_outcome) == COUPLING_CLAIM_MOMENT
+    assert dsp_coupling_kind(dsp_approach) == COUPLING_CHARACTERIZATION
+    assert dsp_coupling_kind(dsp_judgment) == COUPLING_CLAIM_TRAJECTORY
+
+
+def test_template_coupling_kind_for_story_goal_returns_trajectory():
+    """Story.story_goal is a Template field extension; Dramatic's
+    Story record has no such field. The Template declaration lets
+    verifiers look up the coupling kind."""
+    assert (
+        template_coupling_kind_for("Story", "story_goal")
+        == COUPLING_CLAIM_TRAJECTORY
+    )
+    assert (
+        template_coupling_kind_for("Story", "story_consequence")
+        == COUPLING_CLAIM_MOMENT
+    )
+
+
+def test_template_coupling_field_lookup_falls_back_to_record_level():
+    """Field-level wins when present; record-level applies otherwise.
+    Signpost has only a record-level declaration; any field lookup
+    should fall back to the record-level kind."""
+    # Record-level match.
+    assert (
+        template_coupling_kind_for("Signpost")
+        == COUPLING_CLAIM_MOMENT
+    )
+    # Field-level lookup falls back to record-level.
+    assert (
+        template_coupling_kind_for("Signpost", "signpost_position")
+        == COUPLING_CLAIM_MOMENT
+    )
+
+
+def test_dsp_coupling_map_covers_all_six_axes():
+    assert set(DSP_COUPLING_KIND_BY_AXIS.keys()) == set(DSPAxis)
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -1311,6 +1400,13 @@ TESTS = [
     test_purpose_quads_count_four,
     # Cross-dimension
     test_multi_dimension_clean_passes,
+    # Per-record-type coupling declarations (V5)
+    test_template_coupling_declarations_cover_new_record_types,
+    test_template_coupling_no_realization_at_template_layer,
+    test_dsp_coupling_kind_dispatches_per_axis,
+    test_template_coupling_kind_for_story_goal_returns_trajectory,
+    test_template_coupling_field_lookup_falls_back_to_record_level,
+    test_dsp_coupling_map_covers_all_six_axes,
 ]
 
 

@@ -1659,3 +1659,166 @@ def verify_character_elements(
             dim_assignments, characters, archetype_map, dim_name,
         ))
     return out
+
+
+# ============================================================================
+# Per-record-type coupling-kind declarations (verification-sketch-01 V5)
+# ============================================================================
+#
+# Parallels dramatic.py's COUPLING_DECLARATIONS but covers the record
+# types and Story-level fields the dramatica-complete Template adds.
+# Imports the coupling-kind constants and CouplingDeclaration shape
+# from dramatic.py so the Template extends rather than duplicates the
+# dialect's declaration surface.
+#
+# The finding worth naming: **no Realization couplings appear at the
+# Template layer.** Realization couplings (Story, Character, Throughline
+# owners, Scene advances) are declared at the Dramatic dialect level.
+# Template records classify or claim against substrate — they do not
+# introduce new record-is-made-true-by-specific-lower-records bindings.
+# This means authoring Lowerings for dramatica-complete encodings
+# reduces to authoring them for the underlying Dramatic encoding
+# (which *_lowerings.py already does for Oedipus and Macbeth). The
+# Template's new coupling work lives entirely in the verifier surface.
+#
+# DynamicStoryPoint is a special case: its coupling kind depends on
+# which axis the record is keyed to (Resolve, Growth, Approach, Limit,
+# Outcome, Judgment). The record-level declaration below uses
+# claim-trajectory as a broad-modal default (three of six axes); the
+# authoritative per-axis mapping is DSP_COUPLING_KIND_BY_AXIS, and
+# `dsp_coupling_kind(dsp)` dispatches correctly per record.
+
+from dramatic import (
+    CouplingDeclaration,
+    COUPLING_REALIZATION,
+    COUPLING_CHARACTERIZATION,
+    COUPLING_CLAIM_MOMENT,
+    COUPLING_CLAIM_TRAJECTORY,
+    COUPLING_FLAVOR,
+)
+
+
+TEMPLATE_COUPLING_DECLARATIONS = (
+    # Story-level Template extensions. story_goal is a claim-trajectory
+    # about what the OS Throughline works toward across the narrative;
+    # story_consequence is a claim-moment about substrate state at the
+    # point the goal lands (or doesn't). These fields aren't on the
+    # Dramatic `Story` dataclass — Template passes them to verifiers
+    # as separate strings — but the coupling declaration treats them
+    # as Story-conceptual extensions so a verifier asking
+    # `coupling_kind_for("Story", "story_goal")` gets the right answer.
+    CouplingDeclaration("Story", "story_goal", COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("Story", "story_consequence", COUPLING_CLAIM_MOMENT),
+
+    # DomainAssignment — a Throughline placed in a Domain classifies
+    # the substrate pattern the Throughline exhibits across its events
+    # (Activity → external-action-saturated; Situation → state/setting
+    # saturated; Fixed Attitude → attitude-saturated; Manipulation →
+    # influence/scheme-saturated). Characterization.
+    CouplingDeclaration("DomainAssignment", None,
+                        COUPLING_CHARACTERIZATION),
+
+    # DynamicStoryPoint — see DSP_COUPLING_KIND_BY_AXIS for the
+    # authoritative per-axis mapping. The record-level declaration is
+    # claim-trajectory as a modal default; `dsp_coupling_kind(dsp)`
+    # is the correct dispatch.
+    CouplingDeclaration("DynamicStoryPoint", None,
+                        COUPLING_CLAIM_TRAJECTORY),
+
+    # Signpost — at narrative position N, the Throughline is "at" a
+    # Concern. The claim is that substrate events at that position
+    # exhibit the named Concern's pattern. Claim-moment (scoped to a
+    # specific narrative position).
+    CouplingDeclaration("Signpost", None, COUPLING_CLAIM_MOMENT),
+
+    # Character Element assignments across all four dimensions —
+    # claim-trajectory: the character exhibits the element pair
+    # across their arc (Protagonist pursues goals and considers
+    # actions across the narrative; Antagonist avoids and reconsiders;
+    # etc.). Each of the four dimensions (Motivation, Methodology,
+    # Evaluation, Purpose) gets the same coupling kind.
+    CouplingDeclaration("CharacterElementAssignment", None,
+                        COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("MethodologyElementAssignment", None,
+                        COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("EvaluationElementAssignment", None,
+                        COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("PurposeElementAssignment", None,
+                        COUPLING_CLAIM_TRAJECTORY),
+
+    # ThematicPicks fields. concern_pick and issue_pick classify what
+    # the Throughline is about (characterization). problem_pick and
+    # the three derived fields (solution / symptom / response) are
+    # claim-trajectory — what's driving / resolving / manifesting /
+    # responding-to the trouble across the Throughline's arc.
+    CouplingDeclaration("ThematicPicks", "concern_pick",
+                        COUPLING_CHARACTERIZATION),
+    CouplingDeclaration("ThematicPicks", "issue_pick",
+                        COUPLING_CHARACTERIZATION),
+    CouplingDeclaration("ThematicPicks", "problem_pick",
+                        COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("ThematicPicks", "solution_override",
+                        COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("ThematicPicks", "symptom_override",
+                        COUPLING_CLAIM_TRAJECTORY),
+    CouplingDeclaration("ThematicPicks", "response_override",
+                        COUPLING_CLAIM_TRAJECTORY),
+
+    # Quad / QuadPick — theory-data constructs. No direct substrate
+    # coupling; they exist within the Template for authoring and
+    # validation. Flavor.
+    CouplingDeclaration("Quad", None, COUPLING_FLAVOR),
+    CouplingDeclaration("QuadPick", None, COUPLING_FLAVOR),
+)
+
+
+# Per-axis coupling kind for DynamicStoryPoint. Authoritative over
+# the record-level declaration above.
+DSP_COUPLING_KIND_BY_AXIS = {
+    DSPAxis.RESOLVE:   COUPLING_CLAIM_TRAJECTORY,  # MC changes vs. not across arc
+    DSPAxis.GROWTH:    COUPLING_CLAIM_TRAJECTORY,  # MC adopts/stops a trait across arc
+    DSPAxis.APPROACH:  COUPLING_CHARACTERIZATION,  # substrate events classify as Do-er/Be-er
+    DSPAxis.LIMIT:     COUPLING_CHARACTERIZATION,  # substrate pressure shape classifies
+    DSPAxis.OUTCOME:   COUPLING_CLAIM_MOMENT,      # at τ_s end: goal achieved or not
+    DSPAxis.JUDGMENT:  COUPLING_CLAIM_TRAJECTORY,  # MC's internal resolution across arc
+}
+
+
+def dsp_coupling_kind(dsp: DynamicStoryPoint) -> str:
+    """Return the authoritative coupling kind for a DSP record,
+    dispatching on its axis. Prefer this over
+    `template_coupling_kind_for("DynamicStoryPoint", None)` for DSPs
+    because the record-level declaration is only a modal default."""
+    return DSP_COUPLING_KIND_BY_AXIS[dsp.axis]
+
+
+def template_coupling_kind_for(
+    record_type: str,
+    field: Optional[str] = None,
+) -> Optional[str]:
+    """Look up the coupling kind for a (record_type, field) pair among
+    the Template declarations. Returns None if no Template declaration
+    applies; callers that want the combined Dramatic+Template lookup
+    should fall back to dramatic.coupling_kind_for after this returns
+    None. Same field-level-wins-over-record-level precedence as
+    dramatic.coupling_kind_for."""
+    for d in TEMPLATE_COUPLING_DECLARATIONS:
+        if d.record_type == record_type and d.field == field:
+            return d.kind
+    if field is not None:
+        for d in TEMPLATE_COUPLING_DECLARATIONS:
+            if d.record_type == record_type and d.field is None:
+                return d.kind
+    return None
+
+
+def template_fields_with_coupling(
+    record_type: str,
+    kind: str,
+) -> tuple:
+    """Return the field names of `record_type` that carry coupling
+    kind `kind` among the Template declarations."""
+    return tuple(
+        d.field for d in TEMPLATE_COUPLING_DECLARATIONS
+        if d.record_type == record_type and d.kind == kind
+    )
