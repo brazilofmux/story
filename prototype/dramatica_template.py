@@ -661,7 +661,7 @@ class MotivationElement(str, Enum):
     """
     PURSUE = "pursue"
     CONSIDER = "consider"
-    PREVENT = "prevent"
+    AVOID = "avoid"
     RECONSIDER = "reconsider"
     LOGIC = "logic"
     CONTROL = "control"
@@ -685,7 +685,7 @@ class MotivationElement(str, Enum):
 
 ARCHETYPE_MOTIVATION_ELEMENTS: dict = {
     "Protagonist": (MotivationElement.PURSUE, MotivationElement.CONSIDER),
-    "Antagonist": (MotivationElement.PREVENT, MotivationElement.RECONSIDER),
+    "Antagonist": (MotivationElement.AVOID, MotivationElement.RECONSIDER),
     "Reason": (MotivationElement.LOGIC, MotivationElement.CONTROL),
     "Emotion": (MotivationElement.FEELING, MotivationElement.UNCONTROLLED),
     "Sidekick": (MotivationElement.FAITH, MotivationElement.SUPPORT),
@@ -695,14 +695,56 @@ ARCHETYPE_MOTIVATION_ELEMENTS: dict = {
 }
 
 
-MOTIVATION_ELEMENT_QUAD = Quad(
-    id="motivation_element_quad",
+# The 4 Motivation Quads. Each archetype takes the companion pair
+# (A+B or C+D) from one of these quads. Dynamic pairs are the
+# fundamental oppositions; companion pairs are the cooperative set
+# an archetype bundles.
+
+MOTIVATION_QUAD_ACTION = Quad(
+    id="motivation_quad_action",
     kind="motivation-quad",
-    element_A="pursue",
-    element_B="prevent",
-    element_C="consider",
-    element_D="reconsider",
+    element_A="pursue",        # Protagonist's drive
+    element_B="consider",      # Protagonist's deliberation
+    element_C="avoid",         # Antagonist's evasion
+    element_D="reconsider",    # Antagonist's re-evaluation
     authored_by="dramatica-theory",
+)
+
+MOTIVATION_QUAD_DECISION = Quad(
+    id="motivation_quad_decision",
+    kind="motivation-quad",
+    element_A="faith",         # Sidekick's trust
+    element_B="support",       # Sidekick's loyalty
+    element_C="disbelief",     # Skeptic's doubt
+    element_D="oppose",        # Skeptic's resistance
+    authored_by="dramatica-theory",
+)
+
+MOTIVATION_QUAD_EVALUATION = Quad(
+    id="motivation_quad_evaluation",
+    kind="motivation-quad",
+    element_A="logic",         # Reason's analysis
+    element_B="control",       # Reason's governance
+    element_C="feeling",       # Emotion's intuition
+    element_D="uncontrolled",  # Emotion's abandon
+    authored_by="dramatica-theory",
+)
+
+MOTIVATION_QUAD_PROTECTION = Quad(
+    id="motivation_quad_protection",
+    kind="motivation-quad",
+    element_A="conscience",    # Guardian's moral compass
+    element_B="help",          # Guardian's assistance
+    element_C="temptation",    # Contagonist's lure
+    element_D="hinder",        # Contagonist's obstruction
+    authored_by="dramatica-theory",
+)
+
+ALL_MOTIVATION_QUADS = (
+    MOTIVATION_QUAD_ACTION,
+    MOTIVATION_QUAD_DECISION,
+    MOTIVATION_QUAD_EVALUATION,
+    MOTIVATION_QUAD_PROTECTION,
 )
 
 

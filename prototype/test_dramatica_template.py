@@ -585,7 +585,7 @@ _TEST_ELEMENT_QUAD_INSTINCT = Quad(
     id="element_instinct_test",
     kind="element-quad",
     element_A="pursue",
-    element_B="prevent",
+    element_B="consider",
     element_C="avoid",
     element_D="reconsider",
 )
@@ -614,8 +614,8 @@ def test_derive_symptom_is_companion():
         attached_to_kind="throughline", attached_to_id="T_mc",
     )
     derived = derive_from_problem(pick, _TEST_ELEMENT_QUAD_INSTINCT)
-    assert derived["symptom"] == (QuadPosition.B, "prevent"), (
-        f"Problem at A → Symptom should be at B ('prevent'); "
+    assert derived["symptom"] == (QuadPosition.B, "consider"), (
+        f"Problem at A → Symptom should be at B ('consider'); "
         f"got {derived['symptom']}"
     )
 
@@ -805,7 +805,7 @@ def test_element_uniqueness_clean_passes():
         CharacterElementAssignment(id="A1", character_id="C_hero",
                                    element=MotivationElement.PURSUE),
         CharacterElementAssignment(id="A2", character_id="C_villain",
-                                   element=MotivationElement.PREVENT),
+                                   element=MotivationElement.AVOID),
     )
     obs = verify_character_elements(assignments=assignments)
     assert "element_assigned_to_multiple_characters" not in _codes(obs)
