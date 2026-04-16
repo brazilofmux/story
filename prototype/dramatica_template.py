@@ -785,6 +785,255 @@ def _check_archetype_element_conformance(
     return out
 
 
+# ============================================================================
+# Pick-chain: Concern → Issue → Problem, with derivation
+# ============================================================================
+#
+# Dramatica's nested hierarchy: each Throughline picks a Concern
+# (from its Domain's Concern Quad), then an Issue (from that
+# Concern's Issue Quad), then a Problem (from that Issue's Element
+# Quad). Each pick constrains the next level's options.
+#
+# The Problem pick automatically derives:
+#   Solution = dynamic pair of Problem in the Element Quad
+#   Symptom = companion of Problem
+#   Response = dependent of Problem
+#
+# These derivations are the sketch's forcing function #2. In this
+# implementation, the derivation functions exist; the template
+# verifier checks that any explicitly-authored Solution/Symptom/
+# Response agrees with the derivation.
+#
+# Issue Quads (Variations under each Type/Concern): Dramatica ships
+# canonical labels for each. A mapping from Concern-label → Issue
+# Quad is needed for chain validation. The full 64 labels require
+# canonical Dramatica reference; this module ships the mapping
+# structure with selected entries and validates the chain where
+# data is available.
+
+
+# Issue Quad registry: maps Concern-label → Issue Quad.
+# Entries are added as theory data is authored.
+ISSUE_QUADS_BY_CONCERN: dict = {}
+
+
+def register_issue_quad(concern_label: str, quad: Quad) -> None:
+    """Register an Issue Quad for a specific Concern label. Called
+    during module initialization as theory data is authored."""
+    ISSUE_QUADS_BY_CONCERN[concern_label] = quad
+
+
+# Element Quad registry: maps Issue-label → Element (Problem) Quad.
+ELEMENT_QUADS_BY_ISSUE: dict = {}
+
+
+def register_element_quad(issue_label: str, quad: Quad) -> None:
+    """Register an Element Quad for a specific Issue label."""
+    ELEMENT_QUADS_BY_ISSUE[issue_label] = quad
+
+
+@dataclass(frozen=True)
+class ThematicPicks:
+    """All four levels of thematic picks for one Throughline.
+    Concern, Issue, Problem are QuadPick records referencing the
+    appropriate Quad at each level. Solution, Symptom, Response
+    are derived from the Problem pick."""
+    throughline_id: str
+    concern_pick: QuadPick         # from Domain's Concern Quad
+    issue_pick: QuadPick           # from chosen Concern's Issue Quad
+    problem_pick: QuadPick         # from chosen Issue's Element Quad
+    # Optional explicit Solution/Symptom/Response (for verification
+    # against derivation).
+    solution_override: Optional[str] = None
+    symptom_override: Optional[str] = None
+    response_override: Optional[str] = None
+
+
+def derive_from_problem(problem_pick: QuadPick, quad: Quad) -> dict:
+    """Given a Problem pick and its Quad, derive Solution, Symptom,
+    and Response positions and labels.
+
+    Returns a dict with keys 'solution', 'symptom', 'response',
+    each containing (position, element_label)."""
+    pos = problem_pick.chosen_position
+
+    # Solution: dynamic pair
+    sol_pos = quad.dynamic_pair_of(pos)
+
+    # Symptom: companion (A↔B, C↔D)
+    companion_map = {
+        QuadPosition.A: QuadPosition.B,
+        QuadPosition.B: QuadPosition.A,
+        QuadPosition.C: QuadPosition.D,
+        QuadPosition.D: QuadPosition.C,
+    }
+    sym_pos = companion_map[pos]
+
+    # Response: dependent (A↔D, B↔C)
+    dependent_map = {
+        QuadPosition.A: QuadPosition.D,
+        QuadPosition.B: QuadPosition.C,
+        QuadPosition.C: QuadPosition.B,
+        QuadPosition.D: QuadPosition.A,
+    }
+    rsp_pos = dependent_map[pos]
+
+    return {
+        "solution": (sol_pos, quad.element_at(sol_pos)),
+        "symptom": (sym_pos, quad.element_at(sym_pos)),
+        "response": (rsp_pos, quad.element_at(rsp_pos)),
+    }
+
+
+def _check_pick_chain(
+    picks_list: tuple,
+    domain_assignments: tuple,
+) -> list:
+    """Validate Concern → Issue → Problem chain integrity for each
+    ThematicPicks record.
+
+    Rules:
+    - Concern pick's quad_id must match the Domain's Concern Quad
+    - Issue pick's quad_id must match the chosen Concern's Issue Quad
+      (if registered)
+    - Problem pick's quad_id must match the chosen Issue's Element
+      Quad (if registered)
+    - If solution/symptom/response overrides are present, they must
+      agree with derivation from the Problem pick
+    """
+    out = []
+    da_by_tl = {a.throughline_id: a.domain for a in domain_assignments}
+
+    for tp in picks_list:
+        tl_id = tp.throughline_id
+        domain = da_by_tl.get(tl_id)
+
+        # Check Concern pick's quad matches the Domain's Concern Quad.
+        if domain is not None:
+            expected_concern_quad = CONCERN_QUADS_BY_DOMAIN.get(domain)
+            if (expected_concern_quad is not None
+                    and tp.concern_pick.quad_id
+                    != expected_concern_quad.id):
+                out.append(DramaticaObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="concern_pick_wrong_quad",
+                    target_id=tp.concern_pick.id,
+                    message=(
+                        f"Concern pick {tp.concern_pick.id!r} "
+                        f"references quad {tp.concern_pick.quad_id!r}"
+                        f" but Throughline {tl_id!r}'s Domain "
+                        f"{domain.value!r} expects Concern Quad "
+                        f"{expected_concern_quad.id!r}"
+                    ),
+                ))
+
+        # Check Issue pick's quad matches chosen Concern's Issue Quad.
+        concern_label = None
+        if domain is not None:
+            cq = CONCERN_QUADS_BY_DOMAIN.get(domain)
+            if cq is not None:
+                concern_label = cq.element_at(
+                    tp.concern_pick.chosen_position,
+                )
+        if concern_label is not None:
+            expected_issue_quad = ISSUE_QUADS_BY_CONCERN.get(
+                concern_label,
+            )
+            if (expected_issue_quad is not None
+                    and tp.issue_pick.quad_id
+                    != expected_issue_quad.id):
+                out.append(DramaticaObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="issue_pick_wrong_quad",
+                    target_id=tp.issue_pick.id,
+                    message=(
+                        f"Issue pick {tp.issue_pick.id!r} references "
+                        f"quad {tp.issue_pick.quad_id!r} but Concern "
+                        f"{concern_label!r} expects Issue Quad "
+                        f"{expected_issue_quad.id!r}"
+                    ),
+                ))
+
+        # Check Problem pick's quad matches chosen Issue's Element Quad.
+        issue_label = None
+        if concern_label is not None:
+            iq = ISSUE_QUADS_BY_CONCERN.get(concern_label)
+            if iq is not None:
+                issue_label = iq.element_at(
+                    tp.issue_pick.chosen_position,
+                )
+        if issue_label is not None:
+            expected_element_quad = ELEMENT_QUADS_BY_ISSUE.get(
+                issue_label,
+            )
+            if (expected_element_quad is not None
+                    and tp.problem_pick.quad_id
+                    != expected_element_quad.id):
+                out.append(DramaticaObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="problem_pick_wrong_quad",
+                    target_id=tp.problem_pick.id,
+                    message=(
+                        f"Problem pick {tp.problem_pick.id!r} "
+                        f"references quad "
+                        f"{tp.problem_pick.quad_id!r} but Issue "
+                        f"{issue_label!r} expects Element Quad "
+                        f"{expected_element_quad.id!r}"
+                    ),
+                ))
+
+        # Check derivation overrides agree.
+        problem_quad_id = tp.problem_pick.quad_id
+        # Find the quad in shipped data or registries.
+        problem_quad = None
+        for q in ALL_SHIPPED_QUADS:
+            if q.id == problem_quad_id:
+                problem_quad = q
+                break
+        if problem_quad is None:
+            for q in ELEMENT_QUADS_BY_ISSUE.values():
+                if q.id == problem_quad_id:
+                    problem_quad = q
+                    break
+
+        if problem_quad is not None:
+            derived = derive_from_problem(tp.problem_pick, problem_quad)
+            for field_name, override in [
+                ("solution", tp.solution_override),
+                ("symptom", tp.symptom_override),
+                ("response", tp.response_override),
+            ]:
+                if override is not None:
+                    _, derived_label = derived[field_name]
+                    if override != derived_label:
+                        out.append(DramaticaObservation(
+                            severity=SEVERITY_ADVISES_REVIEW,
+                            code=f"{field_name}_override_mismatch",
+                            target_id=tp.problem_pick.id,
+                            message=(
+                                f"Explicit {field_name} "
+                                f"{override!r} does not match "
+                                f"derived {field_name} "
+                                f"{derived_label!r} from Problem "
+                                f"pick at position "
+                                f"{tp.problem_pick.chosen_position.value}"
+                                f" in quad "
+                                f"{problem_quad_id!r}"
+                            ),
+                        ))
+    return out
+
+
+def verify_thematic_picks(
+    picks_list: tuple = (),
+    domain_assignments: tuple = (),
+) -> list:
+    """Run pick-chain and derivation checks. Composes with
+    verify_dramatica_complete and verify_character_elements —
+    call all three."""
+    return _check_pick_chain(picks_list, domain_assignments)
+
+
 def verify_character_elements(
     assignments: tuple = (),
     characters: tuple = (),

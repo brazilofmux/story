@@ -13,7 +13,7 @@ import traceback
 from dramatica_template import (
     # Record types
     Quad, QuadPick, DomainAssignment, DynamicStoryPoint, Signpost,
-    CharacterElementAssignment,
+    CharacterElementAssignment, ThematicPicks,
     # Enums
     Domain, DSPAxis, QuadPosition,
     Resolve, Growth, Approach, Limit, Outcome, Judgment,
@@ -25,11 +25,16 @@ from dramatica_template import (
     CONCERN_MANIPULATION_QUAD, CONCERN_FIXED_ATTITUDE_QUAD,
     ALL_SHIPPED_QUADS,
     ARCHETYPE_MOTIVATION_ELEMENTS,
+    ISSUE_QUADS_BY_CONCERN, ELEMENT_QUADS_BY_ISSUE,
+    register_issue_quad, register_element_quad,
     # Observation types
     DramaticaObservation, SEVERITY_NOTED, SEVERITY_ADVISES_REVIEW,
     # Verifier
     verify_dramatica_complete,
     verify_character_elements,
+    verify_thematic_picks,
+    # Derivation
+    derive_from_problem,
     # Convenience
     canonical_ending,
 )
@@ -558,6 +563,215 @@ def test_oedipus_partial_encoding_surfaces_expected_gaps():
 
 
 # ============================================================================
+# Pick chain + derivation
+# ============================================================================
+
+
+# A test Issue Quad registered for the Activity Domain's "understanding"
+# Concern. Lets us test the chain validation without needing the full
+# 64-Variation data set.
+_TEST_ISSUE_QUAD_UNDERSTANDING = Quad(
+    id="issue_understanding_test",
+    kind="issue-quad",
+    element_A="instinct",
+    element_B="senses",
+    element_C="interpretation",
+    element_D="conditioning",
+)
+register_issue_quad("understanding", _TEST_ISSUE_QUAD_UNDERSTANDING)
+
+# A test Element Quad registered under the Issue "instinct".
+_TEST_ELEMENT_QUAD_INSTINCT = Quad(
+    id="element_instinct_test",
+    kind="element-quad",
+    element_A="pursue",
+    element_B="prevent",
+    element_C="avoid",
+    element_D="reconsider",
+)
+register_element_quad("instinct", _TEST_ELEMENT_QUAD_INSTINCT)
+
+
+def test_derive_solution_is_dynamic_pair():
+    """Solution is the dynamic pair of the Problem position."""
+    pick = QuadPick(
+        id="P1", quad_id="element_instinct_test",
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    derived = derive_from_problem(pick, _TEST_ELEMENT_QUAD_INSTINCT)
+    assert derived["solution"] == (QuadPosition.C, "avoid"), (
+        f"Problem at A ('pursue') → Solution should be at C "
+        f"('avoid'); got {derived['solution']}"
+    )
+
+
+def test_derive_symptom_is_companion():
+    """Symptom is the companion of the Problem (A↔B, C↔D)."""
+    pick = QuadPick(
+        id="P1", quad_id="element_instinct_test",
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    derived = derive_from_problem(pick, _TEST_ELEMENT_QUAD_INSTINCT)
+    assert derived["symptom"] == (QuadPosition.B, "prevent"), (
+        f"Problem at A → Symptom should be at B ('prevent'); "
+        f"got {derived['symptom']}"
+    )
+
+
+def test_derive_response_is_dependent():
+    """Response is the dependent (diagonal) of the Problem."""
+    pick = QuadPick(
+        id="P1", quad_id="element_instinct_test",
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    derived = derive_from_problem(pick, _TEST_ELEMENT_QUAD_INSTINCT)
+    assert derived["response"] == (QuadPosition.D, "reconsider"), (
+        f"Problem at A → Response should be at D ('reconsider'); "
+        f"got {derived['response']}"
+    )
+
+
+def test_pick_chain_clean_passes():
+    """A correctly-chained set of picks — Concern from Domain's quad,
+    Issue from Concern's Issue Quad, Problem from Issue's Element
+    Quad — produces no chain-related observations."""
+    tls = _make_throughlines()
+    das = _make_domain_assignments(tls)
+    # MC is T_mc, Domain = ACTIVITY. Concern Quad = Activity's.
+    concern_pick = QuadPick(
+        id="CP_mc", quad_id=CONCERN_ACTIVITY_QUAD.id,
+        chosen_position=QuadPosition.A,  # "understanding"
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    issue_pick = QuadPick(
+        id="IP_mc", quad_id=_TEST_ISSUE_QUAD_UNDERSTANDING.id,
+        chosen_position=QuadPosition.A,  # "instinct"
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    problem_pick = QuadPick(
+        id="PP_mc", quad_id=_TEST_ELEMENT_QUAD_INSTINCT.id,
+        chosen_position=QuadPosition.A,  # "pursue"
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    tp = ThematicPicks(
+        throughline_id="T_mc",
+        concern_pick=concern_pick,
+        issue_pick=issue_pick,
+        problem_pick=problem_pick,
+    )
+    obs = verify_thematic_picks(
+        picks_list=(tp,), domain_assignments=das,
+    )
+    chain_codes = {o.code for o in obs
+                   if "pick" in o.code or "override" in o.code}
+    assert len(chain_codes) == 0, (
+        f"expected no chain observations; got {chain_codes}"
+    )
+
+
+def test_pick_chain_wrong_concern_quad_flagged():
+    """If the Concern pick references the wrong Domain's Concern
+    Quad, the chain validator catches it."""
+    tls = _make_throughlines()
+    das = _make_domain_assignments(tls)
+    # MC is in ACTIVITY but we reference SITUATION's Concern Quad.
+    concern_pick = QuadPick(
+        id="CP_bad", quad_id=CONCERN_SITUATION_QUAD.id,  # WRONG
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    issue_pick = QuadPick(
+        id="IP", quad_id="whatever",
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    problem_pick = QuadPick(
+        id="PP", quad_id="whatever",
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    tp = ThematicPicks(
+        throughline_id="T_mc",
+        concern_pick=concern_pick,
+        issue_pick=issue_pick,
+        problem_pick=problem_pick,
+    )
+    obs = verify_thematic_picks(
+        picks_list=(tp,), domain_assignments=das,
+    )
+    assert "concern_pick_wrong_quad" in _codes(obs)
+
+
+def test_pick_chain_solution_override_mismatch_flagged():
+    """If an explicit Solution override disagrees with the derivation,
+    the validator catches it."""
+    tls = _make_throughlines()
+    das = _make_domain_assignments(tls)
+    concern_pick = QuadPick(
+        id="CP", quad_id=CONCERN_ACTIVITY_QUAD.id,
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    issue_pick = QuadPick(
+        id="IP", quad_id=_TEST_ISSUE_QUAD_UNDERSTANDING.id,
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    problem_pick = QuadPick(
+        id="PP", quad_id=_TEST_ELEMENT_QUAD_INSTINCT.id,
+        chosen_position=QuadPosition.A,  # "pursue" → solution = "avoid"
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    tp = ThematicPicks(
+        throughline_id="T_mc",
+        concern_pick=concern_pick,
+        issue_pick=issue_pick,
+        problem_pick=problem_pick,
+        solution_override="prevent",  # WRONG — should be "avoid"
+    )
+    obs = verify_thematic_picks(
+        picks_list=(tp,), domain_assignments=das,
+    )
+    assert "solution_override_mismatch" in _codes(obs)
+
+
+def test_pick_chain_correct_override_passes():
+    """If an explicit Solution override agrees with the derivation,
+    no mismatch observation."""
+    tls = _make_throughlines()
+    das = _make_domain_assignments(tls)
+    concern_pick = QuadPick(
+        id="CP", quad_id=CONCERN_ACTIVITY_QUAD.id,
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    issue_pick = QuadPick(
+        id="IP", quad_id=_TEST_ISSUE_QUAD_UNDERSTANDING.id,
+        chosen_position=QuadPosition.A,
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    problem_pick = QuadPick(
+        id="PP", quad_id=_TEST_ELEMENT_QUAD_INSTINCT.id,
+        chosen_position=QuadPosition.A,  # "pursue" → solution = "avoid"
+        attached_to_kind="throughline", attached_to_id="T_mc",
+    )
+    tp = ThematicPicks(
+        throughline_id="T_mc",
+        concern_pick=concern_pick,
+        issue_pick=issue_pick,
+        problem_pick=problem_pick,
+        solution_override="avoid",  # CORRECT
+    )
+    obs = verify_thematic_picks(
+        picks_list=(tp,), domain_assignments=das,
+    )
+    assert "solution_override_mismatch" not in _codes(obs)
+
+
+# ============================================================================
 # Character Element decomposition — Motivation Elements
 # ============================================================================
 
@@ -700,6 +914,14 @@ TESTS = [
     test_full_clean_encoding_produces_zero_observations,
     # Integration
     test_oedipus_partial_encoding_surfaces_expected_gaps,
+    # Pick chain + derivation
+    test_derive_solution_is_dynamic_pair,
+    test_derive_symptom_is_companion,
+    test_derive_response_is_dependent,
+    test_pick_chain_clean_passes,
+    test_pick_chain_wrong_concern_quad_flagged,
+    test_pick_chain_solution_override_mismatch_flagged,
+    test_pick_chain_correct_override_passes,
     # Character Elements
     test_motivation_elements_count_sixteen,
     test_archetype_elements_cover_all_sixteen,
