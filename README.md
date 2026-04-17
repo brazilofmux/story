@@ -92,31 +92,33 @@ Working prototype, closed-corpus encodings, extensive test surface:
   checks per encoding. DA_mc spectrum: APPROVED 0.77 (Oedipus) /
   PARTIAL 0.69 (Macbeth) / PARTIAL 0.54 (Ackroyd) / APPROVED 0.72
   (Rocky) — a real four-point spread measuring encoding/taxonomy
-  match honestly. DSP_limit four-point spectrum: APPROVED 0.67 ×3
-  (Oedipus / Macbeth / Ackroyd, all Optionlock, three different
-  signal compositions) + **NEEDS_WORK 0.33** (Rocky, Timelock
-  declared + Optionlock-shaped substrate — the first non-APPROVED
-  DSP_limit in the corpus and LT5's asymmetric disposition
-  validated concretely).
+  match honestly. DSP_limit four-point spectrum post-LT9:
+  **all APPROVED** — 0.67 ×3 (Oedipus / Macbeth / Ackroyd, all
+  Optionlock, three different signal compositions) + **1.00**
+  (Rocky, Timelock-strong via LT9 — two distinct scheduling
+  predicates + zero middle-arc LT2 signals; pressure-shape-
+  taxonomy-sketch-02 adopts the probe's concrete signature proposal
+  and closes the prior sketch-01 NEEDS_WORK 0.33 verdict).
 - **Cross-boundary reader-model probe at the dramatica-complete
   surface** — the LLM reads the upper Template records (DomainAssignments,
   DSPs, Signposts, ThematicPicks, Story-level fields), the Lowerings,
   the substrate context, and the verifier's 9-check output; emits
   annotation reviews on the Lowerings and commentaries on the
-  verifier's verdicts. First live run against Rocky (Personal Triumph,
-  the NEEDS_WORK DSP_limit case): **probe dissents with the verifier's
-  NEEDS_WORK 0.33 on DSP_limit and proposes a concrete LT3-strong
-  signature** (scheduled temporal endpoints + τ_s convergence + round
-  structure as temporal limit), validating that the weak verdict was
-  predicate weakness rather than encoding weakness. Endorses 7/9
-  verifier verdicts as interpretively well-grounded; qualifies the
+  verifier's verdicts. First live run against Rocky (Personal Triumph)
+  **dissented with the verifier's NEEDS_WORK 0.33 on DSP_limit and
+  proposed a concrete LT3-strong signature** (scheduled temporal
+  endpoints + clean middle-arc). Sketch-02 (pressure-shape-taxonomy)
+  adopts that signature as LT7–LT11; the probe/verifier loop closes
+  its first concrete cycle, with Rocky's DSP_limit shifting from
+  NEEDS_WORK 0.33 to APPROVED 1.00. Probe endorsed 7/9 verifier
+  verdicts as interpretively well-grounded; qualified the
   Steadfast-via-structural-invariance pattern by naming its
   false-positive risk.
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **548 tests** across 12 test files. Full suite runs in under a
+- **558 tests** across 12 test files. Full suite runs in under a
   second. Standard-library only except for the reader-model probe
   (which needs `anthropic` and `pydantic` from
   `prototype/requirements.txt`).
