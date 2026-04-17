@@ -103,7 +103,8 @@ Run the self-verifier:
 from __future__ import annotations
 
 from save_the_cat import (
-    StcStory, StcBeat, StcStrand, StrandAdvancement, StrandKind,
+    StcStory, StcBeat, StcStrand, StcCharacter, StcArchetypeAssignment,
+    StrandAdvancement, StrandKind,
     GENRE_RITES_OF_PASSAGE,
 )
 
@@ -132,6 +133,7 @@ Strand_A_scotland = StcStrand(
         "and then repaired. The external stakes are the kingdom's "
         "moral order and its subjects' safety under a usurper"
     ),
+    focal_character_id="C_macbeth",
 )
 
 Strand_B_marriage = StcStrand(
@@ -145,6 +147,120 @@ Strand_B_marriage = StcStrand(
         "'tomorrow' soliloquy. The marriage carries the theme: the "
         "more ambition succeeds, the less of the marriage remains"
     ),
+    focal_character_id="C_lady_macbeth",
+)
+
+
+# ============================================================================
+# Characters (S9, S10, S11) — save-the-cat-sketch-02 amendment
+# ============================================================================
+#
+# Rites of Passage's archetypes are internal stages ("the life problem",
+# "the wrong way", "the acceptance"), not characters — so the
+# load-bearing sketch-02 work on Macbeth is the archetype_assignments
+# demonstrating prose-note binding. The character set is still worth
+# declaring so the structural claims about who plays what role in the
+# play become reachable from the dialect (Macduff as antagonist;
+# Malcolm as the restoration; Lady Macbeth as the partner whose push
+# is itself a thematic stage).
+
+C_macbeth = StcCharacter(
+    id="C_macbeth",
+    name="Macbeth",
+    description=(
+        "thane of Glamis and Cawdor; receives the witches' prophecy; "
+        "commits regicide against Duncan; rules as tyrant; is killed "
+        "by Macduff. Save the Cat's protagonist role — the character "
+        "whose commit at Break Into Two is the structural pivot"
+    ),
+    role_labels=("protagonist",),
+)
+
+C_lady_macbeth = StcCharacter(
+    id="C_lady_macbeth",
+    name="Lady Macbeth",
+    description=(
+        "Macbeth's wife; the conspirator-catalyst of the regicide; the "
+        "B story's focal character; ends in madness and offstage "
+        "death. Her push is the immediate catalyst of the wrong-way "
+        "choice; her disintegration tracks the partnership's cost"
+    ),
+    role_labels=("ally", "threshold-guardian"),
+)
+
+C_duncan = StcCharacter(
+    id="C_duncan",
+    name="King Duncan",
+    description=(
+        "rightful king of Scotland; murdered by Macbeth at Inverness. "
+        "The stable-past whose destruction is the wrong-way act's "
+        "concrete target"
+    ),
+    role_labels=("victim",),
+)
+
+C_banquo = StcCharacter(
+    id="C_banquo",
+    name="Banquo",
+    description=(
+        "Macbeth's fellow general; the witches' other recipient; the "
+        "moral-foil who hears the same prophecy and does not act on "
+        "it. Murdered at Macbeth's order; his ghost haunts the "
+        "banquet scene"
+    ),
+    role_labels=("confidant", "victim"),
+)
+
+C_macduff = StcCharacter(
+    id="C_macduff",
+    name="Macduff",
+    description=(
+        "thane of Fife; the one who refuses the tyrant's legitimacy "
+        "early and confronts him at the end. The structural opponent "
+        "whose arrival closes the arc — 'not of woman born' unmakes "
+        "Macbeth's final protection"
+    ),
+    role_labels=("antagonist",),
+)
+
+C_malcolm = StcCharacter(
+    id="C_malcolm",
+    name="Malcolm",
+    description=(
+        "Duncan's son; Scotland's rightful heir; the restoration after "
+        "Macbeth's fall. Closes the A story: the final image is his "
+        "coronation"
+    ),
+    role_labels=("ally",),
+)
+
+C_witches = StcCharacter(
+    id="C_witches",
+    name="The Weird Sisters",
+    description=(
+        "three supernatural prophecy-givers; agents of the Catalyst "
+        "and the second-act equivocating prophecy. Their ontology is "
+        "unsettled (see macbeth.py's substrate uncertainty question); "
+        "functionally, they are the voice that names the wrong way "
+        "before it is taken"
+    ),
+    role_labels=("mentor",),  # in the ironic / malign sense
+)
+
+C_ross = StcCharacter(
+    id="C_ross",
+    name="Ross",
+    description=(
+        "Scottish thane; carrier-of-news (Cawdor's execution, Duncan's "
+        "favor, Macduff's family's murder); the play's structural "
+        "messenger-character"
+    ),
+    role_labels=("ally",),
+)
+
+CHARACTERS = (
+    C_macbeth, C_lady_macbeth, C_duncan, C_banquo, C_macduff,
+    C_malcolm, C_witches, C_ross,
 )
 
 STRANDS = (Strand_A_scotland, Strand_B_marriage)
@@ -179,6 +295,7 @@ B_01_opening = StcBeat(
                  "supernatural intrudes on political order",
         ),
     ),
+    participant_ids=("C_witches",),
 )
 
 B_02_theme = StcBeat(
@@ -249,6 +366,7 @@ B_04_catalyst = StcBeat(
                  "claim on the throne has been introduced",
         ),
     ),
+    participant_ids=("C_witches", "C_macbeth", "C_banquo"),
 )
 
 B_05_debate = StcBeat(
@@ -275,6 +393,7 @@ B_05_debate = StcBeat(
                  "override the husband's moral hesitation?",
         ),
     ),
+    participant_ids=("C_macbeth", "C_lady_macbeth"),
 )
 
 B_06_break_into_two = StcBeat(
@@ -348,6 +467,7 @@ B_08_fun_and_games = StcBeat(
                  "handles the aftermath while he unravels",
         ),
     ),
+    participant_ids=("C_macbeth", "C_duncan", "C_lady_macbeth"),
 )
 
 B_09_midpoint = StcBeat(
@@ -400,6 +520,9 @@ B_10_bad_guys_close_in = StcBeat(
                  "banquet she cannot reach him through the crack",
         ),
     ),
+    participant_ids=(
+        "C_macbeth", "C_banquo", "C_witches", "C_macduff", "C_ross",
+    ),
 )
 
 B_11_all_is_lost = StcBeat(
@@ -421,6 +544,7 @@ B_11_all_is_lost = StcBeat(
                  "with the simple removal of the other person",
         ),
     ),
+    participant_ids=("C_lady_macbeth", "C_macbeth"),
 )
 
 B_12_dark_night = StcBeat(
@@ -494,6 +618,7 @@ B_14_finale = StcBeat(
                  "in matched annihilation",
         ),
     ),
+    participant_ids=("C_macbeth", "C_macduff"),
 )
 
 B_15_final_image = StcBeat(
@@ -515,6 +640,7 @@ B_15_final_image = StcBeat(
                  "succession reasserted; Scotland can begin again",
         ),
     ),
+    participant_ids=("C_malcolm", "C_macduff", "C_ross"),
 )
 
 BEATS = (
@@ -549,4 +675,36 @@ STORY = StcStory(
     stc_genre_id=GENRE_RITES_OF_PASSAGE.id,
     beat_ids=tuple(b.id for b in BEATS),
     strand_ids=tuple(s.id for s in STRANDS),
+    character_ids=tuple(c.id for c in CHARACTERS),
+    archetype_assignments=(
+        # S12 — Rites of Passage's three archetypes are internal stages,
+        # not persons. Each binds via prose note rather than
+        # character_id. This is the sketch-02 way of saying "the genre's
+        # archetypes don't map to characters on this material" —
+        # structural signal, not a gap.
+        StcArchetypeAssignment(
+            archetype="the life problem",
+            note=("Macbeth's ambition + the Witches' prophecy together "
+                  "create a future he must either accept or refuse. "
+                  "The 'problem' is internal — not an external "
+                  "affliction but a possibility named from outside and "
+                  "seized from within"),
+        ),
+        StcArchetypeAssignment(
+            archetype="the wrong way",
+            note=("the regicide of Duncan and the cascade of defensive "
+                  "killings that follow. Act 1's committed regicide is "
+                  "the wrong-way choice; Acts 2-4 are its "
+                  "consequences accreted into tyranny"),
+        ),
+        StcArchetypeAssignment(
+            archetype="the acceptance",
+            note=("the 'tomorrow and tomorrow' recognition of what he "
+                  "has become — a self no longer hoping to be anything "
+                  "else, reconciled to meaninglessness as the only "
+                  "honest register left to the man who did what he "
+                  "did. The Rites-of-Passage 'acceptance' stage fits "
+                  "only in this bleak form"),
+        ),
+    ),
 )

@@ -61,7 +61,8 @@ dialect's reminder to the author). Everything else clean.
 from __future__ import annotations
 
 from save_the_cat import (
-    StcStory, StcBeat, StcStrand, StrandAdvancement, StrandKind,
+    StcStory, StcBeat, StcStrand, StcCharacter, StcArchetypeAssignment,
+    StrandAdvancement, StrandKind,
     GENRE_WHYDUNIT,
 )
 
@@ -96,6 +97,7 @@ Strand_A_case = StcStrand(
         "inciting crime, investigation, reveal, aftermath — is the "
         "Whydunit genre's canonical scaffold"
     ),
+    focal_character_id="C_poirot",
 )
 
 Strand_B_flora_ralph = StcStrand(
@@ -113,9 +115,129 @@ Strand_B_flora_ralph = StcStrand(
         "embodied by the love's refusal to accept the easy "
         "accusation"
     ),
+    focal_character_id="C_flora",
 )
 
 STRANDS = (Strand_A_case, Strand_B_flora_ralph)
+
+
+# ============================================================================
+# Characters (S9, S10, S11) — save-the-cat-sketch-02 amendment
+# ============================================================================
+#
+# Sheppard's role_labels are the load-bearing structural claim the
+# amendment was written to make expressible: he is simultaneously the
+# novel's protagonist (first-person narrator, doctor-turning-investigator-
+# assistant who is also the voice we inhabit for 110 pages) and its
+# antagonist (the killer whose reveal is the novel's central motion),
+# AND its narrator (the meta-role that makes the Whydunit's unreliable-
+# narration trick work). Three canonical role labels on one character.
+# Under sketch-01 this was "a person referenced in beat descriptions";
+# under sketch-02 it is a structural declaration.
+
+C_sheppard = StcCharacter(
+    id="C_sheppard",
+    name="Dr. James Sheppard",
+    description=(
+        "the village doctor; Ackroyd's confidant; the novel's first-"
+        "person narrator; the killer. The three role overlap is the "
+        "structural engine: the protagonist of the narrative (the "
+        "voice we inhabit) is simultaneously its antagonist (the "
+        "concealed killer whose reveal the plot works toward) and "
+        "its narrator (whose manuscript the reader is reading). "
+        "Christie's structural signature"
+    ),
+    role_labels=("protagonist", "antagonist", "narrator"),
+)
+
+C_poirot = StcCharacter(
+    id="C_poirot",
+    name="Hercule Poirot",
+    description=(
+        "retired Belgian detective settled in King's Abbot to grow "
+        "vegetable marrows; Flora's choice of investigator; the "
+        "Whydunit genre's detective-archetype made flesh; the agent "
+        "of the novel's truth-recovery"
+    ),
+    role_labels=("the detective", "mentor"),
+)
+
+C_ackroyd = StcCharacter(
+    id="C_ackroyd",
+    name="Roger Ackroyd",
+    description=(
+        "wealthy widower; Mrs. Ferrars's intended; Sheppard's "
+        "patient-and-friend; the letter's addressee; the murder "
+        "victim. His death opens the investigation the novel is "
+        "about"
+    ),
+    role_labels=("victim",),
+)
+
+C_flora = StcCharacter(
+    id="C_flora",
+    name="Flora Ackroyd",
+    description=(
+        "Ackroyd's niece; engaged to Ralph Paton; the one who hires "
+        "Poirot because she believes Ralph innocent. The B story's "
+        "focal character; the moral claim 'the one I love is "
+        "telling the truth' is hers, and its vindication is the B "
+        "arc's payoff"
+    ),
+    role_labels=("love-interest", "ally"),
+)
+
+C_ralph = StcCharacter(
+    id="C_ralph",
+    name="Ralph Paton",
+    description=(
+        "Ackroyd's stepson and heir; engaged to Flora; secretly "
+        "married to Ursula; the first suspect because he disappears "
+        "after the murder; cleared publicly when Sheppard is named. "
+        "The B story's other focal character"
+    ),
+    role_labels=("love-interest", "suspect"),
+)
+
+C_ursula = StcCharacter(
+    id="C_ursula",
+    name="Ursula Bourne",
+    description=(
+        "parlormaid at Fernly; secretly Ralph's wife; confesses "
+        "the marriage when the investigation closes on him. The "
+        "substrate of Ralph's innocence"
+    ),
+    role_labels=("suspect",),
+)
+
+C_caroline = StcCharacter(
+    id="C_caroline",
+    name="Caroline Sheppard",
+    description=(
+        "Sheppard's older sister; the village's unofficial "
+        "intelligence service; the character Christie herself "
+        "cited as the prototype for Miss Marple. Sheppard's "
+        "domestic confidant and one of the reveal-scene witnesses"
+    ),
+    role_labels=("confidant",),
+)
+
+C_raglan = StcCharacter(
+    id="C_raglan",
+    name="Inspector Raglan",
+    description=(
+        "the official police investigator. Runs parallel to Poirot; "
+        "arrests on the wrong suspects until Poirot's reveal "
+        "redirects him; embodies the institutional response to the "
+        "murder"
+    ),
+    role_labels=("ally",),
+)
+
+CHARACTERS = (
+    C_sheppard, C_poirot, C_ackroyd, C_flora, C_ralph, C_ursula,
+    C_caroline, C_raglan,
+)
 
 
 # ============================================================================
@@ -240,6 +362,7 @@ B_05_debate = StcBeat(
                  "murder",
         ),
     ),
+    participant_ids=("C_ackroyd", "C_sheppard"),
 )
 
 B_06_break_into_two = StcBeat(
@@ -268,6 +391,7 @@ B_06_break_into_two = StcBeat(
                  "engagement",
         ),
     ),
+    participant_ids=("C_flora", "C_poirot", "C_sheppard"),
 )
 
 B_07_b_story = StcBeat(
@@ -367,6 +491,7 @@ B_10_bad_guys_close_in = StcBeat(
                  "the B story's tension drops",
         ),
     ),
+    participant_ids=("C_ursula", "C_poirot", "C_sheppard"),
 )
 
 B_11_all_is_lost = StcBeat(
@@ -458,6 +583,10 @@ B_14_finale = StcBeat(
                  "(the B story's payoff)",
         ),
     ),
+    participant_ids=(
+        "C_poirot", "C_sheppard", "C_flora", "C_ralph", "C_raglan",
+        "C_caroline",
+    ),
 )
 
 B_15_final_image = StcBeat(
@@ -480,6 +609,7 @@ B_15_final_image = StcBeat(
             note="the A story's denouement; case closed on all sides",
         ),
     ),
+    participant_ids=("C_sheppard",),
 )
 
 BEATS = (
@@ -509,4 +639,27 @@ STORY = StcStory(
     stc_genre_id=GENRE_WHYDUNIT.id,
     beat_ids=tuple(b.id for b in BEATS),
     strand_ids=tuple(s.id for s in STRANDS),
+    character_ids=tuple(c.id for c in CHARACTERS),
+    archetype_assignments=(
+        # S12 — Whydunit's three archetypes. Poirot IS the detective;
+        # the other two are non-character content (a concealed fact and
+        # a sequence of events).
+        StcArchetypeAssignment(
+            archetype="the detective", character_id="C_poirot",
+        ),
+        StcArchetypeAssignment(
+            archetype="the secret",
+            note=("Sheppard's identity as Mrs. Ferrars's blackmailer "
+                  "and Ackroyd's killer; concealed from Poirot and the "
+                  "household until the drawing-room reveal. The "
+                  "secret is a fact, not a person"),
+        ),
+        StcArchetypeAssignment(
+            archetype="the dark turn",
+            note=("the drawing-room reveal + Poirot's private mercy + "
+                  "Sheppard's overdose — the concluding sequence that "
+                  "names, judges, and closes. A sequence of events, "
+                  "not a character"),
+        ),
+    ),
 )

@@ -25,6 +25,15 @@ Per save-the-cat-sketch-01 commitments:
       observation, never errors.
 - S7: Description surface inherited (matches future Dramatic-side state).
 - S8: Connective relations to other dialects out of scope here.
+
+save-the-cat-sketch-02 amendment (StcCharacter) commitments:
+- S9:  StcCharacter as a minimal optional record type.
+- S10: Role labels as canonical-plus-open vocabulary.
+- S11: Optional reference wiring on StcBeat / StcStrand / StcStory.
+- S12: Genre archetype assignments bind archetypes to characters
+       or prose notes.
+- S13: Three new verifier checks — character-id resolution,
+       one-protagonist advisory, archetype coverage.
 """
 
 from __future__ import annotations
@@ -190,12 +199,18 @@ class StcBeat:
     against the encoding's own page count.
 
     Multiple StcBeats may share a slot (S1 admits this; the verifier
-    surfaces it as an observation, not an error)."""
+    surfaces it as an observation, not an error).
+
+    Per S11, `participant_ids` is an optional tuple of StcCharacter
+    ids present in the beat. Empty by default — existing encodings
+    that pre-date sketch-02 continue to verify cleanly without
+    wiring. When set, the verifier checks that every id resolves."""
     id: str
     slot: int
     page_actual: int
     description_of_change: str = ""
     advances: tuple = ()              # tuple[StrandAdvancement, ...]
+    participant_ids: tuple = ()       # tuple[str, ...] — StcCharacter ids
     authored_by: str = "author"
 
     def __post_init__(self):
@@ -211,11 +226,77 @@ class StcStrand:
     """A or B story. Per S3, both are first-class records, and a Story
     may declare zero, one, or both. Snyder's framework strongly implies
     every story has both, but the dialect doesn't enforce that — some
-    encodings (especially short-form) collapse them."""
+    encodings (especially short-form) collapse them.
+
+    Per S11, `focal_character_id` optionally names the one character
+    the strand is structurally about (often the protagonist for the
+    A story and the love-interest for the B story under Snyder's
+    convention). None by default."""
     id: str
     kind: StrandKind
     description: str = ""
+    focal_character_id: Optional[str] = None
     authored_by: str = "author"
+
+
+# ============================================================================
+# StcCharacter and role labels (S9, S10)
+# ============================================================================
+#
+# Per save-the-cat-sketch-02 S9, a minimal optional record. S10 names
+# a canonical role-label set the dialect recognizes; open strings are
+# admissible (per-genre archetypes and author-introduced labels live
+# in the open-string tail).
+
+
+# Canonical role labels. Authors may use others; these are what the
+# verifier's one-protagonist advisory and the walker's grouping
+# recognize. Stability of this list is OQ4 — expand cautiously.
+CANONICAL_ROLE_LABELS: Tuple[str, ...] = (
+    "protagonist",
+    "antagonist",
+    "love-interest",
+    "mentor",
+    "confidant",
+    "ally",
+    "narrator",
+    "victim",
+    "suspect",
+    "threshold-guardian",
+)
+
+CANONICAL_ROLE_LABEL_SET = frozenset(CANONICAL_ROLE_LABELS)
+
+
+@dataclass(frozen=True)
+class StcCharacter:
+    """One authored character. Deliberately minimal (per S9) — id,
+    name, description, role_labels. The dialect does not track
+    character-character relations or per-character arcs at this
+    iteration; see save-the-cat-sketch-02 open questions.
+
+    `role_labels` is a tuple (not a set) to preserve author-declared
+    ordering when a character carries multiple overlapping roles —
+    the Ackroyd case where Sheppard is
+    ("protagonist", "antagonist", "narrator"). Labels drawn from
+    `CANONICAL_ROLE_LABELS` are recognized by the verifier; open
+    strings are admitted for per-genre archetypes and the long tail."""
+    id: str
+    name: str
+    description: str = ""
+    role_labels: Tuple[str, ...] = ()
+    authored_by: str = "author"
+
+
+@dataclass(frozen=True)
+class StcArchetypeAssignment:
+    """One binding between a genre archetype label and either a
+    character id or a prose note (S12). Exactly one of
+    `character_id` / `note` must be set; the verifier surfaces
+    both-set or neither-set as advise-review."""
+    archetype: str
+    character_id: Optional[str] = None
+    note: str = ""
 
 
 # ============================================================================
@@ -363,6 +444,12 @@ class StcStory:
     dramatizes; it is promoted to Story level so other tooling can
     reference it without parsing the beat content. Empty is admissible
     (the verifier surfaces it); some authors set the theme later.
+
+    Per S11, `character_ids` aggregates the Story's characters — the
+    authoritative list the verifier walks for one-protagonist and
+    archetype-coverage checks. Per S12, `archetype_assignments`
+    binds each of the declared genre's archetypes to either a
+    character or a prose note.
     """
     id: str
     title: str
@@ -370,6 +457,8 @@ class StcStory:
     stc_genre_id: Optional[str] = None
     beat_ids: tuple = ()       # tuple[str, ...]
     strand_ids: tuple = ()     # tuple[str, ...]
+    character_ids: tuple = ()  # tuple[str, ...] — S11
+    archetype_assignments: tuple = ()  # tuple[StcArchetypeAssignment, ...] — S12
     authored_by: str = "author"
 
 
@@ -601,9 +690,9 @@ def _check_genre_archetypes(
     """S5: if the Story declares a genre, the dialect surfaces the
     genre's required archetypes as a pointer for the author. The
     dialect does not check whether the encoding *contains* the
-    archetypes (Save the Cat carries archetype-identification at the
-    description / character level, which this dialect doesn't model
-    yet — see save-the-cat-sketch-01 OQ1)."""
+    archetypes; archetype-coverage is the S13
+    _check_archetype_coverage job (see below), which runs when
+    sketch-02's archetype_assignments are present."""
     out = []
     if story.stc_genre_id is None:
         return out
@@ -625,22 +714,283 @@ def _check_genre_archetypes(
     return out
 
 
+# ============================================================================
+# S13 — character-id resolution, one-protagonist, archetype coverage
+# ============================================================================
+
+
+def _check_character_references_resolve(
+    story: StcStory,
+    beats_by_id: dict,
+    strands_by_id: dict,
+    characters_by_id: dict,
+) -> list:
+    """S13 (1): every character id named in StcStory.character_ids,
+    StcBeat.participant_ids, StcStrand.focal_character_id, and
+    StcArchetypeAssignment.character_id must resolve. Unresolved
+    ids advise-review."""
+    out = []
+    known = set(characters_by_id.keys())
+
+    for cid in story.character_ids:
+        if cid not in known:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="character_id_unresolved",
+                target_id=story.id,
+                message=(f"Story {story.id!r} references character_id "
+                         f"{cid!r} which is not in the characters "
+                         f"collection"),
+            ))
+
+    for bid in story.beat_ids:
+        if bid not in beats_by_id:
+            continue
+        b = beats_by_id[bid]
+        for cid in b.participant_ids:
+            if cid not in known:
+                out.append(StcObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="participant_id_unresolved",
+                    target_id=b.id,
+                    message=(f"Beat {b.id!r} names participant_id "
+                             f"{cid!r} which is not in the characters "
+                             f"collection"),
+                ))
+
+    for sid in story.strand_ids:
+        if sid not in strands_by_id:
+            continue
+        s = strands_by_id[sid]
+        if s.focal_character_id is not None and s.focal_character_id not in known:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="focal_character_id_unresolved",
+                target_id=s.id,
+                message=(f"Strand {s.id!r} names focal_character_id "
+                         f"{s.focal_character_id!r} which is not in "
+                         f"the characters collection"),
+            ))
+
+    for aa in story.archetype_assignments:
+        if aa.character_id is not None and aa.character_id not in known:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="archetype_character_id_unresolved",
+                target_id=story.id,
+                message=(f"ArchetypeAssignment for archetype "
+                         f"{aa.archetype!r} names character_id "
+                         f"{aa.character_id!r} which is not in the "
+                         f"characters collection"),
+            ))
+
+    return out
+
+
+def _check_unreferenced_characters(
+    story: StcStory,
+    beats_by_id: dict,
+    strands_by_id: dict,
+    characters_by_id: dict,
+) -> list:
+    """S11: characters that aren't named in any beat's
+    participant_ids, any strand's focal_character_id, or any
+    archetype assignment's character_id are noted (informational —
+    some encodings declare cast up front and wire in later)."""
+    out = []
+    referenced = set()
+    for bid in story.beat_ids:
+        if bid in beats_by_id:
+            referenced.update(beats_by_id[bid].participant_ids)
+    for sid in story.strand_ids:
+        if sid in strands_by_id:
+            s = strands_by_id[sid]
+            if s.focal_character_id is not None:
+                referenced.add(s.focal_character_id)
+    for aa in story.archetype_assignments:
+        if aa.character_id is not None:
+            referenced.add(aa.character_id)
+
+    for cid in story.character_ids:
+        if cid not in characters_by_id:
+            continue  # already surfaced by _check_character_references_resolve
+        if cid not in referenced:
+            out.append(StcObservation(
+                severity=SEVERITY_NOTED,
+                code="character_unreferenced",
+                target_id=cid,
+                message=(f"Character {cid!r} is declared on the Story "
+                         f"but not referenced by any beat, strand, or "
+                         f"archetype assignment. Admissible — some "
+                         f"encodings declare cast up front"),
+            ))
+    return out
+
+
+def _check_one_protagonist(
+    story: StcStory,
+    characters_by_id: dict,
+) -> list:
+    """S13 (2): exactly-one character carries 'protagonist' in
+    role_labels is the expected shape. Multiple protagonists
+    advise-review (ensemble stories exist but are unusual); zero
+    protagonists is noted (informational)."""
+    out = []
+    protagonists = [
+        characters_by_id[cid]
+        for cid in story.character_ids
+        if cid in characters_by_id
+        and "protagonist" in characters_by_id[cid].role_labels
+    ]
+    if len(protagonists) > 1:
+        ids = [c.id for c in protagonists]
+        out.append(StcObservation(
+            severity=SEVERITY_ADVISES_REVIEW,
+            code="multiple_protagonists",
+            target_id=story.id,
+            message=(f"Story {story.id!r} has multiple characters "
+                     f"carrying 'protagonist' in role_labels: {ids}. "
+                     f"Snyder's framework assumes one; ensemble stories "
+                     f"do exist but confirm intentional"),
+        ))
+    elif len(protagonists) == 0 and story.character_ids:
+        out.append(StcObservation(
+            severity=SEVERITY_NOTED,
+            code="no_protagonist_declared",
+            target_id=story.id,
+            message=(f"Story {story.id!r} declares characters but none "
+                     f"carries 'protagonist' in role_labels. If a "
+                     f"character plays that role, label it so the "
+                     f"verifier recognizes the structural claim"),
+        ))
+    return out
+
+
+def _check_archetype_coverage(
+    story: StcStory,
+    genres_by_id: dict,
+    characters_by_id: dict,
+) -> list:
+    """S13 (3): if the Story declares a genre with archetypes, every
+    archetype should appear in exactly one archetype_assignment.
+    Missing archetypes advise-review; duplicated archetypes
+    advise-review; extraneous archetypes (not in the genre's list)
+    advise-review. Each assignment must have exactly one of
+    character_id / note set; neither-or-both advise-review."""
+    out = []
+
+    # Each archetype_assignment must have exactly one of the two set.
+    for aa in story.archetype_assignments:
+        has_char = aa.character_id is not None
+        has_note = bool(aa.note.strip())
+        if has_char and has_note:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="archetype_assignment_both_set",
+                target_id=story.id,
+                message=(f"ArchetypeAssignment for archetype "
+                         f"{aa.archetype!r} has both character_id and "
+                         f"note set; exactly one is expected"),
+            ))
+        if not has_char and not has_note:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="archetype_assignment_neither_set",
+                target_id=story.id,
+                message=(f"ArchetypeAssignment for archetype "
+                         f"{aa.archetype!r} has neither character_id "
+                         f"nor note set; exactly one is expected"),
+            ))
+
+    # Coverage against the declared genre's archetypes.
+    if story.stc_genre_id is None:
+        # No genre → no coverage check. But if archetype_assignments
+        # are set without a genre, that's a smell worth noting.
+        if story.archetype_assignments:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="archetype_assignments_without_genre",
+                target_id=story.id,
+                message=(f"Story {story.id!r} declares "
+                         f"archetype_assignments but no stc_genre_id; "
+                         f"archetypes are genre-scoped"),
+            ))
+        return out
+    if story.stc_genre_id not in genres_by_id:
+        return out  # already surfaced by _check_id_resolution
+    genre = genres_by_id[story.stc_genre_id]
+
+    archetype_seq = [aa.archetype for aa in story.archetype_assignments]
+    archetype_set = set(archetype_seq)
+    declared = set(genre.archetypes)
+
+    # Missing: archetypes declared by the genre but not assigned.
+    for ar in genre.archetypes:
+        if ar not in archetype_set:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="archetype_missing",
+                target_id=story.id,
+                message=(f"Genre {genre.name!r} names archetype "
+                         f"{ar!r}; the Story has no "
+                         f"archetype_assignment for it. Bind it to a "
+                         f"character or provide a prose note, or "
+                         f"document why it's intentionally absent"),
+            ))
+
+    # Duplicated: one archetype appearing multiple times.
+    seen = set()
+    for ar in archetype_seq:
+        if ar in seen:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="archetype_duplicated",
+                target_id=story.id,
+                message=(f"Archetype {ar!r} appears in multiple "
+                         f"archetype_assignments; exactly one "
+                         f"assignment per archetype is expected"),
+            ))
+        seen.add(ar)
+
+    # Extraneous: archetypes assigned but not in the genre's list.
+    for ar in archetype_seq:
+        if ar not in declared:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="archetype_extraneous",
+                target_id=story.id,
+                message=(f"ArchetypeAssignment names archetype "
+                         f"{ar!r} which is not in genre "
+                         f"{genre.name!r}'s archetypes "
+                         f"{list(genre.archetypes)}"),
+            ))
+
+    return out
+
+
 def verify(
     story: StcStory,
     *,
     beats: tuple = (),
     strands: tuple = (),
+    characters: tuple = (),
     genres: tuple = GENRES,
 ) -> list:
-    """Run all S6 self-verification checks on a Story plus its record
+    """Run all self-verification checks on a Story plus its record
     bundle. Returns a list of StcObservation records.
 
     Per S6, no check rejects a Story; observations are advisory and
     flow to the proposal queue (in a higher layer) for author walking.
     Verification is a partner, not a gate.
+
+    `characters` is the tuple of StcCharacter records per S9 / S11.
+    Empty by default — encodings that pre-date sketch-02 continue to
+    verify without wiring characters. The S13 checks activate only
+    when the Story declares character_ids or archetype_assignments.
     """
     beats_by_id = _index(beats)
     strands_by_id = _index(strands)
+    characters_by_id = _index(characters)
     genres_by_id = _index(genres)
 
     out: list = []
@@ -655,6 +1005,17 @@ def verify(
         story, beats_by_id, strands_by_id,
     ))
     out.extend(_check_genre_archetypes(story, genres_by_id))
+    # S13 — character-layer checks (amendment, sketch-02)
+    out.extend(_check_character_references_resolve(
+        story, beats_by_id, strands_by_id, characters_by_id,
+    ))
+    out.extend(_check_unreferenced_characters(
+        story, beats_by_id, strands_by_id, characters_by_id,
+    ))
+    out.extend(_check_one_protagonist(story, characters_by_id))
+    out.extend(_check_archetype_coverage(
+        story, genres_by_id, characters_by_id,
+    ))
     return out
 
 
