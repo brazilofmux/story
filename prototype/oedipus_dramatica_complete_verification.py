@@ -52,7 +52,7 @@ from typing import Callable, Optional
 from substrate import (
     Entity, Event, CANONICAL,
     project_world, project_knowledge, in_scope,
-    world_holds_derived,
+    world_holds_derived, holds_derived,
 )
 from oedipus import (
     FABULA, ENTITIES, RULES, ALL_BRANCHES,
@@ -555,77 +555,83 @@ def story_goal_trajectory_check(
     _unused_ranges: tuple = (),
 ) -> tuple:
     """Claim-trajectory: Story_goal = 'identify the pollution causing
-    the plague and expel it'. Substrate shape: the load-bearing fact
-    is `parricide(oedipus, laius)` becoming world-derivable, which
-    requires `killed(oedipus, laius)` + `child_of(oedipus, laius)`
-    accreting across the arc. Check that the premises appear in
-    order and both hold at τ_end.
+    the plague and expel it'. This is an **identification-shaped**
+    goal per identification-goal-sketch-01 (IG1) — it resolves when
+    the investigator (Oedipus himself) comes to know that he IS the
+    pollution. The load-bearing claim is epistemic, not world-state.
 
-    The trajectory (not just the end-state) distinguishes this from
-    the Outcome=Success check: Outcome asks 'did the goal land at
-    the end?'; Goal-trajectory asks 'did the arc build toward it
-    incrementally?'"""
+    Under IG2 the check reads Oedipus's knowledge projection, not
+    the world state. Target derivation: `parricide(oedipus, laius)`
+    supportable from his KnowledgeState via identity-substitution +
+    rule derivation (per identity-and-realization-sketch-01 I3/I7
+    and inference-model-sketch-01). The **recognition τ_s** is the
+    first τ_s at which this derivation is supportable; clean
+    identification-goal trajectory lands at recognition τ_s ≥ 0
+    (mid-arc epistemic arrival).
+
+    Pre-sketch-01 this check read world-state and reported PARTIAL
+    0.7 with a misleading 'unusual premise order' message — the
+    world-facts `killed(oedipus, laius)` and `child_of(oedipus,
+    laius)` both hold pre-plot (crossroads killing at τ_s=-48,
+    birth at τ_s=-100), so their fabula-order was irrelevant to
+    the dramatic trajectory. The probe's 2026-04-17 qualification
+    named the category error; IG2 closes it."""
     τ_end = _end_τ_s()
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
 
-    # When do the two premises first appear in world state?
-    killed_τ = None
-    child_of_τ = None
+    target = parricide("oedipus", "laius")
     all_τ_s = sorted({e.τ_s for e in FABULA if e.τ_s is not None})
+
+    # Walk τ_s in increasing order; find the first τ_s at which
+    # Oedipus's knowledge supports the target derivation.
+    recognition_τ = None
     for τ in all_τ_s:
-        world = project_world(
-            events_in_scope=events_in_scope, up_to_τ_s=τ,
+        state = project_knowledge(
+            agent_id=OEDIPUS_ENTITY_ID,
+            events_in_scope=events_in_scope,
+            up_to_τ_s=τ,
         )
-        if killed_τ is None and killed("oedipus", "laius") in world:
-            killed_τ = τ
-        if child_of_τ is None and child_of("oedipus", "laius") in world:
-            child_of_τ = τ
-        if killed_τ is not None and child_of_τ is not None:
+        if holds_derived(state, target, RULES) is not None:
+            recognition_τ = τ
             break
 
-    if killed_τ is None or child_of_τ is None:
+    if recognition_τ is None:
         return (
             VERDICT_NEEDS_WORK, 0.0,
-            f"Story_goal requires parricide premises: killed_τ="
-            f"{killed_τ}, child_of_τ={child_of_τ}. At least one "
-            f"premise never enters world state; the goal trajectory "
-            f"cannot land.",
+            f"Story_goal (identification): Oedipus's knowledge "
+            f"never supports parricide(oedipus, laius) at any "
+            f"τ_s in arc. Trajectory does not land.",
         )
 
-    # Premises should accrete in order (killed before child_of
-    # recognition) and both hold at τ_end.
-    final_world = project_world(
-        events_in_scope=events_in_scope, up_to_τ_s=τ_end,
-    )
-    derives_at_end = world_holds_derived(
-        final_world, parricide("oedipus", "laius"), RULES,
-    ) is not None
-
-    if killed_τ < child_of_τ and derives_at_end:
+    if recognition_τ < 0:
         return (
-            VERDICT_APPROVED, 1.0,
-            f"Story_goal trajectory: killed(oedipus, laius) enters "
-            f"world at τ_s={killed_τ}; child_of(oedipus, laius) "
-            f"enters at τ_s={child_of_τ}; parricide derives at "
-            f"τ_s={τ_end}. Premises accrete in order; the goal's "
-            f"load-bearing derivation lands at arc's end.",
+            VERDICT_PARTIAL_MATCH, 0.5,
+            f"Story_goal (identification): Oedipus's knowledge "
+            f"already supports parricide(oedipus, laius) at pre-plot "
+            f"τ_s={recognition_τ}. Goal lands before the arc begins; "
+            f"the dramatic buildup is missing.",
         )
-    if derives_at_end:
+
+    if recognition_τ >= τ_end:
         return (
             VERDICT_PARTIAL_MATCH, 0.7,
-            f"Story_goal derivation lands at τ_s={τ_end}, but "
-            f"premise order is unusual (killed_τ={killed_τ} ≥ "
-            f"child_of_τ={child_of_τ}); trajectory arrives but "
-            f"its buildup shape is atypical.",
+            f"Story_goal (identification): Oedipus's knowledge "
+            f"supports parricide only at τ_s={recognition_τ} (arc "
+            f"end); the trajectory lands but without mid-arc "
+            f"buildup.",
         )
+
     return (
-        VERDICT_NEEDS_WORK, 0.0,
-        f"Story_goal premises both enter world (killed at "
-        f"τ_s={killed_τ}, child_of at τ_s={child_of_τ}) but "
-        f"parricide does not derive at τ_s={τ_end}. Trajectory "
-        f"breaks before landing.",
+        VERDICT_APPROVED, 1.0,
+        f"Story_goal (identification): Oedipus's knowledge supports "
+        f"parricide(oedipus, laius) from τ_s={recognition_τ} "
+        f"(anagnorisis) onward via identity-substitution. Pre-"
+        f"anagnorisis his knowledge does not support the derivation "
+        f"— the equivalence class linking oedipus and laius hasn't "
+        f"collapsed yet. The epistemic pivot at τ_s={recognition_τ} "
+        f"IS the goal's trajectory landing (IG2).",
     )
 
 

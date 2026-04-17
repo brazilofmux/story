@@ -2685,6 +2685,110 @@ def test_ag5_rocky_dsp_growth_start_unchanged():
     assert by_target["DSP_growth"].verdict == VERDICT_APPROVED
 
 
+# ----------------------------------------------------------------------------
+# identification-goal-sketch-01: IG1-IG5
+# (knowledge-vs-world for Story_goal trajectory checks on
+# identification-shaped goals)
+# ----------------------------------------------------------------------------
+
+
+def test_ig_oedipus_story_goal_approved_under_knowledge_projection():
+    """Oedipus Story_goal PARTIAL 0.7 → APPROVED 1.0 post-IG2.
+    The refactored check reads Oedipus's knowledge projection and
+    finds parricide(oedipus, laius) supportable from τ_s=13
+    (anagnorisis) onward via identity-substitution. Pre-sketch-01
+    this check read world-state and reported PARTIAL with a
+    misleading 'unusual premise order' message."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["Story_goal"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "identification" in r.comment.lower()
+    assert "anagnorisis" in r.comment.lower() or "τ_s=13" in r.comment
+    assert "knowledge" in r.comment.lower()
+
+
+def test_ig_oedipus_story_goal_uses_knowledge_projection_not_world_projection():
+    """Direct invariant: at τ_s < 13, the world-facts
+    killed(oedipus, laius) and child_of(oedipus, laius) both hold,
+    but Oedipus's knowledge does NOT support parricide(oedipus,
+    laius) — the check reading the world would report goal
+    achieved pre-anagnorisis; the IG2 check correctly does not."""
+    from substrate import CANONICAL, in_scope, project_world, project_knowledge, holds_derived
+    from oedipus import FABULA, ALL_BRANCHES, RULES, parricide, killed, child_of
+    events = [e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)]
+    events_sorted = sorted(
+        events, key=lambda e: (e.τ_s if e.τ_s is not None else 0, e.τ_a)
+    )
+
+    # World: both premises present at τ_s=-48 (pre-plot).
+    world_at_pre_plot = project_world(
+        events_in_scope=events_sorted, up_to_τ_s=-48,
+    )
+    assert killed("oedipus", "laius") in world_at_pre_plot
+    assert child_of("oedipus", "laius") in world_at_pre_plot
+
+    # Knowledge: Oedipus does NOT know parricide at τ_s=-1 (right
+    # before plot start) nor at τ_s=12 (right before anagnorisis).
+    for τ in (-1, 12):
+        state = project_knowledge(
+            agent_id="oedipus",
+            events_in_scope=events_sorted,
+            up_to_τ_s=τ,
+        )
+        assert holds_derived(state, parricide("oedipus", "laius"), RULES) is None, (
+            f"Oedipus should NOT support parricide at τ_s={τ} under "
+            f"knowledge projection"
+        )
+
+    # Knowledge: Oedipus DOES know parricide at τ_s=13 onward.
+    state_at_anag = project_knowledge(
+        agent_id="oedipus",
+        events_in_scope=events_sorted,
+        up_to_τ_s=13,
+    )
+    assert holds_derived(state_at_anag, parricide("oedipus", "laius"), RULES) is not None, (
+        "Oedipus should support parricide from τ_s=13 onward"
+    )
+
+
+def test_ig_ackroyd_story_goal_already_knowledge_aware():
+    """Ackroyd's Story_goal check is the precedent IG2 aligns to.
+    It reads project_knowledge for the witness-set; IG2 formalizes
+    what Ackroyd's author was doing by instinct. No regression pin."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["Story_goal"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+
+
+def test_ig_macbeth_story_goal_world_state_unchanged():
+    """Macbeth's Story_goal is achievement-shaped (restore
+    succession); IG1 does not force a refactor — world-state check
+    continues to apply. No regression."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["Story_goal"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+
+
+def test_ig_rocky_story_goal_world_state_unchanged():
+    """Rocky's Story_goal is achievement-shaped (clean publicity
+    stunt); world-state check continues to apply. No regression."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["Story_goal"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+
+
 def test_oedipus_dsp_growth_approved_under_ag5():
     """Oedipus's DSP_growth=Stop APPROVED post-event-agency-
     taxonomy-sketch-01. The Oedipus cross-boundary probe dissented
@@ -2853,6 +2957,12 @@ TESTS = [
     test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
     test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
     test_lt_rocky_scheduling_signals_include_both_fight_props,
+    # identification-goal-sketch-01 (IG1-IG5)
+    test_ig_oedipus_story_goal_approved_under_knowledge_projection,
+    test_ig_oedipus_story_goal_uses_knowledge_projection_not_world_projection,
+    test_ig_ackroyd_story_goal_already_knowledge_aware,
+    test_ig_macbeth_story_goal_world_state_unchanged,
+    test_ig_rocky_story_goal_world_state_unchanged,
     # event-agency-taxonomy-sketch-01 (AG1-AG6)
     test_ag_returns_none_when_mc_not_participant,
     test_ag_consequential_when_world_effect_targets_mc,
