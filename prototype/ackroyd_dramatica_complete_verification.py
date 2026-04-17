@@ -98,6 +98,9 @@ from verification import (
     VERDICT_NOTED,
     SEVERITY_NOTED,
 )
+from verifier_helpers import (
+    classify_event_action_shape, agent_ids_from_entities,
+)
 
 
 # ============================================================================
@@ -107,6 +110,7 @@ from verification import (
 
 SHEPPARD_ENTITY_ID = "sheppard"
 ACKROYD_ENTITY_ID = "ackroyd"
+_AGENT_IDS = agent_ids_from_entities(ENTITIES)
 
 
 def _end_τ_s() -> int:
@@ -153,27 +157,17 @@ MANIPULATION_KINDS = frozenset({
     "ultimatum",            # the scheme's last-move negotiation
 })
 
-# Internal-state kinds for the Be-er / Do-er inversion.
-INTERNAL_STATE_KINDS = frozenset({
-    "deduction", "fact", "investigation_sequence",
-    "anagnorisis_public", "ultimatum", "confession_writing",
-    "staged_disclosure",
-})
-
-# Overt-action kinds (shared pattern with Macbeth). Used to invert
-# for the Be-er check.
-ACTIVITY_ACTION_KINDS = frozenset({
-    "killing", "ordered_killing", "battle", "siege", "flight",
-    "coronation", "arrival", "royal_decree", "correspondence",
-    "discovery", "death", "standing", "meeting", "approach",
-    "visit", "crossing", "marriage", "blinding", "exile",
-    # Ackroyd-specific overt actions:
-    "death_by_suicide", "blackmail_begins", "dinner_meeting",
-    "departure", "preparation", "commission",
-})
-
-
 def _event_kind(event: Event) -> str:
+    """Type-string extractor — retained only for
+    mc_throughline_manipulation_domain_check, which still uses the
+    MANIPULATION_KINDS set. The Manipulation-domain question is not
+    covered by EK2 (EK2 classifies external-vs-internal action-shape,
+    not manipulation-shape); EK5 notes that different upper-dialect
+    classifications ask different structural questions and each
+    gets its own classifier. A future classifier for manipulation-
+    shape (participants in deception relations, effect on a third
+    party's knowledge about the actor's role, etc.) could retire
+    MANIPULATION_KINDS; not in scope for this pass."""
     return getattr(event, "type", None) or ""
 
 
@@ -243,7 +237,9 @@ def sheppard_be_er_approach_check(
 ) -> tuple:
     """Characterize DSP_approach — Sheppard is a Be-er. Substrate
     check (inverted relative to Do-er): of events where Sheppard is
-    a participant, the fraction whose kind is internal-state.
+    a participant, the fraction that are internal-state-shaped per
+    EK2 (the complement of external-action-shaped; see
+    event-kind-taxonomy-sketch-01 EK2's final clause).
 
     Note on semantics: Sheppard performs the murder (overt action)
     and the suicide (overt action) onstage; the bulk of his arc is
@@ -261,37 +257,34 @@ def sheppard_be_er_approach_check(
     total = len(sh_events)
     internal = sum(
         1 for e in sh_events
-        if _event_kind(e) in INTERNAL_STATE_KINDS
+        if classify_event_action_shape(e, agent_ids=_AGENT_IDS)
+        == "internal"
     )
-    action = sum(
-        1 for e in sh_events
-        if _event_kind(e) in ACTIVITY_ACTION_KINDS
-    )
+    action = total - internal
     internal_ratio = internal / total
     if internal_ratio >= 0.6:
         return (
             VERDICT_APPROVED, internal_ratio,
             f"Sheppard participates in {total} events; {internal} "
-            f"({internal_ratio:.0%}) are internal-state-kind "
-            f"(deduction, investigation, confession-writing, "
-            f"staged_disclosure, ultimatum). {action} are "
-            f"overt-action-kind. Be-er approach confirmed.",
+            f"({internal_ratio:.0%}) are internal-state-shaped (EK2); "
+            f"{action} are external-action-shaped. Be-er approach "
+            f"confirmed.",
         )
     if internal_ratio >= 0.3:
         return (
             VERDICT_PARTIAL_MATCH, internal_ratio,
             f"Sheppard participates in {total} events; {internal} "
-            f"({internal_ratio:.0%}) are internal-state-kind; "
-            f"{action} are overt-action-kind. Mixed Be-er / Do-er "
-            f"signature — Sheppard's concealment-from-inside is real "
-            f"but the murder and suicide are cinematic.",
+            f"({internal_ratio:.0%}) are internal-state-shaped (EK2); "
+            f"{action} are external-action-shaped. Mixed Be-er / "
+            f"Do-er signature — Sheppard's concealment-from-inside "
+            f"is real but the murder and suicide are cinematic.",
         )
     return (
         VERDICT_NEEDS_WORK, internal_ratio,
         f"only {internal}/{total} ({internal_ratio:.0%}) "
-        f"Sheppard-participating events are internal-state-kind; "
-        f"Be-er classification weakly supported — substrate shows "
-        f"him as overwhelmingly action-oriented.",
+        f"Sheppard-participating events are internal-state-shaped "
+        f"per EK2; Be-er classification weakly supported — substrate "
+        f"shows him as overwhelmingly action-oriented.",
     )
 
 

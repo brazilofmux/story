@@ -22,9 +22,18 @@ belong in substrate.py.
 
 from __future__ import annotations
 
-from substrate import Event
+from substrate import Event, KnowledgeEffect, WorldEffect
 from dramatic import Throughline, ABSTRACT_THROUGHLINE_OWNERS
 from lowering import cross_ref, LoweringStatus
+
+
+# Role-name precedence for identifying an event's "primary actor" —
+# the participant whose knowledge/agency the event centers. Ordered
+# most-specific first; the first role present in an event's
+# `participants` dict wins. Encodings that introduce new role names
+# may extend this list, but the five below cover every event shape
+# in the current Oedipus / Macbeth / Ackroyd encodings.
+_PRIMARY_ACTOR_ROLES = ("killer", "speaker", "actor", "agent", "subject")
 
 
 def find_substrate_event(event_id: str, fabula: tuple) -> Event:
@@ -71,6 +80,98 @@ def event_participants_flat(event: Event) -> set:
                 if isinstance(e, str):
                     out.add(e)
     return out
+
+
+def primary_actor_id(event: Event) -> str:
+    """Return the entity id considered the event's primary actor,
+    resolved via role-name precedence
+    (`killer > speaker > actor > agent > subject`). Falls back to
+    the first participant value if none of the privileged roles is
+    present. Returns None if the event has no participants at all.
+
+    For list-valued roles (e.g., `killers=[...]`) the first id in
+    the list wins. Per EK2 in event-kind-taxonomy-sketch-01."""
+    parts = event.participants or {}
+    for role in _PRIMARY_ACTOR_ROLES:
+        if role in parts:
+            v = parts[role]
+            if isinstance(v, (list, tuple)):
+                return v[0] if v else None
+            return v
+    for v in parts.values():
+        if isinstance(v, (list, tuple)):
+            if v:
+                return v[0]
+        else:
+            return v
+    return None
+
+
+def classify_event_action_shape(
+    event: Event,
+    *,
+    agent_ids: frozenset = None,
+) -> str:
+    """Classify an Event as `"external"` or `"internal"` action-shaped
+    per EK2 (event-kind-taxonomy-sketch-01).
+
+    An event is **external-action-shaped** iff both hold:
+      1. **Interpersonal.** Its participants include at least two
+         distinct entity ids. If `agent_ids` is provided, only
+         participants in that set count toward this clause — so a
+         location or non-agent placeholder does not inflate the
+         count. (Callers pass `agent_ids` built from their encoding's
+         ENTITIES tuple; see the `agent_ids_from_entities` helper.)
+      2. **Outward-effect.** Either a `WorldEffect` is present, or
+         a `KnowledgeEffect` whose target agent is not the event's
+         primary actor (so the event updates someone *else's*
+         knowledge).
+
+    If either clause fails, the event is **internal-state-shaped**.
+    These two categories are exhaustive — EK2 defines internal-state
+    as the complement of external-action.
+
+    The classifier reads fold-visible structural features only. It
+    does not branch on the event's `type` string, per EK1's
+    discipline ("verifier classification reads fold-visible
+    structure, not type strings"). Substrate-05 M1 routes modality
+    with downstream fold consequence to effects; EK2 reads those
+    effects and turns them into a yes/no answer."""
+    parts = event.participants or {}
+    all_ids = []
+    for v in parts.values():
+        if isinstance(v, (list, tuple)):
+            all_ids.extend(x for x in v if isinstance(x, str))
+        elif isinstance(v, str):
+            all_ids.append(v)
+    if agent_ids is not None:
+        filtered = [i for i in all_ids if i in agent_ids]
+    else:
+        filtered = list(all_ids)
+    interpersonal = len(set(filtered)) >= 2
+
+    actor = primary_actor_id(event)
+    has_world_effect = any(
+        isinstance(ef, WorldEffect) for ef in event.effects
+    )
+    has_outward_knowledge = any(
+        isinstance(ef, KnowledgeEffect) and ef.agent_id != actor
+        for ef in event.effects
+    )
+    outward = has_world_effect or has_outward_knowledge
+
+    if interpersonal and outward:
+        return "external"
+    return "internal"
+
+
+def agent_ids_from_entities(entities: tuple) -> frozenset:
+    """Build the `agent_ids` frozenset the EK2 classifier expects,
+    from an encoding's `ENTITIES` tuple. Selects entities whose
+    `kind == "agent"` — excluding locations, objects, and abstract
+    placeholders. Used by cross-boundary verifiers; each encoding
+    passes its own ENTITIES in."""
+    return frozenset(e.id for e in entities if e.kind == "agent")
 
 
 def entity_id_for_character(

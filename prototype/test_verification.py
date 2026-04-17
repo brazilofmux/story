@@ -1349,6 +1349,269 @@ def test_coverage_report_macbeth_surfaces_gaps_against_real_encoding():
 
 
 # ----------------------------------------------------------------------------
+# EK2 classifier (event-kind-taxonomy-sketch-01)
+# ----------------------------------------------------------------------------
+#
+# Tests for `classify_event_action_shape` in verifier_helpers.py. The
+# classifier reads fold-visible structure (participants + effects) and
+# returns "external" or "internal". Synthetic fixtures exercise each
+# shape that appears in the three dramatica-complete encodings.
+
+
+def _classifier_fixtures():
+    """Import deferred so this module doesn't force loading
+    verifier_helpers at module import time (matches other
+    encoding-bound integration tests below)."""
+    from substrate import (
+        Event, KnowledgeEffect, WorldEffect, Held, Prop, Slot,
+        Confidence,
+    )
+    from verifier_helpers import classify_event_action_shape
+    return (
+        Event, KnowledgeEffect, WorldEffect, Held, Prop, Slot,
+        Confidence, classify_event_action_shape,
+    )
+
+
+def _mk_ke(agent_id, predicate, *args):
+    from substrate import KnowledgeEffect, Held, Prop, Slot, Confidence
+    return KnowledgeEffect(
+        agent_id=agent_id,
+        held=Held(
+            prop=Prop(predicate=predicate, args=args),
+            slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+            via="test",
+        ),
+    )
+
+
+def _mk_we(predicate, *args):
+    from substrate import WorldEffect, Prop
+    return WorldEffect(prop=Prop(predicate=predicate, args=args))
+
+
+def _mk_event(event_id, type_, participants, effects):
+    from substrate import Event
+    return Event(
+        id=event_id, type=type_, τ_s=0, τ_a=0,
+        participants=participants, effects=tuple(effects),
+        branches=frozenset({":canonical"}),
+    )
+
+
+def test_ek2_soliloquy_shape_is_internal():
+    """Single agent participant, self-directed KnowledgeEffect —
+    internal per EK2 (fails interpersonal clause)."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_soliloquy", "utterance",
+        {"speaker": "hamlet"},
+        [_mk_ke("hamlet", "thinks", "aloud")],
+    )
+    assert classify(event, agent_ids=frozenset({"hamlet"})) == "internal"
+
+
+def test_ek2_command_shape_is_external():
+    """Speaker + hearer, KnowledgeEffect on non-actor — external."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_command", "utterance",
+        {"speaker": "oedipus", "listener": "servant"},
+        [_mk_ke("servant", "bring", "shepherd")],
+    )
+    agents = frozenset({"oedipus", "servant"})
+    assert classify(event, agent_ids=agents) == "external"
+
+
+def test_ek2_interrogation_shape_is_external():
+    """Interrogation: bidirectional KnowledgeEffect — still external
+    because at least one effect targets a non-actor."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_interrogation", "utterance",
+        {"speaker": "oedipus", "listener": "shepherd"},
+        [
+            _mk_ke("shepherd", "queried", "by", "oedipus"),
+            _mk_ke("oedipus", "heard", "shepherd", "say", "X"),
+        ],
+    )
+    agents = frozenset({"oedipus", "shepherd"})
+    assert classify(event, agent_ids=agents) == "external"
+
+
+def test_ek2_killing_shape_is_external():
+    """Two agent participants, WorldEffect (dead) — external."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_killing", "killing",
+        {"killer": "oedipus", "victim": "laius"},
+        [_mk_we("dead", "laius"), _mk_we("killed", "oedipus", "laius")],
+    )
+    agents = frozenset({"oedipus", "laius"})
+    assert classify(event, agent_ids=agents) == "external"
+
+
+def test_ek2_marriage_shape_is_external():
+    """Two agent participants, WorldEffect — external."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_marriage", "marriage",
+        {"husband": "oedipus", "wife": "jocasta"},
+        [_mk_we("married", "oedipus", "jocasta")],
+    )
+    agents = frozenset({"oedipus", "jocasta"})
+    assert classify(event, agent_ids=agents) == "external"
+
+
+def test_ek2_realization_shape_is_internal():
+    """Single agent, self-KnowledgeEffect only — internal."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_realization", "realization",
+        {"agent": "oedipus"},
+        [_mk_ke("oedipus", "realizes", "who", "he", "is")],
+    )
+    agents = frozenset({"oedipus"})
+    assert classify(event, agent_ids=agents) == "internal"
+
+
+def test_ek2_location_does_not_inflate_interpersonal_when_agent_ids_filters():
+    """`E_oedipus_blinding`-shape: agent + location, WorldEffect. The
+    location is not an agent; under the agent_ids filter, the event
+    has only one agent-participant and classifies as internal.
+    Pinned by the sketch's worked-case table."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_blinding", "blinding",
+        {"agent": "oedipus", "location": "thebes"},
+        [_mk_we("blind", "oedipus")],
+    )
+    agents = frozenset({"oedipus"})  # thebes is a location, not in agent_ids
+    assert classify(event, agent_ids=agents) == "internal"
+
+
+def test_ek2_without_agent_ids_counts_all_participants():
+    """Without the agent_ids filter, every distinct participant id
+    counts toward the interpersonal clause. The blinding event then
+    classifies external because 'agent' and 'location' are distinct."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_blinding", "blinding",
+        {"agent": "oedipus", "location": "thebes"},
+        [_mk_we("blind", "oedipus")],
+    )
+    assert classify(event) == "external"  # no agent_ids filter
+
+
+def test_ek2_prophecy_received_is_internal_when_sender_unencoded():
+    """E_prophecy_received-shape: the divine sender is not a
+    participant. Only one agent in participants; KnowledgeEffect is
+    on that agent (self). Internal per EK2."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_prophecy", "prophecy_received",
+        {"recipient": "oedipus"},
+        [_mk_ke("oedipus", "will_kill", "father")],
+    )
+    agents = frozenset({"oedipus"})
+    assert classify(event, agent_ids=agents) == "internal"
+
+
+def test_ek2_primary_actor_precedence_killer_over_speaker():
+    """If both `killer` and `speaker` are present, `killer` wins
+    per the _PRIMARY_ACTOR_ROLES precedence. KnowledgeEffect whose
+    target is the speaker (not killer) counts as outward."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_mixed", "killing",
+        {"killer": "a", "speaker": "b"},
+        [_mk_ke("b", "is_killed", "by", "a")],
+    )
+    agents = frozenset({"a", "b"})
+    assert classify(event, agent_ids=agents) == "external"
+
+
+def test_ek2_list_valued_participants_flatten_correctly():
+    """Some events use list-valued role slots (e.g., multiple killers
+    or victims). Each id in the list counts toward the interpersonal
+    clause."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_multi", "battle",
+        {"killers": ["a", "b"], "victim": "c"},
+        [_mk_we("dead", "c")],
+    )
+    agents = frozenset({"a", "b", "c"})
+    assert classify(event, agent_ids=agents) == "external"
+
+
+def test_ek2_no_outward_effect_is_internal():
+    """Two participants but only self-directed KnowledgeEffect. Fails
+    the outward-effect clause; internal."""
+    (_, _, _, _, _, _, _, classify) = _classifier_fixtures()
+    event = _mk_event(
+        "E_self_only", "utterance",
+        {"speaker": "a", "listener": "b"},
+        [_mk_ke("a", "thinks", "x")],  # effect targets actor only
+    )
+    agents = frozenset({"a", "b"})
+    assert classify(event, agent_ids=agents) == "internal"
+
+
+# ----------------------------------------------------------------------------
+# EK2 integration pins — three dramatica-complete verifiers' spectrum
+# ----------------------------------------------------------------------------
+#
+# Pinned verdict bands rather than exact match_strength values per the
+# sketch's implementation brief ("the test is not 'the verdict is
+# exactly 0.69'; it is 'the verdict is in the expected band'"). Exact
+# strengths are allowed to drift with encoding edits.
+
+
+def test_ek2_oedipus_verifier_both_characterizations_approved():
+    """Post-EK2 Oedipus: DA_mc and DSP_approach both APPROVED. Pre-EK2
+    both were NEEDS_WORK 0.31 — the sketch's load-bearing claim that
+    EK2 removes verifier-heuristic brittleness from the spectrum."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DA_mc"].verdict == VERDICT_APPROVED, (
+        f"DA_mc expected APPROVED under EK2; got "
+        f"{by_target['DA_mc'].verdict} "
+        f"(strength={by_target['DA_mc'].match_strength})"
+    )
+    assert by_target["DSP_approach"].verdict == VERDICT_APPROVED
+    assert by_target["DA_mc"].match_strength >= 0.7
+    assert by_target["DSP_approach"].match_strength >= 0.65
+
+
+def test_ek2_macbeth_verifier_no_regression():
+    """Post-EK2 Macbeth: DA_mc stays PARTIAL, DSP_approach stays
+    APPROVED. No regression from the pre-EK2 baseline (0.69 / 0.79).
+    EK2 may move strengths slightly; the verdict bands hold."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DA_mc"].verdict == VERDICT_PARTIAL_MATCH
+    assert by_target["DSP_approach"].verdict == VERDICT_APPROVED
+    assert by_target["DA_mc"].match_strength >= 0.6
+    assert by_target["DSP_approach"].match_strength >= 0.65
+
+
+def test_ek2_ackroyd_verifier_be_er_inversion_preserved():
+    """Post-EK2 Ackroyd: the Be-er check (DSP_approach) still lands
+    PARTIAL — Sheppard's internal-ratio is modest because the
+    cinematic murder and suicide pull the ratio toward Do-er. EK2's
+    complement-of-external definition preserves the inversion
+    semantics the original check had."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DSP_approach"].verdict == VERDICT_PARTIAL_MATCH
+    assert 0.3 <= by_target["DSP_approach"].match_strength < 0.6
+
+
+# ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
 
@@ -1429,6 +1692,23 @@ TESTS = [
     test_group_gaps_by_record_buckets_correctly,
     test_group_gaps_by_kind_initializes_orchestratable_keys,
     test_coverage_report_macbeth_surfaces_gaps_against_real_encoding,
+    # EK2 classifier (event-kind-taxonomy-sketch-01)
+    test_ek2_soliloquy_shape_is_internal,
+    test_ek2_command_shape_is_external,
+    test_ek2_interrogation_shape_is_external,
+    test_ek2_killing_shape_is_external,
+    test_ek2_marriage_shape_is_external,
+    test_ek2_realization_shape_is_internal,
+    test_ek2_location_does_not_inflate_interpersonal_when_agent_ids_filters,
+    test_ek2_without_agent_ids_counts_all_participants,
+    test_ek2_prophecy_received_is_internal_when_sender_unencoded,
+    test_ek2_primary_actor_precedence_killer_over_speaker,
+    test_ek2_list_valued_participants_flatten_correctly,
+    test_ek2_no_outward_effect_is_internal,
+    # EK2 integration pins on the three dramatica-complete verifiers
+    test_ek2_oedipus_verifier_both_characterizations_approved,
+    test_ek2_macbeth_verifier_no_regression,
+    test_ek2_ackroyd_verifier_be_er_inversion_preserved,
 ]
 
 

@@ -104,6 +104,9 @@ from verification import (
     VERDICT_NOTED,
     SEVERITY_NOTED,
 )
+from verifier_helpers import (
+    classify_event_action_shape, agent_ids_from_entities,
+)
 
 
 # ============================================================================
@@ -112,6 +115,7 @@ from verification import (
 
 
 MACBETH_ENTITY_ID = "macbeth"
+_AGENT_IDS = agent_ids_from_entities(ENTITIES)
 
 
 def _end_τ_s() -> int:
@@ -142,32 +146,6 @@ def _events_lowered_from_throughline(throughline_id: str) -> tuple:
     return tuple(events)
 
 
-# External-action event kinds — substrate event types that embody
-# "Activity domain" and "Do-er" patterns (visible physical action,
-# combat, formal acts). Internal-state kinds are their counter-set
-# (apparitions, received prophecies, soliloquies — things that
-# happen *to* or *within* a character). This list is Macbeth-scoped;
-# a more general taxonomy belongs in substrate.py if and when another
-# encoding pressures it.
-ACTIVITY_ACTION_KINDS = frozenset({
-    "killing", "ordered_killing", "battle", "siege", "flight",
-    "coronation", "arrival", "royal_decree", "correspondence",
-    "discovery", "death", "standing", "meeting", "approach",
-    "visit", "crossing",
-})
-
-INTERNAL_STATE_KINDS = frozenset({
-    "apparition", "prophecy_received", "utterance", "soliloquy",
-    "vision", "prophecy", "decision", "unraveling",
-})
-
-
-def _event_kind(event: Event) -> str:
-    """Best-effort extraction of an event's 'kind' from its type
-    field. Macbeth events carry a `type` attribute."""
-    return getattr(event, "type", None) or ""
-
-
 def _macbeth_is_participant(event: Event) -> bool:
     """True if the 'macbeth' entity appears among the event's
     participants. Substrate Event participants is a dict mapping
@@ -187,10 +165,9 @@ def mc_throughline_activity_domain_check(
 ) -> tuple:
     """Characterize DA_mc — the MC Throughline (T_mc_macbeth) is in
     the Activity domain. Substrate check: of the events reached via
-    L_mc_throughline's lowering, count external-action-kind vs.
-    internal-state-kind.
-
-    Returns (verdict, match_strength, comment)."""
+    L_mc_throughline's lowering, count external-action-shaped vs.
+    internal-state-shaped per EK2 (structural predicate on
+    participants and effects, not a type-string set)."""
     events = _events_lowered_from_throughline("T_mc_macbeth")
     if not events:
         return (
@@ -200,30 +177,31 @@ def mc_throughline_activity_domain_check(
         )
     total = len(events)
     action_count = sum(
-        1 for e in events if _event_kind(e) in ACTIVITY_ACTION_KINDS
+        1 for e in events
+        if classify_event_action_shape(e, agent_ids=_AGENT_IDS)
+        == "external"
     )
-    state_count = sum(
-        1 for e in events if _event_kind(e) in INTERNAL_STATE_KINDS
-    )
+    state_count = total - action_count
     ratio = action_count / total
     if ratio >= 0.7:
         return (
             VERDICT_APPROVED, ratio,
             f"{action_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are external-action-kind; {state_count} are "
-            f"internal-state-kind. Consistent with Activity domain.",
+            f"events are external-action-shaped (EK2); {state_count} "
+            f"are internal-state-shaped. Consistent with Activity "
+            f"domain.",
         )
     if ratio >= 0.4:
         return (
             VERDICT_PARTIAL_MATCH, ratio,
             f"{action_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are external-action-kind; the mix is not "
-            f"decisively Activity-flavored.",
+            f"events are external-action-shaped (EK2); the mix is "
+            f"not decisively Activity-flavored.",
         )
     return (
         VERDICT_NEEDS_WORK, ratio,
         f"only {action_count}/{total} ({ratio:.0%}) MC-Throughline "
-        f"events are external-action-kind; Activity domain "
+        f"events are external-action-shaped per EK2; Activity domain "
         f"classification is weakly supported by substrate.",
     )
 
@@ -238,8 +216,8 @@ def macbeth_do_er_approach_check(
     _unused_lower_refs: tuple = (),
 ) -> tuple:
     """Characterize DSP_approach — Macbeth is a Do-er. Substrate
-    check: of all fabula events, the fraction in which Macbeth is a
-    participant AND the event kind is an external action."""
+    check: of all fabula events in which Macbeth is a participant,
+    the fraction that are external-action-shaped per EK2."""
     macbeth_events = [e for e in FABULA if _macbeth_is_participant(e)]
     if not macbeth_events:
         return (
@@ -250,27 +228,28 @@ def macbeth_do_er_approach_check(
     total = len(macbeth_events)
     action_count = sum(
         1 for e in macbeth_events
-        if _event_kind(e) in ACTIVITY_ACTION_KINDS
+        if classify_event_action_shape(e, agent_ids=_AGENT_IDS)
+        == "external"
     )
     ratio = action_count / total
     if ratio >= 0.65:
         return (
             VERDICT_APPROVED, ratio,
             f"Macbeth participates in {total} events; {action_count} "
-            f"({ratio:.0%}) are external-action-kind. Do-er "
+            f"({ratio:.0%}) are external-action-shaped (EK2). Do-er "
             f"approach confirmed.",
         )
     if ratio >= 0.35:
         return (
             VERDICT_PARTIAL_MATCH, ratio,
             f"Macbeth participates in {total} events; {action_count} "
-            f"({ratio:.0%}) are external-action-kind. Mixed Do-er / "
-            f"Be-er signature.",
+            f"({ratio:.0%}) are external-action-shaped (EK2). Mixed "
+            f"Do-er / Be-er signature.",
         )
     return (
         VERDICT_NEEDS_WORK, ratio,
         f"Macbeth participates in {total} events; only {action_count} "
-        f"({ratio:.0%}) are external-action-kind. Do-er "
+        f"({ratio:.0%}) are external-action-shaped per EK2. Do-er "
         f"classification weakly supported.",
     )
 

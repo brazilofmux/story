@@ -83,6 +83,9 @@ from verification import (
     VERDICT_NOTED,
     SEVERITY_NOTED,
 )
+from verifier_helpers import (
+    classify_event_action_shape, agent_ids_from_entities,
+)
 
 
 # ============================================================================
@@ -91,6 +94,7 @@ from verification import (
 
 
 OEDIPUS_ENTITY_ID = "oedipus"
+_AGENT_IDS = agent_ids_from_entities(ENTITIES)
 
 
 def _end_τ_s() -> int:
@@ -122,34 +126,6 @@ def _events_lowered_from_throughline(throughline_id: str) -> tuple:
     return tuple(events)
 
 
-# Action-kind taxonomy paralleling macbeth_dramatica_complete_verification's
-# ACTIVITY_ACTION_KINDS / INTERNAL_STATE_KINDS. Oedipus's substrate uses
-# some kinds Macbeth's doesn't (marriage, birth, exposure, upbringing,
-# realization) and shares some (killing, utterance, prophecy_received).
-# Kept local to this module rather than shared-with-Macbeth per the
-# "don't abstract until pressured" discipline; if a third encoding
-# pressures the taxonomy, promote to a shared module then.
-ACTIVITY_ACTION_KINDS = frozenset({
-    "killing", "ordered_killing", "battle", "siege", "flight",
-    "coronation", "arrival", "royal_decree", "correspondence",
-    "discovery", "death", "standing", "meeting", "approach",
-    "visit", "crossing",
-    # Oedipus-specific:
-    "marriage", "blinding", "exile",
-})
-
-INTERNAL_STATE_KINDS = frozenset({
-    "apparition", "prophecy_received", "utterance", "soliloquy",
-    "vision", "prophecy", "decision", "unraveling",
-    # Oedipus-specific:
-    "realization", "birth", "exposure", "upbringing",
-})
-
-
-def _event_kind(event: Event) -> str:
-    return getattr(event, "type", None) or ""
-
-
 def _oedipus_is_participant(event: Event) -> bool:
     parts = event.participants or {}
     return OEDIPUS_ENTITY_ID in parts.values()
@@ -166,14 +142,9 @@ def mc_throughline_activity_domain_check(
 ) -> tuple:
     """Characterize DA_mc — T_mc_oedipus in Activity domain. Substrate
     check: of the events reached via L_mc_throughline, count
-    external-action-kind vs. internal-state-kind.
-
-    Expected result on Oedipus's current substrate: NEEDS_WORK (low
-    ratio). This is a productive failure — not a classification error
-    at the upper dialect (Oedipus's investigation IS activity in
-    Dramatica terms) but a pointer to F5: the substrate renders
-    investigation as speech acts, not as the overt physical actions
-    the Activity-kind taxonomy looks for."""
+    external-action-shaped vs. internal-state-shaped per EK2
+    (event-kind-taxonomy-sketch-01) — a structural predicate over
+    participants and effects, not a type-string set."""
     events = _events_lowered_from_throughline("T_mc_oedipus")
     if not events:
         return (
@@ -183,36 +154,36 @@ def mc_throughline_activity_domain_check(
         )
     total = len(events)
     action_count = sum(
-        1 for e in events if _event_kind(e) in ACTIVITY_ACTION_KINDS
+        1 for e in events
+        if classify_event_action_shape(e, agent_ids=_AGENT_IDS)
+        == "external"
     )
-    state_count = sum(
-        1 for e in events if _event_kind(e) in INTERNAL_STATE_KINDS
-    )
+    state_count = total - action_count
     ratio = action_count / total
     if ratio >= 0.7:
         return (
             VERDICT_APPROVED, ratio,
             f"{action_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are external-action-kind; {state_count} are "
-            f"internal-state-kind. Consistent with Activity domain.",
+            f"events are external-action-shaped (EK2); {state_count} "
+            f"are internal-state-shaped. Consistent with Activity "
+            f"domain.",
         )
     if ratio >= 0.4:
         return (
             VERDICT_PARTIAL_MATCH, ratio,
             f"{action_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are external-action-kind; the mix leans toward "
-            f"internal-state.",
+            f"events are external-action-shaped (EK2); the mix leans "
+            f"toward internal-state.",
         )
     return (
         VERDICT_NEEDS_WORK, ratio,
         f"only {action_count}/{total} ({ratio:.0%}) MC-Throughline "
-        f"events are external-action-kind ({state_count} are "
-        f"internal-state-kind). The Activity-domain classification "
-        f"at the upper dialect is not invalidated — Oedipus's "
-        f"investigation is activity in Dramatica terms — but the "
-        f"substrate renders that activity as speech acts, not as "
-        f"the overt physical actions the kind-taxonomy recognizes. "
-        f"Surfacing F5 (lowering-sketch-01 substrate-gap finding).",
+        f"events are external-action-shaped per EK2 "
+        f"({state_count} are internal-state-shaped). If this "
+        f"persists after substrate extension, the substrate is "
+        f"genuinely at a different grain than Dramatica-Sophocles — "
+        f"F5 (lowering-sketch-01 substrate-gap finding) points at "
+        f"which beats the encoding is still missing.",
     )
 
 
@@ -227,9 +198,8 @@ def oedipus_do_er_approach_check(
 ) -> tuple:
     """Characterize DSP_approach — Oedipus is a Do-er. Substrate
     check: of events where Oedipus is a participant, the fraction
-    whose kind is external-action. Expected on current substrate:
-    NEEDS_WORK — only `killing` and `marriage` are action-kind;
-    investigation renders as `utterance` and `realization`."""
+    that are external-action-shaped per EK2 (structural predicate
+    over participants and effects)."""
     oed_events = [e for e in FABULA if _oedipus_is_participant(e)]
     if not oed_events:
         return (
@@ -240,30 +210,32 @@ def oedipus_do_er_approach_check(
     total = len(oed_events)
     action_count = sum(
         1 for e in oed_events
-        if _event_kind(e) in ACTIVITY_ACTION_KINDS
+        if classify_event_action_shape(e, agent_ids=_AGENT_IDS)
+        == "external"
     )
     ratio = action_count / total
     if ratio >= 0.65:
         return (
             VERDICT_APPROVED, ratio,
             f"Oedipus participates in {total} events; {action_count} "
-            f"({ratio:.0%}) are external-action-kind. Do-er "
+            f"({ratio:.0%}) are external-action-shaped (EK2). Do-er "
             f"approach confirmed.",
         )
     if ratio >= 0.35:
         return (
             VERDICT_PARTIAL_MATCH, ratio,
             f"Oedipus participates in {total} events; {action_count} "
-            f"({ratio:.0%}) are external-action-kind. Mixed Do-er / "
-            f"Be-er signature in substrate.",
+            f"({ratio:.0%}) are external-action-shaped (EK2). Mixed "
+            f"Do-er / Be-er signature in substrate.",
         )
     return (
         VERDICT_NEEDS_WORK, ratio,
         f"Oedipus participates in {total} events; only {action_count} "
-        f"({ratio:.0%}) are external-action-kind. Do-er classification "
-        f"at the upper dialect is not invalidated — Oedipus's "
-        f"investigation is active — but the substrate renders most "
-        f"of his action as speech and realization. F5 again.",
+        f"({ratio:.0%}) are external-action-shaped per EK2. Do-er "
+        f"classification at the upper dialect is not invalidated — "
+        f"Oedipus's investigation is active — but the substrate "
+        f"does not yet encode enough of it as interpersonal outward-"
+        f"effect events for EK2 to classify it external.",
     )
 
 
