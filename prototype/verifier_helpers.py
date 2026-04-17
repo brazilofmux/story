@@ -798,6 +798,89 @@ def classify_event_agency_shape(event, mc_id: str):
     return "pursuit"
 
 
+def classify_event_manipulation_shape(
+    event,
+    mc_id: str,
+    events_in_scope: list,
+):
+    """Classify an event as manipulation-shaped / not, per
+    event-manipulation-taxonomy-sketch-01 (MN1–MN5).
+
+    Returns:
+        - `None` — MC is not a participant in the event.
+        - `"manipulation"` — MN2's concealment-asymmetry predicate
+          fires: MC holds at least one self-fact at `Slot.KNOWN`
+          (a world-proposition with `prop.args[0] == mc_id`) that
+          at least one non-MC participant in this event does NOT
+          hold at `Slot.KNOWN` at event.τ_s.
+        - `"non-manipulation"` — MC participates but MN2 does not
+          fire (no asymmetry found among this event's participants).
+
+    Per MN1, reads fold-visible structure only — participants dict,
+    world-state via `project_world`, each non-MC participant's
+    `KnowledgeState` via `project_knowledge`. No event type strings,
+    no participant role names.
+
+    `events_in_scope` is the canonical-scope fabula list the verifier
+    is running over — used to project world state and per-agent
+    knowledge at `event.τ_s`.
+    """
+    # Lazy import to keep verifier_helpers' import graph narrow.
+    from substrate import (
+        project_world as _project_world,
+        project_knowledge as _project_knowledge,
+        Slot as _Slot,
+    )
+
+    participant_ids = event_participants_flat(event)
+    if mc_id not in participant_ids:
+        return None
+
+    τ = event.τ_s
+    if τ is None:
+        return "non-manipulation"
+
+    world = _project_world(events_in_scope=events_in_scope, up_to_τ_s=τ)
+    # Self-facts: world-propositions whose first argument is mc_id.
+    self_facts = [
+        p for p in world
+        if p.args and str(p.args[0]) == mc_id
+    ]
+    if not self_facts:
+        return "non-manipulation"
+
+    mc_state = _project_knowledge(
+        agent_id=mc_id,
+        events_in_scope=events_in_scope,
+        up_to_τ_s=τ,
+    )
+    mc_known_self_facts = [
+        p for p in self_facts if mc_state.holds_as(p, _Slot.KNOWN)
+    ]
+    if not mc_known_self_facts:
+        return "non-manipulation"
+
+    non_mc_participants = [p for p in participant_ids if p != mc_id]
+    if not non_mc_participants:
+        # MC is the only participant; asymmetry needs at least one
+        # other agent in the event.
+        return "non-manipulation"
+
+    # Fire on first asymmetry found: any (self-fact, other-participant)
+    # pair where the other does not hold the fact at KNOWN.
+    for other_id in non_mc_participants:
+        other_state = _project_knowledge(
+            agent_id=other_id,
+            events_in_scope=events_in_scope,
+            up_to_τ_s=τ,
+        )
+        for p in mc_known_self_facts:
+            if not other_state.holds_as(p, _Slot.KNOWN):
+                return "manipulation"
+
+    return "non-manipulation"
+
+
 def agent_ids_from_entities(entities: tuple) -> frozenset:
     """Build the `agent_ids` frozenset the EK2 classifier expects,
     from an encoding's `ENTITIES` tuple. Selects entities whose

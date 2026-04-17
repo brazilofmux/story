@@ -2686,6 +2686,162 @@ def test_ag5_rocky_dsp_growth_start_unchanged():
 
 
 # ----------------------------------------------------------------------------
+# event-manipulation-taxonomy-sketch-01: MN1-MN5
+# (classify_event_manipulation_shape; MN2 concealment-asymmetry predicate)
+# ----------------------------------------------------------------------------
+
+
+def test_mn_returns_none_when_mc_not_participant():
+    """MN3: MC not in participants → None."""
+    from verifier_helpers import classify_event_manipulation_shape
+    from substrate import Event, WorldEffect, Prop
+    e = Event(
+        id="E1", type="meeting", τ_s=1, τ_a=1,
+        participants={"speaker": "alice", "listener": "bob"},
+        effects=(),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_manipulation_shape(e, "charlie", [e]) is None
+
+
+def test_mn_non_manipulation_when_no_self_facts_known():
+    """MN2: MC holds no self-facts at KNOWN → non-manipulation.
+    MC participates but carries no concealed knowledge about
+    themselves."""
+    from verifier_helpers import classify_event_manipulation_shape
+    from substrate import Event
+    e = Event(
+        id="E1", type="meeting", τ_s=1, τ_a=1,
+        participants={"speaker": "mc", "listener": "other"},
+        effects=(),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_manipulation_shape(e, "mc", [e]) == "non-manipulation"
+
+
+def test_mn_manipulation_when_mc_knows_self_fact_other_does_not():
+    """MN2 fires: self-fact `secret(mc)` is world-asserted, MC
+    knows it at KNOWN, co-participant does not. Asymmetry = the
+    manipulation structural signal."""
+    from verifier_helpers import classify_event_manipulation_shape
+    from substrate import (
+        Event, WorldEffect, KnowledgeEffect, Prop, Held, Slot,
+        Confidence,
+    )
+    secret_prop = Prop("secret", ("mc",))
+    # τ_s=1: world-assert secret(mc) AND MC learns secret at KNOWN.
+    e_assert = Event(
+        id="E_assert", type="reveal", τ_s=1, τ_a=1,
+        participants={"speaker": "mc"},
+        effects=(
+            WorldEffect(prop=secret_prop, asserts=True),
+            KnowledgeEffect(
+                agent_id="mc",
+                held=Held(prop=secret_prop, slot=Slot.KNOWN,
+                          confidence=Confidence.CERTAIN, via="test"),
+            ),
+        ),
+        branches=frozenset({":canonical"}),
+    )
+    # τ_s=2: meeting with co-participant who doesn't know.
+    e_meet = Event(
+        id="E_meet", type="meeting", τ_s=2, τ_a=2,
+        participants={"speaker": "mc", "listener": "other"},
+        effects=(),
+        branches=frozenset({":canonical"}),
+    )
+    result = classify_event_manipulation_shape(
+        e_meet, "mc", [e_assert, e_meet],
+    )
+    assert result == "manipulation"
+
+
+def test_mn_non_manipulation_when_asymmetry_resolved():
+    """MN2 does not fire: both MC and other participant hold the
+    self-fact at KNOWN (post-reveal scenario)."""
+    from verifier_helpers import classify_event_manipulation_shape
+    from substrate import (
+        Event, WorldEffect, KnowledgeEffect, Prop, Held, Slot,
+        Confidence,
+    )
+    secret_prop = Prop("secret", ("mc",))
+    e_assert = Event(
+        id="E_assert", type="reveal", τ_s=1, τ_a=1,
+        participants={"speaker": "mc"},
+        effects=(
+            WorldEffect(prop=secret_prop, asserts=True),
+            KnowledgeEffect(
+                agent_id="mc",
+                held=Held(prop=secret_prop, slot=Slot.KNOWN,
+                          confidence=Confidence.CERTAIN, via="test"),
+            ),
+            KnowledgeEffect(
+                agent_id="other",
+                held=Held(prop=secret_prop, slot=Slot.KNOWN,
+                          confidence=Confidence.CERTAIN, via="test"),
+            ),
+        ),
+        branches=frozenset({":canonical"}),
+    )
+    e_meet = Event(
+        id="E_meet", type="meeting", τ_s=2, τ_a=2,
+        participants={"speaker": "mc", "listener": "other"},
+        effects=(),
+        branches=frozenset({":canonical"}),
+    )
+    result = classify_event_manipulation_shape(
+        e_meet, "mc", [e_assert, e_meet],
+    )
+    assert result == "non-manipulation"
+
+
+def test_mn4_ackroyd_da_mc_approved_post_concealment_asymmetry():
+    """Ackroyd DA_mc PARTIAL 0.54 → APPROVED ≥0.7 post-MN4.
+    The refactored check composes MANIPULATION_KINDS with MN2
+    concealment-asymmetry; investigation events where Sheppard is
+    also_present / assistant now count toward Manipulation-domain
+    support."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DA_mc"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength >= 0.7
+    assert "concealment-asymmetry" in r.comment.lower() or "mn2" in r.comment.lower()
+
+
+def test_mn4_oedipus_da_mc_unchanged():
+    """Oedipus DA_mc uses EK2 (Activity domain); MN4 is Ackroyd-
+    only wiring. No regression."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DA_mc"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 0.77) < 0.01
+
+
+def test_mn4_macbeth_da_mc_unchanged():
+    """Macbeth DA_mc uses EK2; MN4 not wired. No regression."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DA_mc"]
+    assert r.verdict == VERDICT_PARTIAL_MATCH
+    assert abs(r.match_strength - 0.69) < 0.01
+
+
+def test_mn4_rocky_da_mc_unchanged():
+    """Rocky DA_mc uses EK2; MN4 not wired. No regression."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DA_mc"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 0.72) < 0.01
+
+
+# ----------------------------------------------------------------------------
 # identification-goal-sketch-01: IG1-IG5
 # (knowledge-vs-world for Story_goal trajectory checks on
 # identification-shaped goals)
@@ -2957,6 +3113,15 @@ TESTS = [
     test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
     test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
     test_lt_rocky_scheduling_signals_include_both_fight_props,
+    # event-manipulation-taxonomy-sketch-01 (MN1-MN5)
+    test_mn_returns_none_when_mc_not_participant,
+    test_mn_non_manipulation_when_no_self_facts_known,
+    test_mn_manipulation_when_mc_knows_self_fact_other_does_not,
+    test_mn_non_manipulation_when_asymmetry_resolved,
+    test_mn4_ackroyd_da_mc_approved_post_concealment_asymmetry,
+    test_mn4_oedipus_da_mc_unchanged,
+    test_mn4_macbeth_da_mc_unchanged,
+    test_mn4_rocky_da_mc_unchanged,
     # identification-goal-sketch-01 (IG1-IG5)
     test_ig_oedipus_story_goal_approved_under_knowledge_projection,
     test_ig_oedipus_story_goal_uses_knowledge_projection_not_world_projection,

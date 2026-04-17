@@ -103,6 +103,7 @@ from verification import (
 from verifier_helpers import (
     classify_event_action_shape, agent_ids_from_entities,
     dsp_limit_characterization_check,
+    classify_event_manipulation_shape,
 )
 
 
@@ -189,9 +190,23 @@ def mc_throughline_manipulation_domain_check(
     _unused_lower_refs: tuple = (),
 ) -> tuple:
     """Characterize DA_mc — T_mc_sheppard is in the Manipulation
-    domain. Substrate check: of events reached via L_mc_throughline,
-    count manipulation-kind (concealment, scheming, staging,
-    endgame-as-concealment)."""
+    domain. Post-event-manipulation-taxonomy-sketch-01 (MN4), the
+    check composes two signals:
+
+    - **Type-set signal** (existing): event type ∈
+      `MANIPULATION_KINDS` (blackmail, preparation, staged_disclosure,
+      killing-as-endgame, confession-writing, suicide-as-concealment).
+    - **Concealment-asymmetry signal** (MN2): Sheppard holds a
+      self-fact at `Slot.KNOWN` that at least one other participant
+      in the event does not — structural trace of performed
+      innocence. Fires on investigation events where Sheppard is
+      `also_present` / `assistant`.
+
+    An event counts as manipulation-shaped if EITHER signal fires.
+    The compositional form closes the 2026-04-17 Ackroyd probe's
+    qualification: investigation events were classified as
+    non-manipulation under the type-set alone; under MN4 they're
+    correctly counted."""
     events = _events_lowered_from_throughline("T_mc_sheppard")
     if not events:
         return (
@@ -200,32 +215,58 @@ def mc_throughline_manipulation_domain_check(
             "DomainAssignment check cannot evaluate",
         )
     total = len(events)
-    manip_count = sum(
-        1 for e in events if _event_kind(e) in MANIPULATION_KINDS
+
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+
+    type_set_hits = 0
+    asymmetry_hits = 0
+    combined = 0
+    for e in events:
+        type_hit = _event_kind(e) in MANIPULATION_KINDS
+        asymmetry_hit = (
+            classify_event_manipulation_shape(
+                e, SHEPPARD_ENTITY_ID, events_in_scope,
+            )
+            == "manipulation"
+        )
+        if type_hit:
+            type_set_hits += 1
+        if asymmetry_hit:
+            asymmetry_hits += 1
+        if type_hit or asymmetry_hit:
+            combined += 1
+
+    ratio = combined / total
+    breakdown = (
+        f"{combined}/{total} ({ratio:.0%}) MC-Throughline events "
+        f"manipulation-shaped — {type_set_hits} via "
+        f"MANIPULATION_KINDS type-set + {asymmetry_hits} via MN2 "
+        f"concealment-asymmetry (overlap allowed)"
     )
-    ratio = manip_count / total
+
     if ratio >= 0.7:
         return (
             VERDICT_APPROVED, ratio,
-            f"{manip_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are manipulation-kind (blackmail, preparation, "
-            f"staged_disclosure, killing-as-endgame, "
-            f"confession-writing, suicide-as-concealment). Consistent "
-            f"with Manipulation domain.",
+            f"{breakdown}. Consistent with Manipulation domain — "
+            f"Sheppard's concealment layer is visible structurally "
+            f"at every investigation event he participates in "
+            f"(he holds `killed(sheppard, ackroyd)` at KNOWN from "
+            f"the murder onward; non-Sheppard participants do not "
+            f"hold it at KNOWN until Poirot's reveal).",
         )
     if ratio >= 0.4:
         return (
             VERDICT_PARTIAL_MATCH, ratio,
-            f"{manip_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are manipulation-kind; the remainder are "
-            f"investigatory / discovery events that document the "
-            f"scheme rather than enact it.",
+            f"{breakdown}. Manipulation-domain classification "
+            f"partially supported; some events may be post-reveal "
+            f"where the concealment asymmetry has collapsed.",
         )
     return (
         VERDICT_NEEDS_WORK, ratio,
-        f"only {manip_count}/{total} ({ratio:.0%}) MC-Throughline "
-        f"events are manipulation-kind. Manipulation domain "
-        f"classification is weakly supported by substrate.",
+        f"{breakdown}. Manipulation domain classification is "
+        f"weakly supported by substrate.",
     )
 
 
