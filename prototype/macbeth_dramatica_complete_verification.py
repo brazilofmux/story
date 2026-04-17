@@ -82,7 +82,7 @@ from macbeth import (
 
 # Dramatic-side imports.
 from dramatic import Throughline, Character
-from macbeth_dramatic import THROUGHLINES, CHARACTERS, STORY
+from macbeth_dramatic import THROUGHLINES, CHARACTERS, STORY, SCENES, BEATS
 
 # Template-side imports.
 from dramatica_template import (
@@ -108,6 +108,7 @@ from verification import (
 from verifier_helpers import (
     classify_event_action_shape, agent_ids_from_entities,
     dsp_limit_characterization_check,
+    beat_type_weight, event_to_beat_type,
 )
 
 
@@ -168,8 +169,18 @@ def mc_throughline_activity_domain_check(
     """Characterize DA_mc — the MC Throughline (T_mc_macbeth) is in
     the Activity domain. Substrate check: of the events reached via
     L_mc_throughline's lowering, count external-action-shaped vs.
-    internal-state-shaped per EK2 (structural predicate on
-    participants and effects, not a type-string set)."""
+    internal-state-shaped per EK2, weighted by beat-type significance
+    per beat-weight-taxonomy-sketch-01 (BW4).
+
+    Beat-type weighting addresses the 2026-04-17 probe qualification:
+    non-Activity events in Macbeth's arc (prophecies, ghost) are the
+    MC Throughline's most dramatically significant moments
+    (inciting, midpoint) — treating all events equally understates
+    their narrative weight. The weighted ratio honestly reports the
+    Activity-domain classification strength.
+
+    Comment reports both the raw count and the weighted ratio so
+    the refinement is inspectable."""
     events = _events_lowered_from_throughline("T_mc_macbeth")
     if not events:
         return (
@@ -184,27 +195,51 @@ def mc_throughline_activity_domain_check(
         == "external"
     )
     state_count = total - action_count
-    ratio = action_count / total
-    if ratio >= 0.7:
-        return (
-            VERDICT_APPROVED, ratio,
-            f"{action_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are external-action-shaped (EK2); {state_count} "
-            f"are internal-state-shaped. Consistent with Activity "
-            f"domain.",
+    raw_ratio = action_count / total
+
+    # BW4: weighted ratio using beat_type significance.
+    weighted_activity = 0.0
+    weighted_total = 0.0
+    for e in events:
+        beat_type = event_to_beat_type(
+            e.id, "T_mc_macbeth", LOWERINGS, SCENES, BEATS,
         )
-    if ratio >= 0.4:
+        weight = beat_type_weight(beat_type)
+        weighted_total += weight
+        if (classify_event_action_shape(e, agent_ids=_AGENT_IDS)
+                == "external"):
+            weighted_activity += weight
+    weighted_ratio = (
+        weighted_activity / weighted_total if weighted_total > 0 else 0.0
+    )
+    breakdown = (
+        f"raw {action_count}/{total} ({raw_ratio:.0%}); "
+        f"BW4-weighted {weighted_activity:.1f}/{weighted_total:.1f} "
+        f"({weighted_ratio:.0%}) — beat_type significance applied"
+    )
+
+    if weighted_ratio >= 0.7:
         return (
-            VERDICT_PARTIAL_MATCH, ratio,
-            f"{action_count}/{total} ({ratio:.0%}) MC-Throughline "
-            f"events are external-action-shaped (EK2); the mix is "
-            f"not decisively Activity-flavored.",
+            VERDICT_APPROVED, weighted_ratio,
+            f"{breakdown}. Consistent with Activity domain — "
+            f"weighted signal confirms the Activity-flavored majority "
+            f"carries enough narrative weight to support the "
+            f"declaration.",
+        )
+    if weighted_ratio >= 0.4:
+        return (
+            VERDICT_PARTIAL_MATCH, weighted_ratio,
+            f"{breakdown}. Activity-domain classification partially "
+            f"supported; the non-Activity events ({state_count} raw) "
+            f"include dramatically heavy beats (inciting prophecy, "
+            f"midpoint ghost) whose weight shifts the honest signal "
+            f"below the raw ratio.",
         )
     return (
-        VERDICT_NEEDS_WORK, ratio,
-        f"only {action_count}/{total} ({ratio:.0%}) MC-Throughline "
-        f"events are external-action-shaped per EK2; Activity domain "
-        f"classification is weakly supported by substrate.",
+        VERDICT_NEEDS_WORK, weighted_ratio,
+        f"{breakdown}. Activity domain classification weakly "
+        f"supported under beat-weighted reading; the non-Activity "
+        f"events dominate when narrative weight is honored.",
     )
 
 

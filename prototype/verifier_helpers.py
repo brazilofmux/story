@@ -798,6 +798,73 @@ def classify_event_agency_shape(event, mc_id: str):
     return "pursuit"
 
 
+# Canonical beat-type weight vocabulary per beat-weight-taxonomy-
+# sketch-01 (BW2). Values tuned to the Dramatic dialect's common
+# five-beat structure (Macbeth's vocabulary). Unknown strings default
+# to 1.0 (rising-action baseline).
+_BEAT_TYPE_WEIGHTS = {
+    "inciting": 2.0,
+    "rising": 1.0,
+    "midpoint": 2.0,
+    "climax": 2.0,
+    "denouement": 1.5,
+}
+
+
+def beat_type_weight(beat_type) -> float:
+    """Return the canonical weight for a beat_type string per BW2.
+    Unknown / None values default to 1.0 (rising-action baseline)
+    per the sketch's conservative-default discipline."""
+    if not beat_type:
+        return 1.0
+    return _BEAT_TYPE_WEIGHTS.get(beat_type, 1.0)
+
+
+def event_to_beat_type(
+    event_id: str,
+    throughline_id: str,
+    lowerings,
+    scenes,
+    beats,
+):
+    """Resolve the beat_type for a substrate event, for a specific
+    throughline, per BW3. Walks:
+
+      substrate event_id →
+      Scene-level Lowering whose lower_records contain the event →
+      Scene.advances matching throughline_id →
+      Beat.beat_type
+
+    Returns the beat_type string, or None if any step fails.
+    """
+    # Step 1 — find Scene-level lowerings pointing at this substrate
+    # event. Scene lowerings have upper_record.dialect == "dramatic"
+    # and upper_record.record_id starting with "S_" by convention.
+    scenes_by_id = {s.id: s for s in scenes}
+    beats_by_id = {b.id: b for b in beats}
+    for lw in lowerings:
+        ur = lw.upper_record
+        if ur.dialect != "dramatic":
+            continue
+        scene = scenes_by_id.get(ur.record_id)
+        if scene is None:
+            continue
+        if not any(
+            lr.dialect == "substrate" and lr.record_id == event_id
+            for lr in lw.lower_records
+        ):
+            continue
+        # Step 2 — find the Scene's advance entry for this throughline.
+        for advance in scene.advances:
+            if advance.throughline_id != throughline_id:
+                continue
+            beat = beats_by_id.get(advance.beat_id)
+            if beat is None:
+                continue
+            return beat.beat_type
+    return None
+
+
 def classify_event_manipulation_shape(
     event,
     mc_id: str,

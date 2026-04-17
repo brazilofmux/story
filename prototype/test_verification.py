@@ -2686,6 +2686,97 @@ def test_ag5_rocky_dsp_growth_start_unchanged():
 
 
 # ----------------------------------------------------------------------------
+# beat-weight-taxonomy-sketch-01: BW1-BW5
+# (beat_type_weight vocabulary; event_to_beat_type resolver; Macbeth DA_mc
+# weighted ratio)
+# ----------------------------------------------------------------------------
+
+
+def test_bw2_beat_type_weight_canonical_values():
+    """BW2: the canonical five beat_type weights match the sketch's
+    declared vocabulary."""
+    from verifier_helpers import beat_type_weight
+    assert beat_type_weight("inciting") == 2.0
+    assert beat_type_weight("rising") == 1.0
+    assert beat_type_weight("midpoint") == 2.0
+    assert beat_type_weight("climax") == 2.0
+    assert beat_type_weight("denouement") == 1.5
+
+
+def test_bw2_beat_type_weight_defaults_to_baseline_for_unknown():
+    """BW2: unknown or None beat_type values default to 1.0 —
+    conservative baseline matching rising-action weight. Supports
+    per-story vocabularies without rejecting unfamiliar labels."""
+    from verifier_helpers import beat_type_weight
+    assert beat_type_weight(None) == 1.0
+    assert beat_type_weight("") == 1.0
+    assert beat_type_weight("turning_point") == 1.0
+    assert beat_type_weight("denoument") == 1.0  # typo defaults cleanly
+
+
+def test_bw3_event_to_beat_type_resolves_through_scene_advance():
+    """BW3: the event→beat_type resolver walks Lowerings →
+    Scene.advances → Beat.beat_type. Integration test against
+    Macbeth's real fixture (E_prophecy_first is in S_prophecy which
+    advances T_mc_macbeth via B_mc_1 — Macbeth's inciting beat)."""
+    from verifier_helpers import event_to_beat_type
+    from macbeth_dramatic import SCENES, BEATS
+    from macbeth_lowerings import LOWERINGS
+    result = event_to_beat_type(
+        "E_prophecy_first", "T_mc_macbeth",
+        LOWERINGS, SCENES, BEATS,
+    )
+    assert result == "inciting", (
+        f"E_prophecy_first should resolve to inciting on T_mc_macbeth; "
+        f"got {result!r}"
+    )
+
+
+def test_bw3_event_to_beat_type_returns_none_for_non_advancing_throughline():
+    """BW3: if the Scene doesn't advance the requested throughline,
+    resolver returns None (caller uses baseline 1.0)."""
+    from verifier_helpers import event_to_beat_type
+    from macbeth_dramatic import SCENES, BEATS
+    from macbeth_lowerings import LOWERINGS
+    result = event_to_beat_type(
+        "E_prophecy_first", "T_nonexistent_throughline",
+        LOWERINGS, SCENES, BEATS,
+    )
+    assert result is None
+
+
+def test_bw4_oedipus_da_mc_unchanged():
+    """BW is Macbeth-only wiring. Oedipus DA_mc uses EK2 directly."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DA_mc"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 0.77) < 0.01
+
+
+def test_bw4_rocky_da_mc_unchanged():
+    """BW is Macbeth-only wiring. Rocky DA_mc uses EK2 directly."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DA_mc"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 0.72) < 0.01
+
+
+def test_bw4_ackroyd_da_mc_unchanged():
+    """BW is Macbeth-only wiring. Ackroyd DA_mc uses MN4 (knowledge-
+    asymmetry + MANIPULATION_KINDS), no beat-weighting applied."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DA_mc"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 0.85) < 0.01
+
+
+# ----------------------------------------------------------------------------
 # event-manipulation-taxonomy-sketch-01: MN1-MN5
 # (classify_event_manipulation_shape; MN2 concealment-asymmetry predicate)
 # ----------------------------------------------------------------------------
@@ -2821,14 +2912,22 @@ def test_mn4_oedipus_da_mc_unchanged():
     assert abs(r.match_strength - 0.77) < 0.01
 
 
-def test_mn4_macbeth_da_mc_unchanged():
-    """Macbeth DA_mc uses EK2; MN4 not wired. No regression."""
+def test_mn4_macbeth_da_mc_partial_under_bw4_weighting():
+    """Macbeth DA_mc stays PARTIAL under MN4 + BW4. MN4 not wired
+    for Macbeth (EK2 is used); BW4 applies beat-type weighting.
+    Raw ratio 0.69 shifts to weighted 0.65 — strength calibrated
+    below 0.69 per the probe's 'may even be generous' observation."""
     from macbeth_dramatica_complete_verification import run
     reviews = run()
     by_target = {r.target_record.record_id: r for r in reviews}
     r = by_target["DA_mc"]
     assert r.verdict == VERDICT_PARTIAL_MATCH
-    assert abs(r.match_strength - 0.69) < 0.01
+    assert r.match_strength < 0.69, (
+        f"BW4 weighting should produce a strength < 0.69 raw "
+        f"(probe's 'may even be generous' prediction); got "
+        f"{r.match_strength}"
+    )
+    assert "BW4" in r.comment or "beat_type" in r.comment.lower()
 
 
 def test_mn4_rocky_da_mc_unchanged():
@@ -3113,6 +3212,14 @@ TESTS = [
     test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
     test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
     test_lt_rocky_scheduling_signals_include_both_fight_props,
+    # beat-weight-taxonomy-sketch-01 (BW1-BW5)
+    test_bw2_beat_type_weight_canonical_values,
+    test_bw2_beat_type_weight_defaults_to_baseline_for_unknown,
+    test_bw3_event_to_beat_type_resolves_through_scene_advance,
+    test_bw3_event_to_beat_type_returns_none_for_non_advancing_throughline,
+    test_bw4_oedipus_da_mc_unchanged,
+    test_bw4_rocky_da_mc_unchanged,
+    test_bw4_ackroyd_da_mc_unchanged,
     # event-manipulation-taxonomy-sketch-01 (MN1-MN5)
     test_mn_returns_none_when_mc_not_participant,
     test_mn_non_manipulation_when_no_self_facts_known,
@@ -3120,7 +3227,7 @@ TESTS = [
     test_mn_non_manipulation_when_asymmetry_resolved,
     test_mn4_ackroyd_da_mc_approved_post_concealment_asymmetry,
     test_mn4_oedipus_da_mc_unchanged,
-    test_mn4_macbeth_da_mc_unchanged,
+    test_mn4_macbeth_da_mc_partial_under_bw4_weighting,
     test_mn4_rocky_da_mc_unchanged,
     # identification-goal-sketch-01 (IG1-IG5)
     test_ig_oedipus_story_goal_approved_under_knowledge_projection,
