@@ -2150,6 +2150,115 @@ def test_lt_ackroyd_dsp_limit_approved_with_two_signal_kinds():
     assert "rule-emergence" in r.comment
 
 
+# ----------------------------------------------------------------------------
+# Rocky verifier — Phase 2 integration pins (pressure-shape-taxonomy-sketch-01)
+# ----------------------------------------------------------------------------
+#
+# Rocky is the first Timelock + Failure + Judgment=Good encoding in the
+# corpus. The verifier surface stresses LT5's asymmetric disposition
+# table (DSP_limit NEEDS_WORK on a Timelock declaration + Optionlock-
+# shaped substrate), inverted DSP_outcome semantics (Failure = goal
+# fact does NOT land), and the Good-judgment positive-closure cluster.
+
+
+def test_rocky_verifier_has_nine_checks():
+    """Rocky's verifier surface matches the other three dramatica-
+    complete verifiers at 9 checks across all three primitives."""
+    from rocky_dramatica_complete_verification import run
+    assert len(run()) == 9
+
+
+def test_rocky_dsp_limit_needs_work_on_timelock_declaration():
+    """First non-APPROVED DSP_limit in the corpus. Rocky declares
+    Timelock; LT2 reads the substrate and counts retraction (Mac's
+    scheduled fight) + rule-emergence (went_the_distance) → Optionlock
+    0.67. LT5's disposition reports NEEDS_WORK for the declaration/
+    substrate disagreement — the honest signal the sketch named as
+    the forcing function for LT3-strong (OQ1 / OQ3)."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_limit"]
+    assert r.verdict == VERDICT_NEEDS_WORK
+    assert "timelock" in r.comment.lower()
+    assert "optionlock" in r.comment.lower()
+
+
+def test_rocky_dsp_outcome_failure_approved():
+    """Rocky's Failure declaration is supported by substrate: went_the_
+    distance(rocky, apollo) derives at τ_s=end, which contaminates
+    the clean-publicity-stunt goal. Inverted from the Success checks
+    in the other three encodings: for Failure, the goal's load-bearing
+    fact being the OPPOSITE of what the goal predicts IS the evidence
+    that supports the declaration."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_outcome"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "went_the_distance" in r.comment
+
+
+def test_rocky_dsp_judgment_good_positive_closure_cluster():
+    """First Judgment=Good for the MC in the corpus. Rocky's Good
+    signature is the confluence of three positive-closure facts at
+    τ_s=end: went_the_distance (achievement), called_out(rocky,
+    adrian) (relationship payoff), refused_rematch(rocky)
+    (acceptance). All three hold — APPROVED 1.0."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_judgment"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+
+
+def test_rocky_dsp_resolve_steadfast_via_structural_invariance():
+    """Rocky's Steadfast rests on the structural absence of equivalence-
+    class collapses involving the MC — unlike Ackroyd's Steadfast
+    (which rests on a pre-existing rule-derived trait). Same DSP
+    axis value, different verifier evidence."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+
+
+def test_rocky_dsp_growth_start_via_articulated_goal_acquisition():
+    """Rocky's Start is privately chosen at the night-before-fight
+    empty-ring scene (τ_s=45), not externally compelled like Ackroyd's
+    ultimatum-driven confession-writing. Substrate signature:
+    articulated_goal enters Rocky's knowledge state at τ_s=45 and
+    holds through τ_s=end."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_growth"]
+    assert r.verdict == VERDICT_APPROVED
+
+
+def test_rocky_all_characterization_and_claim_checks_except_dsp_limit_approved():
+    """Summary pin: Rocky produces 8 APPROVED and 1 NEEDS_WORK
+    (DSP_limit) across the 9-check surface. Ackroyd/Macbeth/Oedipus
+    each produce 9/9 APPROVED on DSP_limit; Rocky is the first to
+    exercise LT5's disagreement verdict — which is the core finding
+    the Phase 2 landing reports."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    approved = sum(1 for r in reviews if r.verdict == VERDICT_APPROVED)
+    needs_work = sum(1 for r in reviews if r.verdict == VERDICT_NEEDS_WORK)
+    assert approved == 8
+    assert needs_work == 1
+    # The single NEEDS_WORK is on DSP_limit specifically.
+    needs_work_targets = [
+        r.target_record.record_id for r in reviews
+        if r.verdict == VERDICT_NEEDS_WORK
+    ]
+    assert needs_work_targets == ["DSP_limit"]
+
+
 def test_oedipus_dsp_growth_partial_rate_heuristic():
     """Oedipus's DSP_growth=Stop. Honest PARTIAL finding: the
     current rate-based heuristic (participation events per τ_s pre
@@ -2292,6 +2401,14 @@ TESTS = [
     test_lt_oedipus_dsp_limit_approved_with_two_signal_kinds,
     test_lt_macbeth_dsp_limit_approved_with_two_signal_kinds,
     test_lt_ackroyd_dsp_limit_approved_with_two_signal_kinds,
+    # Rocky Phase 2 integration pins
+    test_rocky_verifier_has_nine_checks,
+    test_rocky_dsp_limit_needs_work_on_timelock_declaration,
+    test_rocky_dsp_outcome_failure_approved,
+    test_rocky_dsp_judgment_good_positive_closure_cluster,
+    test_rocky_dsp_resolve_steadfast_via_structural_invariance,
+    test_rocky_dsp_growth_start_via_articulated_goal_acquisition,
+    test_rocky_all_characterization_and_claim_checks_except_dsp_limit_approved,
     test_oedipus_dsp_growth_partial_rate_heuristic,
 ]
 
