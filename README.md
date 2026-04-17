@@ -114,25 +114,27 @@ Working prototype, closed-corpus encodings, extensive test surface:
   (agentive-pursuit vs. reactive/consequential events; manipulation
   via participant-role; beat_type-weighted domain signals;
   recognition-structure premise-order inversion) — the first
-  first three (Oedipus DSP_growth, Oedipus Story_goal, Ackroyd
-  DA_mc) landed same day as event-agency-taxonomy-sketch-01 (AG5),
-  identification-goal-sketch-01 (IG2), and event-manipulation-
-  taxonomy-sketch-01 (MN4) respectively — shifting Oedipus
-  DSP_growth PARTIAL 0.5 → APPROVED 1.0, Oedipus Story_goal
-  PARTIAL 0.7 → APPROVED 1.0, and Ackroyd DA_mc PARTIAL 0.54 →
-  APPROVED 0.85; the last (Macbeth DA_mc beat-type weighting)
-  remains banked. The probe acts as a steady signature-proposal
-  engine — not a verdict-opposition machine — with consistent ~7
-  endorse + 2 qualify + 0-1 dissent baseline per 9-check run.
-  Four probe-proposed signatures have now landed as sketches
-  (LT9 scheduling + AG5 agency + IG2 identification-goal + MN4
-  concealment-manipulation) — the probe/verifier loop replicates
-  reliably, four cycles in two days.
+  all four landed same day as sketches — Oedipus DSP_growth
+  (AG5), Oedipus Story_goal (IG2), Ackroyd DA_mc (MN4), Macbeth
+  DA_mc (BW4). Verdict shifts: Oedipus DSP_growth PARTIAL 0.5 →
+  APPROVED 1.0; Oedipus Story_goal PARTIAL 0.7 → APPROVED 1.0;
+  Ackroyd DA_mc PARTIAL 0.54 → APPROVED 0.85; Macbeth DA_mc
+  PARTIAL 0.69 → PARTIAL 0.65 (first landed proposal where verdict
+  polarity does not change — strength honestly calibrated below
+  the unweighted raw ratio per the probe's prediction). The probe
+  acts as a steady signature-proposal engine — not a verdict-
+  opposition machine — with consistent ~7 endorse + 2 qualify +
+  0-1 dissent baseline per 9-check run. **All five probe-proposed
+  signatures have now landed as sketches** (LT9 scheduling,
+  AG5 agency, IG2 identification-goal, MN4 concealment-
+  manipulation, BW4 beat-type-weighting) — the probe/verifier
+  loop replicates reliably, five cycles in two days, every banked
+  proposal closed.
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **581 tests** across 12 test files. Full suite runs in under a
+- **588 tests** across 12 test files. Full suite runs in under a
   second. Standard-library only except for the reader-model probe
   (which needs `anthropic` and `pydantic` from
   `prototype/requirements.txt`).
