@@ -40,17 +40,35 @@ the sketches argue against.
 - Tests are plain `assert` with a minimal runner at the bottom of
   each file. No framework. Each test's docstring should note
   which sketch commitment it pins.
-- Run tests before claiming a change works:
+- Run the standard-library core tests before claiming a change works:
 
   ```sh
   cd prototype
-  for t in test_*.py; do python3 "$t" | tail -1; done
+  for t in \
+    test_dramatic.py \
+    test_dramatica_template.py \
+    test_identity.py \
+    test_inference.py \
+    test_lowering.py \
+    test_proposal_walker.py \
+    test_rashomon.py \
+    test_save_the_cat.py \
+    test_substrate.py \
+    test_verification.py
+  do
+    python3 "$t" | tail -1
+  done
   ```
 
-- The reader-model probe requires the venv and an API key:
+- The reader-model probe and client tests require the venv; live
+  demos also require an API key:
 
   ```sh
+  cd prototype
+  python3 -m venv .venv
+  .venv/bin/pip install -r requirements.txt
   .venv/bin/python3 test_reader_model_client.py
+  .venv/bin/python3 test_dramatic_reader_model_client.py
   .venv/bin/python3 demo_reader_model.py --dry-run
   ```
 

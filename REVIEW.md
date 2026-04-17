@@ -229,3 +229,144 @@ Of the review's near-term plan items:
 3. **Venv path docs** — not done. Cheap to fix once the README is rewritten.
 
 Of the next-term plan items, item 1 (third encoding) and item 2 (extract shared verifier scaffolding once it exists) remain the right ordering.
+
+---
+
+## Status update — 2026-04-16 (Codex)
+
+This pass re-checked the current tree rather than relying on the April 15 snapshot. The project has moved again. Some earlier findings are now closed; the remaining ones have shifted.
+
+### Finding 1 — Repository guidance stale relative to project: **addressed at the root, shifted inward**
+
+The root front door is no longer the problem. `README.md` now describes the project as a research notebook plus working Python prototype, names the active dialects, lists the encoded stories, and gives a real start path.
+
+The stale guidance has moved into `prototype/README.md`, which still reads like an earlier-phase artifact:
+
+- it still frames the implementation as the first executable pressure-test of `substrate-sketch-04.md`
+- it still foregrounds only the Oedipus and Rashomon substrate encodings
+- it still documents `verification.py` as shipping only the first Characterization primitive
+- it does not reflect the Dramatica template layer, Save the Cat layer, Ackroyd / Rocky / Chinatown / Pride and Prejudice encodings, or the current 12-file / 514-test surface
+
+The main documentation risk is no longer "there is no front door." It is that the front door and the module catalog now disagree about what repository they are describing.
+
+### Finding 2 — Verification real but coverage sparse: **still stands, but the picture is more honest now**
+
+The verifier surface is materially stronger than it was in the original review.
+
+- The dramatica-complete → substrate verifier now runs **8 checks per encoding** on Oedipus, Macbeth, and Ackroyd.
+- Current measured results:
+  - Oedipus: 6 approved, 2 partial (`DSP_growth` 0.50, `Story_goal` 0.70)
+  - Macbeth: 7 approved, 1 partial (`DA_mc` 0.69)
+  - Ackroyd: 6 approved, 2 partial (`DA_mc` 0.54, `DSP_approach` 0.46)
+- The partials are now useful signal rather than vague unease. Oedipus's remaining partials are trajectory-shape issues; Macbeth and Ackroyd still pressure the characterization taxonomy from opposite sides.
+
+What has **not** changed is the declared-coverage backlog on the base Dramatic → substrate verifier surface:
+
+- Oedipus: **54** uncovered declarations
+  - characterization: 6
+  - claim-trajectory: 8
+  - claim-moment: 40
+- Macbeth: **73** uncovered declarations
+  - characterization: 6
+  - claim-trajectory: 12
+  - claim-moment: 55
+- Ackroyd: **67** uncovered declarations
+  - characterization: 6
+  - claim-trajectory: 12
+  - claim-moment: 49
+
+By record type, the gaps are still concentrated in Throughlines, Beats, Scenes, and Stakes. The instrumentation is doing its job. The burndown still has not happened.
+
+### Finding 3 — Duplicated verifier scaffolding: **stronger than before**
+
+This is no longer a "wait for a third client" warning. There are now three parallel dramatica-complete verifier modules:
+
+- `prototype/oedipus_dramatica_complete_verification.py`
+- `prototype/macbeth_dramatica_complete_verification.py`
+- `prototype/ackroyd_dramatica_complete_verification.py`
+
+All three carry the same structural pattern:
+
+- `_end_τ_s`
+- `_events_lowered_from_throughline`
+- `_wrap_check`
+- `run()`
+- the same eight-check orchestration shape
+
+Keeping the semantic predicates local to each encoding still makes sense. Keeping the orchestration and lookup scaffolding triplicated is starting to look like editorial debt rather than prototype convenience.
+
+### Finding 4 — Environment ergonomics fragile: **still stands, with a sharper concrete failure**
+
+The repo guidance in `AGENTS.md` currently says to run:
+
+```sh
+cd prototype
+for t in test_*.py; do python3 "$t" | tail -1; done
+```
+
+That command does **not** work in the current workspace. Ten test files pass under the system interpreter, but the two reader-model client suites fail immediately on missing `pydantic`:
+
+- `test_reader_model_client.py`
+- `test_dramatic_reader_model_client.py`
+
+The current measured split is:
+
+- **480 passed** under plain `python3`
+- **34 tests blocked by environment**, not by repository logic
+
+The older wording "the reader-model probe requires the venv" is true but incomplete. The concrete problem is that the documented all-tests loop includes the venv-only tests, so the default command contradicts the environment model. The fix is editorial:
+
+- separate the standard-library core suite from the optional client suites
+- make the dependency-install step explicit before any `.venv/bin/python3` examples
+- stop presenting `for t in test_*.py` as a universal command unless the workspace actually guarantees those dependencies
+
+### Finding 5 — Research corpus onboarding: **partly addressed**
+
+The root README rewrite substantially improved first contact. A new reader now gets the project's argument, current status, and a minimal test subset without having to reconstruct it from three READMEs.
+
+The remaining onboarding weakness is narrower: the prototype module catalog is outdated, and the design roadmap in `design/README.md` is now doing more "recently landed" explanatory work than `prototype/README.md` does.
+
+### Finding 6 — Load-bearing survey gaps: **stands**
+
+No change from the prior review. The survey is still methodologically strong, but the universality-pressure areas named in the original review remain open.
+
+### Updated Health Check
+
+What I verified directly on April 16, 2026:
+
+- `python3 prototype/test_dramatic.py` → 36 passed
+- `python3 prototype/test_dramatica_template.py` → 77 passed
+- `python3 prototype/test_identity.py` → 20 passed
+- `python3 prototype/test_inference.py` → 28 passed
+- `python3 prototype/test_lowering.py` → 32 passed
+- `python3 prototype/test_proposal_walker.py` → 46 passed
+- `python3 prototype/test_rashomon.py` → 49 passed
+- `python3 prototype/test_save_the_cat.py` → 60 passed
+- `python3 prototype/test_substrate.py` → 45 passed
+- `python3 prototype/test_verification.py` → 87 passed
+- `python3 prototype/oedipus_dramatica_complete_verification.py`
+- `python3 prototype/macbeth_dramatica_complete_verification.py`
+- `python3 prototype/ackroyd_dramatica_complete_verification.py`
+
+What did not run cleanly in the current workspace:
+
+- `python3 prototype/test_reader_model_client.py` → missing `pydantic`
+- `python3 prototype/test_dramatic_reader_model_client.py` → missing `pydantic`
+
+Current test inventory counted from the tree:
+
+- **12 test files**
+- **514 tests total**
+
+### Plan delta
+
+The near-term priorities have changed order:
+
+1. Refresh `prototype/README.md` so it matches the repository that now exists.
+2. Fix the test-running guidance so the core suite and the venv-only suites are documented as two different paths.
+3. Continue verifier coverage burndown on the base Dramatic → substrate surface.
+4. Extract shared dramatica-complete verifier scaffolding if another round of verifier-surface expansion lands.
+
+### Bottom line, updated
+
+The repository is now better documented at the top and substantially stronger in the template-layer verifier surface than the April 15 review captured. The main risks have narrowed: documentation drift is now mostly inside `prototype/README.md`, the environment story is still easy to misrun, and the base Dramatic → substrate verifier still has a large declared-but-unchecked surface.
