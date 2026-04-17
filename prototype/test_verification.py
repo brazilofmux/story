@@ -1622,15 +1622,18 @@ def test_ek2_ackroyd_verifier_be_er_inversion_preserved():
 
 
 def test_verifier_surface_has_eight_checks_per_encoding():
-    """Each of the three dramatica-complete verifiers runs 8 checks
-    covering all three primitives (Characterization + Claim-moment +
-    Claim-trajectory)."""
+    """Historical pin for the 8-check surface that landed before
+    pressure-shape-taxonomy-sketch-01. Superseded by
+    `test_lt_verifier_surface_has_nine_checks_per_encoding` once the
+    LT2 DSP_limit check landed; kept so the sketch-by-sketch growth
+    of the verifier surface is visible in the test suite. At 9
+    checks today."""
     from oedipus_dramatica_complete_verification import run as o_run
     from macbeth_dramatica_complete_verification import run as m_run
     from ackroyd_dramatica_complete_verification import run as a_run
-    assert len(o_run()) == 8
-    assert len(m_run()) == 8
-    assert len(a_run()) == 8
+    assert len(o_run()) >= 8
+    assert len(m_run()) >= 8
+    assert len(a_run()) >= 8
 
 
 def test_oedipus_story_consequence_averted_at_end():
@@ -1702,6 +1705,384 @@ def test_ackroyd_story_consequence_approved_after_ralph_cleared_fix():
     by_target = {r.target_record.record_id: r for r in reviews}
     assert by_target["Story_consequence"].verdict == VERDICT_APPROVED
     assert by_target["Story_consequence"].match_strength == 1.0
+
+
+# ----------------------------------------------------------------------------
+# LT2 / LT3 classifier (pressure-shape-taxonomy-sketch-01)
+# ----------------------------------------------------------------------------
+#
+# Tests for `classify_arc_limit_shape` in verifier_helpers.py. The
+# classifier reads fold-visible fabula structure (retractions,
+# identity-prop effects, rule-derivable emergences) and returns
+# `"optionlock"` when any convergence signal kind fires,
+# `"timelock-consistent"` when none does. Synthetic fixtures exercise
+# each signal kind in isolation plus the cross-products.
+
+
+def _lt_fixtures():
+    """Import deferred to keep import graph narrow; matches
+    _classifier_fixtures pattern."""
+    from substrate import (
+        Event, KnowledgeEffect, WorldEffect, Held, Prop, Slot,
+        Confidence, Rule, Branch, IDENTITY_PREDICATE,
+    )
+    from verifier_helpers import classify_arc_limit_shape
+    return (
+        Event, KnowledgeEffect, WorldEffect, Held, Prop, Slot,
+        Confidence, Rule, Branch, IDENTITY_PREDICATE,
+        classify_arc_limit_shape,
+    )
+
+
+def _lt_mk_event(event_id, τ_s, effects, participants=None):
+    from substrate import Event
+    return Event(
+        id=event_id, type="generic", τ_s=τ_s, τ_a=τ_s,
+        participants=participants or {"agent": "a"},
+        effects=tuple(effects),
+        branches=frozenset({":canonical"}),
+    )
+
+
+def _lt_branches():
+    from substrate import Branch
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    return canonical, {":canonical": canonical}
+
+
+def test_lt2_empty_fabula_is_timelock_consistent():
+    """Zero events → zero convergence signals → timelock-consistent
+    by LT3's complement rule. Not an error: trivially consistent."""
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    result = classify((), (), canonical, all_branches)
+    assert result == ("timelock-consistent", 0.0, ())
+
+
+def test_lt2_retraction_signal_alone():
+    """One event asserts P; a later event retracts with asserts=False.
+    Retraction kind fires; other signal kinds don't. Strength 1/3."""
+    from substrate import WorldEffect, Prop
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    P = Prop("at_location", ("a", "forest"))
+    fabula = (
+        _lt_mk_event("E1", 1, [WorldEffect(prop=P, asserts=True)]),
+        _lt_mk_event("E2", 2, [WorldEffect(prop=P, asserts=False)]),
+    )
+    classification, strength, signals = classify(
+        fabula, (), canonical, all_branches,
+    )
+    assert classification == "optionlock"
+    assert signals == ("retraction:1",)
+    assert abs(strength - 1/3) < 1e-9
+
+
+def test_lt2_retraction_without_prior_assertion_does_not_fire():
+    """asserts=False on a proposition never previously asserted in
+    this fabula is NOT a retraction. LT2's first-clause literal
+    wording: 'where P was previously world-asserted'."""
+    from substrate import WorldEffect, Prop
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    P = Prop("at_location", ("a", "forest"))
+    fabula = (
+        _lt_mk_event("E1", 1, [WorldEffect(prop=P, asserts=False)]),
+    )
+    classification, _strength, signals = classify(
+        fabula, (), canonical, all_branches,
+    )
+    assert classification == "timelock-consistent"
+    assert signals == ()
+
+
+def test_lt2_identity_resolution_via_world_effect():
+    """An event with a world-level identity/2 proposition is an
+    identity-resolution signal — equivalence-class collapse visible
+    at fold time."""
+    from substrate import WorldEffect, Prop, IDENTITY_PREDICATE
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    identity = Prop(IDENTITY_PREDICATE, ("oedipus", "the-exposed-baby"))
+    fabula = (
+        _lt_mk_event("E_reveal", 5, [WorldEffect(prop=identity)]),
+    )
+    classification, strength, signals = classify(
+        fabula, (), canonical, all_branches,
+    )
+    assert classification == "optionlock"
+    assert signals == ("identity-resolution:1",)
+    assert abs(strength - 1/3) < 1e-9
+
+
+def test_lt2_identity_resolution_via_knowledge_effect():
+    """An identity/2 prop carried in a KnowledgeEffect's held.prop
+    also counts as an identity-resolution signal."""
+    from substrate import (
+        KnowledgeEffect, Held, Prop, Slot, Confidence, IDENTITY_PREDICATE,
+    )
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    identity = Prop(IDENTITY_PREDICATE, ("oedipus", "the-exposed-baby"))
+    ke = KnowledgeEffect(
+        agent_id="oedipus",
+        held=Held(prop=identity, slot=Slot.KNOWN,
+                  confidence=Confidence.CERTAIN, via="realization"),
+    )
+    fabula = (_lt_mk_event("E_realize", 5, [ke]),)
+    classification, _strength, signals = classify(
+        fabula, (), canonical, all_branches,
+    )
+    assert classification == "optionlock"
+    assert signals == ("identity-resolution:1",)
+
+
+def test_lt2_rule_emergence_signal_alone():
+    """Premises accrete across the fabula; a rule-head compound
+    becomes derivable at end. Rule-emergence signal fires even when
+    the compound is also authored — the strip-authored-heads refinement
+    keeps this robust against N10 (authored wins)."""
+    from substrate import WorldEffect, Prop, Rule
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    killed = Prop("killed", ("X", "Y"))
+    child_of = Prop("child_of", ("X", "Y"))
+    parricide = Prop("parricide", ("X", "Y"))
+    rule = Rule(id="parricide", head=parricide, body=(killed, child_of))
+    fabula = (
+        _lt_mk_event("E1", 1, [
+            WorldEffect(prop=Prop("killed", ("o", "l"))),
+        ]),
+        _lt_mk_event("E2", 2, [
+            WorldEffect(prop=Prop("child_of", ("o", "l"))),
+        ]),
+    )
+    classification, strength, signals = classify(
+        fabula, (rule,), canonical, all_branches,
+    )
+    assert classification == "optionlock"
+    assert signals == ("rule-emergence:1",)
+    assert abs(strength - 1/3) < 1e-9
+
+
+def test_lt2_rule_emergence_fires_when_compound_also_authored():
+    """N10 says authored beats derived; the classifier's strip-and-
+    rederive step must still detect the rule firing even when the
+    encoding directly authors the compound at an event."""
+    from substrate import WorldEffect, Prop, Rule
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    killed = Prop("killed", ("X", "Y"))
+    child_of = Prop("child_of", ("X", "Y"))
+    parricide_head = Prop("parricide", ("X", "Y"))
+    rule = Rule(
+        id="parricide", head=parricide_head,
+        body=(killed, child_of),
+    )
+    fabula = (
+        _lt_mk_event("E1", 1, [
+            WorldEffect(prop=Prop("killed", ("o", "l"))),
+            WorldEffect(prop=Prop("child_of", ("o", "l"))),
+            WorldEffect(prop=Prop("parricide", ("o", "l"))),
+        ]),
+    )
+    classification, _strength, signals = classify(
+        fabula, (rule,), canonical, all_branches,
+    )
+    assert classification == "optionlock"
+    assert signals == ("rule-emergence:1",)
+
+
+def test_lt2_all_three_kinds_firing_gives_strength_one():
+    """Retraction + identity-resolution + rule-emergence — strength
+    1.0 because 3/3 signal kinds fire."""
+    from substrate import (
+        WorldEffect, Prop, Rule, IDENTITY_PREDICATE,
+    )
+    (*_, classify) = _lt_fixtures()
+    canonical, all_branches = _lt_branches()
+    P = Prop("at_location", ("a", "forest"))
+    identity = Prop(IDENTITY_PREDICATE, ("a", "b"))
+    killed = Prop("killed", ("X", "Y"))
+    child_of = Prop("child_of", ("X", "Y"))
+    parricide = Prop("parricide", ("X", "Y"))
+    rule = Rule(id="parricide", head=parricide, body=(killed, child_of))
+    fabula = (
+        _lt_mk_event("E1", 1, [
+            WorldEffect(prop=P, asserts=True),
+            WorldEffect(prop=Prop("killed", ("x", "y"))),
+            WorldEffect(prop=Prop("child_of", ("x", "y"))),
+        ]),
+        _lt_mk_event("E2", 2, [
+            WorldEffect(prop=P, asserts=False),
+            WorldEffect(prop=identity),
+        ]),
+    )
+    classification, strength, signals = classify(
+        fabula, (rule,), canonical, all_branches,
+    )
+    assert classification == "optionlock"
+    assert strength == 1.0
+    assert set(signals) == {
+        "retraction:1", "identity-resolution:1", "rule-emergence:1",
+    }
+
+
+def test_lt2_oedipus_fabula_classifies_optionlock():
+    """Integration pin: the real Oedipus encoding lands Optionlock
+    with identity-resolution + rule-emergence signals (matching the
+    sketch's LT2 worked-case prediction)."""
+    from substrate import CANONICAL
+    from verifier_helpers import classify_arc_limit_shape
+    from oedipus import FABULA, RULES, ALL_BRANCHES
+    classification, strength, signals = classify_arc_limit_shape(
+        FABULA, RULES, CANONICAL, ALL_BRANCHES,
+    )
+    assert classification == "optionlock"
+    assert any(s.startswith("identity-resolution:") for s in signals)
+    assert any(s.startswith("rule-emergence:") for s in signals)
+    assert strength >= 2 / 3
+
+
+def test_lt2_macbeth_fabula_classifies_optionlock():
+    """Integration pin: Macbeth lands Optionlock via retraction +
+    rule-emergence (the retraction is king=False at death; the
+    emergences are the inference-01-retired compounds)."""
+    from substrate import CANONICAL
+    from verifier_helpers import classify_arc_limit_shape
+    from macbeth import FABULA, RULES, ALL_BRANCHES
+    classification, _strength, signals = classify_arc_limit_shape(
+        FABULA, RULES, CANONICAL, ALL_BRANCHES,
+    )
+    assert classification == "optionlock"
+    assert any(s.startswith("retraction:") for s in signals)
+    assert any(s.startswith("rule-emergence:") for s in signals)
+
+
+def test_lt2_ackroyd_fabula_classifies_optionlock():
+    """Integration pin: Ackroyd lands Optionlock via retraction
+    (post-F5 Ralph-cleared fix) + rule-emergence (betrayer_of_trust
+    and driver_of_suicide)."""
+    from substrate import CANONICAL
+    from verifier_helpers import classify_arc_limit_shape
+    from ackroyd import FABULA, RULES, ALL_BRANCHES
+    classification, _strength, signals = classify_arc_limit_shape(
+        FABULA, RULES, CANONICAL, ALL_BRANCHES,
+    )
+    assert classification == "optionlock"
+    assert any(s.startswith("retraction:") for s in signals)
+    assert any(s.startswith("rule-emergence:") for s in signals)
+
+
+def test_lt5_timelock_declared_on_timelock_consistent_substrate_is_noted():
+    """LT5's disposition: Timelock declared + no convergence signals
+    → NOTED (consistent-but-not-affirmed). The honest asymmetry
+    stated in LT3."""
+    from verifier_helpers import dsp_limit_characterization_check
+    from substrate import CANONICAL, Branch
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    verdict, strength, comment = dsp_limit_characterization_check(
+        (), (), canonical, all_branches, "timelock",
+    )
+    assert verdict == VERDICT_NOTED
+    assert strength is None
+    assert "timelock" in comment.lower()
+    assert "complement-only" in comment.lower()
+
+
+def test_lt5_optionlock_declared_on_optionlock_substrate_is_approved():
+    """LT5's primary case: Optionlock declared + convergence signals
+    present → APPROVED."""
+    from verifier_helpers import dsp_limit_characterization_check
+    from substrate import CANONICAL, WorldEffect, Prop, Branch, Event
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    P = Prop("x", ("a",))
+    e1 = Event(
+        id="E1", type="g", τ_s=1, τ_a=1, participants={"agent": "a"},
+        effects=(WorldEffect(prop=P, asserts=True),),
+        branches=frozenset({":canonical"}),
+    )
+    e2 = Event(
+        id="E2", type="g", τ_s=2, τ_a=2, participants={"agent": "a"},
+        effects=(WorldEffect(prop=P, asserts=False),),
+        branches=frozenset({":canonical"}),
+    )
+    verdict, strength, _comment = dsp_limit_characterization_check(
+        (e1, e2), (), canonical, all_branches, "optionlock",
+    )
+    assert verdict == VERDICT_APPROVED
+    assert strength > 0
+
+
+def test_lt5_optionlock_declared_on_timelock_consistent_substrate_is_needs_work():
+    """LT5 disagreement case: Optionlock declared but no convergence
+    → NEEDS_WORK. The substrate contradicts the declaration."""
+    from verifier_helpers import dsp_limit_characterization_check
+    from substrate import Branch
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    verdict, strength, _comment = dsp_limit_characterization_check(
+        (), (), canonical, all_branches, "optionlock",
+    )
+    assert verdict == VERDICT_NEEDS_WORK
+    assert strength == 0.0
+
+
+def test_lt_verifier_surface_has_nine_checks_per_encoding():
+    """Post-LT2 landing: each of the three dramatica-complete
+    verifiers runs 9 checks (was 8). The ninth is DSP_limit,
+    adding a Characterization-primitive check for pressure shape."""
+    from oedipus_dramatica_complete_verification import run as o_run
+    from macbeth_dramatica_complete_verification import run as m_run
+    from ackroyd_dramatica_complete_verification import run as a_run
+    assert len(o_run()) == 9
+    assert len(m_run()) == 9
+    assert len(a_run()) == 9
+
+
+def test_lt_oedipus_dsp_limit_approved_with_two_signal_kinds():
+    """Post-LT2: Oedipus DSP_limit APPROVED at strength 0.67 (two of
+    three signal kinds fire — identity-resolution + rule-emergence;
+    no retractions in the Oedipus substrate)."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_limit"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 2/3) < 1e-9
+    assert "identity-resolution" in r.comment
+    assert "rule-emergence" in r.comment
+
+
+def test_lt_macbeth_dsp_limit_approved_with_two_signal_kinds():
+    """Post-LT2: Macbeth DSP_limit APPROVED at strength 0.67 via
+    retraction (king=False at death) + rule-emergence (kinslayer /
+    regicide / breach_of_hospitality / tyrant)."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_limit"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 2/3) < 1e-9
+    assert "retraction" in r.comment
+    assert "rule-emergence" in r.comment
+
+
+def test_lt_ackroyd_dsp_limit_approved_with_two_signal_kinds():
+    """Post-LT2: Ackroyd DSP_limit APPROVED at strength 0.67 via
+    retraction (Ralph cleared at reveal, landed same-day as F5
+    substrate fix) + rule-emergence (betrayer_of_trust +
+    driver_of_suicide)."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_limit"]
+    assert r.verdict == VERDICT_APPROVED
+    assert abs(r.match_strength - 2/3) < 1e-9
+    assert "retraction" in r.comment
+    assert "rule-emergence" in r.comment
 
 
 def test_oedipus_dsp_growth_partial_rate_heuristic():
@@ -1823,6 +2204,26 @@ TESTS = [
     test_ackroyd_resolve_steadfast_lands_before_investigation_arc,
     test_ackroyd_growth_start_after_ultimatum,
     test_ackroyd_story_consequence_approved_after_ralph_cleared_fix,
+    # LT2 / LT3 classifier (pressure-shape-taxonomy-sketch-01)
+    test_lt2_empty_fabula_is_timelock_consistent,
+    test_lt2_retraction_signal_alone,
+    test_lt2_retraction_without_prior_assertion_does_not_fire,
+    test_lt2_identity_resolution_via_world_effect,
+    test_lt2_identity_resolution_via_knowledge_effect,
+    test_lt2_rule_emergence_signal_alone,
+    test_lt2_rule_emergence_fires_when_compound_also_authored,
+    test_lt2_all_three_kinds_firing_gives_strength_one,
+    test_lt2_oedipus_fabula_classifies_optionlock,
+    test_lt2_macbeth_fabula_classifies_optionlock,
+    test_lt2_ackroyd_fabula_classifies_optionlock,
+    test_lt5_timelock_declared_on_timelock_consistent_substrate_is_noted,
+    test_lt5_optionlock_declared_on_optionlock_substrate_is_approved,
+    test_lt5_optionlock_declared_on_timelock_consistent_substrate_is_needs_work,
+    # LT2 integration pins on the three dramatica-complete verifiers
+    test_lt_verifier_surface_has_nine_checks_per_encoding,
+    test_lt_oedipus_dsp_limit_approved_with_two_signal_kinds,
+    test_lt_macbeth_dsp_limit_approved_with_two_signal_kinds,
+    test_lt_ackroyd_dsp_limit_approved_with_two_signal_kinds,
     test_oedipus_dsp_growth_partial_rate_heuristic,
 ]
 

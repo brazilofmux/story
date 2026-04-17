@@ -102,6 +102,7 @@ from verification import (
 )
 from verifier_helpers import (
     classify_event_action_shape, agent_ids_from_entities,
+    dsp_limit_characterization_check,
 )
 
 
@@ -620,7 +621,31 @@ def story_goal_trajectory_check(
 
 
 # ============================================================================
-# Check 8 — Claim-moment: Story_consequence
+# Check 8 — Characterization: DSP_limit (pressure-shape-taxonomy-sketch-01)
+# ============================================================================
+
+
+def dsp_limit_optionlock_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+) -> tuple:
+    """Characterize DSP_limit. Ackroyd declares Optionlock (Poirot
+    eliminates suspects one by one). LT2 predicts convergence signals
+    in the substrate: the explicit retraction of
+    `accused_of_murder(ralph_paton, ackroyd)` at the reveal (landed
+    same-day as the Story_consequence fix), and rule-derivable
+    emergences (`betrayer_of_trust`, `driver_of_suicide`). Delegates
+    to `dsp_limit_characterization_check` in verifier_helpers."""
+    declared = next(
+        d.choice for d in DYNAMIC_STORY_POINTS if d.axis == DSPAxis.LIMIT
+    )
+    return dsp_limit_characterization_check(
+        FABULA, RULES, CANONICAL, ALL_BRANCHES, declared,
+    )
+
+
+# ============================================================================
+# Check 9 — Claim-moment: Story_consequence
 # ============================================================================
 
 
@@ -726,8 +751,9 @@ def run() -> tuple:
     """Run the Template-layer verifier checks for Ackroyd. Returns a
     tuple of VerificationReview records.
 
-    Check inventory (8 checks across all three primitives):
-    - Characterization: DA_mc (Manipulation), DSP_approach (Be-er)
+    Check inventory (9 checks across all three primitives):
+    - Characterization: DA_mc (Manipulation), DSP_approach (Be-er),
+      DSP_limit (Optionlock)
     - Claim-moment: DSP_outcome, Story_consequence
     - Claim-trajectory: DSP_judgment, DSP_resolve (Steadfast —
       inverted from Oedipus/Macbeth's Change), DSP_growth (Start —
@@ -743,6 +769,11 @@ def run() -> tuple:
             "dramatica-complete", "DSP_approach",
             sheppard_be_er_approach_check,
             reviewer_id="verifier:characterization:dsp-approach",
+        ),
+        _wrap_check(
+            "dramatica-complete", "DSP_limit",
+            dsp_limit_optionlock_check,
+            reviewer_id="verifier:characterization:dsp-limit",
         ),
         _wrap_check(
             "dramatica-complete", "DSP_outcome",

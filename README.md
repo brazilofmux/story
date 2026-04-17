@@ -84,14 +84,18 @@ Working prototype, closed-corpus encodings, extensive test surface:
   tragedy) and exercise every DSP axis direction at least once.
 - **Three cross-boundary verifiers** at the dramatica-complete →
   substrate coupling: Macbeth, Oedipus, Ackroyd. Post-EK2
-  characterization spectrum: APPROVED 0.77 (Oedipus) / PARTIAL 0.69
-  (Macbeth) / PARTIAL 0.54 (Ackroyd) — the three-point spread
-  measures encoding/taxonomy match honestly.
+  characterization spectrum on DA_mc: APPROVED 0.77 (Oedipus) /
+  PARTIAL 0.69 (Macbeth) / PARTIAL 0.54 (Ackroyd) — the three-point
+  spread measures encoding/taxonomy match honestly. Post-LT2
+  DSP_limit lands APPROVED 0.67 uniformly across the three (all
+  declared Optionlock; three different convergence-signal
+  compositions — identity-resolution + emergence for Oedipus,
+  retraction + emergence for Macbeth and Ackroyd).
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **~510 tests** across 12 test files. Full suite runs in under a
+- **~528 tests** across 12 test files. Full suite runs in under a
   second. Standard-library only except for the reader-model probe
   (which needs `anthropic` and `pydantic` from
   `prototype/requirements.txt`).
