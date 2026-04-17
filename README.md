@@ -72,30 +72,37 @@ coherent:
 
 Working prototype, closed-corpus encodings, extensive test surface:
 
-- **12 active design sketches** across substrate, dialects,
-  identity, focalization, inference, lowering, verification, and
-  two cross-dialect comparisons. Status, supersession, and open
-  questions tracked per sketch.
+- **19 active design sketches** across substrate, dialects,
+  identity, focalization, inference, lowering, verification,
+  event-kind and pressure-shape taxonomies, and two cross-dialect
+  comparisons. Status, supersession, and open questions tracked
+  per sketch.
 - **Seven encoded stories** exercising the substrate and dialects:
   *Oedipus Rex*, *Macbeth*, *The Murder of Roger Ackroyd*,
   *Rashomon*, *Pride and Prejudice*, *Rocky*, *Chinatown*. Together
   they close the canonical Outcome × Judgment matrix across all
   four corners (personal-tragedy ×3, triumph, personal-triumph,
   tragedy) and exercise every DSP axis direction at least once.
-- **Three cross-boundary verifiers** at the dramatica-complete →
-  substrate coupling: Macbeth, Oedipus, Ackroyd. Post-EK2
-  characterization spectrum on DA_mc: APPROVED 0.77 (Oedipus) /
-  PARTIAL 0.69 (Macbeth) / PARTIAL 0.54 (Ackroyd) — the three-point
-  spread measures encoding/taxonomy match honestly. Post-LT2
-  DSP_limit lands APPROVED 0.67 uniformly across the three (all
-  declared Optionlock; three different convergence-signal
-  compositions — identity-resolution + emergence for Oedipus,
-  retraction + emergence for Macbeth and Ackroyd).
+  Four have full substrate encodings (Oedipus, Macbeth, Ackroyd,
+  Rocky); three are dialect-layer-only pending substrate
+  authoring (P&P, Chinatown, Rashomon — Rashomon exercises its
+  own branch-contested slice).
+- **Four cross-boundary verifiers** at the dramatica-complete →
+  substrate coupling: Macbeth, Oedipus, Ackroyd, Rocky. Nine
+  checks per encoding. DA_mc spectrum: APPROVED 0.77 (Oedipus) /
+  PARTIAL 0.69 (Macbeth) / PARTIAL 0.54 (Ackroyd) / APPROVED 0.72
+  (Rocky) — a real four-point spread measuring encoding/taxonomy
+  match honestly. DSP_limit four-point spectrum: APPROVED 0.67 ×3
+  (Oedipus / Macbeth / Ackroyd, all Optionlock, three different
+  signal compositions) + **NEEDS_WORK 0.33** (Rocky, Timelock
+  declared + Optionlock-shaped substrate — the first non-APPROVED
+  DSP_limit in the corpus and LT5's asymmetric disposition
+  validated concretely).
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **~528 tests** across 12 test files. Full suite runs in under a
+- **~540 tests** across 12 test files. Full suite runs in under a
   second. Standard-library only except for the reader-model probe
   (which needs `anthropic` and `pydantic` from
   `prototype/requirements.txt`).

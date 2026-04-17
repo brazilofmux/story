@@ -369,42 +369,129 @@ retraction signal: the explicit `asserts=False` on Ralph's
 accusation at the reveal is the suspect-list pruning operation
 Dramatica-theory Optionlock predicts, made fold-visible after F5.
 
-## Worked case — Rocky under LT3 (prediction, pending substrate)
+## Worked case — Rocky under LT3 (measured, Phase 2 landing)
 
-`rocky.py` **does not exist** — no substrate encoding yet. Rocky's
-dramatic encoding declares DSP_limit = Timelock (first Timelock in
-the corpus). When Rocky's substrate lands, LT3 predicts:
+Rocky's substrate (`rocky.py`), lowerings (`rocky_lowerings.py`),
+and cross-boundary verifier
+(`rocky_dramatica_complete_verification.py`) all landed in the
+three-phase Rocky encoding following this sketch. Rocky's DSP_limit
+declaration is Timelock (first in the corpus). The sketch's original
+prediction was that Rocky's substrate would be timelock-consistent
+(zero convergence signals) under LT3. **Measured: that prediction
+was partially wrong.**
 
-- Zero retractions (the fight is not a candidate-elimination
-  process).
-- Zero identity resolutions (Rocky's identity is steadfast;
-  Apollo's realization about Rocky mid-fight is a belief update,
-  not an identity collapse; the club-fighter / contender
-  equivalence is a *job description*, not an entity-identity
-  collapse).
-- Zero or few rule-derivable emergences (Rocky's "going the
-  distance" is a moment claim at τ_s=end, not a compound predicate
-  assembled from prior premises).
+Measured LT2 classifier output on `rocky.py`:
 
-Expected under LT3: `NOTED` — substrate is *consistent* with
-Timelock (no convergence signals) but LT3 does not affirmatively
-detect scheduling. This is the honest verdict.
+- retraction: **1** (not 0 — `scheduled_fight(apollo, mac)` retracts
+  at E_mac_injured when Mac breaks his hand; this forces the arc
+  into existence).
+- identity-resolution: **0** (prediction confirmed — Rocky is
+  Steadfast; no entity-identity collapses).
+- rule-emergence: **1** (not 0 — `went_the_distance(rocky, apollo)`
+  derives at E_fight_ends from `fought_rounds=15` +
+  `standing_at_final_bell`, via the single `WENT_THE_DISTANCE_RULE`).
 
-If Rocky's substrate, once written, contains unexpected convergence
-signals (e.g., if the boxing-match format is encoded with retraction
-structure), LT3 will flag the declaration/substrate tension —
-exactly the signal the check is there to provide.
+LT2 classification: `("optionlock", 0.67, ("retraction:1",
+"rule-emergence:1"))`.
 
-The Rocky worked case is the forcing function for a future LT3-strong
-predicate. Two possible shapes:
+Under LT5's disposition table, DSP_limit=Timelock declared +
+substrate-shows-convergence → **NEEDS_WORK 0.33**. This is the first
+non-APPROVED DSP_limit verdict in the corpus and the direct
+validation that LT5's asymmetric disposition works as designed.
 
-1. Add a scheduling effect to substrate-05 (e.g., `schedule(event_id,
-   at_τ_s)` as a world effect) and a terminal-event check. Requires
-   substrate-sketch-06.
-2. Canonicalize a schedule-description kind in descriptions-sketch-02
-   and have LT3-strong read description annotations.
+**Why the prediction was partially wrong.** The two signals Rocky
+does exhibit are structurally different from arc-converging
+signals:
 
-Both are substantial sketches. Neither blocks landing LT2.
+- The retraction is a **pre-plot premise retraction**, not a
+  convergence of the main arc. Mac's fight gets retracted so that
+  Rocky's fight can exist. The main arc (τ_s=0-57) never retracts
+  any world fact; the retraction at τ_s=-5 is the *precondition* of
+  the arc, not its payoff. LT2 cannot tell these apart from the
+  classifier's perspective — both are `asserts=False` effects
+  unwinding prior assertions.
+- The rule emergence lands **at the scheduled τ_s** (τ_s=55,
+  E_fight_ends), not before. `went_the_distance` derives because
+  the two premises happen simultaneously at the fight's end.
+  Convergence *coincides* with schedule rather than *replacing*
+  schedule as the arc's forcing mechanism. A Dramatica Timelock
+  arc can still produce a compound at the scheduled moment — the
+  rule's firing is not evidence against Timelock; it is a property
+  of how Rocky's achievement is encoded.
+
+This is LT3's OQ3 ("subplot-only convergence") case made concrete,
+though the name is slightly misleading: the signals are in the
+main arc, not a subplot. A better framing for OQ3 after Rocky:
+**arc-peripheral vs. arc-converging convergence signals**. Both
+exist, both fire LT2, and LT2 cannot distinguish them today.
+
+**Implication for LT3-strong.** The Rocky finding sharpens the
+case for LT3-strong detection rather than weakening the broader
+framework. Two refinement paths, both deferred to a future sketch:
+
+1. **Arc-position weighting.** Weight signals by proximity to the
+   terminal event. A retraction at τ_s=-5 (far from the τ_s=57
+   terminal) contributes less than a retraction at τ_s=55. The
+   ratio of arc-position-weighted signals to total signals would
+   distinguish arc-converging from arc-peripheral shapes.
+2. **Scheduling vocabulary.** Add a `schedule(event_id, at_τ_s)`
+   world effect or a canonical `schedule` description kind. The
+   classifier then asks: does a terminal event's τ_s match an
+   earlier scheduling reference? If yes, the arc is
+   Timelock-shape-strong even in the presence of other signals.
+
+Path 2 is more principled (schedules are a genuine substrate
+concern, not an inference over sparse signals). The Rocky
+encoding's descriptions already flag this explicitly
+(`D_timelock_not_natively_detectable`) — the substrate encoding
+anticipates the future sketch.
+
+**DSP_limit's role in the verifier surface remains correct.** A
+NEEDS_WORK verdict on Rocky is strictly more informative than no
+check. The disagreement is reported honestly; the author can
+choose to edit the DSP declaration, the substrate, or accept the
+mismatch as a known partial. LT5's neutrality preserves authorial
+authority, per the commitment.
+
+## Worked case — Rocky's full 9-check verifier surface (Phase 2 measurements)
+
+Beyond the DSP_limit finding above, Rocky's full verifier run
+(`rocky_dramatica_complete_verification.run()`) produces 8 APPROVED
++ 1 NEEDS_WORK, with three verifier patterns new to the
+dramatica-complete → substrate boundary:
+
+- **First Outcome=Failure check in the corpus.** DSP_outcome=Failure
+  declared on Rocky; the check asks "does the substrate show the
+  goal NOT landing?" The load-bearing fact for "clean publicity-
+  stunt win" is the **opposite** of the goal's own predicate —
+  `went_the_distance(rocky, apollo)` deriving IS the evidence that
+  supports the Failure declaration. APPROVED 1.00. Pattern:
+  **goal-opposite-is-evidence** inversion.
+
+- **First Judgment=Good check for the MC in the corpus.** All prior
+  encodings had Judgment=Bad (epistemic ruin, moral degradation,
+  betrayer self-erasure). Rocky's Good is the positive-closure
+  cluster at τ_s=end: `went_the_distance` (achievement),
+  `called_out(rocky, adrian)` (relationship payoff),
+  `refused_rematch(rocky)` (acceptance). All three hold → APPROVED
+  1.00.
+
+- **Steadfast via structural invariance** (new predicate shape).
+  Ackroyd's Steadfast check uses a pre-existing rule-derived trait
+  (`betrayer_of_trust` holds from the arc's start). Rocky has no
+  comparable pre-existing trait — his Steadfast rests on
+  *absence* of transition. The substrate predicate: Rocky's
+  equivalence-class structure at τ_s=0 matches τ_s=end (both
+  empty). Same DSP value (Steadfast) + different verifier
+  evidence pattern. APPROVED 1.00.
+
+The remaining checks (DA_mc APPROVED 0.72, DSP_approach APPROVED
+0.74, DSP_growth APPROVED 1.00, Story_goal APPROVED 1.00,
+Story_consequence APPROVED 1.00) match the sketch's expected
+measurements. DSP_growth's "privately-chosen start" at τ_s=45 is
+semantically distinct from Ackroyd's "ultimatum-compelled start"
+but uses the same verifier predicate (acquisition of a specific
+proposition mid-arc).
 
 ## Worked case — P&P and Chinatown (prediction, pending substrate)
 
@@ -436,22 +523,21 @@ group:
 - Claim-trajectory (4): DSP_judgment, DSP_resolve, DSP_growth,
   Story_goal.
 
-Expected post-LT2 spectrum at the DSP_limit check:
+Measured post-LT2 spectrum at the DSP_limit check (four encodings;
+updated after Rocky Phase 2):
 
-| Encoding | DSP_limit declared | DSP_limit verdict |
-|---|---|---|
-| Oedipus | Optionlock | APPROVED (identity-resolution + emergence) |
-| Macbeth | Optionlock | APPROVED (retraction + emergences) |
-| Ackroyd | Optionlock | APPROVED (retraction + emergence) |
+| Encoding | DSP_limit declared | Signals fired | DSP_limit verdict |
+|---|---|---|---|
+| Oedipus | Optionlock | identity-resolution:7 + rule-emergence:9 | APPROVED 0.67 |
+| Macbeth | Optionlock | retraction:1 + rule-emergence:3 | APPROVED 0.67 |
+| Ackroyd | Optionlock | retraction:1 + rule-emergence:2 | APPROVED 0.67 |
+| **Rocky** | **Timelock** | retraction:1 + rule-emergence:1 | **NEEDS_WORK 0.33** |
 
-All three expected APPROVED. This is the first verifier check since
-EK2 where **all three encodings are predicted to land APPROVED on
-the first pass** — the three-point spectrum is absent here because
-Optionlock is the shared DSP_limit choice. That is not a weakness of
-the predicate; it is a property of the corpus. Rocky (when
-authored) will give the predicate its first Timelock test case; a
-future sixth encoding picking Tragedy (Failure × Bad) is most likely
-Optionlock too, so the Timelock test surface stays narrow for now.
+The three Optionlock encodings all land APPROVED 0.67 (two of
+three signal kinds firing) — uniformity is a property of the
+corpus, not a weakness of the predicate. The Rocky case is the
+verifier surface's first DSP_limit disagreement and the honest
+signal LT5 was written to produce.
 
 ## Implementation brief
 
@@ -581,20 +667,98 @@ dialect. Strictly parallel to EK2's implementation shape.
 ## Summary
 
 - DSP_limit is the last DSP-axis Characterization gap at the
-  dramatica-complete → substrate boundary. The verifier currently
-  ships eight checks per encoding; DSP_limit is the ninth.
+  dramatica-complete → substrate boundary. The verifier ships
+  nine checks per encoding (was eight); DSP_limit is the ninth.
 - The Optionlock side of the predicate is strong: three disjunctive
   fold-visible signals (retraction, identity resolution, rule
-  emergence) cover all three current encodings.
+  emergence) cover all three Optionlock-declared encodings and
+  produce a uniform APPROVED 0.67.
 - The Timelock side is weak by design — substrate-05 does not
   encode schedules. The sketch commits to this asymmetry (LT3
-  reports `NOTED` for Timelock-consistent-but-unaffirmed) rather
-  than faking a strong predicate.
+  reports `NOTED` for Timelock-consistent-but-unaffirmed, or
+  `NEEDS_WORK`/`PARTIAL_MATCH` when the substrate shows
+  convergence) rather than faking a strong predicate.
 - No substrate changes; no new dialect commitments; the classifier
   is a `verifier_helpers.py` addition parallel to EK2's
   `classify_event_action_shape`.
-- After LT2 lands, each of the three verifier modules runs 9
-  checks; all three are expected APPROVED on DSP_limit. The
-  Timelock case (Rocky) pressures LT3 when its substrate is
-  authored — another instance of the F5 "substrate authoring
-  drives verifier sharpening" pattern.
+- Rocky's substrate (Phase 2 landing) produced **NEEDS_WORK 0.33**
+  on DSP_limit — the first non-APPROVED DSP_limit in the corpus.
+  LT5's asymmetric disposition is validated concretely. The
+  finding sharpens the case for LT3-strong (scheduling vocabulary)
+  and refines LT3's OQ3 from "subplot-only convergence" to
+  "arc-peripheral vs. arc-converging signals".
+
+## Implementation landed
+
+This sketch has been implemented in two phases.
+
+**Phase 1 (2026-04-16, commit `24e1408`):** LT2 / LT3 / LT4 / LT5 /
+LT6 commitments landed for the three existing substrates.
+
+- `classify_arc_limit_shape` and `dsp_limit_characterization_check`
+  shipped in `verifier_helpers.py`. Three-signal disjunction
+  (retraction + identity-resolution + rule-emergence) with the
+  strip-and-rederive refinement that detects rule firings even when
+  the compound is also authored (N10's "authored wins" would
+  otherwise hide Ackroyd's `betrayer_of_trust` / `driver_of_suicide`
+  emergences).
+- DSP_limit check added to
+  `oedipus_dramatica_complete_verification.py`,
+  `macbeth_dramatica_complete_verification.py`,
+  `ackroyd_dramatica_complete_verification.py`. Each verifier now
+  runs 9 checks (was 8).
+- 18 new tests in `test_verification.py` (classifier unit tests
+  with synthetic fixtures, LT5 disposition tests, per-encoding
+  integration pins).
+
+**Phase 2 (2026-04-16, commit `9813d18`):** Rocky encoding —
+`rocky.py` (21 events, 11 agents, 1 rule, 2 descriptions),
+`rocky_lowerings.py` (23 Lowerings), and
+`rocky_dramatica_complete_verification.py` (9 checks). Phase 2
+produced the first non-APPROVED DSP_limit verdict in the corpus
+and two new verifier patterns (Steadfast via structural
+invariance; Failure via goal-opposite-is-evidence).
+
+**Post-Phase-2 spectrum, measured:**
+
+| Encoding | DSP_limit declared | Verdict | Strength | Signals |
+|---|---|---|---|---|
+| Oedipus | Optionlock | APPROVED | 0.67 | identity-resolution:7 + rule-emergence:9 |
+| Macbeth | Optionlock | APPROVED | 0.67 | retraction:1 + rule-emergence:3 |
+| Ackroyd | Optionlock | APPROVED | 0.67 | retraction:1 + rule-emergence:2 |
+| Rocky   | Timelock   | NEEDS_WORK | 0.33 | retraction:1 + rule-emergence:1 |
+
+Three Optionlock encodings APPROVED with three different signal
+compositions; one Timelock encoding NEEDS_WORK via LT5's disagreement
+disposition. The finding is not that Rocky was "misclassified" —
+LT2's reading of Rocky is honest; both signals are present in the
+substrate. The finding is that LT2's current predicate does not
+distinguish arc-converging signals (which support Optionlock) from
+arc-peripheral signals (which may coexist with Timelock). LT3-strong
+is the natural next sketch when a fifth encoding or an explicit
+scheduling vocabulary provides the forcing function.
+
+Tests: 25 new tests total across both phases (18 Phase 1 + 7
+Phase 2). Full suite: 490 → 515 passed (standard-library suite).
+
+**Findings surfaced by Phase 2 that the sketch did not anticipate:**
+
+1. **Steadfast-via-structural-invariance** is a distinct verifier
+   pattern from Steadfast-via-pre-existing-trait (Ackroyd's shape).
+   Rocky has no stable-trait predicate; its Steadfast rests on the
+   absence of equivalence-class collapses involving the MC. Two
+   different verifier evidence shapes for the same DSP axis value.
+2. **Failure-as-goal-opposite-evidence.** The Outcome check
+   inverts cleanly: under Failure, the compound-derivation fact
+   that contradicts the goal IS the evidence supporting the
+   declaration. This generalizes to any DSP where the declaration
+   is the negative form of a predicate the substrate can derive.
+3. **Positive-closure clusters for Judgment=Good.** Unlike the
+   Bad-judgment trajectory shapes (tyrant emerging, self-identity
+   collapsing, betrayer landing), Judgment=Good is best checked as
+   a confluence of multiple positive facts at τ_s=end, not as a
+   trajectory emergence. Different verifier shape; same primitive
+   (claim-trajectory).
+
+These findings are banked as inputs to a future verifier-patterns
+consolidation sketch, not as amendments to this one.
