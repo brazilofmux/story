@@ -71,8 +71,9 @@ from substrate import (
 )
 from ackroyd import (
     FABULA, ENTITIES, RULES, ALL_BRANCHES,
-    killed, dead, betrayer_of_trust,
+    killed, dead, betrayer_of_trust, accused_of_murder,
 )
+from substrate import Slot, project_knowledge
 
 # Dramatic-side imports.
 from dramatic import Throughline, Character
@@ -85,6 +86,7 @@ from dramatica_template import (
 )
 from ackroyd_dramatica_complete import (
     DOMAIN_ASSIGNMENTS, DYNAMIC_STORY_POINTS,
+    STORY_GOAL, STORY_CONSEQUENCE,
 )
 
 # Lowering + verifier-primitive machinery.
@@ -402,6 +404,299 @@ def judgment_bad_trajectory_check(
 
 
 # ============================================================================
+# Check 5 — Claim-trajectory: DSP_resolve = Steadfast (inverted)
+# ============================================================================
+
+
+def dsp_resolve_steadfast_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: DSP_resolve=Steadfast = the MC maintains
+    their stance throughout; no mid-arc transition. For Ackroyd the
+    substrate signature is: `betrayer_of_trust(sheppard, ackroyd)`
+    emerges at τ_s=1 (the murder event, the very start of the post-
+    prologue arc) and holds through τ_s=11. The MC's defining role
+    is a near-pre-existing trait — no mid-arc transition visible
+    within the investigation arc (τ_s ∈ [2, 11]).
+
+    Inverted from Oedipus/Macbeth's Change check (which looks for
+    a mid-arc transition); Steadfast looks for *absence* of such a
+    transition across the arc's investigation span."""
+    τ_end = _end_τ_s()
+    events_in_scope_all = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    all_τ_s = sorted({e.τ_s for e in FABULA if e.τ_s is not None})
+
+    def _betrayer_holds_at(τ: int) -> bool:
+        wf = project_world(
+            events_in_scope=events_in_scope_all, up_to_τ_s=τ,
+        )
+        return world_holds_derived(
+            wf, betrayer_of_trust(SHEPPARD_ENTITY_ID, ACKROYD_ENTITY_ID),
+            RULES,
+        ) is not None
+
+    transition_τ = None
+    for τ in all_τ_s:
+        if _betrayer_holds_at(τ):
+            transition_τ = τ
+            break
+
+    if transition_τ is None:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            "betrayer_of_trust never derives; Resolve=Steadfast "
+            "needs a stable defining trait the substrate does not "
+            "carry.",
+        )
+
+    # Investigation arc begins when Poirot is engaged — slot 6.
+    # Everything before is pre-play setup. Steadfast means the trait
+    # is in place BEFORE the investigation arc starts.
+    investigation_start = 2  # E_flora_summons_poirot at τ_s=2
+    arc_span = τ_end - investigation_start
+    if arc_span <= 0:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            "investigation arc has zero span; cannot classify "
+            "trajectory shape.",
+        )
+
+    if transition_τ <= investigation_start:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"betrayer_of_trust(sheppard, ackroyd) derives at "
+            f"τ_s={transition_τ}, before the investigation arc "
+            f"begins at τ_s={investigation_start}; the trait is "
+            f"steady across τ_s ∈ [{investigation_start}, {τ_end}]. "
+            f"Resolve=Steadfast confirmed — Sheppard's defining "
+            f"role is a pre-arc trait, not a mid-arc transition.",
+        )
+    position = (transition_τ - investigation_start) / arc_span
+    return (
+        VERDICT_PARTIAL_MATCH, max(1.0 - position, 0.0),
+        f"betrayer_of_trust emerges at τ_s={transition_τ}, "
+        f"{position:.0%} through the investigation arc [{investigation_start}, "
+        f"{τ_end}]. Resolve=Steadfast would predict emergence "
+        f"before or at the arc's start.",
+    )
+
+
+# ============================================================================
+# Check 6 — Claim-trajectory: DSP_growth = Start
+# ============================================================================
+
+
+def dsp_growth_start_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: DSP_growth=Start = the MC needs to START
+    doing something they have been failing to do — confess,
+    acknowledge, accept responsibility. For Ackroyd the substrate
+    signature is: Sheppard participates in concealment events
+    throughout (the ultimatum, the confession-writing, the suicide
+    at τ_s=11 are terminal events, not the start of an admitted
+    confession). The growth=start axis diagnoses the NEEDED
+    acquisition; the substrate shows the acquisition arriving
+    only at the terminal edge (after Poirot's ultimatum) — the
+    growth happens at the point of no-return.
+
+    Check: look for confession-shaped events in the fabula, and
+    verify they occur at or after the ultimatum (growth=start
+    achieved only under external compulsion = Bad-judgment shape)."""
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+
+    ultimatum_τ = None
+    confession_τ = None
+    for e in FABULA:
+        if e.τ_s is None:
+            continue
+        if (e.type == "ultimatum"
+                and SHEPPARD_ENTITY_ID in (e.participants or {}).values()):
+            ultimatum_τ = e.τ_s
+        if (e.type == "confession_writing"
+                and SHEPPARD_ENTITY_ID in (e.participants or {}).values()):
+            confession_τ = e.τ_s
+
+    if ultimatum_τ is None or confession_τ is None:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            f"Ackroyd substrate needs both ultimatum and "
+            f"confession_writing events for Growth=Start "
+            f"trajectory; ultimatum_τ={ultimatum_τ}, "
+            f"confession_τ={confession_τ}.",
+        )
+
+    if ultimatum_τ <= confession_τ:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"Sheppard's confession-writing (τ_s={confession_τ}) "
+            f"follows Poirot's ultimatum (τ_s={ultimatum_τ}). "
+            f"Growth=Start is achieved only under external "
+            f"compulsion — the MC starts what they have been "
+            f"failing to start, but too late to avert judgment. "
+            f"Classic Start/Bad shape.",
+        )
+    return (
+        VERDICT_PARTIAL_MATCH, 0.5,
+        f"confession_τ={confession_τ} precedes ultimatum_τ="
+        f"{ultimatum_τ}; Growth=Start trajectory shape is not the "
+        f"expected ultimatum-compelled order.",
+    )
+
+
+# ============================================================================
+# Check 7 — Claim-trajectory: Story_goal
+# ============================================================================
+
+
+def story_goal_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: Story_goal = 'identify the killer of Roger
+    Ackroyd and recover the household's moral order'. Substrate
+    signature: the knowledge of `killed(sheppard, ackroyd)` expands
+    across agents over the arc — at τ_s=1 only Sheppard knows; by
+    τ_s=8 (reveal) at least four key agents hold it at KNOWN.
+    Trajectory: expanding-knowledge shape."""
+    τ_end = _end_τ_s()
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    target_prop = killed(SHEPPARD_ENTITY_ID, ACKROYD_ENTITY_ID)
+
+    # Core witnesses/participants who should hold the knowledge by end.
+    knowers = ("poirot", "caroline_sheppard", "inspector_raglan",
+               "flora_ackroyd")
+
+    def _knower_count_at(τ: int) -> int:
+        count = 0
+        for agent in knowers:
+            state = project_knowledge(
+                agent_id=agent,
+                events_in_scope=events_in_scope,
+                up_to_τ_s=τ,
+            )
+            if state.holds_as(target_prop, Slot.KNOWN):
+                count += 1
+        return count
+
+    early_count = _knower_count_at(2)
+    end_count = _knower_count_at(τ_end)
+    total = len(knowers)
+
+    if early_count == 0 and end_count == total:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"Story_goal trajectory: 0/{total} key knowers hold "
+            f"killed(sheppard, ackroyd) at KNOWN at τ_s=2 "
+            f"(investigation start); {end_count}/{total} hold it "
+            f"at τ_s={τ_end}. Knowledge expansion lands the goal "
+            f"across the entire witness-set.",
+        )
+    if end_count >= total - 1 and end_count > early_count:
+        return (
+            VERDICT_PARTIAL_MATCH, end_count / total,
+            f"Story_goal trajectory: {early_count}/{total} → "
+            f"{end_count}/{total} key knowers. Goal mostly lands; "
+            f"one witness is missing at τ_end.",
+        )
+    return (
+        VERDICT_NEEDS_WORK, end_count / total if total else 0.0,
+        f"Story_goal trajectory: {early_count}/{total} → "
+        f"{end_count}/{total} key knowers at τ_s={τ_end}. "
+        f"Expected expansion to the full witness set is not "
+        f"reached.",
+    )
+
+
+# ============================================================================
+# Check 8 — Claim-moment: Story_consequence
+# ============================================================================
+
+
+def story_consequence_moment_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-moment: Story_consequence = 'the killer goes undetected;
+    Ralph Paton remains under suspicion'. Under Outcome=Success, the
+    consequence is AVOIDED at τ_end. Substrate check: at τ_end, (a)
+    the killer IS publicly detected (multiple agents hold
+    killed(sheppard, ackroyd) at KNOWN) AND (b) Ralph Paton is NOT
+    accused_of_murder anymore. Both conditions must hold for the
+    consequence to be averted."""
+    τ_end = _end_τ_s()
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    final_world = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=τ_end,
+    )
+
+    # Public detection: ≥3 of the key knowers hold killed KNOWN.
+    knowers = ("poirot", "caroline_sheppard", "inspector_raglan",
+               "flora_ackroyd")
+    target = killed(SHEPPARD_ENTITY_ID, ACKROYD_ENTITY_ID)
+    knower_count = 0
+    for agent in knowers:
+        state = project_knowledge(
+            agent_id=agent,
+            events_in_scope=events_in_scope,
+            up_to_τ_s=τ_end,
+        )
+        if state.holds_as(target, Slot.KNOWN):
+            knower_count += 1
+    publicly_detected = knower_count >= 3
+
+    # Ralph cleared: accused_of_murder(ralph_paton, ackroyd) does
+    # NOT hold as a world fact at τ_end (it was raised during
+    # investigation but the substrate should have removed / never-
+    # asserted it by end).
+    ralph_accused = (
+        accused_of_murder("ralph_paton", ACKROYD_ENTITY_ID)
+        in final_world
+    )
+    ralph_cleared = not ralph_accused
+
+    if publicly_detected and ralph_cleared:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"at τ_s={τ_end}: {knower_count}/{len(knowers)} key "
+            f"agents hold killed(sheppard, ackroyd) at KNOWN "
+            f"(killer publicly detected) AND Ralph not accused "
+            f"(cleared). Story_consequence (killer-undetected + "
+            f"Ralph-suspect) fully averted; substrate supports "
+            f"Outcome=Success.",
+        )
+    matches = sum(1 for cond in (publicly_detected, ralph_cleared) if cond)
+    strength = matches / 2
+    if matches == 1:
+        return (
+            VERDICT_PARTIAL_MATCH, strength,
+            f"at τ_s={τ_end}: publicly_detected={publicly_detected} "
+            f"({knower_count}/{len(knowers)} knowers), "
+            f"ralph_cleared={ralph_cleared}. One half of the "
+            f"consequence-avoidance condition holds.",
+        )
+    return (
+        VERDICT_NEEDS_WORK, strength,
+        f"at τ_s={τ_end}: publicly_detected=False, "
+        f"ralph_cleared=False. Consequence not averted.",
+    )
+
+
+# ============================================================================
 # Orchestration
 # ============================================================================
 
@@ -428,7 +723,16 @@ def _wrap_check(
 
 
 def run() -> tuple:
-    """Run the four Template-layer verifier checks for Ackroyd."""
+    """Run the Template-layer verifier checks for Ackroyd. Returns a
+    tuple of VerificationReview records.
+
+    Check inventory (8 checks across all three primitives):
+    - Characterization: DA_mc (Manipulation), DSP_approach (Be-er)
+    - Claim-moment: DSP_outcome, Story_consequence
+    - Claim-trajectory: DSP_judgment, DSP_resolve (Steadfast —
+      inverted from Oedipus/Macbeth's Change), DSP_growth (Start —
+      inverted from Oedipus/Macbeth's Stop), Story_goal
+    """
     return (
         _wrap_check(
             "dramatica-complete", "DA_mc",
@@ -449,6 +753,26 @@ def run() -> tuple:
             "dramatica-complete", "DSP_judgment",
             judgment_bad_trajectory_check,
             reviewer_id="verifier:claim-trajectory:dsp-judgment",
+        ),
+        _wrap_check(
+            "dramatica-complete", "DSP_resolve",
+            dsp_resolve_steadfast_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:dsp-resolve",
+        ),
+        _wrap_check(
+            "dramatica-complete", "DSP_growth",
+            dsp_growth_start_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:dsp-growth",
+        ),
+        _wrap_check(
+            "dramatica-complete", "Story_goal",
+            story_goal_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:story-goal",
+        ),
+        _wrap_check(
+            "dramatica-complete", "Story_consequence",
+            story_consequence_moment_check,
+            reviewer_id="verifier:claim-moment:story-consequence",
         ),
     )
 

@@ -77,7 +77,7 @@ from substrate import (
 )
 from macbeth import (
     FABULA, ENTITIES, RULES, ALL_BRANCHES,
-    tyrant, dead, killed, ordered_killing,
+    tyrant, dead, killed, ordered_killing, king,
 )
 
 # Dramatic-side imports.
@@ -91,6 +91,7 @@ from dramatica_template import (
 )
 from macbeth_dramatica_complete import (
     DOMAIN_ASSIGNMENTS, DYNAMIC_STORY_POINTS,
+    STORY_GOAL, STORY_CONSEQUENCE,
 )
 
 # Lowering + verifier-primitive machinery.
@@ -364,6 +365,286 @@ def judgment_bad_trajectory_check(
 
 
 # ============================================================================
+# Check 5 — Claim-trajectory: DSP_resolve = Change
+# ============================================================================
+
+
+def dsp_resolve_change_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: DSP_resolve=Change = the MC's fundamental
+    stance transitions mid-arc. For Macbeth the substrate signature
+    is `tyrant(macbeth)` emerging: at τ_s=0 he is a loyal general
+    (tyrant does NOT derive), at τ_s=6 (post-coronation + post-
+    regicide) the rule chain fires and he becomes a tyrant world-
+    side, holding through τ_s=17 (moment before death).
+
+    Distinct from DSP_judgment=Bad (both check tyrant emergence, but
+    asking different Dramatica questions): Judgment asks *was the
+    resolution bad*; Resolve asks *did a transition occur at all*.
+    For a Change/Bad MC both fire on the same substrate fact."""
+    τ_end = _end_τ_s()
+    events_in_scope_all = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    all_τ_s = sorted({e.τ_s for e in FABULA if e.τ_s is not None})
+
+    def _tyrant_holds_at(τ: int) -> bool:
+        wf = project_world(
+            events_in_scope=events_in_scope_all, up_to_τ_s=τ,
+        )
+        return world_holds_derived(
+            wf, tyrant(MACBETH_ENTITY_ID), RULES,
+        ) is not None
+
+    transition_τ = None
+    for τ in all_τ_s:
+        if _tyrant_holds_at(τ):
+            transition_τ = τ
+            break
+
+    if transition_τ is None:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            "tyrant(macbeth) never derives; Resolve=Change "
+            "trajectory predicts a mid-arc transition that the "
+            "substrate does not show.",
+        )
+
+    arc_start = min(t for t in all_τ_s if t >= 0)
+    arc_span = τ_end - arc_start if τ_end > arc_start else 1
+    position = (transition_τ - arc_start) / arc_span
+
+    if position >= 0.2:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"Macbeth's tyrant-transition lands at τ_s="
+            f"{transition_τ} ({position:.0%} through the "
+            f"[{arc_start}, {τ_end}] arc) — a mid-arc transition "
+            f"consistent with Resolve=Change. Distinct Dramatica "
+            f"read from Judgment=Bad: the transition is the "
+            f"resolve-signal; its badness is the judgment-signal.",
+        )
+    return (
+        VERDICT_PARTIAL_MATCH, position,
+        f"tyrant-transition at τ_s={transition_τ} ({position:.0%} "
+        f"through the arc) is very early; may read as a pre-existing "
+        f"trait rather than a mid-arc shift.",
+    )
+
+
+# ============================================================================
+# Check 6 — Claim-trajectory: DSP_growth = Stop
+# ============================================================================
+
+
+def dsp_growth_stop_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: DSP_growth=Stop = the MC needs to stop
+    doing something to resolve their arc. Macbeth's substrate
+    signature is the monotonic accumulation of `killed(macbeth, X)`
+    facts across the arc — he doesn't stop until he himself is
+    killed. The growth=stop axis diagnoses the NEEDED cessation;
+    the substrate shows the cessation never happens (until the
+    external termination). This is the Change/Bad shape: the MC
+    fails to grow, so the arc's resolution is catastrophic."""
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    all_τ_s = sorted({e.τ_s for e in FABULA if e.τ_s is not None})
+
+    # Count macbeth-initiated kills at each τ_s. In Shakespeare's play
+    # Macbeth personally kills Duncan; Banquo, Macduff's family are
+    # killed by hired murderers under his orders. The substrate
+    # encodes both as macbeth-driven via `killed(macbeth, X)` and
+    # `ordered_killing(macbeth, X)` — count the union.
+    kill_counts = []
+    last_count = 0
+    monotonic = True
+    for τ in all_τ_s:
+        if τ < 0:
+            continue
+        wf = project_world(events_in_scope=events_in_scope, up_to_τ_s=τ)
+        count = sum(
+            1 for p in wf
+            if p.predicate in ("killed", "ordered_killing")
+            and len(p.args) >= 1
+            and p.args[0] == MACBETH_ENTITY_ID
+        )
+        if count < last_count:
+            monotonic = False
+        kill_counts.append((τ, count))
+        last_count = count
+
+    if not kill_counts:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            "no kills found in fabula; Growth=Stop needs a "
+            "cumulative activity to diagnose.",
+        )
+
+    final_count = kill_counts[-1][1]
+    if monotonic and final_count >= 2:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"killed(macbeth, X) count rises monotonically across "
+            f"the arc to {final_count} by τ_s={kill_counts[-1][0]}. "
+            f"Growth=Stop diagnoses the cessation the MC does not "
+            f"enact; the substrate shows exactly that — the killing "
+            f"never self-terminates.",
+        )
+    if final_count >= 2:
+        return (
+            VERDICT_PARTIAL_MATCH, 0.6,
+            f"killed(macbeth, X) count is {final_count} but "
+            f"trajectory is non-monotonic; Growth=Stop is supported "
+            f"but the accumulation shape is atypical.",
+        )
+    return (
+        VERDICT_PARTIAL_MATCH, 0.4,
+        f"only {final_count} killed(macbeth, X) fact(s) at arc's "
+        f"end; Growth=Stop predicts a more pronounced cumulative "
+        f"shape.",
+    )
+
+
+# ============================================================================
+# Check 7 — Claim-trajectory: Story_goal
+# ============================================================================
+
+
+def story_goal_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: Story_goal = 'restore Scotland's rightful
+    succession and end the tyranny'. Substrate signature: the
+    kingship trajectory has a three-phase shape — Duncan (rightful)
+    at τ_s=0; Macbeth (usurper) for the middle; Malcolm (restored)
+    at τ_s=end. The three-phase presence of `king(X, scotland)` is
+    the trajectory's substrate realization."""
+    τ_end = _end_τ_s()
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    all_τ_s = sorted({e.τ_s for e in FABULA if e.τ_s is not None})
+
+    phases = {"duncan": None, "macbeth": None, "malcolm": None}
+    for τ in all_τ_s:
+        wf = project_world(events_in_scope=events_in_scope, up_to_τ_s=τ)
+        if phases["duncan"] is None and king("duncan", "scotland") in wf:
+            phases["duncan"] = τ
+        if phases["macbeth"] is None and king("macbeth", "scotland") in wf:
+            phases["macbeth"] = τ
+        if phases["malcolm"] is None and king("malcolm", "scotland") in wf:
+            phases["malcolm"] = τ
+
+    final_world = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=τ_end,
+    )
+    malcolm_king_at_end = king("malcolm", "scotland") in final_world
+    macbeth_king_at_end = king("macbeth", "scotland") in final_world
+
+    all_phases_hit = all(v is not None for v in phases.values())
+    phase_order = (
+        phases["duncan"] is not None and phases["macbeth"] is not None
+        and phases["malcolm"] is not None
+        and phases["duncan"] < phases["macbeth"] < phases["malcolm"]
+    )
+
+    if (all_phases_hit and phase_order and malcolm_king_at_end
+            and not macbeth_king_at_end):
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"kingship trajectory: Duncan at τ_s={phases['duncan']}, "
+            f"Macbeth at τ_s={phases['macbeth']}, Malcolm at τ_s="
+            f"{phases['malcolm']}; Malcolm king at τ_end={τ_end}, "
+            f"Macbeth not king. Three-phase disrupt-restore shape "
+            f"consistent with Story_goal (succession restored).",
+        )
+    if malcolm_king_at_end:
+        return (
+            VERDICT_PARTIAL_MATCH, 0.7,
+            f"Malcolm is king at τ_end; goal lands at the moment "
+            f"level, but the full three-phase trajectory "
+            f"(Duncan→Macbeth→Malcolm) is incomplete: "
+            f"phases={phases}.",
+        )
+    return (
+        VERDICT_NEEDS_WORK, 0.0,
+        f"Malcolm is not king at τ_end={τ_end}; Story_goal "
+        f"(succession restored) not supported by substrate. "
+        f"Phases reached: {phases}.",
+    )
+
+
+# ============================================================================
+# Check 8 — Claim-moment: Story_consequence
+# ============================================================================
+
+
+def story_consequence_moment_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-moment: Story_consequence = 'Scotland remains under
+    Macbeth's tyranny'. Under Outcome=Success, the consequence is
+    AVOIDED at τ_end. Substrate check: at τ_end, neither
+    king(macbeth, scotland) nor tyrant(macbeth) should hold, and
+    Malcolm should be king. Three conditions must all hold for
+    the consequence to be averted."""
+    τ_end = _end_τ_s()
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    final_world = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=τ_end,
+    )
+    macbeth_king = king("macbeth", "scotland") in final_world
+    macbeth_tyrant = world_holds_derived(
+        final_world, tyrant(MACBETH_ENTITY_ID), RULES,
+    ) is not None
+    malcolm_king = king("malcolm", "scotland") in final_world
+
+    if not macbeth_king and not macbeth_tyrant and malcolm_king:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"at τ_s={τ_end}: king(macbeth)=False, tyrant(macbeth) "
+            f"not derivable, king(malcolm)=True. Story_consequence "
+            f"(tyranny continues) is fully averted; the substrate "
+            f"supports Outcome=Success.",
+        )
+    matches = sum(
+        1 for cond in
+        (not macbeth_king, not macbeth_tyrant, malcolm_king)
+        if cond
+    )
+    strength = matches / 3
+    if matches >= 2:
+        return (
+            VERDICT_PARTIAL_MATCH, strength,
+            f"at τ_s={τ_end}: king(macbeth)={macbeth_king}, "
+            f"tyrant(macbeth)={macbeth_tyrant}, king(malcolm)="
+            f"{malcolm_king}. {matches}/3 consequence-avoidance "
+            f"conditions hold; partial averting.",
+        )
+    return (
+        VERDICT_NEEDS_WORK, strength,
+        f"at τ_s={τ_end}: {matches}/3 consequence-avoidance "
+        f"conditions hold (king(macbeth)={macbeth_king}, "
+        f"tyrant(macbeth)={macbeth_tyrant}, king(malcolm)="
+        f"{malcolm_king}). Consequence not averted.",
+    )
+
+
+# ============================================================================
 # Orchestration — run all four checks; build VerificationReviews directly
 # ============================================================================
 #
@@ -405,8 +686,15 @@ def _wrap_check(
 
 
 def run() -> tuple:
-    """Run the four Template-layer verifier checks. Returns a tuple
-    of VerificationReview records."""
+    """Run the Template-layer verifier checks for Macbeth. Returns a
+    tuple of VerificationReview records.
+
+    Check inventory (8 checks across all three primitives):
+    - Characterization: DA_mc, DSP_approach
+    - Claim-moment: DSP_outcome, Story_consequence
+    - Claim-trajectory: DSP_judgment, DSP_resolve, DSP_growth,
+      Story_goal
+    """
     return (
         _wrap_check(
             "dramatica-complete", "DA_mc",
@@ -427,6 +715,26 @@ def run() -> tuple:
             "dramatica-complete", "DSP_judgment",
             judgment_bad_trajectory_check,
             reviewer_id="verifier:claim-trajectory:dsp-judgment",
+        ),
+        _wrap_check(
+            "dramatica-complete", "DSP_resolve",
+            dsp_resolve_change_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:dsp-resolve",
+        ),
+        _wrap_check(
+            "dramatica-complete", "DSP_growth",
+            dsp_growth_stop_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:dsp-growth",
+        ),
+        _wrap_check(
+            "dramatica-complete", "Story_goal",
+            story_goal_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:story-goal",
+        ),
+        _wrap_check(
+            "dramatica-complete", "Story_consequence",
+            story_consequence_moment_check,
+            reviewer_id="verifier:claim-moment:story-consequence",
         ),
     )
 

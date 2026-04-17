@@ -56,7 +56,7 @@ from substrate import (
 )
 from oedipus import (
     FABULA, ENTITIES, RULES, ALL_BRANCHES,
-    parricide, incest,
+    parricide, incest, child_of, killed, exiled,
 )
 
 # Dramatic-side imports.
@@ -70,6 +70,7 @@ from dramatica_template import (
 )
 from oedipus_dramatica_complete import (
     DOMAIN_ASSIGNMENTS, DYNAMIC_STORY_POINTS,
+    STORY_GOAL, STORY_CONSEQUENCE,
 )
 
 # Lowering + verifier-primitive machinery.
@@ -356,6 +357,294 @@ def judgment_bad_trajectory_check(
 
 
 # ============================================================================
+# Check 5 — Claim-trajectory: DSP_resolve = Change
+# ============================================================================
+
+
+def dsp_resolve_change_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: DSP_resolve=Change = the MC's fundamental
+    stance transitions mid-arc rather than holding steady. For
+    Oedipus this renders as the self-identity transition: Oedipus's
+    equivalence class gains `the-exposed-baby` mid-story, crossing a
+    discrete line.
+
+    Distinct from DSP_judgment=Bad (same substrate fact, different
+    Dramatica axis): Judgment asks about the *quality* of the MC's
+    resolution (catastrophic); Resolve asks whether a *transition*
+    occurred at all. Both land on the same identity emergence for
+    Oedipus because epistemic tragedy couples the two — a good
+    Change/Good MC would show a transition to flourishing, a
+    Change/Bad MC a transition to ruin."""
+    τ_end = _end_τ_s()
+    events_in_scope_all = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+
+    def _self_identified_at(τ: int) -> bool:
+        state = project_knowledge(
+            agent_id=OEDIPUS_ENTITY_ID,
+            events_in_scope=events_in_scope_all,
+            up_to_τ_s=τ,
+        )
+        for cls in state.equivalence_classes():
+            if (OEDIPUS_ENTITY_ID in cls
+                    and "the-exposed-baby" in cls):
+                return True
+        return False
+
+    all_τ_s = sorted({e.τ_s for e in FABULA if e.τ_s is not None})
+    transition_τ = None
+    for τ in all_τ_s:
+        if _self_identified_at(τ):
+            transition_τ = τ
+            break
+
+    # Classify where the transition lands in the arc.
+    if transition_τ is None:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            "no self-identity transition found; Resolve=Change "
+            "predicts a mid-arc transition in the MC's stance. The "
+            "substrate shows no such transition.",
+        )
+    arc_start = min(t for t in all_τ_s if t >= 0)
+    arc_span = τ_end - arc_start if τ_end > arc_start else 1
+    position = (transition_τ - arc_start) / arc_span
+    if position >= 0.4:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"Oedipus's self-identity transition lands at τ_s="
+            f"{transition_τ} ({position:.0%} through the [{arc_start}, "
+            f"{τ_end}] arc) — a mid-arc transition consistent with "
+            f"Resolve=Change. Distinct from Judgment=Bad: Judgment "
+            f"evaluates final state; Resolve evaluates whether a "
+            f"transition occurred.",
+        )
+    return (
+        VERDICT_PARTIAL_MATCH, position,
+        f"self-identity transition at τ_s={transition_τ} "
+        f"({position:.0%} through the arc) is earlier than Change's "
+        f"typical mid-arc placement; may indicate the transition is "
+        f"a pre-existing trait rather than a story-arc shift.",
+    )
+
+
+# ============================================================================
+# Check 6 — Claim-trajectory: DSP_growth = Stop
+# ============================================================================
+
+
+def dsp_growth_stop_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: DSP_growth=Stop = the MC needs to stop
+    doing something to resolve their arc. For Oedipus the
+    substrate signature is: his investigation / utterance /
+    participation event density drops sharply after anagnorisis
+    (τ_s=13). The transition from 'interrogating witnesses every
+    τ_s' to 'passively receiving exile' is the substrate-visible
+    cessation.
+
+    Under Judgment=Bad, the MC's 'stopping' doesn't heal them —
+    Oedipus stops because the search has ended with him as its
+    target. The substrate shape still carries the cessation."""
+    τ_end = _end_τ_s()
+    anagnorisis_τ = None
+    for e in FABULA:
+        if (e.type == "realization"
+                and (e.participants or {}).get("agent") == OEDIPUS_ENTITY_ID):
+            anagnorisis_τ = e.τ_s
+            break
+    if anagnorisis_τ is None:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            "no Oedipus realization event found; Growth=Stop "
+            "trajectory needs a cessation pivot the substrate does "
+            "not encode.",
+        )
+
+    before = [
+        e for e in FABULA
+        if e.τ_s is not None
+        and 0 <= e.τ_s < anagnorisis_τ
+        and _oedipus_is_participant(e)
+    ]
+    after = [
+        e for e in FABULA
+        if e.τ_s is not None
+        and anagnorisis_τ <= e.τ_s <= τ_end
+        and _oedipus_is_participant(e)
+    ]
+    before_rate = len(before) / max(anagnorisis_τ, 1)
+    after_span = max(τ_end - anagnorisis_τ, 1)
+    after_rate = len(after) / after_span
+
+    if before_rate > after_rate * 1.5:
+        ratio_drop = 1.0 - (after_rate / before_rate) if before_rate else 0.0
+        return (
+            VERDICT_APPROVED, min(ratio_drop, 1.0),
+            f"Oedipus-participation event rate drops "
+            f"{before_rate:.2f}/τ_s (pre-anagnorisis at "
+            f"τ_s={anagnorisis_τ}) → {after_rate:.2f}/τ_s post-"
+            f"anagnorisis — a {ratio_drop:.0%} drop in activity. "
+            f"Consistent with Growth=Stop (the MC's driving "
+            f"activity ceases).",
+        )
+    return (
+        VERDICT_PARTIAL_MATCH, 0.5,
+        f"Oedipus-participation rate pre/post anagnorisis: "
+        f"{before_rate:.2f} / {after_rate:.2f}. The expected "
+        f"sharp drop is not as pronounced; Growth=Stop trajectory "
+        f"weakly supported.",
+    )
+
+
+# ============================================================================
+# Check 7 — Claim-trajectory: Story_goal
+# ============================================================================
+
+
+def story_goal_trajectory_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-trajectory: Story_goal = 'identify the pollution causing
+    the plague and expel it'. Substrate shape: the load-bearing fact
+    is `parricide(oedipus, laius)` becoming world-derivable, which
+    requires `killed(oedipus, laius)` + `child_of(oedipus, laius)`
+    accreting across the arc. Check that the premises appear in
+    order and both hold at τ_end.
+
+    The trajectory (not just the end-state) distinguishes this from
+    the Outcome=Success check: Outcome asks 'did the goal land at
+    the end?'; Goal-trajectory asks 'did the arc build toward it
+    incrementally?'"""
+    τ_end = _end_τ_s()
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+
+    # When do the two premises first appear in world state?
+    killed_τ = None
+    child_of_τ = None
+    all_τ_s = sorted({e.τ_s for e in FABULA if e.τ_s is not None})
+    for τ in all_τ_s:
+        world = project_world(
+            events_in_scope=events_in_scope, up_to_τ_s=τ,
+        )
+        if killed_τ is None and killed("oedipus", "laius") in world:
+            killed_τ = τ
+        if child_of_τ is None and child_of("oedipus", "laius") in world:
+            child_of_τ = τ
+        if killed_τ is not None and child_of_τ is not None:
+            break
+
+    if killed_τ is None or child_of_τ is None:
+        return (
+            VERDICT_NEEDS_WORK, 0.0,
+            f"Story_goal requires parricide premises: killed_τ="
+            f"{killed_τ}, child_of_τ={child_of_τ}. At least one "
+            f"premise never enters world state; the goal trajectory "
+            f"cannot land.",
+        )
+
+    # Premises should accrete in order (killed before child_of
+    # recognition) and both hold at τ_end.
+    final_world = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=τ_end,
+    )
+    derives_at_end = world_holds_derived(
+        final_world, parricide("oedipus", "laius"), RULES,
+    ) is not None
+
+    if killed_τ < child_of_τ and derives_at_end:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"Story_goal trajectory: killed(oedipus, laius) enters "
+            f"world at τ_s={killed_τ}; child_of(oedipus, laius) "
+            f"enters at τ_s={child_of_τ}; parricide derives at "
+            f"τ_s={τ_end}. Premises accrete in order; the goal's "
+            f"load-bearing derivation lands at arc's end.",
+        )
+    if derives_at_end:
+        return (
+            VERDICT_PARTIAL_MATCH, 0.7,
+            f"Story_goal derivation lands at τ_s={τ_end}, but "
+            f"premise order is unusual (killed_τ={killed_τ} ≥ "
+            f"child_of_τ={child_of_τ}); trajectory arrives but "
+            f"its buildup shape is atypical.",
+        )
+    return (
+        VERDICT_NEEDS_WORK, 0.0,
+        f"Story_goal premises both enter world (killed at "
+        f"τ_s={killed_τ}, child_of at τ_s={child_of_τ}) but "
+        f"parricide does not derive at τ_s={τ_end}. Trajectory "
+        f"breaks before landing.",
+    )
+
+
+# ============================================================================
+# Check 8 — Claim-moment: Story_consequence
+# ============================================================================
+
+
+def story_consequence_moment_check(
+    upper_ref: CrossDialectRef,
+    _unused_lower_refs: tuple = (),
+    _unused_ranges: tuple = (),
+) -> tuple:
+    """Claim-moment: Story_consequence = 'the plague continues; the
+    city dies; the pollution festers'. Under DSP_outcome=Success,
+    the consequence is AVOIDED at τ_end — the pollution is expelled.
+    Substrate check: at τ_end, (a) parricide derives (the pollution
+    is identified) AND (b) `exiled(oedipus)` is world-asserted
+    (the pollution is expelled). Both conditions must hold for
+    the consequence to be successfully averted."""
+    τ_end = _end_τ_s()
+    events_in_scope = [
+        e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
+    ]
+    final_world = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=τ_end,
+    )
+    pollution_identified = world_holds_derived(
+        final_world, parricide("oedipus", "laius"), RULES,
+    ) is not None
+    pollution_expelled = exiled("oedipus") in final_world
+
+    if pollution_identified and pollution_expelled:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"at τ_s={τ_end}: parricide(oedipus, laius) derives "
+            f"(pollution identified) AND exiled(oedipus) holds "
+            f"(pollution expelled). Story_consequence is averted — "
+            f"the plague-cause has been found and removed, as "
+            f"Success=Outcome predicts.",
+        )
+    if pollution_identified or pollution_expelled:
+        return (
+            VERDICT_PARTIAL_MATCH, 0.5,
+            f"at τ_s={τ_end}: identified={pollution_identified}, "
+            f"expelled={pollution_expelled}. One half of the "
+            f"consequence-avoidance condition is missing; the "
+            f"success is incomplete.",
+        )
+    return (
+        VERDICT_NEEDS_WORK, 0.0,
+        f"at τ_s={τ_end}: identified=False, expelled=False. The "
+        f"consequence is not averted; substrate state does not "
+        f"support Outcome=Success.",
+    )
+
+
+# ============================================================================
 # Orchestration (parallel to macbeth_dramatica_complete_verification)
 # ============================================================================
 
@@ -382,8 +671,15 @@ def _wrap_check(
 
 
 def run() -> tuple:
-    """Run the four Template-layer verifier checks for Oedipus.
-    Returns a tuple of VerificationReview records."""
+    """Run the Template-layer verifier checks for Oedipus.
+    Returns a tuple of VerificationReview records.
+
+    Check inventory (8 checks across all three primitives):
+    - Characterization: DA_mc, DSP_approach
+    - Claim-moment: DSP_outcome, Story_consequence
+    - Claim-trajectory: DSP_judgment, DSP_resolve, DSP_growth,
+      Story_goal
+    """
     return (
         _wrap_check(
             "dramatica-complete", "DA_mc",
@@ -404,6 +700,26 @@ def run() -> tuple:
             "dramatica-complete", "DSP_judgment",
             judgment_bad_trajectory_check,
             reviewer_id="verifier:claim-trajectory:dsp-judgment",
+        ),
+        _wrap_check(
+            "dramatica-complete", "DSP_resolve",
+            dsp_resolve_change_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:dsp-resolve",
+        ),
+        _wrap_check(
+            "dramatica-complete", "DSP_growth",
+            dsp_growth_stop_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:dsp-growth",
+        ),
+        _wrap_check(
+            "dramatica-complete", "Story_goal",
+            story_goal_trajectory_check,
+            reviewer_id="verifier:claim-trajectory:story-goal",
+        ),
+        _wrap_check(
+            "dramatica-complete", "Story_consequence",
+            story_consequence_moment_check,
+            reviewer_id="verifier:claim-moment:story-consequence",
         ),
     )
 

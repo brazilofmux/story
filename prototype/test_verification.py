@@ -1612,6 +1612,109 @@ def test_ek2_ackroyd_verifier_be_er_inversion_preserved():
 
 
 # ----------------------------------------------------------------------------
+# dramatica-complete → substrate verifier surface extension
+# (item 2 from the design README's Upcoming list)
+# ----------------------------------------------------------------------------
+#
+# Each of the three verifiers now ships 8 checks (was 4): adds DSP_resolve,
+# DSP_growth, Story_goal, and Story_consequence. Integration pins confirm
+# the extension lands and the new checks produce honest spectrum signal.
+
+
+def test_verifier_surface_has_eight_checks_per_encoding():
+    """Each of the three dramatica-complete verifiers runs 8 checks
+    covering all three primitives (Characterization + Claim-moment +
+    Claim-trajectory)."""
+    from oedipus_dramatica_complete_verification import run as o_run
+    from macbeth_dramatica_complete_verification import run as m_run
+    from ackroyd_dramatica_complete_verification import run as a_run
+    assert len(o_run()) == 8
+    assert len(m_run()) == 8
+    assert len(a_run()) == 8
+
+
+def test_oedipus_story_consequence_averted_at_end():
+    """Oedipus's Story_consequence = plague-continues. Under
+    Outcome=Success the consequence is AVOIDED at τ_end —
+    pollution is identified (parricide derives) and expelled
+    (exile holds)."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["Story_consequence"].verdict == VERDICT_APPROVED
+    assert by_target["Story_consequence"].match_strength == 1.0
+
+
+def test_macbeth_story_goal_three_phase_kingship():
+    """Macbeth's Story_goal = restore succession. Three-phase
+    trajectory: Duncan (rightful) → Macbeth (usurper) → Malcolm
+    (restored), all three distinct τ_s values, Malcolm king at end."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["Story_goal"].verdict == VERDICT_APPROVED
+    assert by_target["Story_goal"].match_strength == 1.0
+
+
+def test_macbeth_dsp_growth_monotonic_killing():
+    """Macbeth's DSP_growth=Stop. Substrate signature: killed +
+    ordered_killing count with macbeth as killer rises monotonically
+    (he never self-terminates the killing)."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DSP_growth"].verdict == VERDICT_APPROVED
+
+
+def test_ackroyd_resolve_steadfast_lands_before_investigation_arc():
+    """Ackroyd's DSP_resolve=Steadfast. Sheppard's
+    betrayer_of_trust role derives at τ_s=1 — before the
+    investigation arc begins at τ_s=2. Classic steadfast signature:
+    the MC's defining trait is a pre-arc property, not a mid-arc
+    transition."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DSP_resolve"].verdict == VERDICT_APPROVED
+
+
+def test_ackroyd_growth_start_after_ultimatum():
+    """Ackroyd's DSP_growth=Start. Substrate signature:
+    confession_writing (τ_s=10) follows ultimatum (τ_s=9) —
+    Sheppard 'starts' what he had been failing to start, but only
+    under external compulsion. Classic Start/Bad shape."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DSP_growth"].verdict == VERDICT_APPROVED
+
+
+def test_ackroyd_story_consequence_partial_ralph_not_cleared():
+    """Ackroyd's Story_consequence — honest PARTIAL finding. The
+    substrate has no explicit 'Ralph cleared' world-state transition
+    at the reveal; `accused_of_murder(ralph_paton, ackroyd)` is
+    asserted earlier and never retracted. This is a substrate
+    encoding gap the verifier surfaces, not a verifier bug."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["Story_consequence"].verdict == VERDICT_PARTIAL_MATCH
+
+
+def test_oedipus_dsp_growth_partial_rate_heuristic():
+    """Oedipus's DSP_growth=Stop. Honest PARTIAL finding: the
+    current rate-based heuristic (participation events per τ_s pre
+    vs post anagnorisis) doesn't capture Oedipus's actual
+    cessation pattern because post-anagnorisis events are densely
+    clustered. A primary-actor-shift heuristic would be stronger;
+    deferred as a follow-on refinement."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DSP_growth"].verdict == VERDICT_PARTIAL_MATCH
+
+
+# ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
 
@@ -1709,6 +1812,15 @@ TESTS = [
     test_ek2_oedipus_verifier_both_characterizations_approved,
     test_ek2_macbeth_verifier_no_regression,
     test_ek2_ackroyd_verifier_be_er_inversion_preserved,
+    # dramatica-complete → substrate verifier surface extension
+    test_verifier_surface_has_eight_checks_per_encoding,
+    test_oedipus_story_consequence_averted_at_end,
+    test_macbeth_story_goal_three_phase_kingship,
+    test_macbeth_dsp_growth_monotonic_killing,
+    test_ackroyd_resolve_steadfast_lands_before_investigation_arc,
+    test_ackroyd_growth_start_after_ultimatum,
+    test_ackroyd_story_consequence_partial_ralph_not_cleared,
+    test_oedipus_dsp_growth_partial_rate_heuristic,
 ]
 
 
