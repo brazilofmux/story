@@ -202,14 +202,26 @@ def strand_b_flora_ralph_trajectory_check(
     upper_ref, lower_refs, position_ranges,
 ):
     """Trajectory check for Strand_B_flora_ralph.description. Four
-    signatures across the love arc; last is epistemic at τ_s=8."""
+    signatures across the love arc; last is epistemic at τ_s=8.
+
+    Note: the `accused_of_murder` signature is probed at τ_s=7 (the
+    pre-reveal moment) because the reveal event at τ_s=8 now
+    explicitly retracts the accusation (ackroyd.py substrate fix
+    closing the Story_consequence partial finding). The trajectory
+    semantics are preserved — "Ralph was accused during the
+    investigation" — by querying at the latest τ_s before the
+    reveal's retraction."""
     reveal_τ_s = 8
+    pre_reveal_τ_s = 7
 
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
     world_facts_reveal = project_world(
         events_in_scope=events_in_scope, up_to_τ_s=reveal_τ_s,
+    )
+    world_facts_pre_reveal = project_world(
+        events_in_scope=events_in_scope, up_to_τ_s=pre_reveal_τ_s,
     )
 
     married_fact = world_holds_literal(
@@ -218,7 +230,7 @@ def strand_b_flora_ralph_trajectory_check(
     )
     accused_fact = world_holds_literal(
         accused_of_murder("ralph_paton", "ackroyd"),
-        world_facts_reveal,
+        world_facts_pre_reveal,
     )
 
     summons_event = _substrate_event("E_flora_summons_poirot")
@@ -253,8 +265,8 @@ def strand_b_flora_ralph_trajectory_check(
         f"τ_s={reveal_τ_s}): "
         f"secretly_married(ralph_paton, ursula_bourne) world-"
         f"literal: {married_fact}; "
-        f"accused_of_murder(ralph_paton, ackroyd) world-literal: "
-        f"{accused_fact}; "
+        f"accused_of_murder(ralph_paton, ackroyd) at τ_s="
+        f"{pre_reveal_τ_s}: {accused_fact}; "
         f"flora_ackroyd in E_flora_summons_poirot.participants: "
         f"{flora_in_summons}; "
         f"Poirot KNOWS secretly_married(ralph, ursula) at "

@@ -1689,16 +1689,19 @@ def test_ackroyd_growth_start_after_ultimatum():
     assert by_target["DSP_growth"].verdict == VERDICT_APPROVED
 
 
-def test_ackroyd_story_consequence_partial_ralph_not_cleared():
-    """Ackroyd's Story_consequence — honest PARTIAL finding. The
-    substrate has no explicit 'Ralph cleared' world-state transition
-    at the reveal; `accused_of_murder(ralph_paton, ackroyd)` is
-    asserted earlier and never retracted. This is a substrate
-    encoding gap the verifier surfaces, not a verifier bug."""
+def test_ackroyd_story_consequence_approved_after_ralph_cleared_fix():
+    """Ackroyd's Story_consequence is now APPROVED after the
+    substrate gap was closed: E_poirot_reveals_solution now carries
+    an explicit world-effect retracting accused_of_murder(
+    ralph_paton, ackroyd), so Ralph is structurally cleared at the
+    reveal rather than only socially inferred. The PARTIAL 0.5
+    this test initially pinned was a real substrate-completeness
+    finding the verifier surfaced; fix landed in ackroyd.py."""
     from ackroyd_dramatica_complete_verification import run
     reviews = run()
     by_target = {r.target_record.record_id: r for r in reviews}
-    assert by_target["Story_consequence"].verdict == VERDICT_PARTIAL_MATCH
+    assert by_target["Story_consequence"].verdict == VERDICT_APPROVED
+    assert by_target["Story_consequence"].match_strength == 1.0
 
 
 def test_oedipus_dsp_growth_partial_rate_heuristic():
@@ -1819,7 +1822,7 @@ TESTS = [
     test_macbeth_dsp_growth_monotonic_killing,
     test_ackroyd_resolve_steadfast_lands_before_investigation_arc,
     test_ackroyd_growth_start_after_ultimatum,
-    test_ackroyd_story_consequence_partial_ralph_not_cleared,
+    test_ackroyd_story_consequence_approved_after_ralph_cleared_fix,
     test_oedipus_dsp_growth_partial_rate_heuristic,
 ]
 

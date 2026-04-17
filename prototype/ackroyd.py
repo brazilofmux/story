@@ -741,6 +741,15 @@ FABULA = [
                     killed("sheppard", "ackroyd"), 8),
             observe("inspector_raglan",
                     killed("sheppard", "ackroyd"), 8),
+            # Public naming of Sheppard retracts the earlier
+            # accused_of_murder(ralph_paton, ackroyd) fact. Ralph
+            # is cleared by the same reveal that names the killer —
+            # the substrate must now record that state transition
+            # explicitly so downstream queries see him un-accused.
+            # Without this, "Ralph cleared" would remain a purely
+            # social inference the substrate cannot witness.
+            world(accused_of_murder("ralph_paton", "ackroyd"),
+                  asserts=False),
         ),
     ),
 
