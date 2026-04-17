@@ -1,72 +1,141 @@
 # story — computational storytelling engine
 
-A research and design notebook for a storytelling engine based on a multi-layered architectural stack. The project aims to bridge the gap between high-level narrative structure (Dramatica, Aristotelian poetics) and a formal, tri-temporal world-state "substrate."
+See [`README.md`](README.md) for the full project overview. This
+file carries the Gemini-facing summary.
 
-## Project Overview
+## Project goal
 
-The "story" project implements a modular stack for narrative generation and analysis:
+A long-horizon research project to build a story-telling engine.
+The narrow goal is to **force humans or LLMs to do their homework
+on the structural layer of a story** — who knows what when, what
+claim the story argues, whether the dialect-chosen shape actually
+fits the substrate's events.
 
-1.  **Substrate:** The base layer (sink) that tracks events, propositions, and agent knowledge across three time dimensions:
-    - **τ_s (Story Time):** The sequence of events within the story world (fabula).
-    - **τ_a (Author Time):** The sequence of authorial revisions and additions.
-    - **τ_d (Discourse Time):** The order in which facts are disclosed to the reader (sjuzhet).
-2.  **Dramatic Dialect:** An upper-layer dialect for high-level narrative structure, featuring Arguments, Throughlines (roles), Scenes, Beats, and Stakes. It is influenced by Dramatica but remains theory-agnostic.
-3.  **Lowering & Verification:** A connective layer that maps high-level narrative records to concrete substrate facts (Realization) and verifies their consistency via automated checks (Characterization, Claims).
-4.  **Inference Model:** A query-time derivation engine using Horn-clause rules to compute complex story predicates (e.g., "parricide", "incest") from simple, authored facts.
-5.  **Reader Model:** An interpretive layer that bridges the "description surface" (unstructured text) and the formal substrate using LLMs (Anthropic Claude) or human feedback.
+Research + design notebook + working Python prototype. Not a
+product. Not seeking contributors.
 
-## Repository Structure
+## Architectural stack
 
-- `design/`: Architectural sketches (`{topic}-sketch-NN.md`). Active sketches are self-contained; old ones are preserved and marked as superseded.
-- `prototype/`: Python 3.12 reference implementation. Written as an "executable specification" for maximum portability.
-- `research/`: Survey notes on existing narrative theories (`theories/`) and computational systems (`systems/`).
-- `AGENTS.md`: Specific guidelines for AI agents interacting with this repository.
+The engine is a stack of upper dialects over a single substrate:
 
-## Building and Running
+1. **Substrate** ([`design/substrate-sketch-05.md`](design/substrate-sketch-05.md)).
+   Event-primary; tri-temporal — **τ_s** (story time), **τ_d**
+   (discourse time), **τ_a** (authored time). Branch-aware.
+   Per-agent knowledge projections by fold. Ambiguity as
+   first-class branch structure, not reader-side misunderstanding.
+2. **Dialects.** Three exist:
+   - **Dramatic** ([`design/dramatic-sketch-01.md`](design/dramatic-sketch-01.md))
+     — role-driven, parameterized. Arguments, Throughlines,
+     Characters, Scenes, Beats, Stakes.
+   - **Save the Cat** ([`design/save-the-cat-sketch-01.md`](design/save-the-cat-sketch-01.md)
+     + [`design/save-the-cat-sketch-02.md`](design/save-the-cat-sketch-02.md))
+     — beat-driven, prescriptive. 15 canonical beats, 10 genres,
+     StcCharacter with canonical role labels.
+   - **dramatica-complete** ([`design/dramatica-template-sketch-01.md`](design/dramatica-template-sketch-01.md))
+     — the full Dramatica Grand Argument Story theory as a
+     Template atop Dramatic. 64 character elements across 4
+     dimensions, 16 Issue Quads.
+3. **Lowering + verification.** Four coupling kinds
+   (Realization, Characterization, Claim-moment,
+   Claim-trajectory, Flavor) identified by design; three verifier
+   primitives implement the middle three. Observations flow
+   through the proposal queue — partner, never gate.
+4. **Inference model** ([`design/inference-model-sketch-01.md`](design/inference-model-sketch-01.md)).
+   Horn-clause rules, bounded depth, proof-carrying derivation.
+   Composes with identity-substitution
+   ([`design/identity-and-realization-sketch-01.md`](design/identity-and-realization-sketch-01.md))
+   to handle anagnorisis cleanly.
+5. **Reader-model probe** ([`design/reader-model-sketch-01.md`](design/reader-model-sketch-01.md)).
+   Optional LLM-in-the-loop component reading the description
+   surface and proposing reviews, answer proposals, and edit
+   proposals. Substrate-native record types on input and output.
+   Built against Claude Opus 4.6 via the Anthropic SDK.
 
-The project consists of Markdown documentation and Python prototypes.
+## Load-bearing design choices
 
-### Prerequisites
-- Python 3.12+
-- (Optional) Anthropic API Key for the reader-model probe.
+- **Grid-snap architecture.** Substrate carries structural facts;
+  authors (or LLMs) carry affective / interpretive / tonal load
+  via descriptions. If an attentive reader could reliably catch
+  drift in prose, that content belongs in descriptions — not a
+  typed projection. (Architecture commitment A3.)
+- **Ambiguity-load-bearing texts are scoped out by design.** The
+  engine requires factual commitment; Borges / late James / Kafka
+  are outside supported story forms. Not a limitation — a
+  position.
 
-### Core Prototypes
-Navigate to the `prototype/` directory to run the demos and tests:
+## Repository layout
+
+- [`design/`](design/) — architectural sketches (`{topic}-sketch-NN.md`).
+  Self-contained per topic. Superseded sketches kept as record.
+- [`prototype/`](prototype/) — Python 3.12 reference implementation.
+  Executable specification; favor explicit records and plain
+  functions over Python-specific cleverness (the engine may be
+  ported later).
+- [`research/`](research/) — two parallel tracks:
+  `theories/` (narrative theory surveys) and `systems/`
+  (computational narrative system surveys).
+- [`REVIEW.md`](REVIEW.md) — April 2026 editorial review; several
+  items have since landed.
+
+## Status (April 2026)
+
+- **12 active design sketches**; all have status / date / open
+  questions tracked.
+- **Seven encoded stories** closing the Outcome × Judgment matrix:
+  Oedipus Rex, Macbeth, *The Murder of Roger Ackroyd*, Rashomon,
+  *Pride and Prejudice*, Rocky, Chinatown.
+- **Three cross-boundary verifiers** at the dramatica-complete →
+  substrate coupling. Post-EK2 characterization spectrum: APPROVED
+  0.77 (Oedipus) / PARTIAL 0.69 (Macbeth) / PARTIAL 0.54 (Ackroyd)
+  — the three-point spread measures encoding/taxonomy match
+  honestly.
+- **~510 tests** across 12 test files; full suite runs in under a
+  second. Standard-library only except the reader-model probe.
+
+## Running the prototype
+
+Core (standard library only):
 
 ```sh
 cd prototype
-
-# Demos
-python3 demo.py                  # Oedipus Rex: dramatic irony and anagnorisis report
-python3 demo_rashomon.py         # Rashomon: matrix of contested branches and testimonies
-
-# Tests (Standard Library only)
-python3 test_substrate.py        # Core substrate invariants
-python3 test_inference.py        # Inference engine and rule derivation
-python3 test_dramatic.py         # Dramatic dialect and M8 verifier
-python3 test_lowering.py         # Lowering records and staleness tracking
-python3 test_verification.py     # Verifier primitives (Characterization, etc.)
-
-# Reader Model (Requires dependencies and API key)
-pip install -r requirements.txt
-python3 demo_reader_model.py --dry-run  # Print the reader-model prompt without calling API
-python3 demo_reader_model.py --walk     # Interactive authorial walker over LLM proposals
+python3 demo.py                  # Oedipus Rex — irony + anagnorisis report
+python3 demo_rashomon.py         # Rashomon — contested-branch matrices
+python3 test_substrate.py        # 45 tests — substrate invariants
+python3 test_verification.py     # 79 tests — verifier primitives + EK2
+python3 test_save_the_cat.py     # 60 tests — STC dialect S1–S13
 ```
 
-## Development Conventions
+Reader-model probe (requires venv + `ANTHROPIC_API_KEY`):
 
-- **Design First:** Major architectural changes must be drafted as a Markdown sketch in `design/` before implementation.
-- **Sketch Immutability:** Never overwrite a superseded sketch; mark it as `Status: superseded` and link to its successor.
-- **Plain Markdown:** Use lowercase, hyphenated filenames and follow the templates in `research/`.
-- **Executable Specification:** Prototype code (`prototype/*.py`) should prioritize clarity and portability. Avoid complex Python-specific idioms (metaclasses, decorators) to ensure it can be easily ported to C#, Rust, or Go.
-- **Verification Over Refactoring:** The "quality control" for research entries is editorial. Ensure links are correct and index tables in READMEs are updated.
-- **No Test Frameworks:** Use plain `assert` statements and minimal test runners to keep the prototype dependency-free.
+```sh
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python3 demo_reader_model.py --dry-run   # print prompt
+.venv/bin/python3 demo_reader_model.py --walk      # interactive walker
+```
 
-## Key Files
+## Development conventions
 
-- `design/architecture-sketch-02.md`: The multi-dialect stack architecture.
-- `design/substrate-sketch-05.md`: The current substrate specification.
-- `prototype/substrate.py`: The core substrate implementation.
-- `prototype/dramatic.py`: The Dramatic dialect implementation.
-- `prototype/lowering.py`: The cross-dialect mapping machinery.
-- `AGENTS.md`: Mandatory reading for any AI assistant working in this repo.
+- **Design first.** Non-trivial architectural change gets a
+  Markdown sketch in `design/` before code lands.
+- **Sketch immutability.** Superseded sketches stay in place with
+  `Status: superseded` + successor link.
+- **Python as specification.** Explicit `@dataclass(frozen=True)`,
+  tagged unions via `Union[KnowledgeEffect, WorldEffect]`, plain
+  functions. No metaclasses, no decorators-as-mechanism, no
+  complex generics.
+- **Tests are plain `assert`.** No framework. Each test's
+  docstring notes which sketch commitment it pins.
+- **Editorial review, not toolchain.** No CI, no linters, no
+  formatters. Quality control is at commit time.
+
+## Commit and PR style
+
+Short imperative subjects; body bullets explain the *why*.
+Implementation commits often pair with a follow-on `README:`
+commit documenting the finding. Claude-co-authored commits use:
+
+```
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+```
+
+(matched to the actual collaboration).
