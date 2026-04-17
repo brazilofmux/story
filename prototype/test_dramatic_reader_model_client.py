@@ -31,12 +31,14 @@ from dramatic_reader_model_client import (
     DramaticReaderOutput,
     DramaticReaderVerifierCommentary,
     DroppedOutput,
+    _build_template_section,
     _build_verifier_section,
     _classify_annotation_review,
     _classify_verifier_commentary,
     _extract_review_ids,
     _translate_annotation_review,
     _translate_verifier_commentary,
+    build_user_prompt,
 )
 
 
@@ -399,6 +401,151 @@ def test_dropped_output_carries_reason_and_raw_record():
     assert drop.reason == "ghost id"
     assert drop.raw is raw
     assert hasattr(drop.raw, "model_dump")
+
+
+# ============================================================================
+# Template-section rendering (dramatica-complete extension)
+# ============================================================================
+
+
+def test_template_section_is_none_when_all_empty():
+    """All-empty Template inputs produce no Template section. Preserves
+    the Dramatic-only prompt shape — callers who don't pass Template
+    records see no extra section rendered."""
+    result = _build_template_section(
+        domain_assignments=(),
+        dynamic_story_points=(),
+        signposts=(),
+        thematic_picks=(),
+        character_element_assignments=(),
+        methodology_element_assignments=(),
+        evaluation_element_assignments=(),
+        purpose_element_assignments=(),
+        story_goal=None,
+        story_consequence=None,
+    )
+    assert result is None
+
+
+def test_template_section_renders_story_level_keys():
+    """Story_goal / Story_consequence render under the keys the
+    verifier uses — record_ids `Story_goal` / `Story_consequence` —
+    so a reader comparing a VerificationReview's target_record to
+    the Template surface can find the matching entry."""
+    result = _build_template_section(
+        domain_assignments=(),
+        dynamic_story_points=(),
+        signposts=(),
+        thematic_picks=(),
+        character_element_assignments=(),
+        methodology_element_assignments=(),
+        evaluation_element_assignments=(),
+        purpose_element_assignments=(),
+        story_goal="stage a clean stunt",
+        story_consequence="stunt contaminated",
+    )
+    assert result is not None
+    import json as _json
+    parsed = _json.loads(result)
+    assert "story_level_fields" in parsed
+    assert parsed["story_level_fields"]["Story_goal"] == "stage a clean stunt"
+    assert (
+        parsed["story_level_fields"]["Story_consequence"]
+        == "stunt contaminated"
+    )
+
+
+def test_template_section_renders_domain_assignment_with_enum_value():
+    """Enum fields serialize by value so the LLM sees the canonical
+    label ('activity', 'situation') rather than a Python enum repr."""
+    from dramatica_template import DomainAssignment, Domain
+    da = DomainAssignment(
+        id="DA_mc", throughline_id="T_mc", domain=Domain.ACTIVITY,
+    )
+    result = _build_template_section(
+        domain_assignments=(da,),
+        dynamic_story_points=(),
+        signposts=(),
+        thematic_picks=(),
+        character_element_assignments=(),
+        methodology_element_assignments=(),
+        evaluation_element_assignments=(),
+        purpose_element_assignments=(),
+        story_goal=None,
+        story_consequence=None,
+    )
+    import json as _json
+    parsed = _json.loads(result)
+    assert parsed["domain_assignments"][0]["domain"] == "activity"
+    assert parsed["domain_assignments"][0]["id"] == "DA_mc"
+
+
+def test_build_user_prompt_omits_template_section_without_records():
+    """A Dramatic-only invocation (no Template kwargs) produces a
+    prompt with no Template records section. Back-compat guarantee
+    for callers that haven't adopted the Template extension."""
+    prompt, _ = build_user_prompt(
+        arguments=(), throughlines=(), characters=(),
+        scenes=(), beats=(), stakes=(),
+        lowerings=_make_lowerings(),
+        verifier_results=_make_verifier_results(),
+        substrate_events=[], substrate_entities=[],
+        lowerings_to_review=[], reviews_to_comment_on=[],
+    )
+    assert "## Template records" not in prompt
+
+
+def test_build_user_prompt_includes_template_section_with_records():
+    """When Template kwargs are populated, the Template-records
+    section renders between the Dramatic section and the Lowerings
+    section — so the LLM reads Template records alongside the
+    underlying Dramatic records the verifier targets."""
+    from dramatica_template import DomainAssignment, Domain
+    da = DomainAssignment(
+        id="DA_mc", throughline_id="T_one", domain=Domain.ACTIVITY,
+    )
+    prompt, _ = build_user_prompt(
+        arguments=(), throughlines=(), characters=(),
+        scenes=(), beats=(), stakes=(),
+        lowerings=_make_lowerings(),
+        verifier_results=_make_verifier_results(),
+        substrate_events=[], substrate_entities=[],
+        lowerings_to_review=[], reviews_to_comment_on=[],
+        domain_assignments=(da,),
+    )
+    assert "## Template records (dramatica-complete)" in prompt
+    # Section ordering: Dramatic before Template before Lowerings.
+    dramatic_pos = prompt.index("## Dramatic records")
+    template_pos = prompt.index("## Template records")
+    lowerings_pos = prompt.index("## Lowerings")
+    assert dramatic_pos < template_pos < lowerings_pos
+
+
+def test_template_section_with_only_story_goal_omits_empty_lists():
+    """Empty Template collections don't produce empty-list keys in
+    the rendered JSON — the payload only contains populated
+    sub-sections. Keeps the prompt tight when the caller only has
+    a partial Template surface to show."""
+    result = _build_template_section(
+        domain_assignments=(),
+        dynamic_story_points=(),
+        signposts=(),
+        thematic_picks=(),
+        character_element_assignments=(),
+        methodology_element_assignments=(),
+        evaluation_element_assignments=(),
+        purpose_element_assignments=(),
+        story_goal="the goal",
+        story_consequence=None,
+    )
+    import json as _json
+    parsed = _json.loads(result)
+    assert "domain_assignments" not in parsed
+    assert "dynamic_story_points" not in parsed
+    assert "signposts" not in parsed
+    assert "story_level_fields" in parsed
+    assert "Story_goal" in parsed["story_level_fields"]
+    assert "Story_consequence" not in parsed["story_level_fields"]
 
 
 # ============================================================================

@@ -222,6 +222,17 @@ Lowerings that bind those records to a substrate (events + entities), \
 and the *verifier's* output on those records. Your job is to read \
 critically along that boundary.
 
+The Dramatic dialect admits **Templates** — specific theory-shaped \
+extensions that ship additional record types. When the prompt \
+includes a *Template records* section (e.g., under the \
+`dramatica-complete` Template: DomainAssignments, DynamicStoryPoints, \
+Signposts, ThematicPicks, CharacterElementAssignments, Story_goal / \
+Story_consequence), those records are part of the upper dialect — \
+treat them with the same care as Throughlines and Scenes. The \
+verifier may target Template records directly (a VerificationReview \
+whose `target_record` is `dramatica-complete:DSP_limit` is judging \
+the DynamicStoryPoint declaration against substrate evidence).
+
 Your contract:
 
 R1. Typed I/O only. You produce structured output matching the \
@@ -407,6 +418,78 @@ def _stakes_to_dict(s) -> dict:
     }
 
 
+def _domain_assignment_to_dict(da) -> dict:
+    return {
+        "kind": "DomainAssignment",
+        "id": da.id,
+        "throughline_id": da.throughline_id,
+        "domain": da.domain.value if hasattr(da.domain, "value") else da.domain,
+    }
+
+
+def _dynamic_story_point_to_dict(dsp) -> dict:
+    return {
+        "kind": "DynamicStoryPoint",
+        "id": dsp.id,
+        "axis": dsp.axis.value if hasattr(dsp.axis, "value") else dsp.axis,
+        "choice": dsp.choice,
+        "story_id": dsp.story_id,
+    }
+
+
+def _signpost_to_dict(sp) -> dict:
+    return {
+        "kind": "Signpost",
+        "id": sp.id,
+        "throughline_id": sp.throughline_id,
+        "signpost_position": sp.signpost_position,
+        "signpost_element": sp.signpost_element,
+    }
+
+
+def _quad_pick_to_dict(qp) -> dict:
+    return {
+        "id": qp.id,
+        "quad_id": qp.quad_id,
+        "chosen_position": (
+            qp.chosen_position.value
+            if hasattr(qp.chosen_position, "value") else qp.chosen_position
+        ),
+        "attached_to_kind": qp.attached_to_kind,
+        "attached_to_id": qp.attached_to_id,
+    }
+
+
+def _thematic_picks_to_dict(tp) -> dict:
+    return {
+        "kind": "ThematicPicks",
+        "throughline_id": tp.throughline_id,
+        "concern_pick": _quad_pick_to_dict(tp.concern_pick),
+        "issue_pick": _quad_pick_to_dict(tp.issue_pick),
+        "problem_pick": _quad_pick_to_dict(tp.problem_pick),
+        "solution_override": tp.solution_override,
+        "symptom_override": tp.symptom_override,
+        "response_override": tp.response_override,
+    }
+
+
+def _element_assignment_to_dict(ea, dimension: str) -> dict:
+    """Render one {Character,Methodology,Evaluation,Purpose}ElementAssignment
+    as a dict. `dimension` is the authorial dimension string (Motivation /
+    Methodology / Evaluation / Purpose) the element lives in — the element
+    label alone doesn't disambiguate, since the four dimensions share some
+    surface vocabulary."""
+    return {
+        "kind": "ElementAssignment",
+        "dimension": dimension,
+        "id": ea.id,
+        "character_id": ea.character_id,
+        "element": (
+            ea.element.value if hasattr(ea.element, "value") else ea.element
+        ),
+    }
+
+
 def _lowering_to_dict(lw: Lowering) -> dict:
     """Render a Lowering with annotation, status, position_range,
     and resolved upper/lower references. The annotation is the
@@ -506,6 +589,83 @@ def _build_dramatic_section(
     return json.dumps(payload, indent=2, ensure_ascii=False)
 
 
+def _build_template_section(
+    domain_assignments: tuple,
+    dynamic_story_points: tuple,
+    signposts: tuple,
+    thematic_picks: tuple,
+    character_element_assignments: tuple,
+    methodology_element_assignments: tuple,
+    evaluation_element_assignments: tuple,
+    purpose_element_assignments: tuple,
+    story_goal: Optional[str],
+    story_consequence: Optional[str],
+) -> Optional[str]:
+    """Render the Template-records section. Returns None when every
+    argument is empty — callers using the probe on a Dramatic-only
+    surface should see no Template section at all, preserving the
+    Dramatic-only prompt shape.
+
+    The Story-level fields (goal / consequence) appear as dict entries
+    keyed by the record_id the verifier uses to target them
+    (`Story_goal` / `Story_consequence`), matching the
+    `dramatica-complete:Story_goal` pattern a VerificationReview
+    target_record carries."""
+    if not any((
+        domain_assignments, dynamic_story_points, signposts,
+        thematic_picks,
+        character_element_assignments, methodology_element_assignments,
+        evaluation_element_assignments, purpose_element_assignments,
+        story_goal, story_consequence,
+    )):
+        return None
+    payload: dict = {}
+    if domain_assignments:
+        payload["domain_assignments"] = [
+            _domain_assignment_to_dict(da) for da in domain_assignments
+        ]
+    if dynamic_story_points:
+        payload["dynamic_story_points"] = [
+            _dynamic_story_point_to_dict(dsp) for dsp in dynamic_story_points
+        ]
+    if signposts:
+        payload["signposts"] = [
+            _signpost_to_dict(sp) for sp in signposts
+        ]
+    if thematic_picks:
+        payload["thematic_picks"] = [
+            _thematic_picks_to_dict(tp) for tp in thematic_picks
+        ]
+    if character_element_assignments:
+        payload["character_element_assignments_motivation"] = [
+            _element_assignment_to_dict(ea, "Motivation")
+            for ea in character_element_assignments
+        ]
+    if methodology_element_assignments:
+        payload["character_element_assignments_methodology"] = [
+            _element_assignment_to_dict(ea, "Methodology")
+            for ea in methodology_element_assignments
+        ]
+    if evaluation_element_assignments:
+        payload["character_element_assignments_evaluation"] = [
+            _element_assignment_to_dict(ea, "Evaluation")
+            for ea in evaluation_element_assignments
+        ]
+    if purpose_element_assignments:
+        payload["character_element_assignments_purpose"] = [
+            _element_assignment_to_dict(ea, "Purpose")
+            for ea in purpose_element_assignments
+        ]
+    story_level: dict = {}
+    if story_goal:
+        story_level["Story_goal"] = story_goal
+    if story_consequence:
+        story_level["Story_consequence"] = story_consequence
+    if story_level:
+        payload["story_level_fields"] = story_level
+    return json.dumps(payload, indent=2, ensure_ascii=False)
+
+
 def _build_lowerings_section(lowerings: tuple) -> str:
     return json.dumps(
         [_lowering_to_dict(lw) for lw in lowerings],
@@ -583,13 +743,39 @@ def build_user_prompt(
     substrate_entities: list,
     lowerings_to_review: list[str],
     reviews_to_comment_on: list[str],
+    *,
+    domain_assignments: tuple = (),
+    dynamic_story_points: tuple = (),
+    signposts: tuple = (),
+    thematic_picks: tuple = (),
+    character_element_assignments: tuple = (),
+    methodology_element_assignments: tuple = (),
+    evaluation_element_assignments: tuple = (),
+    purpose_element_assignments: tuple = (),
+    story_goal: Optional[str] = None,
+    story_consequence: Optional[str] = None,
 ) -> tuple:
     """Public helper: assemble the full user message and the
     review-id-map without calling the API. The id_map is needed at
     translation time to resolve the LLM's `target_review_id`s back
-    to VerificationReview objects."""
+    to VerificationReview objects.
+
+    Template-record kwargs are optional. When every Template input is
+    empty, no Template section is rendered — the Dramatic-only prompt
+    shape is preserved. When any Template input is populated, a
+    `Template records (dramatica-complete)` section appears right
+    after the Dramatic section, so the LLM can read the Template
+    declarations alongside the underlying Dramatic records the
+    verifier is judging them against."""
     dramatic_section = _build_dramatic_section(
         arguments, throughlines, characters, scenes, beats, stakes,
+    )
+    template_section = _build_template_section(
+        domain_assignments, dynamic_story_points, signposts,
+        thematic_picks,
+        character_element_assignments, methodology_element_assignments,
+        evaluation_element_assignments, purpose_element_assignments,
+        story_goal, story_consequence,
     )
     lowerings_section = _build_lowerings_section(lowerings)
     verifier_section, id_map = _build_verifier_section(verifier_results)
@@ -605,6 +791,22 @@ def build_user_prompt(
         "",
         dramatic_section,
         "",
+    ]
+    if template_section is not None:
+        sections.extend([
+            "## Template records (dramatica-complete)",
+            "",
+            ("(Template records extend the Dramatic dialect with "
+             "theory-specific types. The verifier may target these "
+             "directly — a VerificationReview on "
+             "`dramatica-complete:DSP_limit` is judging the matching "
+             "DynamicStoryPoint declaration, so read these alongside "
+             "the Dramatic records when commenting on such reviews.)"),
+            "",
+            template_section,
+            "",
+        ])
+    sections.extend([
         "## Lowerings (cross-dialect bindings)",
         "",
         lowerings_section,
@@ -617,7 +819,7 @@ def build_user_prompt(
         "",
         verifier_section,
         "",
-    ]
+    ])
     if substrate_section is not None:
         sections.extend([
             "## Substrate context (lower-side records, summarized)",
@@ -737,6 +939,16 @@ def invoke_dramatic_reader_model(
     substrate_entities: Optional[list] = None,
     lowerings_to_review: Optional[list[str]] = None,
     reviews_to_comment_on: Optional[list[str]] = None,
+    domain_assignments: tuple = (),
+    dynamic_story_points: tuple = (),
+    signposts: tuple = (),
+    thematic_picks: tuple = (),
+    character_element_assignments: tuple = (),
+    methodology_element_assignments: tuple = (),
+    evaluation_element_assignments: tuple = (),
+    purpose_element_assignments: tuple = (),
+    story_goal: Optional[str] = None,
+    story_consequence: Optional[str] = None,
     model: str = "claude-opus-4-6",
     reviewer_id: Optional[str] = None,
     effort: str = "high",
@@ -770,6 +982,21 @@ def invoke_dramatic_reader_model(
             LLM should comment on. Default: every VerificationReview
             in `verifier_results` (assigned ids in input order). Pass
             `[]` to skip commentary.
+        domain_assignments / dynamic_story_points / signposts /
+            thematic_picks / character_element_assignments /
+            methodology_element_assignments /
+            evaluation_element_assignments /
+            purpose_element_assignments: optional Template records
+            under a dialect Template (e.g., `dramatica-complete`).
+            When any are provided, the prompt renders a Template-
+            records section so the LLM can read them alongside the
+            base Dramatic records. Each defaults to `()` — the
+            Dramatic-only caller passes nothing and gets the
+            original prompt shape.
+        story_goal / story_consequence: optional Story-level Template
+            strings. Surfaced as `Story_goal` / `Story_consequence`
+            to match the record_id convention the verifier uses when
+            targeting them.
         model / reviewer_id / effort / max_tokens / dry_run / client:
             standard knobs, parallel to invoke_reader_model.
 
@@ -806,6 +1033,16 @@ def invoke_dramatic_reader_model(
         lowerings, verifier_results,
         substrate_events, substrate_entities,
         lowerings_to_review, reviews_to_comment_on,
+        domain_assignments=domain_assignments,
+        dynamic_story_points=dynamic_story_points,
+        signposts=signposts,
+        thematic_picks=thematic_picks,
+        character_element_assignments=character_element_assignments,
+        methodology_element_assignments=methodology_element_assignments,
+        evaluation_element_assignments=evaluation_element_assignments,
+        purpose_element_assignments=purpose_element_assignments,
+        story_goal=story_goal,
+        story_consequence=story_consequence,
     )
 
     if dry_run:
