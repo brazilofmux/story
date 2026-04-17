@@ -87,6 +87,7 @@ from verification import (
 from verifier_helpers import (
     classify_event_action_shape, agent_ids_from_entities,
     dsp_limit_characterization_check,
+    classify_event_agency_shape,
 )
 
 
@@ -444,17 +445,25 @@ def dsp_growth_stop_trajectory_check(
     _unused_lower_refs: tuple = (),
     _unused_ranges: tuple = (),
 ) -> tuple:
-    """Claim-trajectory: DSP_growth=Stop = the MC needs to stop
-    doing something to resolve their arc. For Oedipus the
-    substrate signature is: his investigation / utterance /
-    participation event density drops sharply after anagnorisis
-    (τ_s=13). The transition from 'interrogating witnesses every
-    τ_s' to 'passively receiving exile' is the substrate-visible
-    cessation.
+    """Claim-trajectory: DSP_growth=Stop = the MC needs to stop a
+    problematic drive or behavior. For Oedipus the drive is his
+    relentless pursuit of truth — the investigation through witness-
+    interrogation. Growth=Stop's load-bearing substrate signature is
+    **pursuit-event count dropping to zero post-anagnorisis**, not
+    raw participation rate (per event-agency-taxonomy-sketch-01).
+
+    Post-anagnorisis, Oedipus's participation RISES (self-blinding at
+    τ_s=15, exile at τ_s=17) because consequences cascade — but those
+    events are consequential-shaped under AG2 (world-effects targeting
+    oedipus's state: `blinded(oedipus)`, `exiled(oedipus, thebes)`),
+    not pursuit-shaped. The Stop signature is preserved cleanly once
+    agency shape is the measurement, not event count.
 
     Under Judgment=Bad, the MC's 'stopping' doesn't heal them —
-    Oedipus stops because the search has ended with him as its
-    target. The substrate shape still carries the cessation."""
+    Oedipus stops pursuing because the search has ended with him as
+    its target. The substrate shape still carries the cessation, just
+    at the pursuit-vs-consequential layer rather than the
+    participation-count layer."""
     τ_end = _end_τ_s()
     anagnorisis_τ = None
     for e in FABULA:
@@ -470,39 +479,68 @@ def dsp_growth_stop_trajectory_check(
             "not encode.",
         )
 
-    before = [
-        e for e in FABULA
-        if e.τ_s is not None
-        and 0 <= e.τ_s < anagnorisis_τ
-        and _oedipus_is_participant(e)
-    ]
-    after = [
-        e for e in FABULA
-        if e.τ_s is not None
-        and anagnorisis_τ <= e.τ_s <= τ_end
-        and _oedipus_is_participant(e)
-    ]
-    before_rate = len(before) / max(anagnorisis_τ, 1)
-    after_span = max(τ_end - anagnorisis_τ, 1)
-    after_rate = len(after) / after_span
+    # Per AG5: count pursuit vs consequential events pre/post
+    # anagnorisis. The anagnorisis itself is the pivot event, excluded
+    # from both sides.
+    pre_pursuit = 0
+    pre_consequential = 0
+    post_pursuit = 0
+    post_consequential = 0
+    for e in FABULA:
+        if e.τ_s is None or e.τ_s < 0:
+            continue
+        if e.τ_s == anagnorisis_τ:
+            continue
+        shape = classify_event_agency_shape(e, OEDIPUS_ENTITY_ID)
+        if shape is None:
+            continue  # Oedipus not participant
+        if e.τ_s < anagnorisis_τ:
+            if shape == "pursuit":
+                pre_pursuit += 1
+            elif shape == "consequential":
+                pre_consequential += 1
+        else:  # τ_s > anagnorisis_τ
+            if shape == "pursuit":
+                post_pursuit += 1
+            elif shape == "consequential":
+                post_consequential += 1
 
-    if before_rate > after_rate * 1.5:
-        ratio_drop = 1.0 - (after_rate / before_rate) if before_rate else 0.0
+    summary = (
+        f"pursuit/consequential counts — pre-anagnorisis (τ_s<"
+        f"{anagnorisis_τ}): {pre_pursuit}/{pre_consequential}; "
+        f"post-anagnorisis: {post_pursuit}/{post_consequential}"
+    )
+
+    if pre_pursuit == 0:
         return (
-            VERDICT_APPROVED, min(ratio_drop, 1.0),
-            f"Oedipus-participation event rate drops "
-            f"{before_rate:.2f}/τ_s (pre-anagnorisis at "
-            f"τ_s={anagnorisis_τ}) → {after_rate:.2f}/τ_s post-"
-            f"anagnorisis — a {ratio_drop:.0%} drop in activity. "
-            f"Consistent with Growth=Stop (the MC's driving "
-            f"activity ceases).",
+            VERDICT_NEEDS_WORK, 0.0,
+            f"no pursuit-shaped Oedipus events before anagnorisis "
+            f"at τ_s={anagnorisis_τ}; Growth=Stop needs a pursuit "
+            f"drive to diagnose cessation of. {summary}.",
+        )
+
+    drop_ratio = 1.0 - (post_pursuit / pre_pursuit)
+    if post_pursuit == 0:
+        return (
+            VERDICT_APPROVED, 1.0,
+            f"Oedipus's pursuit-event count drops {pre_pursuit}→0 "
+            f"across the anagnorisis pivot (τ_s={anagnorisis_τ}); "
+            f"post-anagnorisis events are all consequential-shaped "
+            f"(self-blinding + exile). Clean Growth=Stop signature "
+            f"per AG5. {summary}.",
+        )
+    if drop_ratio >= 0.5:
+        return (
+            VERDICT_APPROVED, min(drop_ratio, 1.0),
+            f"Oedipus's pursuit-event count drops {pre_pursuit}→"
+            f"{post_pursuit} ({drop_ratio:.0%}) across the "
+            f"anagnorisis pivot. Growth=Stop trajectory supported "
+            f"per AG5. {summary}.",
         )
     return (
-        VERDICT_PARTIAL_MATCH, 0.5,
-        f"Oedipus-participation rate pre/post anagnorisis: "
-        f"{before_rate:.2f} / {after_rate:.2f}. The expected "
-        f"sharp drop is not as pronounced; Growth=Stop trajectory "
-        f"weakly supported.",
+        VERDICT_PARTIAL_MATCH, max(drop_ratio, 0.0),
+        f"Oedipus's pursuit-event count: {pre_pursuit}→{post_pursuit} "
+        f"— not the sharp drop Growth=Stop predicts. {summary}.",
     )
 
 

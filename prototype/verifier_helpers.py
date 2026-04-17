@@ -751,6 +751,53 @@ def dsp_limit_characterization_check(
     )
 
 
+def classify_event_agency_shape(event, mc_id: str):
+    """Classify an event as pursuit / consequential / neutral / None
+    from the perspective of the named MC, per event-agency-taxonomy-
+    sketch-01 (AG1–AG6).
+
+    Returns:
+        - `None` — MC is not a participant in the event; not classified.
+        - `"consequential"` — event has at least one WorldEffect whose
+          prop asserts a fact whose first argument equals `mc_id`
+          (AG2). Self-directed state changes, exile, consequence-
+          landing events. Both asserts=True and asserts=False effects
+          count — a retraction of `king(macbeth)` is also a
+          consequential change.
+        - `"pursuit"` — MC is participant, event is not consequential
+          per AG2, and the event has at least one non-MC-only effect
+          (at least one effect not exclusively about MC state per a
+          loose sanity check; currently satisfied by any non-empty
+          effect list). AG3. Investigation-era participation fires
+          here — including `listener` utterance events where the MC
+          has summoned the speaker.
+        - `"neutral"` — MC participates but neither predicate fires.
+          Edge case; rare.
+
+    Per AG1, the classifier reads fold-visible structure only:
+    event.participants (for MC membership) and event.effects (for
+    AG2's first-arg match). Event type strings and participant role
+    names are not inspected.
+    """
+    parts = event.participants or {}
+    if mc_id not in parts.values():
+        return None
+
+    consequential = False
+    has_any_effect = False
+    for ef in event.effects:
+        has_any_effect = True
+        if isinstance(ef, WorldEffect):
+            if ef.prop.args and str(ef.prop.args[0]) == mc_id:
+                consequential = True
+
+    if consequential:
+        return "consequential"
+    if not has_any_effect:
+        return "neutral"
+    return "pursuit"
+
+
 def agent_ids_from_entities(entities: tuple) -> frozenset:
     """Build the `agent_ids` frozenset the EK2 classifier expects,
     from an encoding's `ENTITIES` tuple. Selects entities whose

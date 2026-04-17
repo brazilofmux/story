@@ -2535,17 +2535,174 @@ def test_lt_rocky_scheduling_signals_include_both_fight_props():
     assert "scheduled_fight" in result["scheduling_signals"]
 
 
-def test_oedipus_dsp_growth_partial_rate_heuristic():
-    """Oedipus's DSP_growth=Stop. Honest PARTIAL finding: the
-    current rate-based heuristic (participation events per τ_s pre
-    vs post anagnorisis) doesn't capture Oedipus's actual
-    cessation pattern because post-anagnorisis events are densely
-    clustered. A primary-actor-shift heuristic would be stronger;
-    deferred as a follow-on refinement."""
+# ----------------------------------------------------------------------------
+# event-agency-taxonomy-sketch-01: AG1-AG6
+# (classify_event_agency_shape; pursuit / consequential / neutral / None)
+# ----------------------------------------------------------------------------
+
+
+def test_ag_returns_none_when_mc_not_participant():
+    """AG4: MC not in participants → None (not classified)."""
+    from verifier_helpers import classify_event_agency_shape
+    from substrate import Event, WorldEffect, Prop
+    e = Event(
+        id="E1", type="g", τ_s=1, τ_a=1,
+        participants={"agent": "alice"},
+        effects=(WorldEffect(prop=Prop("p", ("alice",)), asserts=True),),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_agency_shape(e, "bob") is None
+
+
+def test_ag_consequential_when_world_effect_targets_mc():
+    """AG2: at least one WorldEffect whose prop's first arg is mc_id
+    → consequential. Rocky's E_self_blinding analog: world-effect
+    `blinded(oedipus)` targets oedipus."""
+    from verifier_helpers import classify_event_agency_shape
+    from substrate import Event, WorldEffect, Prop
+    e = Event(
+        id="E_blind", type="blinding", τ_s=15, τ_a=15,
+        participants={"agent": "oedipus"},
+        effects=(WorldEffect(prop=Prop("blinded", ("oedipus",)),
+                             asserts=True),),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_agency_shape(e, "oedipus") == "consequential"
+
+
+def test_ag_consequential_when_mc_is_subject_under_external_agent():
+    """AG2 first-arg rule fires on `exiled(oedipus, thebes)` where
+    Creon is the agent; the exile event's world-effect targets
+    oedipus's state. Structurally consequential."""
+    from verifier_helpers import classify_event_agency_shape
+    from substrate import Event, WorldEffect, Prop
+    e = Event(
+        id="E_exile", type="exile", τ_s=17, τ_a=17,
+        participants={"agent": "creon", "subject": "oedipus",
+                      "location": "thebes"},
+        effects=(WorldEffect(prop=Prop("exiled", ("oedipus", "thebes")),
+                             asserts=True),),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_agency_shape(e, "oedipus") == "consequential"
+
+
+def test_ag_pursuit_when_mc_participates_in_non_targeting_event():
+    """AG3: MC participates; event has effects; no effect targets
+    MC's state. Fires for investigation-era events where MC listens
+    to summoned witnesses — the event's effects are knowledge-flow
+    or world-facts not about MC's state."""
+    from verifier_helpers import classify_event_agency_shape
+    from substrate import Event, WorldEffect, Prop
+    e = Event(
+        id="E_testimony", type="utterance", τ_s=12, τ_a=12,
+        participants={"speaker": "shepherd", "listener": "oedipus"},
+        effects=(WorldEffect(prop=Prop("testified", ("shepherd",)),
+                             asserts=True),),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_agency_shape(e, "oedipus") == "pursuit"
+
+
+def test_ag_pursuit_when_mc_is_speaker_acting_on_others():
+    """AG3: MC as speaker issuing commands / confronting others is
+    pursuit — no world-effect targets MC's state."""
+    from verifier_helpers import classify_event_agency_shape
+    from substrate import Event, WorldEffect, Prop
+    e = Event(
+        id="E_command", type="command", τ_s=2, τ_a=2,
+        participants={"speaker": "oedipus", "listener": "creon"},
+        effects=(WorldEffect(prop=Prop("summoned", ("creon",)),
+                             asserts=True),),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_agency_shape(e, "oedipus") == "pursuit"
+
+
+def test_ag_neutral_when_mc_participates_but_no_effects():
+    """Edge case: MC in participants, event has no effects. Returns
+    neutral (participating but neither pursuit nor consequential
+    predicate fires)."""
+    from verifier_helpers import classify_event_agency_shape
+    from substrate import Event
+    e = Event(
+        id="E_empty", type="g", τ_s=1, τ_a=1,
+        participants={"agent": "oedipus"},
+        effects=(),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_agency_shape(e, "oedipus") == "neutral"
+
+
+def test_ag_prefers_consequential_over_pursuit_when_both_signals_present():
+    """AG2 dominates: if ANY world-effect targets MC's state,
+    classification is consequential even if other effects don't.
+    E.g., an event where MC self-harms while still summoning a
+    witness stays consequential."""
+    from verifier_helpers import classify_event_agency_shape
+    from substrate import Event, WorldEffect, Prop
+    e = Event(
+        id="E_mixed", type="g", τ_s=15, τ_a=15,
+        participants={"agent": "oedipus", "listener": "creon"},
+        effects=(
+            WorldEffect(prop=Prop("summoned", ("creon",)), asserts=True),
+            WorldEffect(prop=Prop("blinded", ("oedipus",)), asserts=True),
+        ),
+        branches=frozenset({":canonical"}),
+    )
+    assert classify_event_agency_shape(e, "oedipus") == "consequential"
+
+
+# Integration pins for no-regression on Macbeth / Ackroyd / Rocky
+# DSP_growth (AG5 is Oedipus-only; other encodings' checks unchanged).
+
+
+def test_ag5_macbeth_dsp_growth_stop_unchanged():
+    """Macbeth's DSP_growth=Stop uses kill-accumulation, not AG5's
+    pursuit-event-count. Stays APPROVED 1.0."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_growth"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+
+
+def test_ag5_ackroyd_dsp_growth_start_unchanged():
+    """Ackroyd's DSP_growth is Start (different axis) — AG5's Stop
+    refinement doesn't apply. Stays APPROVED."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DSP_growth"].verdict == VERDICT_APPROVED
+
+
+def test_ag5_rocky_dsp_growth_start_unchanged():
+    """Rocky's DSP_growth is Start. AG5 doesn't apply; stays APPROVED."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    assert by_target["DSP_growth"].verdict == VERDICT_APPROVED
+
+
+def test_oedipus_dsp_growth_approved_under_ag5():
+    """Oedipus's DSP_growth=Stop APPROVED post-event-agency-
+    taxonomy-sketch-01. The Oedipus cross-boundary probe dissented
+    with the prior PARTIAL 0.5 verdict, correctly naming raw
+    participation rate as the wrong signal. Under AG5, the check
+    measures pursuit-event count drop across the anagnorisis pivot
+    — Oedipus's 5 pre-anagnorisis pursuit events (witness
+    interrogations) drop to 0 post-anagnorisis; consequential
+    events (self-blinding, exile) rise. Clean Growth=Stop
+    signature; APPROVED 1.0."""
     from oedipus_dramatica_complete_verification import run
     reviews = run()
     by_target = {r.target_record.record_id: r for r in reviews}
-    assert by_target["DSP_growth"].verdict == VERDICT_PARTIAL_MATCH
+    r = by_target["DSP_growth"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "pursuit" in r.comment.lower()
+    assert "consequential" in r.comment.lower()
 
 
 # ----------------------------------------------------------------------------
@@ -2696,7 +2853,18 @@ TESTS = [
     test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
     test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
     test_lt_rocky_scheduling_signals_include_both_fight_props,
-    test_oedipus_dsp_growth_partial_rate_heuristic,
+    # event-agency-taxonomy-sketch-01 (AG1-AG6)
+    test_ag_returns_none_when_mc_not_participant,
+    test_ag_consequential_when_world_effect_targets_mc,
+    test_ag_consequential_when_mc_is_subject_under_external_agent,
+    test_ag_pursuit_when_mc_participates_in_non_targeting_event,
+    test_ag_pursuit_when_mc_is_speaker_acting_on_others,
+    test_ag_neutral_when_mc_participates_but_no_effects,
+    test_ag_prefers_consequential_over_pursuit_when_both_signals_present,
+    test_ag5_macbeth_dsp_growth_stop_unchanged,
+    test_ag5_ackroyd_dsp_growth_start_unchanged,
+    test_ag5_rocky_dsp_growth_start_unchanged,
+    test_oedipus_dsp_growth_approved_under_ag5,
 ]
 
 
