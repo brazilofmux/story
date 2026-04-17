@@ -113,16 +113,20 @@ Working prototype, closed-corpus encodings, extensive test surface:
   dissent and three other qualification-level signature proposals
   (agentive-pursuit vs. reactive/consequential events; manipulation
   via participant-role; beat_type-weighted domain signals;
-  recognition-structure premise-order inversion) are banked as
-  forcing functions for future sketch amendments. The probe acts as
-  a steady signature-proposal engine — not a verdict-opposition
+  recognition-structure premise-order inversion) — the first
+  (Oedipus DSP_growth) landed same day as event-agency-taxonomy-
+  sketch-01 (AG5), shifting Oedipus DSP_growth PARTIAL 0.5 →
+  APPROVED 1.0; the other three remain banked. The probe acts as a
+  steady signature-proposal engine — not a verdict-opposition
   machine — with consistent ~7 endorse + 2 qualify + 0-1 dissent
-  baseline per 9-check run.
+  baseline per 9-check run. Two probe-proposed signatures have now
+  landed as sketches (LT9 scheduling + AG5 agency) — the probe/
+  verifier loop replicates.
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **558 tests** across 12 test files. Full suite runs in under a
+- **568 tests** across 12 test files. Full suite runs in under a
   second. Standard-library only except for the reader-model probe
   (which needs `anthropic` and `pydantic` from
   `prototype/requirements.txt`).
