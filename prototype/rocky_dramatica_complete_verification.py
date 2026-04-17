@@ -5,13 +5,17 @@ verifier at the **dramatica-complete → substrate** coupling boundary.
 Parallels the three existing verifiers (Macbeth / Oedipus / Ackroyd).
 Rocky's encoding is structurally distinct from all three:
 
-- **First Timelock in the corpus.** DSP_limit=Timelock while the
-  substrate exhibits mild convergence signals (retraction of Mac's
-  scheduled fight; rule-derivable `went_the_distance`). Under LT5
-  the DSP_limit check reports the declaration/substrate disagreement
-  — the first non-APPROVED verdict for DSP_limit across the corpus
-  and the direct stress-test of LT5's asymmetric disposition table.
-  See pressure-shape-taxonomy-sketch-01 LT3 OQ3.
+- **First Timelock in the corpus.** DSP_limit=Timelock is
+  affirmatively detected via LT9 (pressure-shape-taxonomy-sketch-02):
+  the substrate carries `scheduled_fight(apollo, mac)` and
+  `scheduled_fight(apollo, rocky)` as scheduling predicates (LT8),
+  and under LT7's arc-position banding the LT2 convergence signals
+  (Mac's pre-plot retraction at τ_s=-5, went_the_distance emergence
+  at τ_s=55 terminal) are all non-middle-arc. Middle-arc LT2 count
+  is 0; LT9 fires. Under sketch-01 (before LT9) the same substrate
+  produced NEEDS_WORK 0.33 — the first non-APPROVED DSP_limit in
+  the corpus, which directly drove the cross-boundary reader-model
+  probe's dissent that proposed the LT9 signature.
 
 - **First Outcome=Failure.** All three prior encodings had
   Outcome=Success; even the tragedies' OS goals (identify the killer,
@@ -45,14 +49,15 @@ Rocky's encoding is structurally distinct from all three:
   predicate carry DA_mc and DSP_approach the same way it did for
   Macbeth.
 
-Expected measurements (Phase 2 commit):
+Measured verdicts (post-pressure-shape-taxonomy-sketch-02, 2026-04-17):
 
-- DA_mc: APPROVED (action-saturated MC arc under EK2)
-- DSP_approach: APPROVED (Do-er; same EK2 predicate)
-- DSP_limit: NEEDS_WORK (Timelock declared + Optionlock-shaped substrate
-  under LT2 — the honest disagreement verdict)
-- DSP_outcome: APPROVED (Failure declared; went_the_distance DOES derive
-  → goal does NOT cleanly land)
+- DA_mc: APPROVED 0.72 (action-saturated MC arc under EK2)
+- DSP_approach: APPROVED 0.74 (Do-er; same EK2 predicate)
+- DSP_limit: APPROVED 1.00 (Timelock-strong via LT9 — two distinct
+  scheduled_fight Props, zero middle-arc LT2 signals; closes the
+  prior sketch-01 NEEDS_WORK 0.33 verdict)
+- DSP_outcome: APPROVED 1.00 (Failure declared; went_the_distance
+  DOES derive → goal does NOT cleanly land)
 - DSP_judgment: APPROVED (Good declared; Rocky's positive-closure facts
   all hold at end)
 - DSP_resolve: APPROVED (Steadfast declared; no identity collapses

@@ -2040,9 +2040,11 @@ def test_rocky_has_no_identity_propositions():
 
 
 def test_lt5_timelock_declared_on_timelock_consistent_substrate_is_noted():
-    """LT5's disposition: Timelock declared + no convergence signals
-    → NOTED (consistent-but-not-affirmed). The honest asymmetry
-    stated in LT3."""
+    """LT5's disposition: Timelock declared + no convergence signals +
+    no scheduling predicate → NOTED (consistent-but-not-affirmed).
+    Sketch-02 preserves the honest LT3 asymmetry for this case —
+    LT9 does not fire without an LT8 scheduling signal, so the
+    verdict stays at the sketch-01 weak-fallback."""
     from verifier_helpers import dsp_limit_characterization_check
     from substrate import CANONICAL, Branch
     canonical = Branch(label=":canonical", kind="canonical", parent=None)
@@ -2053,7 +2055,7 @@ def test_lt5_timelock_declared_on_timelock_consistent_substrate_is_noted():
     assert verdict == VERDICT_NOTED
     assert strength is None
     assert "timelock" in comment.lower()
-    assert "complement-only" in comment.lower()
+    assert "weak-fallback" in comment.lower()
 
 
 def test_lt5_optionlock_declared_on_optionlock_substrate_is_approved():
@@ -2168,20 +2170,29 @@ def test_rocky_verifier_has_nine_checks():
     assert len(run()) == 9
 
 
-def test_rocky_dsp_limit_needs_work_on_timelock_declaration():
-    """First non-APPROVED DSP_limit in the corpus. Rocky declares
-    Timelock; LT2 reads the substrate and counts retraction (Mac's
-    scheduled fight) + rule-emergence (went_the_distance) → Optionlock
-    0.67. LT5's disposition reports NEEDS_WORK for the declaration/
-    substrate disagreement — the honest signal the sketch named as
-    the forcing function for LT3-strong (OQ1 / OQ3)."""
+def test_rocky_dsp_limit_approved_under_lt9_strong():
+    """Post-sketch-02 landing. Rocky declares Timelock; LT8 reads
+    `scheduled_fight(...)` predicates in the substrate vocabulary
+    (two distinct Props — Mac's scheduled fight + Rocky's rescheduled
+    fight), and LT7 classifies Rocky's LT2 signals (retraction at
+    τ_s=-5 pre-plot; rule-emergence at τ_s=55 terminal) as ALL
+    non-middle-arc. Middle-arc LT2 count = 0. LT9's strong Timelock
+    predicate fires → APPROVED.
+
+    This test closes the prior sketch-01 NEEDS_WORK verdict
+    (tracked in test_rocky_dsp_limit_needs_work_on_timelock_declaration
+    pre-sketch-02). The Rocky cross-boundary reader-model probe's
+    DSP_limit dissent is what drove sketch-02 — see
+    pressure-shape-taxonomy-sketch-02."""
     from rocky_dramatica_complete_verification import run
     reviews = run()
     by_target = {r.target_record.record_id: r for r in reviews}
     r = by_target["DSP_limit"]
-    assert r.verdict == VERDICT_NEEDS_WORK
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength is not None and r.match_strength > 0.0
     assert "timelock" in r.comment.lower()
-    assert "optionlock" in r.comment.lower()
+    assert "scheduled_fight" in r.comment.lower()
+    assert "lt9" in r.comment.lower()
 
 
 def test_rocky_dsp_outcome_failure_approved():
@@ -2239,24 +2250,289 @@ def test_rocky_dsp_growth_start_via_articulated_goal_acquisition():
     assert r.verdict == VERDICT_APPROVED
 
 
-def test_rocky_all_characterization_and_claim_checks_except_dsp_limit_approved():
-    """Summary pin: Rocky produces 8 APPROVED and 1 NEEDS_WORK
-    (DSP_limit) across the 9-check surface. Ackroyd/Macbeth/Oedipus
-    each produce 9/9 APPROVED on DSP_limit; Rocky is the first to
-    exercise LT5's disagreement verdict — which is the core finding
-    the Phase 2 landing reports."""
+def test_rocky_all_nine_checks_approved_post_sketch_02():
+    """Summary pin: Rocky produces 9/9 APPROVED across the
+    9-check surface after sketch-02's LT9 strong-Timelock predicate
+    lands. Sketch-01 Phase 2 had Rocky at 8 APPROVED + 1 NEEDS_WORK
+    on DSP_limit (the first non-APPROVED DSP_limit in the corpus);
+    sketch-02 closes that disagreement by detecting Rocky's
+    scheduling-predicate vocabulary and the absent middle-arc
+    convergence. The probe/verifier loop completes its first
+    concrete cycle — architecture-02 A11 validated."""
     from rocky_dramatica_complete_verification import run
     reviews = run()
     approved = sum(1 for r in reviews if r.verdict == VERDICT_APPROVED)
-    needs_work = sum(1 for r in reviews if r.verdict == VERDICT_NEEDS_WORK)
-    assert approved == 8
-    assert needs_work == 1
-    # The single NEEDS_WORK is on DSP_limit specifically.
-    needs_work_targets = [
+    assert approved == 9
+    non_approved = [
         r.target_record.record_id for r in reviews
-        if r.verdict == VERDICT_NEEDS_WORK
+        if r.verdict != VERDICT_APPROVED
     ]
-    assert needs_work_targets == ["DSP_limit"]
+    assert non_approved == [], (
+        f"expected all 9 APPROVED post-sketch-02; non-approved: "
+        f"{non_approved}"
+    )
+
+
+# ----------------------------------------------------------------------------
+# pressure-shape-taxonomy-sketch-02: LT7 (arc-position bands), LT8
+# (scheduling-predicate recognition), LT9 (strong Timelock predicate)
+# ----------------------------------------------------------------------------
+
+
+def _make_event_at(τ_s, event_id, prop, asserts=True):
+    """Helper: build a single-effect WorldEffect event on :canonical."""
+    from substrate import Event, WorldEffect
+    return Event(
+        id=event_id, type="g", τ_s=τ_s, τ_a=τ_s,
+        participants={"agent": "x"},
+        effects=(WorldEffect(prop=prop, asserts=asserts),),
+        branches=frozenset({":canonical"}),
+    )
+
+
+def test_lt7_peripheral_pre_retraction_does_not_count_as_middle_arc():
+    """A retraction at τ_s < 0 is peripheral-pre (substrate convention
+    for backstory). Middle-arc count should stay at 0 for this signal
+    even when LT2 (sketch-01) would count it."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    P = Prop("x", ("a",))
+    fabula = (
+        _make_event_at(-10, "E1", P, asserts=True),
+        _make_event_at(-5, "E2", P, asserts=False),
+        # Fill out positive arc so the terminal-band guard activates
+        # and we can test the peripheral classification distinctly.
+        _make_event_at(5, "E3", Prop("y", ("b",))),
+        _make_event_at(10, "E4", Prop("z", ("c",))),
+        _make_event_at(15, "E5", Prop("w", ("d",))),
+        _make_event_at(20, "E6", Prop("v", ("e",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert result["peripheral_pre_count"] == 1
+    assert result["middle_arc_count"] == 0
+    assert result["middle_arc_kinds"] == 0
+
+
+def test_lt7_terminal_band_activates_only_with_enough_positive_events():
+    """Sketch-02 guard: terminal-band classification requires > 3
+    positive-τ_s events. Short synthetic fabulae skip the band entirely
+    (treated as middle-arc) so sketch-01-era fixtures continue to
+    classify correctly."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    P = Prop("x", ("a",))
+    # Only 2 positive events — terminal band suppressed.
+    fabula = (
+        _make_event_at(1, "E1", P, asserts=True),
+        _make_event_at(2, "E2", P, asserts=False),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert result["terminal_count"] == 0
+    assert result["middle_arc_count"] == 1
+    assert result["classification"] == "optionlock"
+
+
+def test_lt8_scheduled_prefix_predicates_register_as_timelock_signal():
+    """A WorldEffect whose prop predicate starts with `scheduled_`
+    fires LT8 regardless of assert polarity. Rocky's canonical signal
+    shape — the scheduled_fight predicate appears in the vocabulary
+    even after its original assertion is retracted."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    scheduled = Prop("scheduled_event", ("a", "b"))
+    fabula = (
+        _make_event_at(-5, "E1", scheduled, asserts=True),
+        _make_event_at(-3, "E2", scheduled, asserts=False),
+        # Make sure this is not caught as a retraction-signal test by
+        # also firing retraction of a NON-scheduled predicate so the
+        # contrast is crisp.
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert result["scheduling_count"] == 1
+    assert "scheduled_event" in result["scheduling_signals"]
+
+
+def test_lt8_no_match_when_predicate_lacks_scheduled_prefix():
+    """LT8 is prefix-specific — predicates that don't start with
+    `scheduled_` don't fire the scheduling signal, even if they're
+    semantically related (e.g., `deadline_*`, `clock_*`). OQ3 in
+    sketch-02 banks the question of widening the prefix set."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    fabula = (
+        _make_event_at(0, "E1", Prop("deadline_at", ("a", "b"))),
+        _make_event_at(5, "E2", Prop("clock_started", ("c",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert result["scheduling_count"] == 0
+
+
+def test_lt9_strong_requires_both_scheduling_and_clean_middle():
+    """LT9 composition: scheduling predicate alone is not enough —
+    middle-arc LT2 signal count must also be zero. When both
+    conditions hold, classification is `timelock-strong`."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    # Scheduling + clean middle → LT9 strong. Need > 3 positive events
+    # to activate the banding.
+    fabula_strong = (
+        _make_event_at(-10, "E_sched", Prop("scheduled_x", ("a",))),
+        _make_event_at(5, "E1", Prop("neutral_a", ("p",))),
+        _make_event_at(10, "E2", Prop("neutral_b", ("q",))),
+        _make_event_at(15, "E3", Prop("neutral_c", ("r",))),
+        _make_event_at(20, "E4", Prop("neutral_d", ("s",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula_strong, (), canonical, all_branches,
+    )
+    assert result["classification"] == "timelock-strong"
+    assert result["scheduling_count"] == 1
+    assert result["middle_arc_kinds"] == 0
+
+
+def test_lt9_does_not_fire_when_middle_arc_convergence_present():
+    """Scheduling + middle-arc LT2 signal → NOT LT9-strong. The arc
+    body doing convergence work contradicts the Timelock reading even
+    when a scheduling predicate is present. Classifier reports
+    `optionlock` (the middle-arc signal wins)."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    P = Prop("z", ("q",))
+    fabula = (
+        _make_event_at(-10, "E_sched", Prop("scheduled_x", ("a",))),
+        _make_event_at(5, "E1", P, asserts=True),   # middle-arc
+        _make_event_at(10, "E2", P, asserts=False),  # middle-arc retraction
+        _make_event_at(15, "E3", Prop("neutral_c", ("r",))),
+        _make_event_at(20, "E4", Prop("neutral_d", ("s",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert result["classification"] == "optionlock"
+    assert result["middle_arc_kinds"] >= 1
+    assert result["scheduling_count"] == 1
+
+
+def test_lt10_optionlock_declared_with_scheduling_signal_gives_needs_work():
+    """LT10 disposition row: declared=Optionlock + substrate shows
+    LT9-strong → NEEDS_WORK (the substrate reads as Timelock, which
+    contradicts the Optionlock declaration)."""
+    from verifier_helpers import dsp_limit_characterization_check
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    fabula = (
+        _make_event_at(-10, "E_sched", Prop("scheduled_x", ("a",))),
+        _make_event_at(5, "E1", Prop("a", ("p",))),
+        _make_event_at(10, "E2", Prop("b", ("q",))),
+        _make_event_at(15, "E3", Prop("c", ("r",))),
+        _make_event_at(20, "E4", Prop("d", ("s",))),
+    )
+    verdict, _strength, comment = dsp_limit_characterization_check(
+        fabula, (), canonical, all_branches, "optionlock",
+    )
+    assert verdict == VERDICT_NEEDS_WORK
+    assert "scheduling" in comment.lower() or "scheduled_" in comment.lower()
+
+
+def test_lt10_timelock_declared_with_peripheral_only_signals_is_noted():
+    """LT10 edge case: declared=Timelock + peripheral-only LT2 signals
+    + no scheduling predicate → NOTED. The middle-arc is clean
+    (Timelock-compatible) but LT8 doesn't fire — sketch-02's honest
+    middle position between APPROVED and NEEDS_WORK. The author gets
+    a hint to name a `scheduled_*` predicate."""
+    from verifier_helpers import dsp_limit_characterization_check
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    # Pre-plot retraction + clean middle + no scheduling
+    P = Prop("x", ("a",))
+    fabula = (
+        _make_event_at(-10, "E_pre1", P, asserts=True),
+        _make_event_at(-5, "E_pre2", P, asserts=False),
+        _make_event_at(5, "E1", Prop("a", ("p",))),
+        _make_event_at(10, "E2", Prop("b", ("q",))),
+        _make_event_at(15, "E3", Prop("c", ("r",))),
+        _make_event_at(20, "E4", Prop("d", ("s",))),
+    )
+    verdict, _strength, comment = dsp_limit_characterization_check(
+        fabula, (), canonical, all_branches, "timelock",
+    )
+    assert verdict == VERDICT_NOTED
+    assert "scheduled_" in comment.lower() or "scheduling" in comment.lower()
+
+
+def test_lt11_sketch01_classify_arc_limit_shape_signature_preserved():
+    """LT11 back-compat: the sketch-01 `classify_arc_limit_shape`
+    entrypoint keeps its 3-tuple return shape so sketch-01 tests
+    (pinning signals == ('retraction:1',), etc.) continue to pass
+    verbatim. The parallel `classify_arc_limit_shape_strong` returns
+    a richer dict — both helpers exist."""
+    from verifier_helpers import (
+        classify_arc_limit_shape, classify_arc_limit_shape_strong,
+    )
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    P = Prop("x", ("a",))
+    fabula = (
+        _make_event_at(1, "E1", P, asserts=True),
+        _make_event_at(2, "E2", P, asserts=False),
+    )
+    # Sketch-01 form: 3-tuple.
+    result_sk01 = classify_arc_limit_shape(
+        fabula, (), canonical, all_branches,
+    )
+    assert isinstance(result_sk01, tuple)
+    assert len(result_sk01) == 3
+    # Sketch-02 form: dict with richer keys.
+    result_sk02 = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert isinstance(result_sk02, dict)
+    assert "middle_arc_kinds" in result_sk02
+    assert "scheduling_signals" in result_sk02
+    assert "arc_range" in result_sk02
+
+
+def test_lt_rocky_scheduling_signals_include_both_fight_props():
+    """Rocky's substrate carries TWO distinct scheduling Props:
+    scheduled_fight(apollo, mac) (asserted at the original
+    scheduling, retracted at Mac's injury) and scheduled_fight(apollo,
+    rocky) (asserted at the rescheduling). LT8 distinct-Prop count
+    reflects this — strength lands at 1.00 (min(1.0, 2/2)) rather
+    than 0.50. Honest measurement vs. sketch-02's prediction of
+    0.50 based on a single distinct Prop."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from rocky import FABULA, RULES, ALL_BRANCHES
+    from substrate import CANONICAL
+    result = classify_arc_limit_shape_strong(
+        FABULA, RULES, CANONICAL, ALL_BRANCHES,
+    )
+    assert result["classification"] == "timelock-strong"
+    assert result["middle_arc_kinds"] == 0
+    assert result["scheduling_count"] == 2
+    assert "scheduled_fight" in result["scheduling_signals"]
 
 
 def test_oedipus_dsp_growth_partial_rate_heuristic():
@@ -2403,12 +2679,23 @@ TESTS = [
     test_lt_ackroyd_dsp_limit_approved_with_two_signal_kinds,
     # Rocky Phase 2 integration pins
     test_rocky_verifier_has_nine_checks,
-    test_rocky_dsp_limit_needs_work_on_timelock_declaration,
+    test_rocky_dsp_limit_approved_under_lt9_strong,
     test_rocky_dsp_outcome_failure_approved,
     test_rocky_dsp_judgment_good_positive_closure_cluster,
     test_rocky_dsp_resolve_steadfast_via_structural_invariance,
     test_rocky_dsp_growth_start_via_articulated_goal_acquisition,
-    test_rocky_all_characterization_and_claim_checks_except_dsp_limit_approved,
+    test_rocky_all_nine_checks_approved_post_sketch_02,
+    # pressure-shape-taxonomy-sketch-02 (LT7–LT11)
+    test_lt7_peripheral_pre_retraction_does_not_count_as_middle_arc,
+    test_lt7_terminal_band_activates_only_with_enough_positive_events,
+    test_lt8_scheduled_prefix_predicates_register_as_timelock_signal,
+    test_lt8_no_match_when_predicate_lacks_scheduled_prefix,
+    test_lt9_strong_requires_both_scheduling_and_clean_middle,
+    test_lt9_does_not_fire_when_middle_arc_convergence_present,
+    test_lt10_optionlock_declared_with_scheduling_signal_gives_needs_work,
+    test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
+    test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
+    test_lt_rocky_scheduling_signals_include_both_fight_props,
     test_oedipus_dsp_growth_partial_rate_heuristic,
 ]
 
