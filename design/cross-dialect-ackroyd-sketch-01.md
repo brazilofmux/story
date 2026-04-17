@@ -271,9 +271,16 @@ epistemic recovery.
 
 ## What remains open
 
-- **StcCharacter amendment**: the Save the Cat Character gap is now
+- ~~**StcCharacter amendment**: the Save the Cat Character gap is now
   pressed by two encodings. Not yet a sketch amendment; worth a
-  third story encoded against the dialect before deciding.
+  third story encoded against the dialect before deciding.~~
+  **Landed 2026-04-16** as [save-the-cat-sketch-02](save-the-cat-sketch-02.md):
+  StcCharacter with `role_labels` as a canonical-plus-open vocabulary,
+  reference wiring on beats/strands/story, and archetype assignments
+  binding genre archetypes to characters or prose notes. Sheppard
+  now carries `role_labels=("protagonist", "antagonist", "narrator")` —
+  the structural claim this sketch named as unexpressible under
+  sketch-01.
 
 - **Substrate non-monotonicity pattern**: no substrate revocation
   events in Ackroyd's encoding (unlike Macbeth's E_malcolm_crowned
