@@ -100,20 +100,24 @@ Working prototype, closed-corpus encodings, extensive test surface:
   taxonomy-sketch-02 adopts the probe's concrete signature proposal
   and closes the prior sketch-01 NEEDS_WORK 0.33 verdict).
 - **Cross-boundary reader-model probe at the dramatica-complete
-  surface** — the LLM reads the upper Template records (DomainAssignments,
-  DSPs, Signposts, ThematicPicks, Story-level fields), the Lowerings,
-  the substrate context, and the verifier's 9-check output; emits
-  annotation reviews on the Lowerings and commentaries on the
-  verifier's verdicts. First live run against Rocky (Personal Triumph)
-  **dissented with the verifier's NEEDS_WORK 0.33 on DSP_limit and
-  proposed a concrete LT3-strong signature** (scheduled temporal
-  endpoints + clean middle-arc). Sketch-02 (pressure-shape-taxonomy)
-  adopts that signature as LT7–LT11; the probe/verifier loop closes
-  its first concrete cycle, with Rocky's DSP_limit shifting from
-  NEEDS_WORK 0.33 to APPROVED 1.00. Probe endorsed 7/9 verifier
-  verdicts as interpretively well-grounded; qualified the
-  Steadfast-via-structural-invariance pattern by naming its
-  false-positive risk.
+  surface** — four live probe runs against Rocky / Macbeth /
+  Oedipus / Ackroyd. Each reads the Template records, the Lowerings,
+  the substrate context, and the verifier's 9-check output, then
+  emits annotation reviews on the Lowerings and commentaries on the
+  verifier's verdicts. Full spectrum: 96 annotations (90 approved +
+  6 needs-work) + 36 commentaries (27 endorses + 7 qualifies + 2
+  dissents) across the four encodings; zero dropped. Rocky's dissent
+  on DSP_limit NEEDS_WORK 0.33 drove pressure-shape-taxonomy-sketch-02
+  (LT7–LT11) — adopted the probe's scheduling-endpoint signature;
+  DSP_limit shifted to APPROVED 1.00 same day. Oedipus's DSP_growth
+  dissent and three other qualification-level signature proposals
+  (agentive-pursuit vs. reactive/consequential events; manipulation
+  via participant-role; beat_type-weighted domain signals;
+  recognition-structure premise-order inversion) are banked as
+  forcing functions for future sketch amendments. The probe acts as
+  a steady signature-proposal engine — not a verdict-opposition
+  machine — with consistent ~7 endorse + 2 qualify + 0-1 dissent
+  baseline per 9-check run.
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
