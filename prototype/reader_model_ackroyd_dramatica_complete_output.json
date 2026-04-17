@@ -1,0 +1,597 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 40000,
+    "lowering_ids": [
+      "L_poirot",
+      "L_sheppard",
+      "L_raymond",
+      "L_flora",
+      "L_raglan",
+      "L_blunt",
+      "L_caroline",
+      "L_ralph",
+      "L_ackroyd",
+      "L_mrs_ferrars",
+      "L_ursula_bourne",
+      "L_parker",
+      "L_ferrars_death",
+      "L_ackroyd_dinner",
+      "L_ackroyd_killed",
+      "L_body_discovery",
+      "L_ralph_flight",
+      "L_flora_hires_poirot",
+      "L_investigation",
+      "L_ursula_confession",
+      "L_dictaphone_breakthrough",
+      "L_poirot_reveal",
+      "L_private_ultimatum",
+      "L_sheppard_death",
+      "L_overall_throughline",
+      "L_mc_throughline",
+      "L_ic_throughline",
+      "L_relationship_throughline"
+    ],
+    "verifier_review_count": 9,
+    "lowerings_to_review": null,
+    "reviews_to_comment_on": null,
+    "substrate_context_included": true,
+    "template_records_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_lowering_id": "L_poirot",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 100,
+      "comment": "The binding maps C_poirot (Protagonist + IC owner) to substrate entity 'poirot' (agent). The annotation correctly identifies the double-role encoding thesis — both the function-label attachment and the throughline ownership resolve to the same substrate entity, and the substrate confirms poirot participates as detective across the investigation, reveal, and confrontation events."
+    },
+    {
+      "target_lowering_id": "L_sheppard",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 101,
+      "comment": "The MC-is-Antagonist alignment is the encoding's central structural thesis, and the annotation names it explicitly. The substrate entity 'sheppard' participates in 13 events spanning blackmail through suicide — the cumulative trajectory the annotation references (KNOWN set carrying blackmail, murder, alibi) is traceable through those events' participant roles (blackmailer, killer, device_operator, writer)."
+    },
+    {
+      "target_lowering_id": "L_raymond",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 102,
+      "comment": "The binding C_raymond → geoffrey_raymond is confirmed by the substrate (present at E_body_discovered and listed in E_poirot_investigates subjects and E_poirot_reveals_solution cast). The 'methodical-witness role' gloss is interpretive shorthand for the Reason function rather than a substrate-level claim; it is serviceable if thin."
+    },
+    {
+      "target_lowering_id": "L_flora",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 103,
+      "comment": "Flora's conviction of Ralph's innocence driving Poirot's engagement is directly grounded: E_flora_summons_poirot (τ_s=2) names flora_ackroyd as client and poirot as detective. The Emotion function claim is well-justified by this commissioning act and by her presence in subsequent investigation and reveal events."
+    },
+    {
+      "target_lowering_id": "L_raglan",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 104,
+      "comment": "The binding C_raglan → inspector_raglan is clean. The annotation characterizes Raglan's Skeptic function (doubting Ralph's flight, doubting Poirot's theory) as interpretive justification for the function label rather than making specific substrate-content claims. The substrate confirms inspector_raglan in E_poirot_reveals_solution cast, consistent with the institutional-skeptic role."
+    },
+    {
+      "target_lowering_id": "L_blunt",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 105,
+      "comment": "The annotation is the thinnest of all character lowerings — 'C_blunt (Sidekick) → Entity major_blunt' — and does not attempt to justify the Sidekick function. Other annotations at this level (L_raglan, L_caroline, L_ralph) explain how the function label lands in the substrate. Major Blunt appears in investigation and reveal events; the annotation should at minimum note how his Sidekick-function (faith + support) manifests through those appearances."
+    },
+    {
+      "target_lowering_id": "L_caroline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 106,
+      "comment": "The annotation's interpretive reading — Guardian as 'ironic form,' pattern-recognition that misses her own brother — is well-drawn and justifies the Guardian function label (conscience + help motivation elements) against the substrate, where caroline_sheppard appears in E_poirot_reveals_solution. The irony claim (knows everyone, doesn't know her brother) is a legitimate reading of the Guardian-who-fails-to-guard-the-closest-charge."
+    },
+    {
+      "target_lowering_id": "L_ralph",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 107,
+      "comment": "The Contagonist function (temptation + hinder) is justified through the red-herring reading: Ralph's disappearance at E_ralph_missing (τ_s=2, effect_count=3 including accused_of_murder) tempts the investigation away from the real killer and hinders progress. The annotation names this mechanism clearly."
+    },
+    {
+      "target_lowering_id": "L_ackroyd",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 108,
+      "comment": "Minimal but appropriate — Ackroyd carries no function label, so the annotation need only confirm the character-to-entity mapping. The substrate entity 'ackroyd' is well-attested (host, patriarch, victim roles across multiple events)."
+    },
+    {
+      "target_lowering_id": "L_mrs_ferrars",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 109,
+      "comment": "The annotation correctly identifies the pre-play backstory chain (poisoning of husband → Sheppard's blackmail → suicide at τ_s=0) as the triggers for the case. The substrate confirms E_mr_ferrars_poisoned, E_sheppard_blackmails_ferrars, and E_mrs_ferrars_suicide with mrs_ferrars as participant."
+    },
+    {
+      "target_lowering_id": "L_ursula_bourne",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 110,
+      "comment": "The binding is clean; E_ralph_ursula_secretly_married (τ_s=-10) and ursula_bourne's presence in E_poirot_investigates subjects and E_poirot_reveals_solution cast confirm her role. The annotation's claim about misdirection-then-clearing is consistent with the investigation-sequence pattern."
+    },
+    {
+      "target_lowering_id": "L_parker",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 111,
+      "comment": "Parker as audience in E_dictaphone_plays (τ_s=1) and discoverer in E_body_discovered (τ_s=2) grounds the annotation's claim about his dictaphone-deceived BELIEVED state. The binding is clean and the annotation identifies the key substrate moments."
+    },
+    {
+      "target_lowering_id": "L_ferrars_death",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 120,
+      "comment": "S_ferrars_death maps to E_mrs_ferrars_suicide (τ_s=0, type=death_by_suicide, effect_count=8). The annotation names specific effect content (dead, death_was_suicide, driver_of_suicide); while the summarized substrate only shows effect counts, the event type and participant structure (who=mrs_ferrars, attending_physician=sheppard) are consistent with these claims."
+    },
+    {
+      "target_lowering_id": "L_ackroyd_dinner",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 121,
+      "comment": "The binding S_ackroyd_dinner → E_ackroyd_dines_with_sheppard (τ_s=1, host=ackroyd, guest=sheppard, effect_count=4) is clean. The told_by effect claim is plausible given the dinner_meeting type and the Scene's conflict_shape (Sheppard learns Ackroyd is about to read the letter)."
+    },
+    {
+      "target_lowering_id": "L_ackroyd_killed",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 122,
+      "comment": "The one-to-many binding to three contiguous events (τ_a=12,13,14; all τ_s=1) is well-justified. The annotation clearly explains why the substrate separates them (distinct effects: setup, killing+derivation, alibi-observable) while the Dramatic Scene reads them as one argumentative moment. The betrayer_of_trust derivation claim is confirmed by vr_4."
+    },
+    {
+      "target_lowering_id": "L_body_discovery",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 123,
+      "comment": "S_body_discovery maps cleanly to E_body_discovered (τ_s=2, discoverer=parker, also_present includes sheppard). The annotation's claim about dislodging Parker's dictaphone-deceived BELIEVED alive(ackroyd) is a plausible effect of the discovery event (effect_count=4) and is consistent with the Scene's result text about the 'first sustained performance of innocence.'"
+    },
+    {
+      "target_lowering_id": "L_ralph_flight",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 124,
+      "comment": "S_ralph_flight maps to E_ralph_missing (τ_s=2, type=fact, effect_count=3). The annotation's claim about accused_of_murder(ralph_paton, ackroyd) being authored as a world fact is plausible given the event type and the Scene's conflict_shape about public opinion converging on Ralph."
+    },
+    {
+      "target_lowering_id": "L_flora_hires_poirot",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 125,
+      "comment": "Clean binding. E_flora_summons_poirot (τ_s=2, type=commission, client=flora_ackroyd, detective=poirot) directly realizes the Scene. The annotation's note that Poirot enters the fabula here is confirmed — no substrate event before τ_s=2 includes poirot as a participant."
+    },
+    {
+      "target_lowering_id": "L_investigation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 126,
+      "comment": "The annotation honestly acknowledges the compression: the novel's long investigation middle maps to a single substrate event E_poirot_investigates (τ_s=5). The substrate confirms the event's scope — detective=poirot, assistant=sheppard, subjects spanning five household members. The interpretive note about the dialect splitting the territory (with S_ursula_confession) is well-placed."
+    },
+    {
+      "target_lowering_id": "L_ursula_confession",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 127,
+      "comment": "The shared-binding annotation is well-justified: two Dramatic Scenes reading different aspects of one substrate event (E_poirot_investigates). The annotation correctly identifies the reason for the dual reading — Ursula's confession is a specific structural moment within the general investigation. The 'observe effect' claim is plausible given the event's effect_count=3."
+    },
+    {
+      "target_lowering_id": "L_dictaphone_breakthrough",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 128,
+      "comment": "The cross-temporal binding (E_dictaphone_plays at τ_s=1 + E_poirot_investigates at τ_s=5) is the most structurally interesting lowering in the set. The annotation clearly justifies the span: the Scene reads an earlier event's fact (the alibi mechanism) and a later event's reasoning (Poirot's reconstruction) as one argumentative beat. This is a legitimate upper-dialect move well-grounded in the substrate."
+    },
+    {
+      "target_lowering_id": "L_poirot_reveal",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 129,
+      "comment": "S_poirot_reveal maps to E_poirot_reveals_solution (τ_s=8, type=anagnorisis_public, effect_count=8). The annotation's claim about cast-wide epistemic updates (killed(sheppard, ackroyd) entering KNOWN sets) is consistent with the event's full cast list and high effect count. The identification as the Argument's AFFIRM resolution event is well-placed."
+    },
+    {
+      "target_lowering_id": "L_private_ultimatum",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 130,
+      "comment": "Clean binding to E_poirot_private_confrontation (τ_s=9, type=ultimatum, detective=poirot, killer=sheppard, effect_count=1). The told_by claim about the ultimatum content entering Sheppard's KNOWN set is consistent with the event structure and the single effect."
+    },
+    {
+      "target_lowering_id": "L_sheppard_death",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 131,
+      "comment": "The two-event bundle (E_sheppard_writes_manuscript at τ_s=10, E_sheppard_suicide at τ_s=11) cleanly realizes the Scene's denouement. The annotation correctly reads these as one dramatic beat — the honest final pages and the death that follows."
+    },
+    {
+      "target_lowering_id": "L_overall_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 140,
+      "comment": "The ten substrate events span τ_s ∈ [-20, 11] and trace the case from Mr. Ferrars' poisoning through Sheppard's suicide. The annotation's interpretive reading (kingdom's-moral-order analog) is well-grounded; the Side-on-Argument AFFIRMS claim is consistent with the throughline's argument_contributions declaration."
+    },
+    {
+      "target_lowering_id": "L_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 141,
+      "comment": "Thirteen substrate events spanning τ_s ∈ [-18, 11] comprehensively trace Sheppard's arc from deduction through death. The annotation's arc summary (doctor→blackmailer→murderer→performer→assistant→named→writer→dead) maps onto the event sequence. The 7-beat count matches the upper-dialect beats B_mc_1 through B_mc_7. The COMPLICATES side-on-argument is well-justified."
+    },
+    {
+      "target_lowering_id": "L_ic_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 142,
+      "comment": "Four substrate events spanning τ_s ∈ [2, 9] correctly frame Poirot's in-play arc. The annotation's observation that the IC arrives only after the inciting murder is confirmed — no poirot-participant event exists before τ_s=2. The shorter span compared to T_mc_sheppard is structurally meaningful and well-noted."
+    },
+    {
+      "target_lowering_id": "L_relationship_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 143,
+      "comment": "Five substrate events spanning τ_s ∈ [2, 11] trace the pairing from formation through Sheppard's death. The annotation's arc summary (apparent good faith → collaboration → public inversion → private end) maps cleanly onto the event sequence. Including E_sheppard_suicide (where Poirot is not a participant) is justified because the suicide is the pairing's terminal consequence."
+    }
+  ],
+  "verifier_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The 54% manipulation-kind ratio understates the case. Even events the check classifies as 'investigatory/discovery' (e.g., E_body_discovered where Sheppard is 'also_present,' E_poirot_investigates where he is 'assistant') are manipulation-colored from the MC perspective — Sheppard is performing innocence at every one of these events. A structural event-type count cannot detect the concealment layer that makes each Sheppard-present event a manipulation event from the throughline's point of view. The partial-match verdict is fair given the check's method, but the annotation-level claim for Manipulation domain is stronger than 54% suggests.",
+      "suggested_signature": "Consider weighting events where the MC's participant role is one of apparent collaboration (e.g., assistant, also_present) while the MC owns an active concealment motive — these are manipulation-shaped even when their event type is investigatory.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:domain-assignment",
+        "verdict": "partial-match",
+        "match_strength": 0.5384615384615384,
+        "target_record": "dramatica-complete:DA_mc",
+        "comment": "7/13 (54%) MC-Throughline events are manipulation-kind; the remainder are investigatory / discovery events that document the scheme rather than enact it."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The 46% be-er signature reflects a genuine measurement challenge. The check classifies the murder (E_sheppard_murders_ackroyd) and suicide (E_sheppard_suicide) as external-action-shaped, which is structurally correct at the event level. However, in Dramatica, Be-er vs Do-er describes the MC's *preferred approach* to problem-solving, not the absence of external action. Sheppard's primary strategy across the investigation arc (τ_s ∈ [2, 9]) is internal adaptation — maintaining the identity of the innocent doctor-assistant. The bookend actions (murder, suicide) serve that internal strategy rather than constituting a Do-er pattern. The partial-match verdict is honest about the check's limitations but may underread the encoding's intent.",
+      "suggested_signature": "Consider distinguishing between the MC's strategic mode (internal identity-management across the investigation middle) and the MC's crisis actions (murder, suicide). A weighted approach that gives more signal to the sustained investigation-middle events versus the singular crisis events might better capture the Be-er pattern.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-approach",
+        "verdict": "partial-match",
+        "match_strength": 0.46153846153846156,
+        "target_record": "dramatica-complete:DSP_approach",
+        "comment": "Sheppard participates in 13 events; 6 (46%) are internal-state-shaped (EK2); 7 are external-action-shaped. Mixed Be-er / Do-er signature — Sheppard's concealment-from-inside is real but the murder and suicide are cinematic."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The optionlock reading is well-grounded. The substrate exhibits classic convergence: suspects are cleared one by one (Flora's theft, Parker's history, Ursula's marriage) until only Sheppard remains. The 0.67 strength reflecting 2/3 signal kinds is appropriate — the arc ends because alternatives are eliminated, not because time runs out. The verifier's references to retraction and rule-emergence signals confirm the pattern.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit",
+        "verdict": "approved",
+        "match_strength": 0.6666666666666666,
+        "target_record": "dramatica-complete:DSP_limit",
+        "comment": "DSP_limit=Optionlock declared; substrate exhibits middle-arc convergence (retraction:1, rule-emergence:2; positions: 2 middle-arc, 1 peripheral-pre, 0 terminal). Arc ends because alternatives are eliminated (LT2 + LT7). Strength 0.67 reflects 2/3 signal kinds firing."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "Outcome=Success is straightforwardly confirmed. killed(sheppard, ackroyd) holding at τ_s=11 directly demonstrates the story goal (identify the killer) is achieved. The 1.0 match strength is appropriate — this is a binary check and the substrate unambiguously supports it.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:dsp-outcome",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_outcome",
+        "comment": "killed(sheppard, ackroyd) holds at τ_s=11; Outcome=Success claim (OS goal — murderer of Ackroyd identified) is supported by substrate at end of fabula. The fact is world-authored at the murder event."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "Judgment=Bad is well-grounded in the emerges-and-persists trajectory of betrayer_of_trust(sheppard, ackroyd). The check correctly identifies that this trait derives at τ_s=1 when killed + patient_of coincide and persists through τ_s=11. The MC's personal throughline ends in death and exposure — a clear Bad judgment. The 1.0 strength is warranted.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-judgment",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_judgment",
+        "comment": "betrayer_of_trust(sheppard, ackroyd) does not hold at τ_s=0; emerges at τ_s=1 (post-murder, when killed + patient_of coincide in the rule); still holds at τ_s=11. Emerges-and-persists trajectory consistent with Judgment=Bad."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "Resolve=Steadfast is confirmed by the pre-arc derivation of betrayer_of_trust at τ_s=1 and its steady persistence across the investigation arc τ_s ∈ [2, 11]. Sheppard never willingly changes his fundamental drive — the confession-writing at τ_s=10 is externally compelled (by Poirot's ultimatum at τ_s=9) and does not constitute a change in resolve. The check's approach of using trait stability as a proxy for resolve is sound for this encoding.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-resolve",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_resolve",
+        "comment": "betrayer_of_trust(sheppard, ackroyd) derives at τ_s=1, before the investigation arc begins at τ_s=2; the trait is steady across τ_s ∈ [2, 11]. Resolve=Steadfast confirmed — Sheppard's defining role is a pre-arc trait, not a mid-arc transition."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "Growth=Start is cleanly demonstrated. Sheppard needs to start being honest — the thing he has been failing to do throughout. The confession-writing at τ_s=10 follows the ultimatum at τ_s=9, arriving only under external compulsion and too late to avert Judgment=Bad. The verifier's description of this as 'Classic Start/Bad shape' is precisely right.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-growth",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_growth",
+        "comment": "Sheppard's confession-writing (τ_s=10) follows Poirot's ultimatum (τ_s=9). Growth=Start is achieved only under external compulsion — the MC starts what they have been failing to start, but too late to avert judgment. Classic Start/Bad shape."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The story-goal trajectory check is clean: 0/4 key knowers hold killed(sheppard, ackroyd) at τ_s=2 and 4/4 hold it at τ_s=11. The knowledge-expansion pattern directly instantiates the declared goal ('identify the killer and recover the truth'). The 1.0 strength is well-earned.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:story-goal",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_goal",
+        "comment": "Story_goal trajectory: 0/4 key knowers hold killed(sheppard, ackroyd) at KNOWN at τ_s=2 (investigation start); 4/4 hold it at τ_s=11. Knowledge expansion lands the goal across the entire witness-set."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "Story_consequence aversion is confirmed: at τ_s=11 the killer is publicly identified (4/4 knowers) and Ralph is cleared (no longer accused). The declared consequence ('killer goes undetected; Ralph remains suspect') is fully averted. This is consistent with Outcome=Success and the check correctly identifies the complementary relationship between goal achievement and consequence aversion.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:story-consequence",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_consequence",
+        "comment": "at τ_s=11: 4/4 key agents hold killed(sheppard, ackroyd) at KNOWN (killer publicly detected) AND Ralph not accused (cleared). Story_consequence (killer-undetected + Ralph-suspect) fully averted; substrate supports Outcome=Success."
+      }
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "lowering_id": "L_poirot",
+        "verdict": "approved",
+        "rationale": "The binding maps C_poirot (Protagonist + IC owner) to substrate entity 'poirot' (agent). The annotation correctly identifies the double-role encoding thesis — both the function-label attachment and the throughline ownership resolve to the same substrate entity, and the substrate confirms poirot participates as detective across the investigation, reveal, and confrontation events."
+      },
+      {
+        "lowering_id": "L_sheppard",
+        "verdict": "approved",
+        "rationale": "The MC-is-Antagonist alignment is the encoding's central structural thesis, and the annotation names it explicitly. The substrate entity 'sheppard' participates in 13 events spanning blackmail through suicide — the cumulative trajectory the annotation references (KNOWN set carrying blackmail, murder, alibi) is traceable through those events' participant roles (blackmailer, killer, device_operator, writer)."
+      },
+      {
+        "lowering_id": "L_raymond",
+        "verdict": "approved",
+        "rationale": "The binding C_raymond → geoffrey_raymond is confirmed by the substrate (present at E_body_discovered and listed in E_poirot_investigates subjects and E_poirot_reveals_solution cast). The 'methodical-witness role' gloss is interpretive shorthand for the Reason function rather than a substrate-level claim; it is serviceable if thin."
+      },
+      {
+        "lowering_id": "L_flora",
+        "verdict": "approved",
+        "rationale": "Flora's conviction of Ralph's innocence driving Poirot's engagement is directly grounded: E_flora_summons_poirot (τ_s=2) names flora_ackroyd as client and poirot as detective. The Emotion function claim is well-justified by this commissioning act and by her presence in subsequent investigation and reveal events."
+      },
+      {
+        "lowering_id": "L_raglan",
+        "verdict": "approved",
+        "rationale": "The binding C_raglan → inspector_raglan is clean. The annotation characterizes Raglan's Skeptic function (doubting Ralph's flight, doubting Poirot's theory) as interpretive justification for the function label rather than making specific substrate-content claims. The substrate confirms inspector_raglan in E_poirot_reveals_solution cast, consistent with the institutional-skeptic role."
+      },
+      {
+        "lowering_id": "L_blunt",
+        "verdict": "needs-work",
+        "rationale": "The annotation is the thinnest of all character lowerings — 'C_blunt (Sidekick) → Entity major_blunt' — and does not attempt to justify the Sidekick function. Other annotations at this level (L_raglan, L_caroline, L_ralph) explain how the function label lands in the substrate. Major Blunt appears in investigation and reveal events; the annotation should at minimum note how his Sidekick-function (faith + support) manifests through those appearances."
+      },
+      {
+        "lowering_id": "L_caroline",
+        "verdict": "approved",
+        "rationale": "The annotation's interpretive reading — Guardian as 'ironic form,' pattern-recognition that misses her own brother — is well-drawn and justifies the Guardian function label (conscience + help motivation elements) against the substrate, where caroline_sheppard appears in E_poirot_reveals_solution. The irony claim (knows everyone, doesn't know her brother) is a legitimate reading of the Guardian-who-fails-to-guard-the-closest-charge."
+      },
+      {
+        "lowering_id": "L_ralph",
+        "verdict": "approved",
+        "rationale": "The Contagonist function (temptation + hinder) is justified through the red-herring reading: Ralph's disappearance at E_ralph_missing (τ_s=2, effect_count=3 including accused_of_murder) tempts the investigation away from the real killer and hinders progress. The annotation names this mechanism clearly."
+      },
+      {
+        "lowering_id": "L_ackroyd",
+        "verdict": "approved",
+        "rationale": "Minimal but appropriate — Ackroyd carries no function label, so the annotation need only confirm the character-to-entity mapping. The substrate entity 'ackroyd' is well-attested (host, patriarch, victim roles across multiple events)."
+      },
+      {
+        "lowering_id": "L_mrs_ferrars",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the pre-play backstory chain (poisoning of husband → Sheppard's blackmail → suicide at τ_s=0) as the triggers for the case. The substrate confirms E_mr_ferrars_poisoned, E_sheppard_blackmails_ferrars, and E_mrs_ferrars_suicide with mrs_ferrars as participant."
+      },
+      {
+        "lowering_id": "L_ursula_bourne",
+        "verdict": "approved",
+        "rationale": "The binding is clean; E_ralph_ursula_secretly_married (τ_s=-10) and ursula_bourne's presence in E_poirot_investigates subjects and E_poirot_reveals_solution cast confirm her role. The annotation's claim about misdirection-then-clearing is consistent with the investigation-sequence pattern."
+      },
+      {
+        "lowering_id": "L_parker",
+        "verdict": "approved",
+        "rationale": "Parker as audience in E_dictaphone_plays (τ_s=1) and discoverer in E_body_discovered (τ_s=2) grounds the annotation's claim about his dictaphone-deceived BELIEVED state. The binding is clean and the annotation identifies the key substrate moments."
+      },
+      {
+        "lowering_id": "L_ferrars_death",
+        "verdict": "approved",
+        "rationale": "S_ferrars_death maps to E_mrs_ferrars_suicide (τ_s=0, type=death_by_suicide, effect_count=8). The annotation names specific effect content (dead, death_was_suicide, driver_of_suicide); while the summarized substrate only shows effect counts, the event type and participant structure (who=mrs_ferrars, attending_physician=sheppard) are consistent with these claims."
+      },
+      {
+        "lowering_id": "L_ackroyd_dinner",
+        "verdict": "approved",
+        "rationale": "The binding S_ackroyd_dinner → E_ackroyd_dines_with_sheppard (τ_s=1, host=ackroyd, guest=sheppard, effect_count=4) is clean. The told_by effect claim is plausible given the dinner_meeting type and the Scene's conflict_shape (Sheppard learns Ackroyd is about to read the letter)."
+      },
+      {
+        "lowering_id": "L_ackroyd_killed",
+        "verdict": "approved",
+        "rationale": "The one-to-many binding to three contiguous events (τ_a=12,13,14; all τ_s=1) is well-justified. The annotation clearly explains why the substrate separates them (distinct effects: setup, killing+derivation, alibi-observable) while the Dramatic Scene reads them as one argumentative moment. The betrayer_of_trust derivation claim is confirmed by vr_4."
+      },
+      {
+        "lowering_id": "L_body_discovery",
+        "verdict": "approved",
+        "rationale": "S_body_discovery maps cleanly to E_body_discovered (τ_s=2, discoverer=parker, also_present includes sheppard). The annotation's claim about dislodging Parker's dictaphone-deceived BELIEVED alive(ackroyd) is a plausible effect of the discovery event (effect_count=4) and is consistent with the Scene's result text about the 'first sustained performance of innocence.'"
+      },
+      {
+        "lowering_id": "L_ralph_flight",
+        "verdict": "approved",
+        "rationale": "S_ralph_flight maps to E_ralph_missing (τ_s=2, type=fact, effect_count=3). The annotation's claim about accused_of_murder(ralph_paton, ackroyd) being authored as a world fact is plausible given the event type and the Scene's conflict_shape about public opinion converging on Ralph."
+      },
+      {
+        "lowering_id": "L_flora_hires_poirot",
+        "verdict": "approved",
+        "rationale": "Clean binding. E_flora_summons_poirot (τ_s=2, type=commission, client=flora_ackroyd, detective=poirot) directly realizes the Scene. The annotation's note that Poirot enters the fabula here is confirmed — no substrate event before τ_s=2 includes poirot as a participant."
+      },
+      {
+        "lowering_id": "L_investigation",
+        "verdict": "approved",
+        "rationale": "The annotation honestly acknowledges the compression: the novel's long investigation middle maps to a single substrate event E_poirot_investigates (τ_s=5). The substrate confirms the event's scope — detective=poirot, assistant=sheppard, subjects spanning five household members. The interpretive note about the dialect splitting the territory (with S_ursula_confession) is well-placed."
+      },
+      {
+        "lowering_id": "L_ursula_confession",
+        "verdict": "approved",
+        "rationale": "The shared-binding annotation is well-justified: two Dramatic Scenes reading different aspects of one substrate event (E_poirot_investigates). The annotation correctly identifies the reason for the dual reading — Ursula's confession is a specific structural moment within the general investigation. The 'observe effect' claim is plausible given the event's effect_count=3."
+      },
+      {
+        "lowering_id": "L_dictaphone_breakthrough",
+        "verdict": "approved",
+        "rationale": "The cross-temporal binding (E_dictaphone_plays at τ_s=1 + E_poirot_investigates at τ_s=5) is the most structurally interesting lowering in the set. The annotation clearly justifies the span: the Scene reads an earlier event's fact (the alibi mechanism) and a later event's reasoning (Poirot's reconstruction) as one argumentative beat. This is a legitimate upper-dialect move well-grounded in the substrate."
+      },
+      {
+        "lowering_id": "L_poirot_reveal",
+        "verdict": "approved",
+        "rationale": "S_poirot_reveal maps to E_poirot_reveals_solution (τ_s=8, type=anagnorisis_public, effect_count=8). The annotation's claim about cast-wide epistemic updates (killed(sheppard, ackroyd) entering KNOWN sets) is consistent with the event's full cast list and high effect count. The identification as the Argument's AFFIRM resolution event is well-placed."
+      },
+      {
+        "lowering_id": "L_private_ultimatum",
+        "verdict": "approved",
+        "rationale": "Clean binding to E_poirot_private_confrontation (τ_s=9, type=ultimatum, detective=poirot, killer=sheppard, effect_count=1). The told_by claim about the ultimatum content entering Sheppard's KNOWN set is consistent with the event structure and the single effect."
+      },
+      {
+        "lowering_id": "L_sheppard_death",
+        "verdict": "approved",
+        "rationale": "The two-event bundle (E_sheppard_writes_manuscript at τ_s=10, E_sheppard_suicide at τ_s=11) cleanly realizes the Scene's denouement. The annotation correctly reads these as one dramatic beat — the honest final pages and the death that follows."
+      },
+      {
+        "lowering_id": "L_overall_throughline",
+        "verdict": "approved",
+        "rationale": "The ten substrate events span τ_s ∈ [-20, 11] and trace the case from Mr. Ferrars' poisoning through Sheppard's suicide. The annotation's interpretive reading (kingdom's-moral-order analog) is well-grounded; the Side-on-Argument AFFIRMS claim is consistent with the throughline's argument_contributions declaration."
+      },
+      {
+        "lowering_id": "L_mc_throughline",
+        "verdict": "approved",
+        "rationale": "Thirteen substrate events spanning τ_s ∈ [-18, 11] comprehensively trace Sheppard's arc from deduction through death. The annotation's arc summary (doctor→blackmailer→murderer→performer→assistant→named→writer→dead) maps onto the event sequence. The 7-beat count matches the upper-dialect beats B_mc_1 through B_mc_7. The COMPLICATES side-on-argument is well-justified."
+      },
+      {
+        "lowering_id": "L_ic_throughline",
+        "verdict": "approved",
+        "rationale": "Four substrate events spanning τ_s ∈ [2, 9] correctly frame Poirot's in-play arc. The annotation's observation that the IC arrives only after the inciting murder is confirmed — no poirot-participant event exists before τ_s=2. The shorter span compared to T_mc_sheppard is structurally meaningful and well-noted."
+      },
+      {
+        "lowering_id": "L_relationship_throughline",
+        "verdict": "approved",
+        "rationale": "Five substrate events spanning τ_s ∈ [2, 11] trace the pairing from formation through Sheppard's death. The annotation's arc summary (apparent good faith → collaboration → public inversion → private end) maps cleanly onto the event sequence. Including E_sheppard_suicide (where Poirot is not a participant) is justified because the suicide is the pairing's terminal consequence."
+      }
+    ],
+    "verifier_commentaries": [
+      {
+        "target_review_id": "vr_0",
+        "assessment": "qualifies",
+        "rationale": "The 54% manipulation-kind ratio understates the case. Even events the check classifies as 'investigatory/discovery' (e.g., E_body_discovered where Sheppard is 'also_present,' E_poirot_investigates where he is 'assistant') are manipulation-colored from the MC perspective — Sheppard is performing innocence at every one of these events. A structural event-type count cannot detect the concealment layer that makes each Sheppard-present event a manipulation event from the throughline's point of view. The partial-match verdict is fair given the check's method, but the annotation-level claim for Manipulation domain is stronger than 54% suggests.",
+        "suggested_signature": "Consider weighting events where the MC's participant role is one of apparent collaboration (e.g., assistant, also_present) while the MC owns an active concealment motive — these are manipulation-shaped even when their event type is investigatory."
+      },
+      {
+        "target_review_id": "vr_1",
+        "assessment": "qualifies",
+        "rationale": "The 46% be-er signature reflects a genuine measurement challenge. The check classifies the murder (E_sheppard_murders_ackroyd) and suicide (E_sheppard_suicide) as external-action-shaped, which is structurally correct at the event level. However, in Dramatica, Be-er vs Do-er describes the MC's *preferred approach* to problem-solving, not the absence of external action. Sheppard's primary strategy across the investigation arc (τ_s ∈ [2, 9]) is internal adaptation — maintaining the identity of the innocent doctor-assistant. The bookend actions (murder, suicide) serve that internal strategy rather than constituting a Do-er pattern. The partial-match verdict is honest about the check's limitations but may underread the encoding's intent.",
+        "suggested_signature": "Consider distinguishing between the MC's strategic mode (internal identity-management across the investigation middle) and the MC's crisis actions (murder, suicide). A weighted approach that gives more signal to the sustained investigation-middle events versus the singular crisis events might better capture the Be-er pattern."
+      },
+      {
+        "target_review_id": "vr_2",
+        "assessment": "endorses",
+        "rationale": "The optionlock reading is well-grounded. The substrate exhibits classic convergence: suspects are cleared one by one (Flora's theft, Parker's history, Ursula's marriage) until only Sheppard remains. The 0.67 strength reflecting 2/3 signal kinds is appropriate — the arc ends because alternatives are eliminated, not because time runs out. The verifier's references to retraction and rule-emergence signals confirm the pattern.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_3",
+        "assessment": "endorses",
+        "rationale": "Outcome=Success is straightforwardly confirmed. killed(sheppard, ackroyd) holding at τ_s=11 directly demonstrates the story goal (identify the killer) is achieved. The 1.0 match strength is appropriate — this is a binary check and the substrate unambiguously supports it.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_4",
+        "assessment": "endorses",
+        "rationale": "Judgment=Bad is well-grounded in the emerges-and-persists trajectory of betrayer_of_trust(sheppard, ackroyd). The check correctly identifies that this trait derives at τ_s=1 when killed + patient_of coincide and persists through τ_s=11. The MC's personal throughline ends in death and exposure — a clear Bad judgment. The 1.0 strength is warranted.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_5",
+        "assessment": "endorses",
+        "rationale": "Resolve=Steadfast is confirmed by the pre-arc derivation of betrayer_of_trust at τ_s=1 and its steady persistence across the investigation arc τ_s ∈ [2, 11]. Sheppard never willingly changes his fundamental drive — the confession-writing at τ_s=10 is externally compelled (by Poirot's ultimatum at τ_s=9) and does not constitute a change in resolve. The check's approach of using trait stability as a proxy for resolve is sound for this encoding.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_6",
+        "assessment": "endorses",
+        "rationale": "Growth=Start is cleanly demonstrated. Sheppard needs to start being honest — the thing he has been failing to do throughout. The confession-writing at τ_s=10 follows the ultimatum at τ_s=9, arriving only under external compulsion and too late to avert Judgment=Bad. The verifier's description of this as 'Classic Start/Bad shape' is precisely right.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_7",
+        "assessment": "endorses",
+        "rationale": "The story-goal trajectory check is clean: 0/4 key knowers hold killed(sheppard, ackroyd) at τ_s=2 and 4/4 hold it at τ_s=11. The knowledge-expansion pattern directly instantiates the declared goal ('identify the killer and recover the truth'). The 1.0 strength is well-earned.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_8",
+        "assessment": "endorses",
+        "rationale": "Story_consequence aversion is confirmed: at τ_s=11 the killer is publicly identified (4/4 knowers) and Ralph is cleared (no longer accused). The declared consequence ('killer goes undetected; Ralph remains suspect') is fully averted. This is consistent with Outcome=Success and the check correctly identifies the complementary relationship between goal achievement and consequence aversion.",
+        "suggested_signature": null
+      }
+    ]
+  }
+}
