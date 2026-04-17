@@ -1974,6 +1974,71 @@ def test_lt2_ackroyd_fabula_classifies_optionlock():
     assert any(s.startswith("rule-emergence:") for s in signals)
 
 
+def test_lt2_rocky_substrate_shows_mild_convergence_not_clean_timelock():
+    """Phase 1 Rocky substrate authoring finding: Rocky's fabula shows
+    mild convergence signals — one retraction (Mac's scheduled fight
+    retracted when Mac breaks his hand) and one rule-emergence
+    (went_the_distance derivable at τ_s=55) — and classifies as
+    Optionlock 0.67 under LT2, despite the dramatic encoding declaring
+    DSP_limit=Timelock. This is the LT2-OQ3 'subplot-only convergence'
+    case the sketch anticipated, and it sharpens the forcing function
+    for LT3-strong (scheduling-vocabulary detection). No identity
+    resolutions (Rocky is Steadfast — no equivalence classes collapse).
+    """
+    from substrate import CANONICAL
+    from verifier_helpers import classify_arc_limit_shape
+    from rocky import FABULA, RULES, ALL_BRANCHES
+    classification, strength, signals = classify_arc_limit_shape(
+        FABULA, RULES, CANONICAL, ALL_BRANCHES,
+    )
+    assert classification == "optionlock"
+    assert abs(strength - 2/3) < 1e-9
+    assert any(s.startswith("retraction:") for s in signals)
+    assert any(s.startswith("rule-emergence:") for s in signals)
+    assert not any(s.startswith("identity-resolution:") for s in signals)
+
+
+def test_rocky_went_the_distance_rule_derives_at_fight_end():
+    """Rocky's single rule fires at τ_s=55: fought_rounds(rocky, apollo, 15)
+    + standing_at_final_bell(rocky, fight) ⇒ went_the_distance(rocky,
+    apollo). This is the substrate-visible form of the MC's articulated
+    goal from the night-before-fight scene."""
+    from substrate import (
+        CANONICAL, in_scope, project_world, world_holds_derived,
+    )
+    from rocky import FABULA, RULES, ALL_BRANCHES, went_the_distance
+    events = [e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)]
+    τ_end = max(e.τ_s for e in events if e.τ_s is not None)
+    world = project_world(events, up_to_τ_s=τ_end)
+    proof = world_holds_derived(
+        world, went_the_distance("rocky", "apollo"), RULES,
+    )
+    assert proof is not None
+    assert proof.kind == "derived"
+
+
+def test_rocky_has_no_identity_propositions():
+    """Rocky is Steadfast — no identity placeholder entities, no
+    equivalence-class collapses across the arc. This is the
+    structural signature that LT2 correctly detects (zero identity-
+    resolution signal count)."""
+    from substrate import IDENTITY_PREDICATE, WorldEffect, KnowledgeEffect
+    from rocky import FABULA, ENTITIES
+    # No 'abstract' entities intended as identity placeholders other
+    # than `fight`/`mac_fight` (which are referenceable entities, not
+    # identity stand-ins).
+    for e in FABULA:
+        for ef in e.effects:
+            if isinstance(ef, WorldEffect):
+                assert ef.prop.predicate != IDENTITY_PREDICATE, (
+                    f"unexpected identity prop in {e.id}"
+                )
+            elif isinstance(ef, KnowledgeEffect):
+                assert ef.held.prop.predicate != IDENTITY_PREDICATE, (
+                    f"unexpected identity prop in {e.id}"
+                )
+
+
 def test_lt5_timelock_declared_on_timelock_consistent_substrate_is_noted():
     """LT5's disposition: Timelock declared + no convergence signals
     → NOTED (consistent-but-not-affirmed). The honest asymmetry
@@ -2216,6 +2281,9 @@ TESTS = [
     test_lt2_oedipus_fabula_classifies_optionlock,
     test_lt2_macbeth_fabula_classifies_optionlock,
     test_lt2_ackroyd_fabula_classifies_optionlock,
+    test_lt2_rocky_substrate_shows_mild_convergence_not_clean_timelock,
+    test_rocky_went_the_distance_rule_derives_at_fight_end,
+    test_rocky_has_no_identity_propositions,
     test_lt5_timelock_declared_on_timelock_consistent_substrate_is_noted,
     test_lt5_optionlock_declared_on_optionlock_substrate_is_approved,
     test_lt5_optionlock_declared_on_timelock_consistent_substrate_is_needs_work,
