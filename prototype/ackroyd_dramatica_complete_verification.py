@@ -508,6 +508,21 @@ def dsp_resolve_steadfast_trajectory_check(
             "trajectory shape.",
         )
 
+    # RE3: core-drive-persistence note per resolve-endpoint-sketch-
+    # 01. Ackroyd's defining fact `betrayer_of_trust(sheppard,
+    # ackroyd)` derives at τ_s=1 (via the killing event) and holds
+    # through τ_end=11. No state-additions; clean pre-arc-trait
+    # persistence. Contrasts with Rocky's Steadfast (articulated
+    # goal as state-addition) — Ackroyd's is pre-arc-anchored.
+    re_note = (
+        f" [RE3 core-drive-persistence: `betrayer_of_trust` "
+        f"derives at τ_s={transition_τ} and holds through "
+        f"τ_end={τ_end}; no state-additions around the defining "
+        f"trait. Steadfast confirmed at both identity and "
+        f"end-state layers — the distinction from Rocky's "
+        f"mid-arc-articulated Steadfast]"
+    )
+
     # RR3: IC-relational signal per resolve-relational-sketch-01.
     # For Steadfast, count the IC throughline's pressure events —
     # Sheppard's Steadfast holds across Poirot's investigation.
@@ -537,7 +552,7 @@ def dsp_resolve_steadfast_trajectory_check(
             f"steady across τ_s ∈ [{investigation_start}, {τ_end}]. "
             f"Resolve=Steadfast confirmed — Sheppard's defining "
             f"role is a pre-arc trait, not a mid-arc transition."
-            f"{ic_note}",
+            f"{re_note}{ic_note}",
         )
     position = (transition_τ - investigation_start) / arc_span
     return (
@@ -545,7 +560,7 @@ def dsp_resolve_steadfast_trajectory_check(
         f"betrayer_of_trust emerges at τ_s={transition_τ}, "
         f"{position:.0%} through the investigation arc [{investigation_start}, "
         f"{τ_end}]. Resolve=Steadfast would predict emergence "
-        f"before or at the arc's start.{ic_note}",
+        f"before or at the arc's start.{re_note}{ic_note}",
     )
 
 

@@ -110,6 +110,7 @@ from verifier_helpers import (
     dsp_limit_characterization_check,
     beat_type_weight, event_to_beat_type,
     detect_preceding_ic_event,
+    compute_pre_post_action_ratios,
 )
 
 
@@ -454,6 +455,40 @@ def dsp_resolve_change_trajectory_check(
     arc_span = τ_end - arc_start if τ_end > arc_start else 1
     position = (transition_τ - arc_start) / arc_span
 
+    # RE2: end-state behavioral-shift signal per resolve-endpoint-
+    # sketch-01. For Macbeth, both pre- and post-transition events
+    # are action-dominated (kills before and after coronation); no
+    # behavioral shift is expected. The RE2 "no shift" report
+    # honestly surfaces v3's observation that Macbeth's terminal
+    # "I will not yield" reads as Steadfast commitment at the
+    # behavioral layer even though Change is confirmed at the
+    # identity layer (tyrant emergence).
+    re2 = compute_pre_post_action_ratios(
+        MACBETH_ENTITY_ID, transition_τ,
+        events_in_scope_all,
+        _AGENT_IDS,
+    )
+    if re2["shift_detected"]:
+        re_note = (
+            f" [RE2 end-state: external-action ratio shifts from "
+            f"{re2['pre_external_ratio']:.0%} (pre-transition, "
+            f"n={re2['pre_count']}) to "
+            f"{re2['post_external_ratio']:.0%} (post-transition, "
+            f"n={re2['post_count']}) — behavioral shift reinforces "
+            f"Change signal]"
+        )
+    else:
+        re_note = (
+            f" [RE2 end-state: external-action ratio "
+            f"{re2['pre_external_ratio']:.0%} → "
+            f"{re2['post_external_ratio']:.0%} (shift "
+            f"{re2['shift']:.0%} below 30% threshold). Change is "
+            f"structurally at the identity level (tyrant emergence), "
+            f"not the behavioral-shape level. v3 probe observation: "
+            f"Macbeth's terminal 'I will not yield' doubling-down "
+            f"reads as Steadfast commitment at the behavioral layer]"
+        )
+
     # RR3: IC-relational signal per resolve-relational-sketch-01.
     # Dramatica's Resolve=Change specifically means MC changes in
     # response to IC influence — check if Lady Macbeth's throughline
@@ -484,13 +519,13 @@ def dsp_resolve_change_trajectory_check(
             f"consistent with Resolve=Change. Distinct Dramatica "
             f"read from Judgment=Bad: the transition is the "
             f"resolve-signal; its badness is the judgment-signal."
-            f"{ic_note}",
+            f"{re_note}{ic_note}",
         )
     return (
         VERDICT_PARTIAL_MATCH, position,
         f"tyrant-transition at τ_s={transition_τ} ({position:.0%} "
         f"through the arc) is very early; may read as a pre-existing "
-        f"trait rather than a mid-arc shift.{ic_note}",
+        f"trait rather than a mid-arc shift.{re_note}{ic_note}",
     )
 
 

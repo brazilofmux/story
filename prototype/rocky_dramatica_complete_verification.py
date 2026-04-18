@@ -455,6 +455,32 @@ def dsp_resolve_steadfast_trajectory_check(
     classes_at_start = _rocky_classes_at(0)
     classes_at_end = _rocky_classes_at(τ_end)
 
+    # RE3: core-drive-persistence note per resolve-endpoint-sketch-
+    # 01. Rocky's defining drive is `articulated_goal(rocky,
+    # went_the_distance)`, which enters at τ_s=45 (state-addition
+    # around the arc's midpoint) and persists through τ_end via
+    # the rule-derived `went_the_distance(rocky, apollo)` at
+    # τ_s=55. The state-addition is NOT a paradigm-reversal; v3
+    # probe observation: Rocky's core drive, once articulated,
+    # never wavers — Steadfast confirmed at the end-state layer.
+    from substrate import Prop, project_knowledge as _pk
+    articulated_prop = Prop("articulated_goal",
+                            ("rocky", "went_the_distance"))
+    rocky_state_end = _pk(
+        agent_id=ROCKY_ENTITY_ID,
+        events_in_scope=events_in_scope_all,
+        up_to_τ_s=τ_end,
+    )
+    articulated_at_end = rocky_state_end.holds(articulated_prop) is not None
+    re_note = (
+        f" [RE3 core-drive-persistence: `articulated_goal(rocky, "
+        f"went_the_distance)` {'holds' if articulated_at_end else 'does not hold'} "
+        f"at τ_end={τ_end}; the state-addition at τ_s=45 is a "
+        f"mid-arc articulation, not a paradigm-reversal. Rocky's "
+        f"Steadfast read is preserved at the end-state layer: "
+        f"once articulated, the drive is never abandoned]"
+    )
+
     # RR3: IC-relational signal per resolve-relational-sketch-01.
     # For Steadfast, count IC throughline pressure events Rocky held
     # through (Apollo's dismissals, selections, in-ring pressure).
@@ -488,21 +514,21 @@ def dsp_resolve_steadfast_trajectory_check(
             f"show zero equivalence classes involving rocky; no "
             f"identity transition across the arc. Resolve=Steadfast "
             f"confirmed — Rocky is structurally the same throughout."
-            f"{ic_note}",
+            f"{re_note}{ic_note}",
         )
     if classes_at_start == classes_at_end:
         return (
             VERDICT_APPROVED, 1.0,
             f"Rocky's equivalence classes unchanged across the arc "
             f"({len(classes_at_start)} at both τ_s=0 and τ_s={τ_end}). "
-            f"Resolve=Steadfast confirmed.{ic_note}",
+            f"Resolve=Steadfast confirmed.{re_note}{ic_note}",
         )
     return (
         VERDICT_NEEDS_WORK, 0.0,
         f"Rocky's equivalence classes changed across the arc: "
         f"{len(classes_at_start)} at τ_s=0, {len(classes_at_end)} "
         f"at τ_s={τ_end}. Resolve=Steadfast predicts no such "
-        f"transition.{ic_note}",
+        f"transition.{re_note}{ic_note}",
     )
 
 

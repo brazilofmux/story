@@ -90,6 +90,7 @@ from verifier_helpers import (
     classify_event_agency_shape,
     detect_preceding_ic_event,
     events_advancing_throughline,
+    compute_pre_post_action_ratios,
 )
 
 
@@ -418,6 +419,34 @@ def dsp_resolve_change_trajectory_check(
     arc_start = min(t for t in all_τ_s if t >= 0)
     arc_span = τ_end - arc_start if τ_end > arc_start else 1
     position = (transition_τ - arc_start) / arc_span
+    # RE2: end-state behavioral-shift signal per resolve-endpoint-
+    # sketch-01. Compare MC's EK2 action-shape ratio pre vs post
+    # the anagnorisis. For Change, a behavioral shift strengthens
+    # the Change verdict beyond the identity-transition alone.
+    re2 = compute_pre_post_action_ratios(
+        OEDIPUS_ENTITY_ID, transition_τ,
+        [e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)],
+        _AGENT_IDS,
+    )
+    if re2["shift_detected"]:
+        re_note = (
+            f" [RE2 end-state: external-action ratio shifts from "
+            f"{re2['pre_external_ratio']:.0%} (pre-anagnorisis, "
+            f"n={re2['pre_count']}) to "
+            f"{re2['post_external_ratio']:.0%} (post-anagnorisis, "
+            f"n={re2['post_count']}) — behavioral shift detected; "
+            f"Change signal strengthened at the end-state layer]"
+        )
+    else:
+        re_note = (
+            f" [RE2 end-state: external-action ratio "
+            f"{re2['pre_external_ratio']:.0%} → "
+            f"{re2['post_external_ratio']:.0%} (shift "
+            f"{re2['shift']:.0%} below 30% threshold); Change is "
+            f"structurally at the identity level, not the "
+            f"behavioral-shape level]"
+        )
+
     # RR3: IC-relational signal per resolve-relational-sketch-01.
     # Dramatica's Resolve=Change means MC transitions in response to
     # IC influence — check if Jocasta's throughline events temporally
@@ -455,14 +484,14 @@ def dsp_resolve_change_trajectory_check(
             f"{τ_end}] arc) — a mid-arc transition consistent with "
             f"Resolve=Change. Distinct from Judgment=Bad: Judgment "
             f"evaluates final state; Resolve evaluates whether a "
-            f"transition occurred.{ic_note}",
+            f"transition occurred.{re_note}{ic_note}",
         )
     return (
         VERDICT_PARTIAL_MATCH, position,
         f"self-identity transition at τ_s={transition_τ} "
         f"({position:.0%} through the arc) is earlier than Change's "
         f"typical mid-arc placement; may indicate the transition is "
-        f"a pre-existing trait rather than a story-arc shift.{ic_note}",
+        f"a pre-existing trait rather than a story-arc shift.{re_note}{ic_note}",
     )
 
 

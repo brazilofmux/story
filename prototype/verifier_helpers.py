@@ -919,6 +919,68 @@ def events_advancing_throughline(
     return tuple(out)
 
 
+def compute_pre_post_action_ratios(
+    mc_id: str,
+    transition_τ,
+    events_in_scope: list,
+    agent_ids,
+    shift_threshold: float = 0.3,
+) -> dict:
+    """RE2/RE5: compare MC EK2 action-shape ratio pre vs post a
+    transition τ_s. Returns dict with pre/post counts, external-
+    ratios, absolute shift, and shift_detected bool (shift ≥
+    threshold).
+
+    Used by Change-declared DSP_resolve checks to detect whether
+    the MC's behavioral signature structurally changes across the
+    transition — a positive end-state signal for Change per
+    resolve-endpoint-sketch-01.
+
+    `transition_τ` is the MC's identity / paradigm transition τ_s.
+    `events_in_scope` is the canonical fabula; `agent_ids` is the
+    frozenset EK2 expects.
+    """
+    if transition_τ is None:
+        return {
+            "pre_count": 0,
+            "post_count": 0,
+            "pre_external_ratio": 0.0,
+            "post_external_ratio": 0.0,
+            "shift": 0.0,
+            "shift_detected": False,
+        }
+
+    pre_external = pre_total = 0
+    post_external = post_total = 0
+    for e in events_in_scope:
+        if e.τ_s is None:
+            continue
+        parts = event_participants_flat(e)
+        if mc_id not in parts:
+            continue
+        shape = classify_event_action_shape(e, agent_ids=agent_ids)
+        if e.τ_s < transition_τ:
+            pre_total += 1
+            if shape == "external":
+                pre_external += 1
+        else:
+            post_total += 1
+            if shape == "external":
+                post_external += 1
+
+    pre_ratio = pre_external / pre_total if pre_total > 0 else 0.0
+    post_ratio = post_external / post_total if post_total > 0 else 0.0
+    shift = abs(pre_ratio - post_ratio)
+    return {
+        "pre_count": pre_total,
+        "post_count": post_total,
+        "pre_external_ratio": pre_ratio,
+        "post_external_ratio": post_ratio,
+        "shift": shift,
+        "shift_detected": shift >= shift_threshold,
+    }
+
+
 def detect_preceding_ic_event(
     target_τ,
     ic_event_τs,

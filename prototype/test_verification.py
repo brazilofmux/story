@@ -2686,6 +2686,138 @@ def test_ag5_rocky_dsp_growth_start_unchanged():
 
 
 # ----------------------------------------------------------------------------
+# resolve-endpoint-sketch-01: RE1-RE5
+# (end-state behavioral-shift for Change; core-drive-persistence for Steadfast)
+# ----------------------------------------------------------------------------
+
+
+def test_re5_compute_pre_post_ratios_detects_shift():
+    """RE5: the helper returns correct pre/post ratios and
+    shift_detected flag when ratios differ by ≥30 points."""
+    from verifier_helpers import compute_pre_post_action_ratios
+    from substrate import Event, WorldEffect, Prop
+    # Pre events: 3 external actions (MC as agent)
+    pre_events = [
+        Event(id=f"E_pre{i}", type="fight", τ_s=i, τ_a=i,
+              participants={"fighter_a": "mc", "fighter_b": "foe"},
+              effects=(WorldEffect(prop=Prop("hit", ("mc", "foe")),
+                                   asserts=True),),
+              branches=frozenset({":canonical"}))
+        for i in range(3)
+    ]
+    # Post events: 3 passive/internal (MC as subject / listener only)
+    post_events = [
+        Event(id=f"E_post{i}", type="reflection", τ_s=10+i, τ_a=10+i,
+              participants={"subject": "mc"},
+              effects=(),
+              branches=frozenset({":canonical"}))
+        for i in range(3)
+    ]
+    result = compute_pre_post_action_ratios(
+        mc_id="mc", transition_τ=5,
+        events_in_scope=pre_events + post_events,
+        agent_ids=frozenset({"mc", "foe"}),
+    )
+    assert result["pre_count"] == 3
+    assert result["post_count"] == 3
+    assert result["pre_external_ratio"] > result["post_external_ratio"]
+    assert result["shift"] >= 0.3
+    assert result["shift_detected"] is True
+
+
+def test_re5_returns_zero_shift_when_pre_post_similar():
+    """RE5: no shift when pre/post distributions match."""
+    from verifier_helpers import compute_pre_post_action_ratios
+    from substrate import Event, WorldEffect, Prop
+    events = [
+        Event(id=f"E{i}", type="fight", τ_s=i, τ_a=i,
+              participants={"fighter_a": "mc", "fighter_b": "foe"},
+              effects=(WorldEffect(prop=Prop("hit", ("mc", "foe")),
+                                   asserts=True),),
+              branches=frozenset({":canonical"}))
+        for i in range(6)
+    ]
+    result = compute_pre_post_action_ratios(
+        mc_id="mc", transition_τ=3,
+        events_in_scope=events,
+        agent_ids=frozenset({"mc", "foe"}),
+    )
+    assert result["shift"] < 0.01
+    assert result["shift_detected"] is False
+
+
+def test_re5_returns_empty_when_transition_none():
+    """RE5: transition_τ=None returns clean-zero dict."""
+    from verifier_helpers import compute_pre_post_action_ratios
+    result = compute_pre_post_action_ratios(
+        mc_id="mc", transition_τ=None,
+        events_in_scope=[],
+        agent_ids=frozenset({"mc"}),
+    )
+    assert result["pre_count"] == 0
+    assert result["post_count"] == 0
+    assert result["shift_detected"] is False
+
+
+def test_re2_oedipus_dsp_resolve_reports_behavioral_shift():
+    """RE2 on Oedipus: external-action ratio drops significantly
+    post-anagnorisis (investigation → self-blinding/exile).
+    Shift detected; Change signal strengthened."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RE2" in r.comment
+    assert "behavioral shift detected" in r.comment
+
+
+def test_re2_macbeth_dsp_resolve_reports_no_behavioral_shift():
+    """RE2 on Macbeth: both pre- and post-transition events are
+    action-dominated; shift does NOT fire. The check honestly
+    reports this and surfaces the v3 probe observation about
+    'I will not yield' terminal doubling-down."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RE2" in r.comment
+    assert "below 30% threshold" in r.comment
+    assert "yield" in r.comment.lower() or "doubling-down" in r.comment
+
+
+def test_re3_rocky_dsp_resolve_reports_state_addition():
+    """RE3 on Rocky: articulated_goal entering at τ_s=45 noted as
+    state-addition, not paradigm-reversal; Steadfast preserved at
+    end-state layer."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RE3" in r.comment
+    assert "state-addition" in r.comment or "state-addition at τ_s=45" in r.comment
+
+
+def test_re3_ackroyd_dsp_resolve_reports_pre_arc_trait_persistence():
+    """RE3 on Ackroyd: betrayer_of_trust persists through τ_end
+    with no state-additions; clean pre-arc-trait anchoring."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RE3" in r.comment
+    assert "betrayer_of_trust" in r.comment
+    assert "pre-arc" in r.comment
+
+
+# ----------------------------------------------------------------------------
 # resolve-relational-sketch-01: RR1-RR6
 # (IC-correlation signal added to DSP_resolve checks; detect_preceding_ic_event
 # helper)
@@ -3328,6 +3460,14 @@ TESTS = [
     test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
     test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
     test_lt_rocky_scheduling_signals_include_both_fight_props,
+    # resolve-endpoint-sketch-01 (RE1-RE5)
+    test_re5_compute_pre_post_ratios_detects_shift,
+    test_re5_returns_zero_shift_when_pre_post_similar,
+    test_re5_returns_empty_when_transition_none,
+    test_re2_oedipus_dsp_resolve_reports_behavioral_shift,
+    test_re2_macbeth_dsp_resolve_reports_no_behavioral_shift,
+    test_re3_rocky_dsp_resolve_reports_state_addition,
+    test_re3_ackroyd_dsp_resolve_reports_pre_arc_trait_persistence,
     # resolve-relational-sketch-01 (RR1-RR6)
     test_rr2_detect_preceding_ic_event_correlation_fires,
     test_rr2_detect_preceding_ic_event_no_correlation,
