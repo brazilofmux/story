@@ -230,10 +230,16 @@ In the order I'd work them:
    function surfaces in two more probe cycles, the finding can be
    formally dropped per the deferral sketch's revisit-criteria.
 5. **Maybe-next research targets** (no commitment):
-   - A sixth encoding. Candidate: *And Then There Were None* if we
-     want to stress-test the unreliable-frame machinery further, or
-     a comedy/ensemble work to balance the 4-of-5 tragedies in the
-     corpus.
+   - A sixth encoding. ~~Candidate: *And Then There Were None*~~
+     **Bootstrapped 2026-04-18** — `and_then_there_were_none.py` +
+     4 sibling stubs authored via the skeleton generator (first
+     real use of the tool). Content is pending; the substrate
+     file's docstring carries the rationale, anticipated DSP axis
+     settings, MC/IC open-choice (conventional Vera vs. subversive
+     Wargrave), and probe expectations once authored. Not yet in
+     the verifier corpus; the existing skeleton advisory
+     (`skeleton:and_then_there_were_none`) is all the verifier
+     currently emits.
    - The fourth Dramatica quad layer (Elements per Variation).
      Storage-cheap; probe-context expensive; not urgent.
    - Non-Dramatica Templates (Save-the-Cat is partly-done for
