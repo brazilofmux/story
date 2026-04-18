@@ -1,0 +1,457 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 40000,
+    "lowering_ids": [
+      "L_oedipus",
+      "L_jocasta",
+      "L_shepherd",
+      "L_messenger",
+      "L_tiresias",
+      "L_creon",
+      "L_jocasta_doubt_speech",
+      "L_messenger_arrives",
+      "L_jocasta_realizes",
+      "L_shepherd_testimony",
+      "L_anagnorisis",
+      "L_tiresias_accusation",
+      "L_jocasta_hangs",
+      "L_self_blinding",
+      "L_exile",
+      "L_prologue_plague_pending",
+      "L_discovery_and_crown_pending",
+      "L_mc_throughline"
+    ],
+    "verifier_review_count": 9,
+    "lowerings_to_review": null,
+    "reviews_to_comment_on": null,
+    "substrate_context_included": true,
+    "template_records_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_lowering_id": "L_oedipus",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 200,
+      "comment": "The binding is correct: substrate entity 'oedipus' (kind=agent) exists and corresponds to Dramatic Character C_oedipus. The annotation helpfully notes that function labels (Protagonist, Emotion) stay dialect-local, which is an accurate framing of the upper/lower boundary."
+    },
+    {
+      "target_lowering_id": "L_jocasta",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 201,
+      "comment": "Entity 'jocasta' (kind=agent) exists in the substrate and corresponds to C_jocasta. The annotation is terse but the binding is structurally sound and the correspondence is unambiguous."
+    },
+    {
+      "target_lowering_id": "L_shepherd",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 202,
+      "comment": "Entity 'shepherd' (kind=agent) exists in the substrate and corresponds to C_shepherd. Terse but correct."
+    },
+    {
+      "target_lowering_id": "L_messenger",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 203,
+      "comment": "Entity 'messenger' (kind=agent) exists in the substrate and corresponds to C_messenger. The binding is straightforward and accurate."
+    },
+    {
+      "target_lowering_id": "L_tiresias",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 204,
+      "comment": "The binding itself is correct (substrate entity 'tiresias' exists), but the annotation's parenthetical — 'the blind prophet, IC Throughline participant' — is misleading. T_impact_jocasta is owned by C_jocasta; Tiresias appears in no Scene that advances the IC throughline. He participates in S_tiresias_accusation, which advances T_overall_plague and T_mc_oedipus. The annotation should drop or correct the IC throughline claim."
+    },
+    {
+      "target_lowering_id": "L_creon",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 205,
+      "comment": "Entity 'creon' (kind=agent) exists in the substrate and corresponds to C_creon. The annotation's note about Creon taking authority after Oedipus's fall is substantiated by E_exile where creon is the agent enacting the banishment."
+    },
+    {
+      "target_lowering_id": "L_jocasta_doubt_speech",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 210,
+      "comment": "The binding (Scene → E_jocasta_mentions_crossroads) is well-grounded, and the annotation accurately identifies B_ic_1 and B_mc_3. However, the Scene also advances T_relationship_oj via B_rel_2 ('Jocasta tries to comfort him; her counter-premise about prophecies is the marriage's voice for the wrong answer'), and the annotation omits this. Since the annotation is characterizing what the Scene structurally does, the relationship throughline beat should be acknowledged."
+    },
+    {
+      "target_lowering_id": "L_messenger_arrives",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 211,
+      "comment": "The 1-to-2 binding is well-justified: E_messenger_polybus_dead (τ_s=7, Polybus death announcement) and E_messenger_adoption_reveal (τ_s=8, adoption reveal) are separate substrate events with distinct epistemic effects, bundled under one Dramatic Scene. The annotation's rationale that their epistemic effects are distinct is confirmed by the substrate's separate τ_s values and differing effect counts (3 vs. 5)."
+    },
+    {
+      "target_lowering_id": "L_jocasta_realizes",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 212,
+      "comment": "The binding is correct: E_jocasta_realizes (type=realization, agent=jocasta, τ_s=9) corresponds to S_jocasta_realizes. The annotation's claim about 'dislodgement of her dead(the-exposed-baby) belief' is a reasonable interpretive reading of a realization event involving the abstract entity 'the-exposed-baby' present in the substrate."
+    },
+    {
+      "target_lowering_id": "L_shepherd_testimony",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 213,
+      "comment": "Direct 1-to-1 binding. E_shepherd_testimony (type=utterance, speaker=shepherd, listener=oedipus, τ_s=12) corresponds exactly to S_shepherd_testimony's dramatic content. The annotation accurately characterizes the relationship."
+    },
+    {
+      "target_lowering_id": "L_anagnorisis",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 214,
+      "comment": "E_oedipus_anagnorisis (type=realization, agent=oedipus, τ_s=13, effect_count=4) directly realizes S_anagnorisis. The annotation's claim that this is the structural climax in both dialects is well-supported: the Dramatic beat B_mc_5 (beat_type=climax) lands here, and the substrate event carries the highest effect count among realization-type events."
+    },
+    {
+      "target_lowering_id": "L_tiresias_accusation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 221,
+      "comment": "E_tiresias_accusation (type=utterance, speaker=tiresias, listener=oedipus, τ_s=3) correctly realizes S_tiresias_accusation. The annotation's claim that Tiresias's accusation is the 'first source of that identity' in Oedipus's held set is supported by the substrate timeline — no earlier event introduces the killer identity to Oedipus."
+    },
+    {
+      "target_lowering_id": "L_jocasta_hangs",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 223,
+      "comment": "E_jocasta_suicide (type=death, agent=jocasta, τ_s=14) correctly realizes S_jocasta_hangs. The annotation accurately notes the offstage reporting and the world fact dead(jocasta)."
+    },
+    {
+      "target_lowering_id": "L_self_blinding",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 224,
+      "comment": "E_self_blinding (type=blinding, agent=oedipus, τ_s=15) correctly realizes S_self_blinding. The annotation's claim about world fact blinded(oedipus) is consistent with the event type and participant structure."
+    },
+    {
+      "target_lowering_id": "L_exile",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 225,
+      "comment": "E_exile (type=exile, agent=creon, subject=oedipus, τ_s=17) correctly realizes S_exile. The annotation accurately reflects the substrate's participant roles — Creon as agent (enactor) and Oedipus as subject (the exiled)."
+    },
+    {
+      "target_lowering_id": "L_prologue_plague_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 220,
+      "comment": "The PENDING annotation correctly identifies why no substrate event exists (the substrate slice begins at the irony machinery and skips the prologue). It accurately describes what the Scene would require: a substrate event for the city's appeal to the king and his pledge. The metadata corroborates."
+    },
+    {
+      "target_lowering_id": "L_discovery_and_crown_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "rejected",
+      "anchor_τ_a": 222,
+      "comment": "The upper_record 'dramatic:S_discovery_and_crown' does not exist in the Dramatic dialect for this story — no Scene with that id appears in the records. The annotation explicitly acknowledges this ('corresponds to no Oedipus Scene') and references a Macbeth analog, suggesting this is a cross-story artifact. A Lowering binding to a non-existent upper record is structurally invalid regardless of PENDING status; this should be removed rather than maintained as a placeholder."
+    },
+    {
+      "target_lowering_id": "L_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 230,
+      "comment": "The binding maps T_mc_oedipus to 13 substrate events spanning τ_s=-100 to 17, which correctly covers Oedipus's arc from birth through exile. The annotation's decision to exclude E_jocasta_realizes and E_jocasta_suicide (IC throughline events) is well-reasoned. The omission of E_exposure_and_rescue is also justified by the substrate's participant structure — that event names 'the-exposed-baby' rather than 'oedipus', reflecting the identity gap that the anagnorisis later collapses."
+    }
+  ],
+  "verifier_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check's 10/13 (77%) external-action-shaped event ratio is a reasonable threshold for confirming Activity domain. Looking at the MC throughline's substrate events, the majority are indeed external actions (killing, marriage, utterances, blinding, exile), with the realization and prophecy events as the internal-state minority. The 77% figure aligns with a throughline whose conflict source is in doing rather than in a fixed state, situation, or manipulation.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:domain-assignment",
+        "verdict": "approved",
+        "match_strength": 0.7692307692307693,
+        "target_record": "dramatica-complete:DA_mc",
+        "comment": "10/13 (77%) MC-Throughline events are external-action-shaped (EK2); 3 are internal-state-shaped. Consistent with Activity domain."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The verdict is well-grounded — 77% external-action events supports Do-er. However, this check uses the same signal (EK2 external-action-shapedness) and the same data (10/13 events) as vr_0's Domain=Activity check. This is expected since Activity domain and Do-er approach are theoretically correlated in Dramatica, but it means these two checks are not independent evidence. The qualification is that approval of DSP_approach on these grounds is structurally entailed by approval of DA_mc, not an additional data point.",
+      "suggested_signature": "Consider tracking whether the check for DSP_approach could incorporate a distinct signal — e.g., whether the MC initiates action versus reacts within those external events — to differentiate it from the Domain=Activity check.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-approach",
+        "verdict": "approved",
+        "match_strength": 0.7692307692307693,
+        "target_record": "dramatica-complete:DSP_approach",
+        "comment": "Oedipus participates in 13 events; 10 (77%) are external-action-shaped (EK2). Do-er approach confirmed."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The optionlock reading is well-supported by the Oedipus Rex narrative structure: each witness (Tiresias, Jocasta, the Messenger, the Shepherd) eliminates an alternative explanation, converging on the single remaining answer. The check's identification of 'middle-arc convergence' with identity-resolution and rule-emergence signals captures this narrowing. The 0.67 strength (2/3 signal kinds) is an honest reflection of the evidence, and the check explicitly explains which signal kinds fired.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit",
+        "verdict": "approved",
+        "match_strength": 0.6666666666666666,
+        "target_record": "dramatica-complete:DSP_limit",
+        "comment": "DSP_limit=Optionlock declared; substrate exhibits middle-arc convergence (identity-resolution:7, rule-emergence:9; positions: 4 middle-arc, 12 peripheral-pre, 0 terminal). Arc ends because alternatives are eliminated (LT2 + LT7). Strength 0.67 reflects 2/3 signal kinds firing."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check correctly applies the Dramatica Outcome=Success criterion: the OS goal (identify the pollution) is achieved, as parricide(oedipus, laius) is world-derivable at τ_s=17 via the inference chain. In Dramatica, Success/Failure is independent of personal cost — the devastating nature of the discovery for Oedipus is captured by Judgment=Bad, not Outcome. The substrate evidence (identity substitution enabling derivation) is specific and sound.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:dsp-outcome",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_outcome",
+        "comment": "parricide(oedipus, laius) is world-derivable at τ_s=17; Outcome=Success claim (OS goal — plague-killer identified) is supported by substrate via the inference-01 rule chain at end of fabula."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check traces the self-identity (oedipus ↔ the-exposed-baby) from absent at τ_s=0 through emergence at τ_s=13 to persistence at τ_s=17, constituting an 'epistemic-ruin trajectory.' This is precise substrate grounding for Judgment=Bad: Oedipus's personal state at the end is catastrophically worse (blinded, exiled, identity destroyed) than at the start (confident king). The 1.0 match strength is justified.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-judgment",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_judgment",
+        "comment": "Oedipus's self-identity (oedipus ↔ the-exposed-baby) does not hold at τ_s=0; emerges at τ_s=13 (anagnorisis); still holds at τ_s=17. Epistemic-ruin trajectory consistent with Judgment=Bad."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The core verdict is sound: the identity transition at τ_s=13 (71% through the arc) and the behavioral shift (external-action ratio from 90% pre-anagnorisis to 33% post-anagnorisis) are strong Change signals. The qualification concerns the OQ1 note that the check itself flagged: whether Oedipus's self-blinding constitutes adoption of Jocasta's 'don't look' counter-premise is genuinely ambiguous. The self-blinding can be read either as paradigm-adoption (aligning with Jocasta's view that sight/knowledge destroys) or as self-punishment (remaining within his own paradigm of justice). Banking this test is reasonable, but it's worth recording that the IC-paradigm-adoption layer is the theoretically decisive one for Change in Dramatica, and its ambiguity should weight the confidence downward from 1.0.",
+      "suggested_signature": "Consider whether the self-blinding event's semantic relationship to Jocasta's 'stop looking' plea (E_jocasta_realizes) can be scored — e.g., whether the MC's post-transition actions semantically mirror the IC's stated counter-premise, beyond mere behavioral shift.",
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-resolve",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_resolve",
+        "comment": "Oedipus's self-identity transition lands at τ_s=13 (71% through the [3, 17] arc) — a mid-arc transition consistent with Resolve=Change. Distinct from Judgment=Bad: Judgment evaluates final state; Resolve evaluates whether a transition occurred. [RE2 end-state: external-action ratio shifts from 90% (pre-anagnorisis, n=10) to 33% (post-anagnorisis, n=3) — behavioral shift detected; Change signal strengthened at the end-state layer] [RR3 IC-correlation: Jocasta throughline event at τ_s=9 precedes anagnorisis by gap=4; IC-driven Change signal present. OQ1: Oedipus's post-transition behavior (self-blinding) does not unambiguously adopt Jocasta's 'don't look' counter-premise — the strict IC-paradigm-adoption test is banked]"
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The pursuit/consequential count shift (5/0 pre-anagnorisis → 0/2 post-anagnorisis) is a clean Growth=Stop signature. Oedipus's relentless pursuit of truth (summoning witnesses, questioning, pressing) ceases entirely at the anagnorisis; his remaining actions (self-blinding, accepting exile) are consequences rather than pursuit moves. The AG5 criterion is cleanly satisfied.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-growth",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_growth",
+        "comment": "Oedipus's pursuit-event count drops 5→0 across the anagnorisis pivot (τ_s=13); post-anagnorisis events are all consequential-shaped (self-blinding + exile). Clean Growth=Stop signature per AG5. pursuit/consequential counts — pre-anagnorisis (τ_s<13): 5/0; post-anagnorisis: 0/2."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check precisely identifies τ_s=13 as the epistemic pivot where Oedipus's knowledge first supports the parricide derivation via identity-substitution. Before the anagnorisis, his knowledge cannot connect 'oedipus' to 'the-crossroads-killer' to 'laius's killer'; afterward, the equivalence classes collapse and the derivation follows. The IG2 characterization of this pivot as the goal's trajectory landing is well-grounded in the substrate's identity-resolution machinery.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:story-goal",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_goal",
+        "comment": "Story_goal (identification): Oedipus's knowledge supports parricide(oedipus, laius) from τ_s=13 (anagnorisis) onward via identity-substitution. Pre-anagnorisis his knowledge does not support the derivation — the equivalence class linking oedipus and laius hasn't collapsed yet. The epistemic pivot at τ_s=13 IS the goal's trajectory landing (IG2)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check correctly verifies that at τ_s=17, both conditions for averting the Story_consequence are met: parricide(oedipus, laius) derives (pollution identified) and exiled(oedipus) holds (pollution expelled). This is structurally consistent with Outcome=Success as confirmed by vr_3. The consequence (ongoing plague) is averted because both the identification and expulsion requirements of the Story_goal have been satisfied in the substrate's terminal state.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:story-consequence",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_consequence",
+        "comment": "at τ_s=17: parricide(oedipus, laius) derives (pollution identified) AND exiled(oedipus) holds (pollution expelled). Story_consequence is averted — the plague-cause has been found and removed, as Success=Outcome predicts."
+      }
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "lowering_id": "L_oedipus",
+        "verdict": "approved",
+        "rationale": "The binding is correct: substrate entity 'oedipus' (kind=agent) exists and corresponds to Dramatic Character C_oedipus. The annotation helpfully notes that function labels (Protagonist, Emotion) stay dialect-local, which is an accurate framing of the upper/lower boundary."
+      },
+      {
+        "lowering_id": "L_jocasta",
+        "verdict": "approved",
+        "rationale": "Entity 'jocasta' (kind=agent) exists in the substrate and corresponds to C_jocasta. The annotation is terse but the binding is structurally sound and the correspondence is unambiguous."
+      },
+      {
+        "lowering_id": "L_shepherd",
+        "verdict": "approved",
+        "rationale": "Entity 'shepherd' (kind=agent) exists in the substrate and corresponds to C_shepherd. Terse but correct."
+      },
+      {
+        "lowering_id": "L_messenger",
+        "verdict": "approved",
+        "rationale": "Entity 'messenger' (kind=agent) exists in the substrate and corresponds to C_messenger. The binding is straightforward and accurate."
+      },
+      {
+        "lowering_id": "L_tiresias",
+        "verdict": "needs-work",
+        "rationale": "The binding itself is correct (substrate entity 'tiresias' exists), but the annotation's parenthetical — 'the blind prophet, IC Throughline participant' — is misleading. T_impact_jocasta is owned by C_jocasta; Tiresias appears in no Scene that advances the IC throughline. He participates in S_tiresias_accusation, which advances T_overall_plague and T_mc_oedipus. The annotation should drop or correct the IC throughline claim."
+      },
+      {
+        "lowering_id": "L_creon",
+        "verdict": "approved",
+        "rationale": "Entity 'creon' (kind=agent) exists in the substrate and corresponds to C_creon. The annotation's note about Creon taking authority after Oedipus's fall is substantiated by E_exile where creon is the agent enacting the banishment."
+      },
+      {
+        "lowering_id": "L_jocasta_doubt_speech",
+        "verdict": "needs-work",
+        "rationale": "The binding (Scene → E_jocasta_mentions_crossroads) is well-grounded, and the annotation accurately identifies B_ic_1 and B_mc_3. However, the Scene also advances T_relationship_oj via B_rel_2 ('Jocasta tries to comfort him; her counter-premise about prophecies is the marriage's voice for the wrong answer'), and the annotation omits this. Since the annotation is characterizing what the Scene structurally does, the relationship throughline beat should be acknowledged."
+      },
+      {
+        "lowering_id": "L_messenger_arrives",
+        "verdict": "approved",
+        "rationale": "The 1-to-2 binding is well-justified: E_messenger_polybus_dead (τ_s=7, Polybus death announcement) and E_messenger_adoption_reveal (τ_s=8, adoption reveal) are separate substrate events with distinct epistemic effects, bundled under one Dramatic Scene. The annotation's rationale that their epistemic effects are distinct is confirmed by the substrate's separate τ_s values and differing effect counts (3 vs. 5)."
+      },
+      {
+        "lowering_id": "L_jocasta_realizes",
+        "verdict": "approved",
+        "rationale": "The binding is correct: E_jocasta_realizes (type=realization, agent=jocasta, τ_s=9) corresponds to S_jocasta_realizes. The annotation's claim about 'dislodgement of her dead(the-exposed-baby) belief' is a reasonable interpretive reading of a realization event involving the abstract entity 'the-exposed-baby' present in the substrate."
+      },
+      {
+        "lowering_id": "L_shepherd_testimony",
+        "verdict": "approved",
+        "rationale": "Direct 1-to-1 binding. E_shepherd_testimony (type=utterance, speaker=shepherd, listener=oedipus, τ_s=12) corresponds exactly to S_shepherd_testimony's dramatic content. The annotation accurately characterizes the relationship."
+      },
+      {
+        "lowering_id": "L_anagnorisis",
+        "verdict": "approved",
+        "rationale": "E_oedipus_anagnorisis (type=realization, agent=oedipus, τ_s=13, effect_count=4) directly realizes S_anagnorisis. The annotation's claim that this is the structural climax in both dialects is well-supported: the Dramatic beat B_mc_5 (beat_type=climax) lands here, and the substrate event carries the highest effect count among realization-type events."
+      },
+      {
+        "lowering_id": "L_tiresias_accusation",
+        "verdict": "approved",
+        "rationale": "E_tiresias_accusation (type=utterance, speaker=tiresias, listener=oedipus, τ_s=3) correctly realizes S_tiresias_accusation. The annotation's claim that Tiresias's accusation is the 'first source of that identity' in Oedipus's held set is supported by the substrate timeline — no earlier event introduces the killer identity to Oedipus."
+      },
+      {
+        "lowering_id": "L_jocasta_hangs",
+        "verdict": "approved",
+        "rationale": "E_jocasta_suicide (type=death, agent=jocasta, τ_s=14) correctly realizes S_jocasta_hangs. The annotation accurately notes the offstage reporting and the world fact dead(jocasta)."
+      },
+      {
+        "lowering_id": "L_self_blinding",
+        "verdict": "approved",
+        "rationale": "E_self_blinding (type=blinding, agent=oedipus, τ_s=15) correctly realizes S_self_blinding. The annotation's claim about world fact blinded(oedipus) is consistent with the event type and participant structure."
+      },
+      {
+        "lowering_id": "L_exile",
+        "verdict": "approved",
+        "rationale": "E_exile (type=exile, agent=creon, subject=oedipus, τ_s=17) correctly realizes S_exile. The annotation accurately reflects the substrate's participant roles — Creon as agent (enactor) and Oedipus as subject (the exiled)."
+      },
+      {
+        "lowering_id": "L_prologue_plague_pending",
+        "verdict": "approved",
+        "rationale": "The PENDING annotation correctly identifies why no substrate event exists (the substrate slice begins at the irony machinery and skips the prologue). It accurately describes what the Scene would require: a substrate event for the city's appeal to the king and his pledge. The metadata corroborates."
+      },
+      {
+        "lowering_id": "L_discovery_and_crown_pending",
+        "verdict": "rejected",
+        "rationale": "The upper_record 'dramatic:S_discovery_and_crown' does not exist in the Dramatic dialect for this story — no Scene with that id appears in the records. The annotation explicitly acknowledges this ('corresponds to no Oedipus Scene') and references a Macbeth analog, suggesting this is a cross-story artifact. A Lowering binding to a non-existent upper record is structurally invalid regardless of PENDING status; this should be removed rather than maintained as a placeholder."
+      },
+      {
+        "lowering_id": "L_mc_throughline",
+        "verdict": "approved",
+        "rationale": "The binding maps T_mc_oedipus to 13 substrate events spanning τ_s=-100 to 17, which correctly covers Oedipus's arc from birth through exile. The annotation's decision to exclude E_jocasta_realizes and E_jocasta_suicide (IC throughline events) is well-reasoned. The omission of E_exposure_and_rescue is also justified by the substrate's participant structure — that event names 'the-exposed-baby' rather than 'oedipus', reflecting the identity gap that the anagnorisis later collapses."
+      }
+    ],
+    "verifier_commentaries": [
+      {
+        "target_review_id": "vr_0",
+        "assessment": "endorses",
+        "rationale": "The check's 10/13 (77%) external-action-shaped event ratio is a reasonable threshold for confirming Activity domain. Looking at the MC throughline's substrate events, the majority are indeed external actions (killing, marriage, utterances, blinding, exile), with the realization and prophecy events as the internal-state minority. The 77% figure aligns with a throughline whose conflict source is in doing rather than in a fixed state, situation, or manipulation.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_1",
+        "assessment": "qualifies",
+        "rationale": "The verdict is well-grounded — 77% external-action events supports Do-er. However, this check uses the same signal (EK2 external-action-shapedness) and the same data (10/13 events) as vr_0's Domain=Activity check. This is expected since Activity domain and Do-er approach are theoretically correlated in Dramatica, but it means these two checks are not independent evidence. The qualification is that approval of DSP_approach on these grounds is structurally entailed by approval of DA_mc, not an additional data point.",
+        "suggested_signature": "Consider tracking whether the check for DSP_approach could incorporate a distinct signal — e.g., whether the MC initiates action versus reacts within those external events — to differentiate it from the Domain=Activity check."
+      },
+      {
+        "target_review_id": "vr_2",
+        "assessment": "endorses",
+        "rationale": "The optionlock reading is well-supported by the Oedipus Rex narrative structure: each witness (Tiresias, Jocasta, the Messenger, the Shepherd) eliminates an alternative explanation, converging on the single remaining answer. The check's identification of 'middle-arc convergence' with identity-resolution and rule-emergence signals captures this narrowing. The 0.67 strength (2/3 signal kinds) is an honest reflection of the evidence, and the check explicitly explains which signal kinds fired.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_3",
+        "assessment": "endorses",
+        "rationale": "The check correctly applies the Dramatica Outcome=Success criterion: the OS goal (identify the pollution) is achieved, as parricide(oedipus, laius) is world-derivable at τ_s=17 via the inference chain. In Dramatica, Success/Failure is independent of personal cost — the devastating nature of the discovery for Oedipus is captured by Judgment=Bad, not Outcome. The substrate evidence (identity substitution enabling derivation) is specific and sound.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_4",
+        "assessment": "endorses",
+        "rationale": "The check traces the self-identity (oedipus ↔ the-exposed-baby) from absent at τ_s=0 through emergence at τ_s=13 to persistence at τ_s=17, constituting an 'epistemic-ruin trajectory.' This is precise substrate grounding for Judgment=Bad: Oedipus's personal state at the end is catastrophically worse (blinded, exiled, identity destroyed) than at the start (confident king). The 1.0 match strength is justified.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_5",
+        "assessment": "qualifies",
+        "rationale": "The core verdict is sound: the identity transition at τ_s=13 (71% through the arc) and the behavioral shift (external-action ratio from 90% pre-anagnorisis to 33% post-anagnorisis) are strong Change signals. The qualification concerns the OQ1 note that the check itself flagged: whether Oedipus's self-blinding constitutes adoption of Jocasta's 'don't look' counter-premise is genuinely ambiguous. The self-blinding can be read either as paradigm-adoption (aligning with Jocasta's view that sight/knowledge destroys) or as self-punishment (remaining within his own paradigm of justice). Banking this test is reasonable, but it's worth recording that the IC-paradigm-adoption layer is the theoretically decisive one for Change in Dramatica, and its ambiguity should weight the confidence downward from 1.0.",
+        "suggested_signature": "Consider whether the self-blinding event's semantic relationship to Jocasta's 'stop looking' plea (E_jocasta_realizes) can be scored — e.g., whether the MC's post-transition actions semantically mirror the IC's stated counter-premise, beyond mere behavioral shift."
+      },
+      {
+        "target_review_id": "vr_6",
+        "assessment": "endorses",
+        "rationale": "The pursuit/consequential count shift (5/0 pre-anagnorisis → 0/2 post-anagnorisis) is a clean Growth=Stop signature. Oedipus's relentless pursuit of truth (summoning witnesses, questioning, pressing) ceases entirely at the anagnorisis; his remaining actions (self-blinding, accepting exile) are consequences rather than pursuit moves. The AG5 criterion is cleanly satisfied.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_7",
+        "assessment": "endorses",
+        "rationale": "The check precisely identifies τ_s=13 as the epistemic pivot where Oedipus's knowledge first supports the parricide derivation via identity-substitution. Before the anagnorisis, his knowledge cannot connect 'oedipus' to 'the-crossroads-killer' to 'laius's killer'; afterward, the equivalence classes collapse and the derivation follows. The IG2 characterization of this pivot as the goal's trajectory landing is well-grounded in the substrate's identity-resolution machinery.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_8",
+        "assessment": "endorses",
+        "rationale": "The check correctly verifies that at τ_s=17, both conditions for averting the Story_consequence are met: parricide(oedipus, laius) derives (pollution identified) and exiled(oedipus) holds (pollution expelled). This is structurally consistent with Outcome=Success as confirmed by vr_3. The consequence (ongoing plague) is averted because both the identification and expulsion requirements of the Story_goal have been satisfied in the substrate's terminal state.",
+        "suggested_signature": null
+      }
+    ]
+  }
+}
