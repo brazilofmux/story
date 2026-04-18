@@ -167,7 +167,18 @@ L_blunt = Lowering(
     upper_record=_dramatic("C_blunt"),
     lower_records=(_substrate("major_blunt"),),
     annotation=Annotation(
-        text="C_blunt (Sidekick) → Entity 'major_blunt'.",
+        text=("C_blunt (Sidekick) → Entity 'major_blunt'. The "
+              "retired major who becomes Poirot's informal informant "
+              "in the household — his knowledge of Fernly Park and "
+              "its inhabitants (including a quiet regard for Flora) "
+              "supplies the ground-level testimony the Skeptic "
+              "(Raglan) refuses to credit. Participates in "
+              "E_poirot_investigates (as witness) and "
+              "E_poirot_reveals_solution (as assembled audience). "
+              "The Sidekick function manifests as provisional support "
+              "— Blunt lends Poirot credibility in the household "
+              "without the institutional challenge a Skeptic or "
+              "Antagonist would bring."),
     ),
     τ_a=105,
 )

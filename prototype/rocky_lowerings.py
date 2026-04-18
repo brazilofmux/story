@@ -273,17 +273,28 @@ L_ice_skating_pending = Lowering(
     annotation=Annotation(
         text=("S_ice_skating (Rocky rents the rink for ten minutes; "
               "walks beside Adrian while she skates; the conversation "
-              "that opens her) has no dedicated substrate event — it is "
-              "a relationship-throughline beat whose work happens "
-              "between world-fact changes, not via them. The content "
-              "lives in the dramatic Beats' prose and will surface via "
-              "descriptions rather than typed fabula. PENDING."),
+              "that opens her) is an author-chosen prose-carried "
+              "relationship-throughline beat. Note that the substrate "
+              "already carries a comparable low-effect social "
+              "interaction — E_pet_store_courtship (type: courtship, "
+              "one effect: characterized_by(adrian, quiet_brightness)) "
+              "— so a substrate encoding IS technically feasible "
+              "(matching the pet-store pattern: a single characterizing "
+              "effect on Adrian's state). The author chose not to for "
+              "Dramatic-vs-substrate-surface-ratio reasons: the "
+              "pet-store-courtship lowering carries enough relationship-"
+              "throughline weight, and the ice-rink scene's work is "
+              "structurally parallel. PENDING keeps the option open "
+              "for a future encoding-extension pass."),
         attention=ATTENTION_INTERPRETIVE,
     ),
     τ_a=326,
     status=LoweringStatus.PENDING,
     metadata={"why_pending": ("relationship beat authored in prose; "
-                              "no typed world-effect to lower to")},
+                              "substrate encoding feasible (cf. "
+                              "E_pet_store_courtship pattern) but "
+                              "deferred for Dramatic/substrate surface-"
+                              "ratio reasons")},
 )
 
 L_first_kiss = Lowering(
@@ -312,9 +323,23 @@ L_training_montage = Lowering(
         text=("S_training_montage (the whole training arc — meat "
               "locker, pre-dawn runs, stairs) realizes as three "
               "substrate events representing onset (τ_s=10), middle "
-              "(meat locker τ_s=15), and peak (stairs τ_s=25). "
-              "Dramatic Scene bundles the montage; substrate splits "
-              "by physical-readiness signposts."),
+              "(meat locker τ_s=15), and peak (stairs τ_s=25) of "
+              "Rocky's physical-readiness arc. The Dramatic Scene "
+              "advances THREE throughlines: T_mc_rocky (B_mc_5 — the "
+              "Do-er's doing at full scale), T_rel_rocky_adrian "
+              "(B_rel_5 — Adrian's sustained witness across the "
+              "montage), and T_ic_apollo (B_ic_3 — Apollo's dismissal "
+              "continuing off-screen). Adrian DOES appear as "
+              "'observer' in E_meat_locker_session (τ_s=15), thinly "
+              "representing the relationship throughline's witness "
+              "dimension in substrate; Apollo / Duke do not appear in "
+              "any of the three bound events — the IC-throughline's "
+              "parallel dismissal is carried in Dramatic-beat prose "
+              "rather than typed world-state. Substrate splits the "
+              "montage by physical-readiness signposts; Dramatic's "
+              "multi-throughline bundling is richer than the "
+              "substrate's single-dimension split, and that asymmetry "
+              "is honest."),
         attention=ATTENTION_INTERPRETIVE,
     ),
     τ_a=328,
@@ -416,10 +441,24 @@ L_mc_throughline = Lowering(
               "fighter to man who went the distance) realizes across "
               "substrate events from τ_s=0 (the Spider Rico club fight) "
               "through τ_s=57 (no rematch). The pre-plot events "
-              "(Mac's injury, Apollo's selection) are OS-Throughline "
-              "(T_overall_fight), not MC — Rocky is not yet a "
-              "participant at those τ_s. Eighteen events total; Rocky "
-              "is a direct participant in all of them."),
+              "(E_apollo_schedules_mac, E_mac_injured, "
+              "E_apollo_selects_rocky) are OS-Throughline "
+              "(T_overall_fight), not MC. The exclusion is **not** "
+              "because Rocky is absent: E_apollo_selects_rocky "
+              "(τ_s=-1) does list `rocky` as the 'selected' "
+              "participant. The exclusion is because that role is "
+              "purely object/receiver — Rocky is selected by Apollo's "
+              "decision, without his knowledge or agency — and the "
+              "MC throughline centers Rocky's own arc. The MC-"
+              "throughline events include a mix of agentive roles "
+              "(fighter, speaker, offerer) and situation-receiving "
+              "roles (listener in E_mickey_clears_locker, downed in "
+              "E_round_one_knockdown, challenger in "
+              "E_jergens_offers_fight). What unifies them is that "
+              "they're ABOUT Rocky's arc — each either originates "
+              "with Rocky or lands on him within his story of "
+              "becoming; they are not tangential OS events that "
+              "happen to mention him. Eighteen MC events total."),
         attention=ATTENTION_INTERPRETIVE,
     ),
     τ_a=340,

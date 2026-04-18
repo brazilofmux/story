@@ -341,10 +341,18 @@ BEATS = (
                                 "innocents with no political pretext")),
     Beat(id="B_mc_8", throughline_id="T_mc_macbeth",
          beat_position=8, beat_type="climax",
-         description_of_change=("Macduff reveals the Caesarean "
-                                "birth; the prophecy's protective "
-                                "reading collapses; Macbeth fights "
-                                "anyway")),
+         description_of_change=("Birnam Wood moves to Dunsinane; the "
+                                "first of the second-encounter "
+                                "prophecy's protective readings "
+                                "collapses; Macbeth hears the "
+                                "impossible has happened and still "
+                                "commits to fighting. The companion "
+                                "Macduff Caesarean-birth reveal is "
+                                "elided at the beat layer in this "
+                                "encoding — its narrative force is "
+                                "absorbed into B_mc_9 (the killing "
+                                "itself), so no separate Scene/Beat "
+                                "pair")),
     Beat(id="B_mc_9", throughline_id="T_mc_macbeth",
          beat_position=9, beat_type="denouement",
          description_of_change=("killed by Macduff; the descent's "

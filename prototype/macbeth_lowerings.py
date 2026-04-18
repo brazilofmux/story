@@ -328,8 +328,15 @@ L_banquo_killing = Lowering(
               "necessity; Fleance escapes; the prophecy's other "
               "promise — Banquo's descendants as kings — stays alive) "
               "realizes as substrate event E_banquo_killed. This is "
-              "the Scene that unilaterally widens M's kinslayer-set "
-              "without LM; the marriage's first private fracture."),
+              "the Scene that widens M's **victim-set** without LM "
+              "(she doesn't plan or know in advance); the marriage's "
+              "first private fracture. Note: Banquo is NOT Macbeth's "
+              "kinsman in the substrate (kinship is authored only "
+              "between Macbeth and Duncan, via "
+              "E_macbeth_kinsman_of_duncan); 'kinslayer' derives from "
+              "the Duncan killing specifically, not from Banquo's. "
+              "The Banquo killing is politically-motivated fratricide-"
+              "of-a-comrade, structurally distinct."),
     ),
     τ_a=215,
     anchor_τ_a=_substrate_event("E_banquo_killed").τ_a,
