@@ -268,7 +268,18 @@ def main() -> int:
         lowerings_to_review=lowerings_to_review,
         reviews_to_comment_on=reviews_to_comment_on,
         current_τ_a=args.current_tau_a,
-        effort=args.effort,
+        effort=args.effort if args.effort != "high" else "medium",
+                            # Override "high" to "medium" for Macbeth —
+                            # "high" generates ~16K-token rationales on
+                            # this Dramatic+Template surface and
+                            # reliably truncates mid-JSON under 16K
+                            # default max_tokens
+        max_tokens=20_000,  # Macbeth's 27-Lowering + 9-check surface
+                            # routinely exceeds the 16K default under
+                            # high effort; values ≥24K hit the
+                            # non-streaming 10-minute SDK limit, so
+                            # 20K is the practical ceiling (combined
+                            # with medium effort to shorten responses)
         dry_run=args.dry_run,
         **template_kwargs,
     )

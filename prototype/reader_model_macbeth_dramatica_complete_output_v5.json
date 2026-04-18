@@ -1,0 +1,583 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 40000,
+    "lowering_ids": [
+      "L_macbeth",
+      "L_lady_macbeth",
+      "L_macduff",
+      "L_banquo",
+      "L_malcolm",
+      "L_witches",
+      "L_duncan",
+      "L_lady_macduff",
+      "L_fleance",
+      "L_prophecy",
+      "L_letter",
+      "L_plot_pending",
+      "L_duncan_killing",
+      "L_discovery_and_crown",
+      "L_banquo_killing",
+      "L_banquet_ghost",
+      "L_second_prophecy",
+      "L_macduff_family",
+      "L_sleepwalking",
+      "L_lady_macbeth_dies",
+      "L_birnam_moves",
+      "L_macbeth_dies",
+      "L_malcolm_crowned",
+      "L_overall_throughline",
+      "L_mc_throughline",
+      "L_ic_throughline",
+      "L_relationship_throughline"
+    ],
+    "verifier_review_count": 9,
+    "lowerings_to_review": null,
+    "reviews_to_comment_on": null,
+    "substrate_context_included": true,
+    "template_records_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_lowering_id": "L_macbeth",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 200,
+      "comment": "The annotation correctly identifies the binding between C_macbeth (Protagonist + Emotion) and substrate entity 'macbeth', notes function labels stay dialect-local, and correctly grounds the moral-derivation chain in substrate events (kinslayer via E_macbeth_kinsman_of_duncan + E_duncan_killed, regicide via E_duncan_killed, tyrant via E_macbeth_crowned and subsequent killings)."
+    },
+    {
+      "target_lowering_id": "L_lady_macbeth",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 201,
+      "comment": "The binding is straightforward. The annotation correctly names both the Contagonist function and the IC throughline ownership, and correctly identifies sleepwalking and death as substrate events (E_sleepwalking, E_lady_macbeth_dies). The claim about her Dramatic role pushing Macbeth across the moral threshold is well-supported by the Scene-level records."
+    },
+    {
+      "target_lowering_id": "L_macduff",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 202,
+      "comment": "The annotation is admirably honest about the interpretive choice of Antagonist, names alternative readings, and correctly notes the substrate stays neutral — it simply records killed(macduff, macbeth) at E_macbeth_killed. The attention='interpretive' flag is appropriate for this kind of contested assignment."
+    },
+    {
+      "target_lowering_id": "L_banquo",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 203,
+      "comment": "The annotation is minimal ('C_banquo (Sidekick) → Entity banquo') and doesn't justify the Sidekick assignment. Given that Banquo receives prophecy alongside Macbeth (E_prophecy_first lists both as recipients), resists acting on it, and is killed as a perceived threat, a brief note on what substrate evidence supports the Sidekick label — or what tension exists — would strengthen the binding."
+    },
+    {
+      "target_lowering_id": "L_malcolm",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 204,
+      "comment": "Like L_banquo, this is a bare binding with no justification for the Reason function label. Malcolm's substrate footprint is thin (he appears primarily at E_malcolm_crowned and implicitly in the forces at E_birnam_moves), and the Reason assignment deserves at least a note about what substrate evidence supports it or why the label is dialect-local only."
+    },
+    {
+      "target_lowering_id": "L_witches",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 205,
+      "comment": "The annotation is well-crafted: it names the interpretive ambiguity (real agents vs. tricksters vs. projections), flags that the substrate stays agnostic, and correctly qualifies the Guardian assignment as leaning on the warn-of-consequences reading. The attention='interpretive' flag is appropriate."
+    },
+    {
+      "target_lowering_id": "L_duncan",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 206,
+      "comment": "A minimal but correct structural binding. Duncan has no Dramatica function labels, appears in multiple substrate events (E_duncan_king_of_scotland, E_duncan_visits, E_duncan_killed, E_duncan_discovered), and the binding is uncontroversial."
+    },
+    {
+      "target_lowering_id": "L_lady_macduff",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 207,
+      "comment": "Minimal but correct. Lady Macduff has no function labels and appears in the substrate as a victim in E_macduff_family_killed. The binding is straightforward."
+    },
+    {
+      "target_lowering_id": "L_fleance",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 208,
+      "comment": "Minimal but correct. Fleance has no function labels and is referenced in the substrate implicitly through E_banquo_killed (where the annotation on S_banquo_killing notes Fleance's escape). The binding is uncontroversial."
+    },
+    {
+      "target_lowering_id": "L_prophecy",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 210,
+      "comment": "The annotation correctly maps S_prophecy to E_prophecy_first, identifies the two throughline advances (T_overall_scotland inciting, T_mc_macbeth inciting), and distinguishes the Scene's interpretive claim (ambition now has a name) from the substrate's literal recording (prophetic speech-acts, KNOWN state). Anchor τ_a=10 matches the substrate event."
+    },
+    {
+      "target_lowering_id": "L_letter",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 211,
+      "comment": "The annotation correctly maps S_letter to E_letter_to_lady_macbeth, identifies the throughline advances (relationship and IC inciting), and distinguishes the Scene's interpretive claim (she decides for both) from the substrate's literal recording (letter-passing, knowledge uptake). Anchor τ_a=12 matches."
+    },
+    {
+      "target_lowering_id": "L_plot_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 212,
+      "comment": "The PENDING annotation is well-justified: it correctly identifies that the substrate elides the plotting between E_letter_to_lady_macbeth (τ_s=2) and E_duncan_visits (τ_s=3)/E_duncan_killed (τ_s=5), names two resolution paths (extend substrate or reclassify the Scene), and explains what would need to exist for the binding to activate."
+    },
+    {
+      "target_lowering_id": "L_duncan_killing",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 213,
+      "comment": "The annotation correctly maps S_duncan_killing to E_duncan_killed, identifies the moral-derivation chain (kinslayer/regicide/breach_of_hospitality under the four RULES), and notes the Scene's three throughline advances. The substrate event confirms killer=macbeth, victim=duncan at τ_s=5."
+    },
+    {
+      "target_lowering_id": "L_discovery_and_crown",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 214,
+      "comment": "The annotation correctly explains the one-Scene-to-two-events mapping, justifies why the substrate keeps them separate (different effects), and identifies the argumentative work (public order restored on false foundations). The note about king(macbeth, scotland) as precondition for TYRANT_RULE is a useful cross-reference."
+    },
+    {
+      "target_lowering_id": "L_banquo_killing",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 215,
+      "comment": "The annotation is notably precise: it correctly distinguishes Banquo's killing from Duncan's in terms of the kinship relation (kinship authored only between Macbeth and Duncan), notes the victim-set widening, the marriage fracture (LM excluded), and Fleance's escape. The substrate event confirms orderer=macbeth, victim=banquo."
+    },
+    {
+      "target_lowering_id": "L_banquet_ghost",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 216,
+      "comment": "The annotation correctly maps S_banquet_ghost to E_banquet_ghost, notes the substrate authors the apparition as perception by Macbeth alone without metaphysical commitment, and correctly identifies this as the kind of ambiguity the Scene's conflict_shape leaves open. The attention='interpretive' flag is well-placed."
+    },
+    {
+      "target_lowering_id": "L_second_prophecy",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 217,
+      "comment": "The annotation correctly maps S_second_prophecy to E_prophecy_second, identifies the three told_by KnowledgeEffects, and makes a careful distinction: M's interpretation of the prophecies as invulnerability is a derived belief the substrate doesn't author directly, with dislodgement at τ_s=17 being where this gets observed."
+    },
+    {
+      "target_lowering_id": "L_macduff_family",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 218,
+      "comment": "The annotation correctly bundles E_macduff_flees and E_macduff_family_killed, names Macduff's flight as the precondition the Scene references, and adds useful context about the TYRANT_RULE firing point vs. the moral-intuitive point at which 'tyrant' lands. The substrate confirms both events."
+    },
+    {
+      "target_lowering_id": "L_sleepwalking",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 219,
+      "comment": "The annotation correctly maps S_sleepwalking to E_sleepwalking, notes the substrate records utterances and overhearing, and honestly flags that the marriage-in-name-only result is a Scene-level claim the substrate doesn't directly assert."
+    },
+    {
+      "target_lowering_id": "L_lady_macbeth_dies",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 220,
+      "comment": "The annotation correctly maps S_lady_macbeth_dies to E_lady_macbeth_dies, identifies what the substrate records (dead(lady_macbeth)) vs. what stays dialect-local (the 'tomorrow' soliloquy), and correctly notes the IC silencing and last-human-attachment loss as Scene-level interpretive claims."
+    },
+    {
+      "target_lowering_id": "L_birnam_moves",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 221,
+      "comment": "The annotation correctly maps S_birnam_moves to E_birnam_moves, identifies the substrate's authoring of troop movement and M's epistemic update (prophecy protection collapses), and the Scene's interpretive framing of literal truth as catastrophically misleading."
+    },
+    {
+      "target_lowering_id": "L_macbeth_dies",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 222,
+      "comment": "The annotation correctly bundles E_macduff_reveals_birth and E_macbeth_killed, explains why the substrate keeps them separate (different effects: epistemic update vs. death), notes both at τ_s=17 with sequential τ_a, and ties this to the central conflict's resolution."
+    },
+    {
+      "target_lowering_id": "L_malcolm_crowned",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 223,
+      "comment": "The annotation correctly maps S_malcolm_crowned to E_malcolm_crowned and provides useful detail about the substrate mechanics — king(malcolm, scotland) asserted, king(macbeth, scotland) dislodged via asserts=False as inference-layer cleanup. The substrate confirms new_king=malcolm at τ_s=18."
+    },
+    {
+      "target_lowering_id": "L_overall_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 230,
+      "comment": "The annotation correctly maps T_overall_scotland across ten substrate events spanning τ_s ∈ [-30, 18], identifies Duncan's reign as baseline, and correctly notes the COMPLICATES side-on-argument. The event selection covers the kingdom's order trajectory comprehensively."
+    },
+    {
+      "target_lowering_id": "L_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 231,
+      "comment": "The annotation maps T_mc_macbeth across thirteen substrate events spanning τ_s ∈ [-5, 17], correctly identifies the moral-descent arc from hero-defender through tyranny to dissolution, and notes the AFFIRMS side-on-argument. The event list is comprehensive for Macbeth's trajectory."
+    },
+    {
+      "target_lowering_id": "L_ic_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 232,
+      "comment": "The annotation correctly maps T_impact_lady_macbeth across five substrate events, and makes the important interpretive note that E_banquo_killed is omitted because M acts without telling LM — the omission is itself a structural signal of the partnership's rupture. The position_range [2, 14] correctly bounds her dramatic agency."
+    },
+    {
+      "target_lowering_id": "L_relationship_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 233,
+      "comment": "The annotation correctly includes E_banquo_killed (unlike the IC throughline) because the rupture is itself a relationship-event. The distinction between the IC and relationship throughlines sharing the same position_range but differing in event inclusion is well-justified and interpretively grounded."
+    }
+  ],
+  "verifier_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The partial-match at 65% weighted is reasonable given the MC domain assignment of Activity. The check correctly identifies that non-Activity events like the inciting prophecy (E_prophecy_first, a received-knowledge event) and the banquet ghost (E_banquet_ghost, an apparition/perception event) carry dramatic weight. However, Dramatica's Activity domain encompasses 'doing' broadly — receiving prophecy arguably initiates Activity by triggering the MC's pursuit-chain. The 65% figure may undercount Activity-compatible events depending on how strictly 'external action' is operationalized.",
+      "suggested_signature": "Consider whether prophecy_received events that directly trigger the MC's action-chain (pursuit → killing → killing) should count as Activity-domain-adjacent, since they initiate the doing rather than merely representing a fixed attitude or situation.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:domain-assignment",
+        "verdict": "partial-match",
+        "match_strength": 0.6470588235294118,
+        "target_record": "dramatica-complete:DA_mc",
+        "comment": "raw 9/13 (69%); BW4-weighted 11.0/17.0 (65%) — beat_type significance applied. Activity-domain classification partially supported; the non-Activity events (4 raw) include dramatically heavy beats (inciting prophecy, midpoint ghost) whose weight shifts the honest signal below the raw ratio."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "71% external-action-shaped events for Macbeth aligns well with a Do-er approach classification. The substrate confirms Macbeth as killer/orderer in multiple killings (E_duncan_killed, E_banquo_killed, E_macduff_family_killed) and as a battlefield agent (E_macbeth_defends_scotland). His responses to problems are consistently action-shaped rather than deliberation-shaped.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-approach",
+        "verdict": "approved",
+        "match_strength": 0.7142857142857143,
+        "target_record": "dramatica-complete:DSP_approach",
+        "comment": "Macbeth participates in 14 events; 10 (71%) are external-action-shaped (EK2). Do-er approach confirmed."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The Optionlock classification is well-supported. The substrate shows Macbeth's options narrowing: Banquo eliminated, Macduff's family eliminated, but Fleance escapes and Macduff survives. The prophecy conditions (Birnam Wood, none-of-woman-born) function as option-boundaries that collapse sequentially. The arc ends not because time runs out but because Macbeth has no remaining moves — exactly optionlock semantics.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit",
+        "verdict": "approved",
+        "match_strength": 0.6666666666666666,
+        "target_record": "dramatica-complete:DSP_limit",
+        "comment": "DSP_limit=Optionlock declared; substrate exhibits middle-arc convergence (retraction:1, rule-emergence:3; positions: 3 middle-arc, 0 peripheral-pre, 1 terminal). Arc ends because alternatives are eliminated (LT2 + LT7). Strength 0.67 reflects 2/3 signal kinds firing."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "dead(macbeth) at τ_s=17-18 and king(malcolm) at τ_s=18 directly confirm the OS goal of restoring Scotland's succession. The check's match_strength=1.0 is warranted; the substrate unambiguously supports Outcome=Success.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:dsp-outcome",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_outcome",
+        "comment": "dead(macbeth) holds at τ_s=18; Outcome=Success claim (OS goal — Scotland freed of Macbeth — lands) is supported by substrate at end of fabula."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The tyrant() trajectory (absent at τ_s=0, emerges at τ_s=6 via coronation + kinslayer + regicide, persists through death) is a clean emerges-and-persists pattern. This is the correct signature for Judgment=Bad: the MC acquires and retains the negative judgment-marker through end-of-arc.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-judgment",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_judgment",
+        "comment": "tyrant(macbeth) does not hold at τ_s=0; emerges at τ_s=6; still holds at τ_s=17 (moment before death at τ_s=18). Emerges-and-persists trajectory consistent with Judgment=Bad."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The check correctly identifies the tyrant-transition at τ_s=6 as a mid-arc identity-level change consistent with Resolve=Change. However, the check's own v3 probe observation — that Macbeth's terminal 'I will not yield' reads as Steadfast at the behavioral layer — deserves more weight. In Dramatica, Resolve=Change means the MC ultimately adopts the IC's perspective or relinquishes their own drive; Macbeth arguably never does this. He dies fighting, still committed to the path. The Change reading depends on whether 'becoming a tyrant' counts as a change in resolve or an intensification of the same drive. The check flags this tension but still approves at 1.0.",
+      "suggested_signature": "Consider a secondary probe that checks whether the MC's final-act behavioral signature (action-type, commitment markers) diverges from or continues the pre-transition pattern — a Steadfast MC who undergoes external transformation would show behavioral continuity despite identity-level change.",
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-resolve",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_resolve",
+        "comment": "Macbeth's tyrant-transition lands at τ_s=6 (33% through the [0, 18] arc) — a mid-arc transition consistent with Resolve=Change. Distinct Dramatica read from Judgment=Bad: the transition is the resolve-signal; its badness is the judgment-signal. [RE2 end-state: external-action ratio 75% → 71% (shift 4% below 30% threshold). Change is structurally at the identity level (tyrant emergence), not the behavioral-shape level. v3 probe observation: Macbeth's terminal 'I will not yield' doubling-down reads as Steadfast commitment at the behavioral layer] [RR3 IC-correlation: Lady Macbeth throughline event at τ_s=5 precedes tyrant-transition by gap=1; Dramatica's IC-driven Change axis structurally supported]"
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The monotonically rising kill-count (killed(macbeth, X) reaching 4 by end) with no self-termination is a clean substrate signature for Growth=Stop. The MC's problem requires him to stop doing something he never stops doing; external force (Macduff) provides the cessation. The substrate directly supports this.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-growth",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_growth",
+        "comment": "killed(macbeth, X) count rises monotonically across the arc to 4 by τ_s=18. Growth=Stop diagnoses the cessation the MC does not enact; the substrate shows exactly that — the killing never self-terminates."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The three-phase kingship trajectory (Duncan → Macbeth → Malcolm) is directly legible in the substrate: E_duncan_king_of_scotland at τ_s=-30, E_macbeth_crowned at τ_s=6, E_malcolm_crowned at τ_s=18. The disrupt-restore shape matches the Story_goal of restoring rightful succession.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:story-goal",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_goal",
+        "comment": "kingship trajectory: Duncan at τ_s=-5, Macbeth at τ_s=6, Malcolm at τ_s=18; Malcolm king at τ_end=18, Macbeth not king. Three-phase disrupt-restore shape consistent with Story_goal (succession restored)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check correctly confirms that at τ_s=18 the consequence conditions (Macbeth as king, tyranny persisting) are fully averted: king(macbeth)=False, king(malcolm)=True. This is the complement of the Outcome=Success check (vr_3) viewed from the consequence side, and both align.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:story-consequence",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_consequence",
+        "comment": "at τ_s=18: king(macbeth)=False, tyrant(macbeth) not derivable, king(malcolm)=True. Story_consequence (tyranny continues) is fully averted; the substrate supports Outcome=Success."
+      }
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "lowering_id": "L_macbeth",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the binding between C_macbeth (Protagonist + Emotion) and substrate entity 'macbeth', notes function labels stay dialect-local, and correctly grounds the moral-derivation chain in substrate events (kinslayer via E_macbeth_kinsman_of_duncan + E_duncan_killed, regicide via E_duncan_killed, tyrant via E_macbeth_crowned and subsequent killings)."
+      },
+      {
+        "lowering_id": "L_lady_macbeth",
+        "verdict": "approved",
+        "rationale": "The binding is straightforward. The annotation correctly names both the Contagonist function and the IC throughline ownership, and correctly identifies sleepwalking and death as substrate events (E_sleepwalking, E_lady_macbeth_dies). The claim about her Dramatic role pushing Macbeth across the moral threshold is well-supported by the Scene-level records."
+      },
+      {
+        "lowering_id": "L_macduff",
+        "verdict": "approved",
+        "rationale": "The annotation is admirably honest about the interpretive choice of Antagonist, names alternative readings, and correctly notes the substrate stays neutral — it simply records killed(macduff, macbeth) at E_macbeth_killed. The attention='interpretive' flag is appropriate for this kind of contested assignment."
+      },
+      {
+        "lowering_id": "L_banquo",
+        "verdict": "needs-work",
+        "rationale": "The annotation is minimal ('C_banquo (Sidekick) → Entity banquo') and doesn't justify the Sidekick assignment. Given that Banquo receives prophecy alongside Macbeth (E_prophecy_first lists both as recipients), resists acting on it, and is killed as a perceived threat, a brief note on what substrate evidence supports the Sidekick label — or what tension exists — would strengthen the binding."
+      },
+      {
+        "lowering_id": "L_malcolm",
+        "verdict": "needs-work",
+        "rationale": "Like L_banquo, this is a bare binding with no justification for the Reason function label. Malcolm's substrate footprint is thin (he appears primarily at E_malcolm_crowned and implicitly in the forces at E_birnam_moves), and the Reason assignment deserves at least a note about what substrate evidence supports it or why the label is dialect-local only."
+      },
+      {
+        "lowering_id": "L_witches",
+        "verdict": "approved",
+        "rationale": "The annotation is well-crafted: it names the interpretive ambiguity (real agents vs. tricksters vs. projections), flags that the substrate stays agnostic, and correctly qualifies the Guardian assignment as leaning on the warn-of-consequences reading. The attention='interpretive' flag is appropriate."
+      },
+      {
+        "lowering_id": "L_duncan",
+        "verdict": "approved",
+        "rationale": "A minimal but correct structural binding. Duncan has no Dramatica function labels, appears in multiple substrate events (E_duncan_king_of_scotland, E_duncan_visits, E_duncan_killed, E_duncan_discovered), and the binding is uncontroversial."
+      },
+      {
+        "lowering_id": "L_lady_macduff",
+        "verdict": "approved",
+        "rationale": "Minimal but correct. Lady Macduff has no function labels and appears in the substrate as a victim in E_macduff_family_killed. The binding is straightforward."
+      },
+      {
+        "lowering_id": "L_fleance",
+        "verdict": "approved",
+        "rationale": "Minimal but correct. Fleance has no function labels and is referenced in the substrate implicitly through E_banquo_killed (where the annotation on S_banquo_killing notes Fleance's escape). The binding is uncontroversial."
+      },
+      {
+        "lowering_id": "L_prophecy",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_prophecy to E_prophecy_first, identifies the two throughline advances (T_overall_scotland inciting, T_mc_macbeth inciting), and distinguishes the Scene's interpretive claim (ambition now has a name) from the substrate's literal recording (prophetic speech-acts, KNOWN state). Anchor τ_a=10 matches the substrate event."
+      },
+      {
+        "lowering_id": "L_letter",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_letter to E_letter_to_lady_macbeth, identifies the throughline advances (relationship and IC inciting), and distinguishes the Scene's interpretive claim (she decides for both) from the substrate's literal recording (letter-passing, knowledge uptake). Anchor τ_a=12 matches."
+      },
+      {
+        "lowering_id": "L_plot_pending",
+        "verdict": "approved",
+        "rationale": "The PENDING annotation is well-justified: it correctly identifies that the substrate elides the plotting between E_letter_to_lady_macbeth (τ_s=2) and E_duncan_visits (τ_s=3)/E_duncan_killed (τ_s=5), names two resolution paths (extend substrate or reclassify the Scene), and explains what would need to exist for the binding to activate."
+      },
+      {
+        "lowering_id": "L_duncan_killing",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_duncan_killing to E_duncan_killed, identifies the moral-derivation chain (kinslayer/regicide/breach_of_hospitality under the four RULES), and notes the Scene's three throughline advances. The substrate event confirms killer=macbeth, victim=duncan at τ_s=5."
+      },
+      {
+        "lowering_id": "L_discovery_and_crown",
+        "verdict": "approved",
+        "rationale": "The annotation correctly explains the one-Scene-to-two-events mapping, justifies why the substrate keeps them separate (different effects), and identifies the argumentative work (public order restored on false foundations). The note about king(macbeth, scotland) as precondition for TYRANT_RULE is a useful cross-reference."
+      },
+      {
+        "lowering_id": "L_banquo_killing",
+        "verdict": "approved",
+        "rationale": "The annotation is notably precise: it correctly distinguishes Banquo's killing from Duncan's in terms of the kinship relation (kinship authored only between Macbeth and Duncan), notes the victim-set widening, the marriage fracture (LM excluded), and Fleance's escape. The substrate event confirms orderer=macbeth, victim=banquo."
+      },
+      {
+        "lowering_id": "L_banquet_ghost",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_banquet_ghost to E_banquet_ghost, notes the substrate authors the apparition as perception by Macbeth alone without metaphysical commitment, and correctly identifies this as the kind of ambiguity the Scene's conflict_shape leaves open. The attention='interpretive' flag is well-placed."
+      },
+      {
+        "lowering_id": "L_second_prophecy",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_second_prophecy to E_prophecy_second, identifies the three told_by KnowledgeEffects, and makes a careful distinction: M's interpretation of the prophecies as invulnerability is a derived belief the substrate doesn't author directly, with dislodgement at τ_s=17 being where this gets observed."
+      },
+      {
+        "lowering_id": "L_macduff_family",
+        "verdict": "approved",
+        "rationale": "The annotation correctly bundles E_macduff_flees and E_macduff_family_killed, names Macduff's flight as the precondition the Scene references, and adds useful context about the TYRANT_RULE firing point vs. the moral-intuitive point at which 'tyrant' lands. The substrate confirms both events."
+      },
+      {
+        "lowering_id": "L_sleepwalking",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_sleepwalking to E_sleepwalking, notes the substrate records utterances and overhearing, and honestly flags that the marriage-in-name-only result is a Scene-level claim the substrate doesn't directly assert."
+      },
+      {
+        "lowering_id": "L_lady_macbeth_dies",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_lady_macbeth_dies to E_lady_macbeth_dies, identifies what the substrate records (dead(lady_macbeth)) vs. what stays dialect-local (the 'tomorrow' soliloquy), and correctly notes the IC silencing and last-human-attachment loss as Scene-level interpretive claims."
+      },
+      {
+        "lowering_id": "L_birnam_moves",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_birnam_moves to E_birnam_moves, identifies the substrate's authoring of troop movement and M's epistemic update (prophecy protection collapses), and the Scene's interpretive framing of literal truth as catastrophically misleading."
+      },
+      {
+        "lowering_id": "L_macbeth_dies",
+        "verdict": "approved",
+        "rationale": "The annotation correctly bundles E_macduff_reveals_birth and E_macbeth_killed, explains why the substrate keeps them separate (different effects: epistemic update vs. death), notes both at τ_s=17 with sequential τ_a, and ties this to the central conflict's resolution."
+      },
+      {
+        "lowering_id": "L_malcolm_crowned",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps S_malcolm_crowned to E_malcolm_crowned and provides useful detail about the substrate mechanics — king(malcolm, scotland) asserted, king(macbeth, scotland) dislodged via asserts=False as inference-layer cleanup. The substrate confirms new_king=malcolm at τ_s=18."
+      },
+      {
+        "lowering_id": "L_overall_throughline",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps T_overall_scotland across ten substrate events spanning τ_s ∈ [-30, 18], identifies Duncan's reign as baseline, and correctly notes the COMPLICATES side-on-argument. The event selection covers the kingdom's order trajectory comprehensively."
+      },
+      {
+        "lowering_id": "L_mc_throughline",
+        "verdict": "approved",
+        "rationale": "The annotation maps T_mc_macbeth across thirteen substrate events spanning τ_s ∈ [-5, 17], correctly identifies the moral-descent arc from hero-defender through tyranny to dissolution, and notes the AFFIRMS side-on-argument. The event list is comprehensive for Macbeth's trajectory."
+      },
+      {
+        "lowering_id": "L_ic_throughline",
+        "verdict": "approved",
+        "rationale": "The annotation correctly maps T_impact_lady_macbeth across five substrate events, and makes the important interpretive note that E_banquo_killed is omitted because M acts without telling LM — the omission is itself a structural signal of the partnership's rupture. The position_range [2, 14] correctly bounds her dramatic agency."
+      },
+      {
+        "lowering_id": "L_relationship_throughline",
+        "verdict": "approved",
+        "rationale": "The annotation correctly includes E_banquo_killed (unlike the IC throughline) because the rupture is itself a relationship-event. The distinction between the IC and relationship throughlines sharing the same position_range but differing in event inclusion is well-justified and interpretively grounded."
+      }
+    ],
+    "verifier_commentaries": [
+      {
+        "target_review_id": "vr_0",
+        "assessment": "qualifies",
+        "rationale": "The partial-match at 65% weighted is reasonable given the MC domain assignment of Activity. The check correctly identifies that non-Activity events like the inciting prophecy (E_prophecy_first, a received-knowledge event) and the banquet ghost (E_banquet_ghost, an apparition/perception event) carry dramatic weight. However, Dramatica's Activity domain encompasses 'doing' broadly — receiving prophecy arguably initiates Activity by triggering the MC's pursuit-chain. The 65% figure may undercount Activity-compatible events depending on how strictly 'external action' is operationalized.",
+        "suggested_signature": "Consider whether prophecy_received events that directly trigger the MC's action-chain (pursuit → killing → killing) should count as Activity-domain-adjacent, since they initiate the doing rather than merely representing a fixed attitude or situation."
+      },
+      {
+        "target_review_id": "vr_1",
+        "assessment": "endorses",
+        "rationale": "71% external-action-shaped events for Macbeth aligns well with a Do-er approach classification. The substrate confirms Macbeth as killer/orderer in multiple killings (E_duncan_killed, E_banquo_killed, E_macduff_family_killed) and as a battlefield agent (E_macbeth_defends_scotland). His responses to problems are consistently action-shaped rather than deliberation-shaped.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_2",
+        "assessment": "endorses",
+        "rationale": "The Optionlock classification is well-supported. The substrate shows Macbeth's options narrowing: Banquo eliminated, Macduff's family eliminated, but Fleance escapes and Macduff survives. The prophecy conditions (Birnam Wood, none-of-woman-born) function as option-boundaries that collapse sequentially. The arc ends not because time runs out but because Macbeth has no remaining moves — exactly optionlock semantics.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_3",
+        "assessment": "endorses",
+        "rationale": "dead(macbeth) at τ_s=17-18 and king(malcolm) at τ_s=18 directly confirm the OS goal of restoring Scotland's succession. The check's match_strength=1.0 is warranted; the substrate unambiguously supports Outcome=Success.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_4",
+        "assessment": "endorses",
+        "rationale": "The tyrant() trajectory (absent at τ_s=0, emerges at τ_s=6 via coronation + kinslayer + regicide, persists through death) is a clean emerges-and-persists pattern. This is the correct signature for Judgment=Bad: the MC acquires and retains the negative judgment-marker through end-of-arc.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_5",
+        "assessment": "qualifies",
+        "rationale": "The check correctly identifies the tyrant-transition at τ_s=6 as a mid-arc identity-level change consistent with Resolve=Change. However, the check's own v3 probe observation — that Macbeth's terminal 'I will not yield' reads as Steadfast at the behavioral layer — deserves more weight. In Dramatica, Resolve=Change means the MC ultimately adopts the IC's perspective or relinquishes their own drive; Macbeth arguably never does this. He dies fighting, still committed to the path. The Change reading depends on whether 'becoming a tyrant' counts as a change in resolve or an intensification of the same drive. The check flags this tension but still approves at 1.0.",
+        "suggested_signature": "Consider a secondary probe that checks whether the MC's final-act behavioral signature (action-type, commitment markers) diverges from or continues the pre-transition pattern — a Steadfast MC who undergoes external transformation would show behavioral continuity despite identity-level change."
+      },
+      {
+        "target_review_id": "vr_6",
+        "assessment": "endorses",
+        "rationale": "The monotonically rising kill-count (killed(macbeth, X) reaching 4 by end) with no self-termination is a clean substrate signature for Growth=Stop. The MC's problem requires him to stop doing something he never stops doing; external force (Macduff) provides the cessation. The substrate directly supports this.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_7",
+        "assessment": "endorses",
+        "rationale": "The three-phase kingship trajectory (Duncan → Macbeth → Malcolm) is directly legible in the substrate: E_duncan_king_of_scotland at τ_s=-30, E_macbeth_crowned at τ_s=6, E_malcolm_crowned at τ_s=18. The disrupt-restore shape matches the Story_goal of restoring rightful succession.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_8",
+        "assessment": "endorses",
+        "rationale": "The check correctly confirms that at τ_s=18 the consequence conditions (Macbeth as king, tyranny persisting) are fully averted: king(macbeth)=False, king(malcolm)=True. This is the complement of the Outcome=Success check (vr_3) viewed from the consequence side, and both align.",
+        "suggested_signature": null
+      }
+    ]
+  }
+}
