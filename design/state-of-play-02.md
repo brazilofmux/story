@@ -203,14 +203,14 @@ function argues for it.
 
 In the order I'd work them:
 
-1. **Scheduling-act utterances sketch.** Deeper of the two new
-   probe seeds; has the shape of a proper pressure-shape-taxonomy
-   amendment (LT15 candidate). Affects LT9 across the whole corpus,
-   not just Rashomon. Would take a worked pass across the existing
-   five encodings to see which utterance events qualify as implicit
-   scheduling — Oedipus's oracle prophecies? Macbeth's witches'
-   prophecies? Rocky's fight-scheduling dialogue? Ackroyd is
-   probably silent on this axis.
+1. ~~**Scheduling-act utterances sketch.**~~ **Landed 2026-04-18 as
+   [scheduling-act-utterance-sketch-01](scheduling-act-utterance-
+   sketch-01.md)** (design only; implementation pending review).
+   Extended LT8 prefix-recognition to `{"scheduled_", "requested_"}`;
+   codified Rocky's scheduling-Prop pattern as general authoring
+   discipline. Closes bandit + samurai probe qualifications; OQ1
+   (`provoked_*`) and OQ2 (`situational_forcing`) remain open; OQ3
+   banks `prophesied_*` for future Oedipus/Macbeth work.
 2. **The `story_engine/core` vs `encodings/` package split** — now
    **unblocked** (sketch-01 gated this on LT2 sketch-03 landing,
    which it has). Mechanical refactor. Doing this before #3
@@ -219,10 +219,13 @@ In the order I'd work them:
 3. **Skeleton generator** — a tool that, given Story title +
    Characters + Throughline count, stubs the four encoding files.
    Codifies only the mechanical shell; does not thwart research.
-4. **Enabling-retraction preservation** — banked but not scheduled.
-   Wait for a forcing function — a downstream check that wants the
-   preserved signal. If no forcing function surfaces in two more
-   probe cycles, drop.
+4. ~~**Enabling-retraction preservation**~~ **Banked as an explicit
+   deferral sketch — [enabling-retraction-preservation-sketch-01](
+   enabling-retraction-preservation-sketch-01.md)** (2026-04-18,
+   first deferral sketch in the corpus). Four criteria enumerated
+   for when to write sketch-02; none holds today. If no forcing
+   function surfaces in two more probe cycles, the finding can be
+   formally dropped per the deferral sketch's revisit-criteria.
 5. **Maybe-next research targets** (no commitment):
    - A sixth encoding. Candidate: *And Then There Were None* if we
      want to stress-test the unreliable-frame machinery further, or
