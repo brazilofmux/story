@@ -345,6 +345,71 @@ class Story:
 
 
 # ============================================================================
+# Multi-story encoding (multi-story-sketch-01, MS1-MS6)
+# ============================================================================
+#
+# A single Dialect encoding may declare more than one Dramatica Story.
+# Rashomon is the motivating case — a frame story at the gate nests
+# four incompatible testimonies of the same killing. The frame is a
+# Story; each testimony is a Story; five Stories in one encoded work.
+#
+# The two records below are additive. Existing single-Story encodings
+# (Oedipus, Macbeth, Ackroyd, Rocky) do not need to change — they
+# remain as `Story` records without a `StoryEncoding` wrapper. The
+# per-Story commitments in dramatic-sketch-01 M1-M10 and dramatica-
+# template-sketch-01 Q1-Q10 are unchanged and apply to each Story
+# independently.
+
+
+@dataclass(frozen=True)
+class StoryRelation:
+    """A structural relation between two Stories in a StoryEncoding.
+
+    kinds:
+      - "contains" — `a_story_id` nests `b_story_id`. The parent's
+        narrative frames the child's; testimony flashbacks, plays-
+        within-plays, reported sub-narratives.
+      - "parallel-to" — `a_story_id` and `b_story_id` are siblings
+        under the same containing parent. They represent
+        incompatible or alternative accounts of shared context.
+
+    Other relation kinds (mutually-exclusive, sequential,
+    embedded-as-metaphor) are deferred per sketch OQ2.
+    """
+    kind: str
+    a_story_id: str
+    b_story_id: str
+    notes: str = ""
+
+
+@dataclass(frozen=True)
+class StoryEncoding:
+    """A dialect-layer record declaring a set of Dramatica Stories
+    composing one encoded work, plus the structural relations
+    between them. Per MS2.
+
+    An encoding of exactly one Story does NOT require a
+    StoryEncoding wrapper — the existing single-Story pattern
+    (bare `Story` record as the encoding's root) continues to
+    work. StoryEncoding is the structure for 2+ Stories.
+    """
+    id: str
+    title: str
+    stories: tuple          # tuple[Story]
+    relations: tuple        # tuple[StoryRelation]
+    entry_story_id: str     # which Story is the outermost / entry
+    authored_by: str = "author"
+
+    def story_by_id(self, story_id: str):
+        """Convenience lookup. Returns the Story with the matching
+        id, or None."""
+        for s in self.stories:
+            if s.id == story_id:
+                return s
+        return None
+
+
+# ============================================================================
 # Self-verifier (M8)
 # ============================================================================
 

@@ -614,6 +614,85 @@ def test_macbeth_dramatic_overfilling_antagonist_surfaces():
 # ----------------------------------------------------------------------------
 
 
+def test_story_encoding_wraps_multiple_stories():
+    """MS2: StoryEncoding carries tuple[Story], tuple[StoryRelation],
+    entry_story_id. Lookup by id works."""
+    from dramatic import StoryEncoding, StoryRelation, Story
+    s1 = Story(id="S1", title="One")
+    s2 = Story(id="S2", title="Two")
+    enc = StoryEncoding(
+        id="enc1", title="Test",
+        stories=(s1, s2),
+        relations=(StoryRelation(kind="contains", a_story_id="S1",
+                                 b_story_id="S2"),),
+        entry_story_id="S1",
+    )
+    assert enc.story_by_id("S1") is s1
+    assert enc.story_by_id("S2") is s2
+    assert enc.story_by_id("missing") is None
+
+
+def test_rashomon_encoding_loads_with_five_stories_ten_relations():
+    """Rashomon is the first multi-Story encoding: five Stories
+    (frame + four testimonies) and ten StoryRelations (four
+    `contains`, six pairwise `parallel-to`)."""
+    import rashomon_dramatic as r
+    enc = r.RASHOMON_ENCODING
+    assert enc.id == "rashomon_encoding"
+    assert enc.entry_story_id == "S_frame"
+    assert len(enc.stories) == 5
+    story_ids = [s.id for s in enc.stories]
+    assert "S_frame" in story_ids
+    for testimony in ("S_bandit_ver", "S_wife_ver",
+                      "S_samurai_ver", "S_woodcutter_ver"):
+        assert testimony in story_ids
+    contains = [rel for rel in enc.relations if rel.kind == "contains"]
+    parallel = [rel for rel in enc.relations if rel.kind == "parallel-to"]
+    assert len(contains) == 4
+    assert len(parallel) == 6
+
+
+def test_rashomon_per_story_verify_runs_cleanly():
+    """MS4: per-Story M8 verification runs over a StoryEncoding's
+    Stories independently. Each Story produces a finite observation
+    list. The skeletal testimony Stories produce few observations
+    (missing Stakes is the main one); the frame produces more
+    because its dramatica-8 Template declaration has unfilled slots
+    (a genuine signal, not a crash)."""
+    import rashomon_dramatic as r
+    from dramatic import verify
+
+    def _filter(recs, ids):
+        ids_set = set(ids)
+        return tuple(x for x in recs if x.id in ids_set)
+
+    all_observed = {}
+    for s in r.RASHOMON_ENCODING.stories:
+        obs = verify(
+            s,
+            arguments=_filter(r.ARGUMENTS, s.argument_ids),
+            throughlines=_filter(r.THROUGHLINES, s.throughline_ids),
+            characters=_filter(r.CHARACTERS, s.character_ids),
+            scenes=_filter(r.SCENES, s.scene_ids),
+            beats=_filter(r.BEATS, s.beat_ids),
+            stakes=_filter(r.STAKES, s.stakes_ids),
+        )
+        all_observed[s.id] = obs
+    # Sanity: each Story produces a list; none explode.
+    for sid, obs in all_observed.items():
+        assert isinstance(obs, list)
+        assert len(obs) < 100, (
+            f"{sid} produced {len(obs)} observations, suspiciously many"
+        )
+    # Skeletal testimony Stories produce few observations.
+    for testimony in ("S_bandit_ver", "S_wife_ver",
+                      "S_samurai_ver", "S_woodcutter_ver"):
+        assert len(all_observed[testimony]) <= 3, (
+            f"{testimony} should be skeletal-clean; got "
+            f"{len(all_observed[testimony])} observations"
+        )
+
+
 TESTS = [
     # M5 / Templates
     test_dramatica_8_has_eight_exactly_one_slots,
@@ -662,6 +741,10 @@ TESTS = [
     # Integration — Macbeth
     test_macbeth_dramatic_produces_zero_observations,
     test_macbeth_dramatic_overfilling_antagonist_surfaces,
+    # multi-story-sketch-01 (MS1-MS6)
+    test_story_encoding_wraps_multiple_stories,
+    test_rashomon_encoding_loads_with_five_stories_ten_relations,
+    test_rashomon_per_story_verify_runs_cleanly,
 ]
 
 
