@@ -1,0 +1,527 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 40000,
+    "lowering_ids": [
+      "L_rocky",
+      "L_apollo",
+      "L_mickey",
+      "L_paulie",
+      "L_adrian",
+      "L_duke",
+      "L_gazzo",
+      "L_jergens",
+      "L_spider_rico",
+      "L_bob",
+      "L_club_fight",
+      "L_mickey_locker",
+      "L_apollo_announces",
+      "L_jergens_office",
+      "L_mickey_apartment",
+      "L_thanksgiving",
+      "L_first_kiss",
+      "L_training_montage",
+      "L_night_before",
+      "L_fight",
+      "L_after",
+      "L_ice_skating_pending",
+      "L_mc_throughline"
+    ],
+    "verifier_review_count": 9,
+    "lowerings_to_review": null,
+    "reviews_to_comment_on": null,
+    "substrate_context_included": true,
+    "template_records_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_lowering_id": "L_rocky",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 300,
+      "comment": "Straightforward structural binding: Dramatic Character C_rocky (Protagonist, MC Throughline owner) maps to substrate agent entity 'rocky,' who appears as a direct participant in 18+ substrate events spanning the full τ_s range. The annotation correctly identifies the function label and throughline ownership."
+    },
+    {
+      "target_lowering_id": "L_apollo",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 301,
+      "comment": "C_apollo (Antagonist, IC Throughline owner) maps cleanly to substrate agent 'apollo,' who participates in scheduling, selection, fight, and utterance events. The annotation is minimal and accurate."
+    },
+    {
+      "target_lowering_id": "L_mickey",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 302,
+      "comment": "C_mickey (Guardian) maps to substrate agent 'mickey,' who appears in E_mickey_clears_locker, E_mickey_offers_to_manage, and E_training_begins. The structural binding is sound."
+    },
+    {
+      "target_lowering_id": "L_paulie",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 303,
+      "comment": "C_paulie (Contagonist) maps to substrate agent 'paulie,' who appears in E_thanksgiving_turkey (disruptor) and E_meat_locker_session (witness). The binding and function label are consistent with the substrate participation pattern."
+    },
+    {
+      "target_lowering_id": "L_adrian",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 304,
+      "comment": "C_adrian (Emotion) maps to substrate agent 'adrian,' who participates in courtship, romantic_commitment, social_disruption, training, private_reflection, and utterance events. The binding is well-grounded across the arc."
+    },
+    {
+      "target_lowering_id": "L_duke",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 305,
+      "comment": "C_duke (Reason) maps to substrate agent 'duke.' Duke has no visible event participation in the summarized substrate context, but the context is explicitly non-exhaustive. The annotation makes no overclaim — it simply records the structural binding."
+    },
+    {
+      "target_lowering_id": "L_gazzo",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 306,
+      "comment": "C_gazzo (Sidekick) maps to substrate agent 'gazzo,' who appears as the employer in E_gazzo_assignment. The binding is straightforward."
+    },
+    {
+      "target_lowering_id": "L_jergens",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 307,
+      "comment": "C_jergens (Skeptic) maps to substrate agent 'jergens,' who appears as promoter in both E_apollo_selects_rocky and E_jergens_offers_fight. The function label (Skeptic: initial resistance to Apollo's novelty proposal) aligns with his role in these events."
+    },
+    {
+      "target_lowering_id": "L_spider_rico",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 308,
+      "comment": "C_spider_rico maps to substrate agent 'spider_rico,' who participates in E_club_fight_spider. The annotation correctly notes the absence of a Dramatica-8 function assignment and identifies the character's narrative role."
+    },
+    {
+      "target_lowering_id": "L_bob",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 309,
+      "comment": "C_bob maps to substrate agent 'bob,' who appears as the 'target' in E_gazzo_assignment. The annotation's characterization ('the dock worker Rocky refuses to break') is consistent with the assignment event's participant structure."
+    },
+    {
+      "target_lowering_id": "L_club_fight",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 320,
+      "comment": "Scene S_club_fight binds to E_club_fight_spider (type 'fight,' participants rocky and spider_rico, τ_s=0). The substrate event type and participants directly realize the Scene's narrative content — a club fight establishing Rocky's baseline."
+    },
+    {
+      "target_lowering_id": "L_mickey_locker",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 321,
+      "comment": "Scene S_mickey_locker binds to E_mickey_clears_locker (type 'confrontation,' speaker=mickey, listener=rocky). The annotation helpfully cross-references E_gazzo_assignment as context reachable via the MC Throughline lowering, keeping the scene binding focused without losing narrative grounding."
+    },
+    {
+      "target_lowering_id": "L_apollo_announces",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 322,
+      "comment": "The one-to-three Scene-to-event mapping is clearly justified: E_apollo_schedules_mac (scheduling), E_mac_injured (injury), and E_apollo_selects_rocky (selection) carry distinct world effects that the single Dramatic Scene bundles as a premise-trigger montage. The annotation's explanation of why the substrate splits what the scene unifies is precise."
+    },
+    {
+      "target_lowering_id": "L_jergens_office",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 323,
+      "comment": "Scene S_jergens_office maps cleanly to E_jergens_offers_fight (type 'offer,' participants jergens, apollo, rocky). The Scene's beats (B_op_3 and B_mc_3) are both grounded in this offer event."
+    },
+    {
+      "target_lowering_id": "L_mickey_apartment",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 324,
+      "comment": "Scene S_mickey_apartment maps to E_mickey_offers_to_manage (type 'offer,' offerer=mickey, fighter=rocky). The annotation's description of the scene turning from rejection to late arrival is consistent with both the Dramatic beat and the substrate event."
+    },
+    {
+      "target_lowering_id": "L_thanksgiving",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 325,
+      "comment": "Scene S_thanksgiving maps to E_thanksgiving_turkey (type 'social_disruption,' disruptor=paulie, sister=adrian, host=rocky). The substrate event type and participant roles directly realize the Scene's conflict shape."
+    },
+    {
+      "target_lowering_id": "L_first_kiss",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 327,
+      "comment": "Scene S_first_kiss maps to E_first_kiss (type 'romantic_commitment,' lover_a=rocky, lover_b=adrian, effect_count=3). The annotation's claim that world fact romantic_partnership(rocky, adrian) lands here is consistent with the event type and the Scene's dramatic role as the relationship's commitment point."
+    },
+    {
+      "target_lowering_id": "L_training_montage",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 328,
+      "comment": "The annotation correctly binds the Scene's physical training arc to three substrate events (E_training_begins, E_meat_locker_session, E_stairs_run), but Scene S_training_montage also advances B_ic_3 ('Duke warns; Apollo dismisses') and B_rel_5 ('Adrian is always there'). The relationship beat has partial substrate support (adrian is 'observer' in E_meat_locker_session), but the IC beat has no substrate counterpart among the bound events — neither apollo nor duke appear as participants in any of the three. The annotation should acknowledge that the Scene's IC advancement is not realized in these substrate events."
+    },
+    {
+      "target_lowering_id": "L_night_before",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 329,
+      "comment": "Scene S_night_before maps to E_night_before_fight (type 'private_reflection,' fighter=rocky, witness=adrian, τ_s=45). The annotation's claim that Rocky's articulated goal and the Growth=Start transition point land here is corroborated by the verifier's finding that articulated_goal enters at τ_s=45."
+    },
+    {
+      "target_lowering_id": "L_fight",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 330,
+      "comment": "The one-to-four Scene-to-event mapping is well-grounded: bell (τ_s=46), knockdown (τ_s=47), recovery (τ_s=48), and fight-end with split decision (τ_s=55). The annotation's reference to WENT_THE_DISTANCE_RULE derivation at E_fight_ends is confirmed by vr_3 and vr_7. Position range [46, 55] matches the events."
+    },
+    {
+      "target_lowering_id": "L_after",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 331,
+      "comment": "Scene S_after binds to E_adrian_called (utterance, speaker=rocky, listener=adrian) and E_no_rematch (utterance, speaker_a=rocky, speaker_b=apollo). The annotation correctly explains the one-to-two split: the 'Adrian!' moment and the 'no rematch' exchange are distinct beats with distinct participants and effects."
+    },
+    {
+      "target_lowering_id": "L_ice_skating_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 326,
+      "comment": "PENDING status is well-justified: the annotation identifies the ice skating scene as a relationship-throughline beat whose dramatic work occurs in conversational texture rather than typed world-state changes. The substrate acknowledges the ice_rink location entity but has no events there. The annotation correctly frames what would need to exist for the lowering to activate."
+    },
+    {
+      "target_lowering_id": "L_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 340,
+      "comment": "The throughline binding to 18 events is structurally sound, but the annotation claims 'Rocky is not yet a participant at those τ_s' regarding the pre-plot events. This is inaccurate for E_apollo_selects_rocky, where the substrate explicitly lists rocky as the 'selected' participant. The throughline-exclusion decision (these are OS events, not MC events) is dramatically defensible, but the annotation should state the distinction precisely — Rocky is a substrate participant in the selection event but is not yet an aware/active agent in his personal arc at that point."
+    }
+  ],
+  "verifier_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "72% external-action-shaped events is a reasonable match for an Activity domain assignment. Rocky's MC arc is dominated by training and fighting events (E_training_begins, E_meat_locker_session, E_stairs_run, E_fight_bell, E_round_one_knockdown, E_rocky_gets_up, E_fight_ends), with a minority of internal-state-shaped events like E_night_before_fight (private_reflection) and E_mickey_clears_locker (confrontation). The check correctly identifies the dominant pattern while acknowledging the minority.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:domain-assignment",
+        "verdict": "approved",
+        "match_strength": 0.7222222222222222,
+        "target_record": "dramatica-complete:DA_mc",
+        "comment": "13/18 (72%) MC-Throughline events are external-action-shaped (EK2); 5 are internal-state-shaped. Consistent with Activity domain — Rocky's arc is training-and-fighting, not reflection."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The check counts 19 events for Rocky while the MC Throughline lowering (L_mc_throughline) lists 18. The discrepancy is almost certainly E_apollo_selects_rocky, where rocky appears as the 'selected' participant but which the MC throughline excludes as an OS event. The verdict is still sound — one additional event doesn't materially shift the 74% ratio — but the check's scope (all substrate events with rocky as participant) differs from the MC throughline's curated scope, and this difference should be transparent.",
+      "suggested_signature": "Consider distinguishing between 'all events where entity participates' and 'events bound to the entity's MC throughline lowering' when calculating approach ratios, since throughline-excluded events may carry a different action/reflection profile.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-approach",
+        "verdict": "approved",
+        "match_strength": 0.7368421052631579,
+        "target_record": "dramatica-complete:DSP_approach",
+        "comment": "Rocky participates in 19 events; 14 (74%) are external-action-shaped (EK2). Do-er approach confirmed."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The Timelock check is well-grounded. The substrate carries scheduling predicates (E_apollo_schedules_mac at τ_s=-10, with scheduled_fight establishing the bicentennial deadline), and the story's pressure derives from the fixed fight date rather than from running out of options. The 1.0 strength with both LT9 and scheduling-predicate signals is appropriate.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows scheduling predicate(s) (scheduled_fight) and zero middle-arc LT2 convergence signals (positions: 0 middle-arc, 1 peripheral-pre, 1 terminal). LT9 affirmatively detects Timelock shape. Strength 1.00 = min(1.0, 2/2)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check traces went_the_distance(rocky, apollo) deriving at τ_s=57 via WENT_THE_DISTANCE_RULE (fought_rounds=15 + standing_at_final_bell). The OS goal (clean publicity) is contaminated because the unknown stayed up. E_fight_ends (winner=apollo, loser=rocky, effect_count=7) and the derived compound fact together support Outcome=Failure — the goal failed precisely because what happened in the ring displaced the scripted narrative.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:dsp-outcome",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_outcome",
+        "comment": "went_the_distance(rocky, apollo) derives at τ_s=57 via WENT_THE_DISTANCE_RULE (fought_rounds=15 + standing_at_final_bell); the clean-publicity OS goal is contaminated. Outcome=Failure claim is supported by substrate — the goal's opposite is the load-bearing fact."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The three positive-closure facts at τ_s=57 — went_the_distance, called_out(rocky, adrian), refused_rematch(rocky) — form a coherent Judgment=Good signature. E_adrian_called (utterance, speaker=rocky, listener=adrian) realizes the relationship closure; E_no_rematch (utterance, speaker_a=rocky, speaker_b=apollo) realizes Rocky's self-sufficiency. The check correctly reads these as confirming Rocky's internal resolution despite the external loss.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-judgment",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_judgment",
+        "comment": "at τ_s=57: went_the_distance derives, called_out(rocky, adrian) holds, refused_rematch(rocky) holds. All three positive-closure facts confirm Judgment=Good — Rocky's internal resolution is achievement + relationship + self-sufficiency."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The check's method — 'zero equivalence classes involving rocky; no identity transition' — correctly identifies Resolve=Steadfast for Rocky, but the signature is narrow. An identity-transition check would also pass for characters who change their approach or drive without a substrate-level identity change. For Rocky specifically the verdict is well-grounded (his fundamental drive never shifts), but the check's proxy might not generalize to steadfast characters in stories where the substrate models motivational state changes that fall short of identity transitions.",
+      "suggested_signature": "Consider also checking whether the MC's problem-element or drive-element persists unchanged across the arc's key τ_s boundaries, not just whether an identity transition exists. A character who starts pursuing and ends pursuing with no drive-state change is a stronger steadfast signal than mere absence of identity reclassification.",
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-resolve",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_resolve",
+        "comment": "Rocky's knowledge state at τ_s=0 and τ_s=57 both show zero equivalence classes involving rocky; no identity transition across the arc. Resolve=Steadfast confirmed — Rocky is structurally the same throughout."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check finds articulated_goal(rocky, went_the_distance) entering Rocky's state at τ_s=45 (E_night_before_fight) and holding through τ_s=57. This is a clear 'start' signal: a new commitment enters the knowledge state after an extended arc without it. The night-before scene is the precise substrate moment where the Growth=Start transition is registered, consistent with the Dramatic Beat B_mc_6 ('I just want to go the distance').",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:dsp-growth",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:DSP_growth",
+        "comment": "articulated_goal(rocky, went_the_distance) enters Rocky's state at τ_s=45 (the night-before-fight private-reflection scene); holds through τ_s=57. Growth=Start confirmed — Rocky starts committing to a named goal after a long arc of evasion."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The Story_goal trajectory check correctly traces the setup (scheduled_fight at τ_s=-1), the mid-arc absence of went_the_distance (τ_s=45, premises not assembled), and the terminal derivation at τ_s=57 (goal contaminated). The three-point trajectory — setup, non-derivation, derivation — is clean and unambiguous. The Failure reading is well-supported.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-trajectory:story-goal",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_goal",
+        "comment": "Story_goal Failure trajectory: scheduled_fight(apollo, rocky) in world at τ_s=-1 (premise-in-place); went_the_distance does NOT derive at τ_s=45 (mid-arc, premises not yet assembled); DOES derive at τ_s=57 (goal contaminated). The clean-publicity goal was set up and then displaced by what actually happened in the ring. Failure trajectory confirmed."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The check confirms Story_consequence at τ_s=57 via two substrate facts: went_the_distance(rocky, apollo) derives (the unknown survived) and refused_rematch(apollo) holds (Apollo concedes what scorecards didn't). These two facts together realize the consequence declared in the Template record — the stunt is contaminated. The check's reading aligns precisely with the Dramatic Argument's resolution ('the fifteen rounds refute both' counter-premises).",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:claim-moment:story-consequence",
+        "verdict": "approved",
+        "match_strength": 1.0,
+        "target_record": "dramatica-complete:Story_consequence",
+        "comment": "at τ_s=57: went_the_distance(rocky, apollo) derives (the unknown stayed up) AND refused_rematch(apollo) holds (Apollo concedes what scorecards didn't). Story_consequence (stunt contaminated) IS realized — the substrate supports Outcome=Failure."
+      }
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "lowering_id": "L_rocky",
+        "verdict": "approved",
+        "rationale": "Straightforward structural binding: Dramatic Character C_rocky (Protagonist, MC Throughline owner) maps to substrate agent entity 'rocky,' who appears as a direct participant in 18+ substrate events spanning the full τ_s range. The annotation correctly identifies the function label and throughline ownership."
+      },
+      {
+        "lowering_id": "L_apollo",
+        "verdict": "approved",
+        "rationale": "C_apollo (Antagonist, IC Throughline owner) maps cleanly to substrate agent 'apollo,' who participates in scheduling, selection, fight, and utterance events. The annotation is minimal and accurate."
+      },
+      {
+        "lowering_id": "L_mickey",
+        "verdict": "approved",
+        "rationale": "C_mickey (Guardian) maps to substrate agent 'mickey,' who appears in E_mickey_clears_locker, E_mickey_offers_to_manage, and E_training_begins. The structural binding is sound."
+      },
+      {
+        "lowering_id": "L_paulie",
+        "verdict": "approved",
+        "rationale": "C_paulie (Contagonist) maps to substrate agent 'paulie,' who appears in E_thanksgiving_turkey (disruptor) and E_meat_locker_session (witness). The binding and function label are consistent with the substrate participation pattern."
+      },
+      {
+        "lowering_id": "L_adrian",
+        "verdict": "approved",
+        "rationale": "C_adrian (Emotion) maps to substrate agent 'adrian,' who participates in courtship, romantic_commitment, social_disruption, training, private_reflection, and utterance events. The binding is well-grounded across the arc."
+      },
+      {
+        "lowering_id": "L_duke",
+        "verdict": "approved",
+        "rationale": "C_duke (Reason) maps to substrate agent 'duke.' Duke has no visible event participation in the summarized substrate context, but the context is explicitly non-exhaustive. The annotation makes no overclaim — it simply records the structural binding."
+      },
+      {
+        "lowering_id": "L_gazzo",
+        "verdict": "approved",
+        "rationale": "C_gazzo (Sidekick) maps to substrate agent 'gazzo,' who appears as the employer in E_gazzo_assignment. The binding is straightforward."
+      },
+      {
+        "lowering_id": "L_jergens",
+        "verdict": "approved",
+        "rationale": "C_jergens (Skeptic) maps to substrate agent 'jergens,' who appears as promoter in both E_apollo_selects_rocky and E_jergens_offers_fight. The function label (Skeptic: initial resistance to Apollo's novelty proposal) aligns with his role in these events."
+      },
+      {
+        "lowering_id": "L_spider_rico",
+        "verdict": "approved",
+        "rationale": "C_spider_rico maps to substrate agent 'spider_rico,' who participates in E_club_fight_spider. The annotation correctly notes the absence of a Dramatica-8 function assignment and identifies the character's narrative role."
+      },
+      {
+        "lowering_id": "L_bob",
+        "verdict": "approved",
+        "rationale": "C_bob maps to substrate agent 'bob,' who appears as the 'target' in E_gazzo_assignment. The annotation's characterization ('the dock worker Rocky refuses to break') is consistent with the assignment event's participant structure."
+      },
+      {
+        "lowering_id": "L_club_fight",
+        "verdict": "approved",
+        "rationale": "Scene S_club_fight binds to E_club_fight_spider (type 'fight,' participants rocky and spider_rico, τ_s=0). The substrate event type and participants directly realize the Scene's narrative content — a club fight establishing Rocky's baseline."
+      },
+      {
+        "lowering_id": "L_mickey_locker",
+        "verdict": "approved",
+        "rationale": "Scene S_mickey_locker binds to E_mickey_clears_locker (type 'confrontation,' speaker=mickey, listener=rocky). The annotation helpfully cross-references E_gazzo_assignment as context reachable via the MC Throughline lowering, keeping the scene binding focused without losing narrative grounding."
+      },
+      {
+        "lowering_id": "L_apollo_announces",
+        "verdict": "approved",
+        "rationale": "The one-to-three Scene-to-event mapping is clearly justified: E_apollo_schedules_mac (scheduling), E_mac_injured (injury), and E_apollo_selects_rocky (selection) carry distinct world effects that the single Dramatic Scene bundles as a premise-trigger montage. The annotation's explanation of why the substrate splits what the scene unifies is precise."
+      },
+      {
+        "lowering_id": "L_jergens_office",
+        "verdict": "approved",
+        "rationale": "Scene S_jergens_office maps cleanly to E_jergens_offers_fight (type 'offer,' participants jergens, apollo, rocky). The Scene's beats (B_op_3 and B_mc_3) are both grounded in this offer event."
+      },
+      {
+        "lowering_id": "L_mickey_apartment",
+        "verdict": "approved",
+        "rationale": "Scene S_mickey_apartment maps to E_mickey_offers_to_manage (type 'offer,' offerer=mickey, fighter=rocky). The annotation's description of the scene turning from rejection to late arrival is consistent with both the Dramatic beat and the substrate event."
+      },
+      {
+        "lowering_id": "L_thanksgiving",
+        "verdict": "approved",
+        "rationale": "Scene S_thanksgiving maps to E_thanksgiving_turkey (type 'social_disruption,' disruptor=paulie, sister=adrian, host=rocky). The substrate event type and participant roles directly realize the Scene's conflict shape."
+      },
+      {
+        "lowering_id": "L_first_kiss",
+        "verdict": "approved",
+        "rationale": "Scene S_first_kiss maps to E_first_kiss (type 'romantic_commitment,' lover_a=rocky, lover_b=adrian, effect_count=3). The annotation's claim that world fact romantic_partnership(rocky, adrian) lands here is consistent with the event type and the Scene's dramatic role as the relationship's commitment point."
+      },
+      {
+        "lowering_id": "L_training_montage",
+        "verdict": "needs-work",
+        "rationale": "The annotation correctly binds the Scene's physical training arc to three substrate events (E_training_begins, E_meat_locker_session, E_stairs_run), but Scene S_training_montage also advances B_ic_3 ('Duke warns; Apollo dismisses') and B_rel_5 ('Adrian is always there'). The relationship beat has partial substrate support (adrian is 'observer' in E_meat_locker_session), but the IC beat has no substrate counterpart among the bound events — neither apollo nor duke appear as participants in any of the three. The annotation should acknowledge that the Scene's IC advancement is not realized in these substrate events."
+      },
+      {
+        "lowering_id": "L_night_before",
+        "verdict": "approved",
+        "rationale": "Scene S_night_before maps to E_night_before_fight (type 'private_reflection,' fighter=rocky, witness=adrian, τ_s=45). The annotation's claim that Rocky's articulated goal and the Growth=Start transition point land here is corroborated by the verifier's finding that articulated_goal enters at τ_s=45."
+      },
+      {
+        "lowering_id": "L_fight",
+        "verdict": "approved",
+        "rationale": "The one-to-four Scene-to-event mapping is well-grounded: bell (τ_s=46), knockdown (τ_s=47), recovery (τ_s=48), and fight-end with split decision (τ_s=55). The annotation's reference to WENT_THE_DISTANCE_RULE derivation at E_fight_ends is confirmed by vr_3 and vr_7. Position range [46, 55] matches the events."
+      },
+      {
+        "lowering_id": "L_after",
+        "verdict": "approved",
+        "rationale": "Scene S_after binds to E_adrian_called (utterance, speaker=rocky, listener=adrian) and E_no_rematch (utterance, speaker_a=rocky, speaker_b=apollo). The annotation correctly explains the one-to-two split: the 'Adrian!' moment and the 'no rematch' exchange are distinct beats with distinct participants and effects."
+      },
+      {
+        "lowering_id": "L_ice_skating_pending",
+        "verdict": "approved",
+        "rationale": "PENDING status is well-justified: the annotation identifies the ice skating scene as a relationship-throughline beat whose dramatic work occurs in conversational texture rather than typed world-state changes. The substrate acknowledges the ice_rink location entity but has no events there. The annotation correctly frames what would need to exist for the lowering to activate."
+      },
+      {
+        "lowering_id": "L_mc_throughline",
+        "verdict": "needs-work",
+        "rationale": "The throughline binding to 18 events is structurally sound, but the annotation claims 'Rocky is not yet a participant at those τ_s' regarding the pre-plot events. This is inaccurate for E_apollo_selects_rocky, where the substrate explicitly lists rocky as the 'selected' participant. The throughline-exclusion decision (these are OS events, not MC events) is dramatically defensible, but the annotation should state the distinction precisely — Rocky is a substrate participant in the selection event but is not yet an aware/active agent in his personal arc at that point."
+      }
+    ],
+    "verifier_commentaries": [
+      {
+        "target_review_id": "vr_0",
+        "assessment": "endorses",
+        "rationale": "72% external-action-shaped events is a reasonable match for an Activity domain assignment. Rocky's MC arc is dominated by training and fighting events (E_training_begins, E_meat_locker_session, E_stairs_run, E_fight_bell, E_round_one_knockdown, E_rocky_gets_up, E_fight_ends), with a minority of internal-state-shaped events like E_night_before_fight (private_reflection) and E_mickey_clears_locker (confrontation). The check correctly identifies the dominant pattern while acknowledging the minority.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_1",
+        "assessment": "qualifies",
+        "rationale": "The check counts 19 events for Rocky while the MC Throughline lowering (L_mc_throughline) lists 18. The discrepancy is almost certainly E_apollo_selects_rocky, where rocky appears as the 'selected' participant but which the MC throughline excludes as an OS event. The verdict is still sound — one additional event doesn't materially shift the 74% ratio — but the check's scope (all substrate events with rocky as participant) differs from the MC throughline's curated scope, and this difference should be transparent.",
+        "suggested_signature": "Consider distinguishing between 'all events where entity participates' and 'events bound to the entity's MC throughline lowering' when calculating approach ratios, since throughline-excluded events may carry a different action/reflection profile."
+      },
+      {
+        "target_review_id": "vr_2",
+        "assessment": "endorses",
+        "rationale": "The Timelock check is well-grounded. The substrate carries scheduling predicates (E_apollo_schedules_mac at τ_s=-10, with scheduled_fight establishing the bicentennial deadline), and the story's pressure derives from the fixed fight date rather than from running out of options. The 1.0 strength with both LT9 and scheduling-predicate signals is appropriate.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_3",
+        "assessment": "endorses",
+        "rationale": "The check traces went_the_distance(rocky, apollo) deriving at τ_s=57 via WENT_THE_DISTANCE_RULE (fought_rounds=15 + standing_at_final_bell). The OS goal (clean publicity) is contaminated because the unknown stayed up. E_fight_ends (winner=apollo, loser=rocky, effect_count=7) and the derived compound fact together support Outcome=Failure — the goal failed precisely because what happened in the ring displaced the scripted narrative.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_4",
+        "assessment": "endorses",
+        "rationale": "The three positive-closure facts at τ_s=57 — went_the_distance, called_out(rocky, adrian), refused_rematch(rocky) — form a coherent Judgment=Good signature. E_adrian_called (utterance, speaker=rocky, listener=adrian) realizes the relationship closure; E_no_rematch (utterance, speaker_a=rocky, speaker_b=apollo) realizes Rocky's self-sufficiency. The check correctly reads these as confirming Rocky's internal resolution despite the external loss.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_5",
+        "assessment": "qualifies",
+        "rationale": "The check's method — 'zero equivalence classes involving rocky; no identity transition' — correctly identifies Resolve=Steadfast for Rocky, but the signature is narrow. An identity-transition check would also pass for characters who change their approach or drive without a substrate-level identity change. For Rocky specifically the verdict is well-grounded (his fundamental drive never shifts), but the check's proxy might not generalize to steadfast characters in stories where the substrate models motivational state changes that fall short of identity transitions.",
+        "suggested_signature": "Consider also checking whether the MC's problem-element or drive-element persists unchanged across the arc's key τ_s boundaries, not just whether an identity transition exists. A character who starts pursuing and ends pursuing with no drive-state change is a stronger steadfast signal than mere absence of identity reclassification."
+      },
+      {
+        "target_review_id": "vr_6",
+        "assessment": "endorses",
+        "rationale": "The check finds articulated_goal(rocky, went_the_distance) entering Rocky's state at τ_s=45 (E_night_before_fight) and holding through τ_s=57. This is a clear 'start' signal: a new commitment enters the knowledge state after an extended arc without it. The night-before scene is the precise substrate moment where the Growth=Start transition is registered, consistent with the Dramatic Beat B_mc_6 ('I just want to go the distance').",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_7",
+        "assessment": "endorses",
+        "rationale": "The Story_goal trajectory check correctly traces the setup (scheduled_fight at τ_s=-1), the mid-arc absence of went_the_distance (τ_s=45, premises not assembled), and the terminal derivation at τ_s=57 (goal contaminated). The three-point trajectory — setup, non-derivation, derivation — is clean and unambiguous. The Failure reading is well-supported.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_8",
+        "assessment": "endorses",
+        "rationale": "The check confirms Story_consequence at τ_s=57 via two substrate facts: went_the_distance(rocky, apollo) derives (the unknown survived) and refused_rematch(apollo) holds (Apollo concedes what scorecards didn't). These two facts together realize the consequence declared in the Template record — the stunt is contaminated. The check's reading aligns precisely with the Dramatic Argument's resolution ('the fifteen rounds refute both' counter-premises).",
+        "suggested_signature": null
+      }
+    ]
+  }
+}
