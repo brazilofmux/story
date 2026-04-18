@@ -141,12 +141,20 @@ Working prototype, closed-corpus encodings, extensive test surface:
   carry an additive IC-throughline temporal-correlation signal.
   Sixth probe → sketch cycle; second landing where verdict
   polarity doesn't change (honesty about MC↔IC relational signal
-  is the deliverable).
+  is the deliverable). **Seventh cycle** landed same day:
+  resolve-endpoint-sketch-01 (RE1–RE5) closes v3's second
+  cross-corpus DSP_resolve finding — end-state behavioral-shift
+  for Change encodings (Oedipus: 90%→33%; Macbeth: no shift,
+  surfacing "I will not yield" as Steadfast-shaped at the
+  behavioral layer) and core-drive-persistence for Steadfast
+  (Rocky's τ_s=45 state-addition vs. Ackroyd's pre-arc trait).
+  The DSP_resolve axis has now produced three successive
+  probe-surfaced layers across three passes (AG5 → RR3 → RE).
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **596 tests** across 12 test files. Full suite runs in under a
+- **603 tests** across 12 test files. Full suite runs in under a
   second. Standard-library only except for the reader-model probe
   (which needs `anthropic` and `pydantic` from
   `prototype/requirements.txt`).
