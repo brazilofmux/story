@@ -1,0 +1,169 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "max_tokens": 20000,
+    "current_τ_a": 40000,
+    "encoding": {
+      "id": "rashomon_encoding",
+      "title": "Rashomon",
+      "story_ids": [
+        "S_frame",
+        "S_bandit_ver",
+        "S_wife_ver",
+        "S_samurai_ver",
+        "S_woodcutter_ver"
+      ],
+      "relation_count": 10
+    },
+    "lowering_ids": [
+      "L_bandit",
+      "L_wife",
+      "L_samurai",
+      "L_woodcutter",
+      "L_priest_pending",
+      "L_commoner_pending",
+      "L_frame_at_gate_pending",
+      "L_frame_testimonies_reported_pending",
+      "L_frame_woodcutter_breaks_pending",
+      "L_frame_abandoned_baby_pending",
+      "L_frame_rain_stops_pending",
+      "L_bandit_seduction",
+      "L_bandit_duel",
+      "L_wife_violated",
+      "L_wife_killing",
+      "L_samurai_begging",
+      "L_samurai_suicide",
+      "L_woodcutter_fight",
+      "L_woodcutter_theft",
+      "L_bandit_mc_throughline",
+      "L_wife_mc_throughline",
+      "L_samurai_mc_throughline",
+      "L_woodcutter_mc_throughline",
+      "L_frame_overall_pending",
+      "L_frame_mc_pending",
+      "L_frame_ic_pending",
+      "L_frame_rel_pending"
+    ],
+    "verifier_review_count": 5,
+    "lowerings_to_review": [],
+    "reviews_to_comment_on": [
+      "vr_0",
+      "vr_1",
+      "vr_2",
+      "vr_3",
+      "vr_4"
+    ],
+    "substrate_context_included": true,
+    "template_records_included": true
+  },
+  "annotation_reviews": [],
+  "verifier_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The verifier correctly identifies that all frame-Story Lowerings (L_priest_pending, L_commoner_pending, L_frame_at_gate_pending, etc.) are PENDING with a grove-only substrate scope, making substrate-based verification of DSP_frame_limit (optionlock) impossible. Reporting the gap as 'noted' rather than forcing a verdict against absent data is exactly the right behavior per MS4. The frame's dramatica-complete declarations (4 DomainAssignments, 6 DSPs, Story_goal, Story_consequence) are well-formed at the upper level; they simply lack lower-side evidence to check against.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:multi-story:frame-declarations:story=S_frame",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_frame_limit",
+        "comment": "S_frame: full Template declarations (4 DomainAssignments, 6 DSPs, Story_goal, Story_consequence) are encoded, but all frame-Story Lowerings are PENDING — the Rashomon substrate scope is grove-only and does not model the gate narrative. No substrate-based verification possible for the frame Story's declarations. Per multi-story-sketch-01 MS4, the per-Story verifier reports this gap rather than producing spurious verdicts."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The verifier's detection of a single middle-arc retraction (LT2 convergence) in the bandit's 3-event branch is technically correct, but the specific retraction — E_t_frees_husband at τ_s=8, which removes the husband's 'bound' state — is enabling rather than restricting: it creates the precondition for the fair duel at τ_s=9 rather than closing off an option. In a 3-event arc, a single structural precondition dominates the LT2 signal, making the 'optionlock-shaped' reading fragile. The timelock declaration may reflect the author's reading that Tajōmaru's testimony unfolds on an afternoon-in-the-grove temporal schedule, which the substrate does not encode with scheduling predicates (hence LT9 not firing). The 'needs-work' verdict stands as a flag worth investigating, but the optionlock alternative is not as strong as the 0.667 strength suggests.",
+      "suggested_signature": "Consider distinguishing enabling retractions (state removal that opens a new possibility for the immediately subsequent event, e.g., 'unbound' enabling 'combat') from restricting retractions (state removal that forecloses a previously available path). Only restricting retractions should count as LT2 convergence evidence for optionlock.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_bandit_ver",
+        "verdict": "needs-work",
+        "match_strength": 0.6666666666666667,
+        "target_record": "dramatica-complete:DSP_bandit_limit",
+        "comment": "DSP_limit=Timelock declared, but substrate exhibits middle-arc LT2 convergence (retraction:1; positions: 1 middle-arc, 0 peripheral-pre, 0 terminal). The arc body looks Optionlock-shaped per LT2+LT7. Either the DSP choice needs revisiting or the substrate's convergence is incidental to a genuinely schedule-driven arc (LT9 does not fire: 0 scheduling predicate(s) present)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The wife's branch has only 2 events (E_w_tajomaru_leaves at τ_s=7, E_w_killing at τ_s=10), giving minimal substrate surface for either timelock or optionlock detection. The verifier's 'noted' verdict with the honest weak-fallback asymmetry — no convergence signals and no scheduling predicates, consistent with timelock but not confirmed — is the appropriate epistemic posture. The suggestion to add a `scheduled_*` predicate to fire LT9 is well-targeted: the wife's account proceeds from abandonment to killing along what reads as a temporal progression (the husband's contemptuous gaze persists until the half-conscious act), but nothing in the current substrate encodes that schedule.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_wife_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_wife_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The samurai's 5-event branch shows one middle-arc retraction, and here the convergence finding has more interpretive weight than in vr_1. The samurai's arc genuinely narrows: E_h_tajomaru_refuses (τ_s=8) closes the 'bandit kills husband' path, E_h_wife_flees (τ_s=9) removes the wife as an actor, and the husband is left with diminishing possibilities until suicide at τ_s=11. This is a plausible optionlock reading. However, the check reports only 1 retraction, suggesting it may be picking up E_h_wife_flees but not E_h_tajomaru_refuses (which has effect_count=0 and may not register as a state-change). The timelock reading — that the husband's testimony narrates events proceeding along the afternoon's temporal order — is also defensible. The 'needs-work' verdict is warranted as a prompt for the author to revisit, but the case for optionlock would be stronger if all option-closing moves were detected.",
+      "suggested_signature": "Consider checking whether events with effect_count=0 that structurally foreclose a narrative path (e.g., a refusal event that eliminates a previously offered action) should count as retractions for LT2 purposes, even when they carry no typed state-change effects in the substrate.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_samurai_ver",
+        "verdict": "needs-work",
+        "match_strength": 0.6666666666666667,
+        "target_record": "dramatica-complete:DSP_samurai_limit",
+        "comment": "DSP_limit=Timelock declared, but substrate exhibits middle-arc LT2 convergence (retraction:1; positions: 1 middle-arc, 0 peripheral-pre, 0 terminal). The arc body looks Optionlock-shaped per LT2+LT7. Either the DSP choice needs revisiting or the substrate's convergence is incidental to a genuinely schedule-driven arc (LT9 does not fire: 0 scheduling predicate(s) present)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The woodcutter's 4-event branch (E_wc_wife_goads, E_wc_fight, E_wc_wife_flees, E_wc_theft) shows no LT2 convergence, which is somewhat surprising given that E_wc_wife_flees (τ_s=10) removes the wife from the scene — but at position 3-of-4 this may fall outside the 'middle-arc' window the check uses. The 'noted' verdict with weak-fallback asymmetry is consistent and appropriately cautious. The woodcutter's testimony arc — goading, chaotic fight, flight, theft — reads as a temporal unfolding rather than a systematic option-closing, supporting the timelock declaration at the interpretive level even if the substrate lacks scheduling predicates to confirm it.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_woodcutter_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_woodcutter_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9."
+      }
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [],
+    "verifier_commentaries": [
+      {
+        "target_review_id": "vr_0",
+        "assessment": "endorses",
+        "rationale": "The verifier correctly identifies that all frame-Story Lowerings (L_priest_pending, L_commoner_pending, L_frame_at_gate_pending, etc.) are PENDING with a grove-only substrate scope, making substrate-based verification of DSP_frame_limit (optionlock) impossible. Reporting the gap as 'noted' rather than forcing a verdict against absent data is exactly the right behavior per MS4. The frame's dramatica-complete declarations (4 DomainAssignments, 6 DSPs, Story_goal, Story_consequence) are well-formed at the upper level; they simply lack lower-side evidence to check against.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_1",
+        "assessment": "qualifies",
+        "rationale": "The verifier's detection of a single middle-arc retraction (LT2 convergence) in the bandit's 3-event branch is technically correct, but the specific retraction — E_t_frees_husband at τ_s=8, which removes the husband's 'bound' state — is enabling rather than restricting: it creates the precondition for the fair duel at τ_s=9 rather than closing off an option. In a 3-event arc, a single structural precondition dominates the LT2 signal, making the 'optionlock-shaped' reading fragile. The timelock declaration may reflect the author's reading that Tajōmaru's testimony unfolds on an afternoon-in-the-grove temporal schedule, which the substrate does not encode with scheduling predicates (hence LT9 not firing). The 'needs-work' verdict stands as a flag worth investigating, but the optionlock alternative is not as strong as the 0.667 strength suggests.",
+        "suggested_signature": "Consider distinguishing enabling retractions (state removal that opens a new possibility for the immediately subsequent event, e.g., 'unbound' enabling 'combat') from restricting retractions (state removal that forecloses a previously available path). Only restricting retractions should count as LT2 convergence evidence for optionlock."
+      },
+      {
+        "target_review_id": "vr_2",
+        "assessment": "endorses",
+        "rationale": "The wife's branch has only 2 events (E_w_tajomaru_leaves at τ_s=7, E_w_killing at τ_s=10), giving minimal substrate surface for either timelock or optionlock detection. The verifier's 'noted' verdict with the honest weak-fallback asymmetry — no convergence signals and no scheduling predicates, consistent with timelock but not confirmed — is the appropriate epistemic posture. The suggestion to add a `scheduled_*` predicate to fire LT9 is well-targeted: the wife's account proceeds from abandonment to killing along what reads as a temporal progression (the husband's contemptuous gaze persists until the half-conscious act), but nothing in the current substrate encodes that schedule.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_3",
+        "assessment": "qualifies",
+        "rationale": "The samurai's 5-event branch shows one middle-arc retraction, and here the convergence finding has more interpretive weight than in vr_1. The samurai's arc genuinely narrows: E_h_tajomaru_refuses (τ_s=8) closes the 'bandit kills husband' path, E_h_wife_flees (τ_s=9) removes the wife as an actor, and the husband is left with diminishing possibilities until suicide at τ_s=11. This is a plausible optionlock reading. However, the check reports only 1 retraction, suggesting it may be picking up E_h_wife_flees but not E_h_tajomaru_refuses (which has effect_count=0 and may not register as a state-change). The timelock reading — that the husband's testimony narrates events proceeding along the afternoon's temporal order — is also defensible. The 'needs-work' verdict is warranted as a prompt for the author to revisit, but the case for optionlock would be stronger if all option-closing moves were detected.",
+        "suggested_signature": "Consider checking whether events with effect_count=0 that structurally foreclose a narrative path (e.g., a refusal event that eliminates a previously offered action) should count as retractions for LT2 purposes, even when they carry no typed state-change effects in the substrate."
+      },
+      {
+        "target_review_id": "vr_4",
+        "assessment": "endorses",
+        "rationale": "The woodcutter's 4-event branch (E_wc_wife_goads, E_wc_fight, E_wc_wife_flees, E_wc_theft) shows no LT2 convergence, which is somewhat surprising given that E_wc_wife_flees (τ_s=10) removes the wife from the scene — but at position 3-of-4 this may fall outside the 'middle-arc' window the check uses. The 'noted' verdict with weak-fallback asymmetry is consistent and appropriately cautious. The woodcutter's testimony arc — goading, chaotic fight, flight, theft — reads as a temporal unfolding rather than a systematic option-closing, supporting the timelock declaration at the interpretive level even if the substrate lacks scheduling predicates to confirm it.",
+        "suggested_signature": null
+      }
+    ]
+  }
+}
