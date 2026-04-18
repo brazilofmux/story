@@ -34,18 +34,18 @@ Core path: standard library only.
 
 ```sh
 cd prototype
-python3 demo.py
-python3 demo_rashomon.py
-python3 test_substrate.py
-python3 test_identity.py
-python3 test_inference.py
-python3 test_dramatic.py
-python3 test_dramatica_template.py
-python3 test_lowering.py
-python3 test_verification.py
-python3 test_rashomon.py
-python3 test_proposal_walker.py
-python3 test_save_the_cat.py
+python3 -m demos.demo
+python3 -m demos.demo_rashomon
+python3 -m tests.test_substrate
+python3 -m tests.test_identity
+python3 -m tests.test_inference
+python3 -m tests.test_dramatic
+python3 -m tests.test_dramatica_template
+python3 -m tests.test_lowering
+python3 -m tests.test_verification
+python3 -m tests.test_rashomon
+python3 -m tests.test_proposal_walker
+python3 -m tests.test_save_the_cat
 ```
 
 Minimal bulk run for the standard-library core:
@@ -53,17 +53,17 @@ Minimal bulk run for the standard-library core:
 ```sh
 cd prototype
 for t in \
-  test_dramatic.py \
-  test_dramatica_template.py \
-  test_identity.py \
-  test_inference.py \
-  test_lowering.py \
-  test_proposal_walker.py \
-  test_rashomon.py \
-  test_save_the_cat.py \
-  test_substrate.py \
-  test_verification.py
-  do python3 "$t" | tail -1
+  test_dramatic \
+  test_dramatica_template \
+  test_identity \
+  test_inference \
+  test_lowering \
+  test_proposal_walker \
+  test_rashomon \
+  test_save_the_cat \
+  test_substrate \
+  test_verification
+  do python3 -m "tests.$t" | tail -1
  done
 ```
 
@@ -74,24 +74,46 @@ Optional reader-model path: requires local venv + `requirements.txt`
 cd prototype
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python3 test_reader_model_client.py
-.venv/bin/python3 test_dramatic_reader_model_client.py
-.venv/bin/python3 demo_reader_model.py --dry-run
-.venv/bin/python3 demo_reader_model_oedipus.py --dry-run
-.venv/bin/python3 demo_reader_model_macbeth.py --dry-run
-.venv/bin/python3 demo_reader_model.py --walk
+.venv/bin/python3 -m tests.test_reader_model_client
+.venv/bin/python3 -m tests.test_dramatic_reader_model_client
+.venv/bin/python3 -m demos.demo_reader_model --dry-run
+.venv/bin/python3 -m demos.demo_reader_model_oedipus --dry-run
+.venv/bin/python3 -m demos.demo_reader_model_macbeth --dry-run
+.venv/bin/python3 -m demos.demo_reader_model --walk
 ```
 
 Cross-boundary verifier demos:
 
 ```sh
 cd prototype
-python3 oedipus_dramatica_complete_verification.py
-python3 macbeth_dramatica_complete_verification.py
-python3 ackroyd_dramatica_complete_verification.py
-python3 macbeth_save_the_cat_verification.py
-python3 ackroyd_save_the_cat_verification.py
+python3 -m story_engine.encodings.oedipus_dramatica_complete_verification
+python3 -m story_engine.encodings.macbeth_dramatica_complete_verification
+python3 -m story_engine.encodings.ackroyd_dramatica_complete_verification
+python3 -m story_engine.encodings.macbeth_save_the_cat_verification
+python3 -m story_engine.encodings.ackroyd_save_the_cat_verification
 ```
+
+## Package layout
+
+```
+prototype/
+├── story_engine/
+│   ├── core/          # framework — 10 modules (substrate, dialects,
+│   │                  #   lowering, verification, verifier_helpers,
+│   │                  #   proposal_walker, reader-model clients)
+│   └── encodings/     # 39 modules across 8 works (oedipus, macbeth,
+│                      #   ackroyd, rocky, rashomon, chinatown,
+│                      #   pride_and_prejudice, turn_of_the_screw)
+├── tests/             # 12 standalone test scripts
+├── demos/             # 11 demo scripts
+├── reader_model_*.json  # probe output artifacts
+├── README.md
+└── requirements.txt
+```
+
+See [`design/package-structure-sketch-01.md`](../design/package-structure-sketch-01.md)
+for the structural commitments (PS1–PS5: directory shape, absolute
+imports, run conventions, package markers, module-membership rule).
 
 ## Files
 
@@ -155,7 +177,7 @@ python3 ackroyd_save_the_cat_verification.py
 
 ### Tests
 
-The prototype currently has **12 test files / 514 tests**.
+The prototype currently has **12 test files / 573 tests** (standard-library core).
 
 - Standard-library core: `test_substrate.py`, `test_identity.py`,
   `test_inference.py`, `test_dramatic.py`,
