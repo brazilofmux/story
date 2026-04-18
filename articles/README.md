@@ -28,5 +28,5 @@ present it for a specific audience at a specific moment.
 
 ## Active articles
 
-- [2026-04-18—Timelock or Optionlock?](2026-04-18-timelock-or-optionlock.md)—Substack draft on what the LLM probe found over six passes against four encoded stories; thesis: real stories don't pick one.
+- [2026-04-18—Timelock or Optionlock?](2026-04-18-timelock-or-optionlock.md)—published at [unlikelyemphasis.substack.com](https://unlikelyemphasis.substack.com/p/timelock-or-optionlock-real-stories). What the LLM probe found over six passes against four encoded stories; thesis: real stories don't pick one.
 - [2026-04-17—Facebook announcement](2026-04-17-fb-announcement.md)—short-form social post written when the repo flipped public. Accessible framing for friends and family: what the engine does, why the thesis is the inverse of end-to-end generation, and a link back to the repo.

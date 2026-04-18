@@ -2,6 +2,8 @@
 
 *What an LLM probe found when I asked it to check my narrative-structure verifier against four actual stories.*
 
+**Published 2026-04-18 at [unlikelyemphasis.substack.com](https://unlikelyemphasis.substack.com/p/timelock-or-optionlock-real-stories).** The Substack version is the canonical citation surface; this file is the source / historical record.
+
 ---
 
 ## 1. The Rulebook
