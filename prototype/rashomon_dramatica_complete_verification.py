@@ -17,7 +17,9 @@ each testimony's DSP_limit is declared Timelock, staking the claim
 that testimonies are "scheduled climaxes within their own narrative
 arcs" (the duel, the violation, the suicide). What does LT9 (per
 pressure-shape-taxonomy-sketch-02) detect against each testimony's
-contested branch?
+contested branch — and, under LT12 (pressure-shape-taxonomy-
+sketch-03), how are the bandit/samurai `bound_to` retractions
+classified?
 
 Per-Story scoping (MS4): for each testimony Story, the LT9 classifier
 is run with the testimony's contested branch as the canonical scope
@@ -37,30 +39,23 @@ available.
 What this verifier is built to surface, not hide:
 
 - **DSP_limit=Timelock against a Timelock-declared testimony that
-  happens to carry a substrate retraction in its middle arc.** The
-  testimonies unbind the husband (retraction of `bound_to`) in three
-  of four branches; the woodcutter branch does not. The retraction
-  lands as an LT2 middle-arc signal against the author's Timelock
-  declaration. This is exactly the sketch-01 vs sketch-02 disposition
-  question: is a scheduled climax Timelock even when a mid-arc
-  retraction looks Optionlock-shaped? The verifier does not decide;
-  it reports the disagreement honestly.
+  happens to carry a substrate retraction in its middle arc.**
+  The bandit and samurai testimonies retract `bound_to(husband,
+  tree)` in the middle arc (`E_t_frees_husband`, `E_h_frees_
+  husband`). Under sketch-02 these fired LT2 and produced
+  NEEDS_WORK 0.67 verdicts — the first non-APPROVED verdict
+  surfaced by the Rashomon probe. Under sketch-03 LT12a classifies
+  both as *enabling* retractions (the `bound_to` predicate matches
+  the constraint vocabulary); they no longer count toward LT2
+  convergence, and the verdicts become NOTED 0.5. The shift
+  closes the probe's first qualification.
 
-- **Woodcutter testimony has no retraction.** Its LT2 signal count
-  is zero. With no scheduling predicate either (LT8 inert), the
-  verdict is NOTED (Timelock-consistent) per LT3's weak-fallback
-  asymmetry. Among the four testimonies, this is the one whose
-  substrate looks cleanly Timelock-shaped.
-
-- **Two axes of asymmetry across the four testimonies.** First:
-  retraction vs no-retraction (three testimonies unbind the husband;
-  the woodcutter's account has the husband already dead by the time
-  the fight begins, so no unbinding is needed — the structural detail
-  that carries the verifier signal is also a plot detail). Second:
-  event count differences activate (samurai, woodcutter: 5 and 4
-  events with terminal band computed) vs do-not-activate (bandit,
-  wife: 3 and 2 events, flat semantics) the LT7 terminal-band refinement.
-  The verifier makes both axes visible.
+- **All four testimonies reach uniform NOTED under LT12.** Wife
+  testimony: no LT2 signals (the `tajomaru_leaves` retraction
+  targets a never-asserted prop). Woodcutter testimony: no
+  retractions. Bandit + samurai: retractions reclassified as
+  enabling per LT12a. Result: consistent-but-not-affirmed across
+  the board, matching the uniform authorial Timelock claim.
 
 Honest scope limit: this verifier does NOT test the frame Story's
 declarations (DSP_limit=Optionlock, Outcome=Success, Judgment=Good)
@@ -135,12 +130,14 @@ def _run_testimony_dsp_limit_check(
 
 def bandit_dsp_limit_check(upper_ref, _unused_lower_refs=()):
     """S_bandit_ver: DSP_limit=Timelock declared. LT9 runs against
-    B_TAJOMARU scope (canonical grove events + Tajōmaru's branch events:
-    wife-requests-killing, frees-husband, duel). The `frees-husband`
-    event retracts `bound_to(husband, tree)` — an LT2 convergence signal.
-    With 3 positive-τ_s events (flat semantics per LT7), this retraction
-    lands in the middle-arc band → classification=optionlock →
-    declaration/substrate disagreement."""
+    B_TAJOMARU scope (canonical grove events + Tajōmaru's branch
+    events: wife-requests-killing, frees-husband, duel). The
+    `frees-husband` event retracts `bound_to(husband, tree)`; under
+    LT12a (sketch-03) `bound_to` is in the constraint-predicate
+    vocabulary → the retraction is enabling (unbinding enables the
+    duel, not foreclosing an option). Restricting retraction count:
+    0. With no scheduling predicate either, classification is
+    timelock-consistent → NOTED 0.5."""
     return _run_testimony_dsp_limit_check(S_bandit_ver.id, B_TAJOMARU)
 
 
@@ -157,11 +154,14 @@ def wife_dsp_limit_check(upper_ref, _unused_lower_refs=()):
 
 def samurai_dsp_limit_check(upper_ref, _unused_lower_refs=()):
     """S_samurai_ver: DSP_limit=Timelock declared. LT9 runs against
-    B_HUSBAND scope. 5 positive-τ_s events (τ_s=7..11) — ENOUGH to
-    activate LT7's terminal-band refinement. The `frees-husband`
-    retraction at τ_s=10 lands middle-arc (terminal threshold ~10.6);
-    the suicide at τ_s=11 lands terminal. Longest of the four
-    testimonies; most LT7-sensitive."""
+    B_HUSBAND scope. 5 positive-τ_s events (τ_s=7..11). Under
+    LT12a (sketch-03) `E_h_frees_husband`'s retraction of
+    `bound_to(husband, tree)` is enabling (the husband is unbound
+    so he can commit suicide; not an option-closing move).
+    Restricting retraction count: 0. Classification:
+    timelock-consistent → NOTED 0.5. Parallels S_bandit_ver's
+    verdict under sketch-03; both were NEEDS_WORK 0.67 under
+    sketch-02."""
     return _run_testimony_dsp_limit_check(S_samurai_ver.id, B_HUSBAND)
 
 

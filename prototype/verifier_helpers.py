@@ -39,6 +39,20 @@ from lowering import cross_ref, LoweringStatus
 _PRIMARY_ACTOR_ROLES = ("killer", "speaker", "actor", "agent", "subject")
 
 
+# LT12a constraint-predicate vocabulary (pressure-shape-taxonomy-
+# sketch-03). Retractions of propositions whose predicate matches
+# this set are presumed *enabling* (state removal that opens a new
+# action) rather than *restricting* (option-closing convergence).
+# Explicitly excludes `scheduled_*` — that prefix is LT8's domain.
+# Encodings can extend this vocabulary at their verifier invocation
+# via the `constraint_vocab` parameter on `classify_arc_limit_shape_
+# strong` / `classify_retraction_kind`.
+DEFAULT_CONSTRAINT_VOCAB: frozenset = frozenset({
+    "bound_to", "tied_to",
+    "imprisoned_in", "trapped_in", "locked_in",
+})
+
+
 def find_substrate_event(event_id: str, fabula: tuple) -> Event:
     """Look up a substrate Event by id, or raise KeyError. Linear
     scan; fabulas are authored tuples and typically under 30 events,
@@ -292,14 +306,86 @@ def classify_arc_limit_shape(
     return ("optionlock", strength, tuple(signals))
 
 
+def classify_retraction_kind(
+    retracted_prop,
+    retraction_τ_s: int,
+    sorted_events: list,
+    constraint_vocab: frozenset = DEFAULT_CONSTRAINT_VOCAB,
+    window: int = 2,
+) -> tuple:
+    """LT12 retraction-kind classifier (pressure-shape-taxonomy-
+    sketch-03). Classifies a retraction as *enabling* (state removal
+    that opens a new action) or *restricting* (option-closing
+    convergence).
+
+    A retraction of `P(X, ...)` at `retraction_τ_s` is **enabling** iff:
+
+      - **LT12a (lexical)**: `P.predicate` matches `constraint_vocab`
+        (default: `bound_to`, `tied_to`, `imprisoned_in`,
+        `trapped_in`, `locked_in`). These predicates represent
+        bounding constraints whose removal releases agency. OR
+      - **LT12b (positional)**: the retracted prop's first argument
+        `X` appears as a named participant (any role) in an event
+        within the arc window `(retraction_τ_s, retraction_τ_s +
+        window]`. This catches enabling retractions outside the
+        lexical vocabulary when the retractee becomes active shortly
+        afterwards.
+
+    Returns `("enabling", reason)` or `("restricting", None)` where
+    `reason` is `"constraint-vocabulary"` (LT12a) or
+    `"subject-reactivation"` (LT12b).
+
+    Only restricting retractions count as LT2 convergence signals per
+    LT14 (sketch-03 disposition table). Enabling retractions are
+    reported in the classifier's output so the verifier's comment
+    can reference them, but they do not shift the verdict.
+    """
+    # LT12a — lexical
+    if retracted_prop.predicate in constraint_vocab:
+        return ("enabling", "constraint-vocabulary")
+
+    # LT12b — positional subject-reactivation
+    if retracted_prop.args:
+        subject = retracted_prop.args[0]
+        window_hi = retraction_τ_s + window
+        for e in sorted_events:
+            if e.τ_s is None or e.τ_s <= retraction_τ_s:
+                continue
+            if e.τ_s > window_hi:
+                break
+            if subject in _participant_values(e.participants):
+                return ("enabling", "subject-reactivation")
+
+    return ("restricting", None)
+
+
+def _participant_values(participants) -> set:
+    """Flatten an event's participants mapping into a set of entity
+    ids, handling both scalar values ("a": "tajomaru") and list values
+    ("targets": ["husband", "wife"]) uniformly."""
+    values: set = set()
+    if not participants:
+        return values
+    for v in participants.values():
+        if isinstance(v, (list, tuple)):
+            for item in v:
+                values.add(item)
+        else:
+            values.add(v)
+    return values
+
+
 def classify_arc_limit_shape_strong(
     fabula,
     rules,
     canonical_branch,
     all_branches: dict,
+    constraint_vocab: frozenset = DEFAULT_CONSTRAINT_VOCAB,
+    enabling_window: int = 2,
 ) -> dict:
-    """LT7–LT9 arc-position-aware classifier per pressure-shape-
-    taxonomy-sketch-02. Extends `classify_arc_limit_shape` with:
+    """LT7–LT12 arc-position-aware classifier per pressure-shape-
+    taxonomy-sketches 02 and 03. Extends `classify_arc_limit_shape`
+    with:
 
       1. **LT7** — each LT2 convergence signal is tagged by arc
          position: `peripheral-pre` (τ_s < 0, substrate convention
@@ -312,6 +398,14 @@ def classify_arc_limit_shape_strong(
          vocabulary per LT6.
       3. **LT9** — strong Timelock predicate: scheduling signal
          present AND middle-arc LT2 signal count is zero.
+      4. **LT12** — enabling vs restricting retractions. A retraction
+         in the middle-arc band is classified per
+         `classify_retraction_kind`; only restricting retractions
+         contribute to the LT2 convergence count. Enabling
+         retractions are reported in `enabling_retractions` so the
+         verifier comment can surface them. Peripheral-pre and
+         terminal-band retractions are exempt from LT12 — LT7's
+         banding handles them first.
 
     Returns a dict with the following keys:
 
@@ -320,15 +414,23 @@ def classify_arc_limit_shape_strong(
         `"undetermined"`.
       - `strength`: float in [0.0, 1.0].
       - `signals`: tuple of `"<kind>:<count>"` strings, compatible
-        with sketch-01's format (flat totals across all positions).
+        with sketch-01's format (flat totals across all positions;
+        retraction count reflects ALL retractions for back-compat,
+        enabling and restricting alike).
       - `middle_arc_kinds`: count of distinct LT2 signal kinds with
-        at least one middle-arc event.
+        at least one **restricting** middle-arc event (LT12-aware).
       - `peripheral_pre_count`, `middle_arc_count`, `terminal_count`:
-        event counts per band across all three LT2 signal kinds.
+        event counts per band across all three LT2 signal kinds
+        (flat, enabling-inclusive; used for diagnostics, not verdict).
       - `scheduling_signals`: tuple of predicate names that fired
         LT8 (distinct `Prop` count, not event count).
       - `scheduling_count`: number of distinct `Prop`s in
         `scheduling_signals`.
+      - `enabling_retractions`: tuple of
+        `(predicate, τ_s, reason)` triples — one per middle-arc
+        retraction classified enabling by LT12.
+      - `enabling_retraction_count`: convenience integer, equals
+        `len(enabling_retractions)`.
       - `arc_range`: `(min_τ_s, max_τ_s)` for diagnostics.
       - `terminal_threshold`: the τ_s cutoff used for terminal-band
         classification (computed as `max_τ_s - 0.1 × positive_span`).
@@ -339,7 +441,7 @@ def classify_arc_limit_shape_strong(
     Per LT1, classification is a function of fold-visible substrate
     structure — events, effects, and rule derivations. Per LT11,
     `dsp_limit_characterization_check` below consumes this dict
-    directly to apply the LT10 disposition table.
+    directly to apply the LT14 disposition table.
     """
     events = [
         e for e in fabula if in_scope(e, canonical_branch, all_branches)
@@ -359,6 +461,8 @@ def classify_arc_limit_shape_strong(
             "terminal_count": 0,
             "scheduling_signals": (),
             "scheduling_count": 0,
+            "enabling_retractions": (),
+            "enabling_retraction_count": 0,
             "arc_range": (0, 0),
             "terminal_threshold": 0.0,
         }
@@ -391,8 +495,19 @@ def classify_arc_limit_shape_strong(
         return "middle-arc"
 
     # === Retractions + scheduling-predicate scan (single pass) ===
+    #
+    # LT12 integration (sketch-03): retractions in the middle-arc band
+    # are classified as enabling or restricting. `retraction_bands`
+    # continues to carry the flat count (back-compat with sketch-01's
+    # signal display); `restricting_retraction_bands` carries the
+    # LT12-filtered count used for classification. Enabling middle-arc
+    # retractions are collected in `enabling_retractions_list`.
     asserted_so_far: set = set()
     retraction_bands = {"peripheral-pre": 0, "middle-arc": 0, "terminal": 0}
+    restricting_retraction_bands = {
+        "peripheral-pre": 0, "middle-arc": 0, "terminal": 0,
+    }
+    enabling_retractions_list: list = []
     scheduling_props: set = set()
     for e in events_sorted:
         for ef in e.effects:
@@ -404,7 +519,25 @@ def classify_arc_limit_shape_strong(
                 asserted_so_far.add(ef.prop)
             else:
                 if ef.prop in asserted_so_far:
-                    retraction_bands[_band_for(e.τ_s)] += 1
+                    band = _band_for(e.τ_s)
+                    retraction_bands[band] += 1
+                    # LT12 applies only within the middle-arc band.
+                    # Peripheral-pre and terminal retractions pass
+                    # through LT7's banding unchanged.
+                    if band == "middle-arc":
+                        kind, reason = classify_retraction_kind(
+                            ef.prop, e.τ_s, events_sorted,
+                            constraint_vocab=constraint_vocab,
+                            window=enabling_window,
+                        )
+                        if kind == "enabling":
+                            enabling_retractions_list.append(
+                                (ef.prop.predicate, e.τ_s, reason)
+                            )
+                        else:
+                            restricting_retraction_bands[band] += 1
+                    else:
+                        restricting_retraction_bands[band] += 1
                     asserted_so_far.discard(ef.prop)
 
     # === Identity resolutions (equivalence-class effects) ===
@@ -517,7 +650,8 @@ def classify_arc_limit_shape_strong(
         + rule_emergence_bands["terminal"]
     )
 
-    # Kinds firing anywhere (sketch-01 format)
+    # Kinds firing anywhere (sketch-01 format; flat retraction count
+    # for back-compat includes both enabling and restricting).
     retraction_total = sum(retraction_bands.values())
     identity_total = sum(identity_bands.values())
     rule_emergence_total = sum(rule_emergence_bands.values())
@@ -526,10 +660,26 @@ def classify_arc_limit_shape_strong(
         if n > 0
     )
 
-    # Middle-arc kinds (LT7 / LT9)
+    # LT12-aware kinds firing (restricting retractions only). Used by
+    # classification (sketch-03 LT14): if every middle-arc retraction
+    # is enabling, the substrate is LT2-clean for Timelock purposes,
+    # not arc-peripheral.
+    restricting_retraction_total = sum(restricting_retraction_bands.values())
+    restricting_kinds_firing = sum(
+        1 for n in (
+            restricting_retraction_total,
+            identity_total,
+            rule_emergence_total,
+        )
+        if n > 0
+    )
+
+    # Middle-arc kinds (LT7 / LT9 / LT12) — restricting-only for the
+    # retraction kind, per sketch-03 LT14. Identity and rule-emergence
+    # kinds are unchanged by LT12.
     middle_arc_kinds = sum(
         1 for n in (
-            retraction_bands["middle-arc"],
+            restricting_retraction_bands["middle-arc"],
             identity_bands["middle-arc"],
             rule_emergence_bands["middle-arc"],
         )
@@ -549,22 +699,24 @@ def classify_arc_limit_shape_strong(
     )
     scheduling_count = len(scheduling_props)
 
-    # Classification per LT7–LT9
+    # Classification per LT7–LT9 + LT12 (sketch-03). Uses restricting-
+    # only counts throughout — enabling retractions never shift the
+    # classification verdict, only the comment/diagnostics.
     if scheduling_count > 0 and middle_arc_kinds == 0:
         classification = "timelock-strong"
         strength = min(1.0, scheduling_count / 2.0)
     elif middle_arc_kinds > 0:
         classification = "optionlock"
-        strength = min(1.0, kinds_firing / 3.0)
-    elif kinds_firing == 0 and scheduling_count == 0:
+        strength = min(1.0, restricting_kinds_firing / 3.0)
+    elif restricting_kinds_firing == 0 and scheduling_count == 0:
         classification = "timelock-consistent"
         strength = 0.5
     else:
-        # Signals fire but only peripheral/terminal, and no scheduling
-        # predicate to support a Timelock-strong reading. LT10's
-        # declared=Optionlock + only-peripheral/terminal row.
+        # Restricting signals fire but only peripheral/terminal, and
+        # no scheduling predicate. LT10's declared=Optionlock +
+        # only-peripheral/terminal row.
         classification = "optionlock-peripheral"
-        strength = 0.5 * min(1.0, kinds_firing / 3.0)
+        strength = 0.5 * min(1.0, restricting_kinds_firing / 3.0)
 
     return {
         "classification": classification,
@@ -576,6 +728,8 @@ def classify_arc_limit_shape_strong(
         "terminal_count": terminal,
         "scheduling_signals": scheduling_signals_tuple,
         "scheduling_count": scheduling_count,
+        "enabling_retractions": tuple(enabling_retractions_list),
+        "enabling_retraction_count": len(enabling_retractions_list),
         "arc_range": (min_τ, max_τ),
         "terminal_threshold": terminal_threshold,
     }
@@ -624,6 +778,7 @@ def dsp_limit_characterization_check(
     terminal = result["terminal_count"]
     middle_arc = result["middle_arc_count"]
     scheduling_count = result["scheduling_count"]
+    enabling_retractions = result["enabling_retractions"]
     kinds_firing = len(signals)
 
     declared_normalized = (declared_choice or "").lower()
@@ -638,6 +793,20 @@ def dsp_limit_characterization_check(
         ", ".join(scheduling_signals) if scheduling_signals
         else "no scheduling predicates"
     )
+    # LT12: surface enabling-retractions as a comment suffix so the
+    # verdict rationale explains what the classifier saw but did not
+    # count toward LT2 convergence.
+    if enabling_retractions:
+        enabling_clauses = ", ".join(
+            f"{pred}@τ_s={τ} ({reason})"
+            for pred, τ, reason in enabling_retractions
+        )
+        enabling_suffix = (
+            f" LT12 excluded {len(enabling_retractions)} "
+            f"enabling retraction(s): {enabling_clauses}."
+        )
+    else:
+        enabling_suffix = ""
 
     # Import verdict constants lazily to keep verifier_helpers' import
     # graph narrow (verification.py imports verifier_helpers indirectly
@@ -709,27 +878,28 @@ def dsp_limit_characterization_check(
         if classification == "timelock-consistent":
             return (
                 VERDICT_NOTED, None,
-                f"DSP_limit=Timelock declared; substrate shows no LT2 "
-                f"convergence signals AND no scheduling predicate "
-                f"(LT8). Consistent with Timelock but not "
-                f"affirmatively detected — LT3's honest weak-fallback "
-                f"asymmetry (sketch-01). Consider naming the "
-                f"scheduled endpoint with a `scheduled_*` predicate "
-                f"to fire LT9.",
+                f"DSP_limit=Timelock declared; substrate shows no "
+                f"restricting middle-arc LT2 convergence signals AND "
+                f"no scheduling predicate (LT8). Consistent with "
+                f"Timelock but not affirmatively detected — LT3's "
+                f"honest weak-fallback asymmetry (sketch-01). Consider "
+                f"naming the scheduled endpoint with a `scheduled_*` "
+                f"predicate to fire LT9." + enabling_suffix,
             )
         if classification == "optionlock-peripheral":
-            # Signals fire but only peripheral/terminal, no scheduling.
-            # This is Timelock-compatible in spirit — no middle-arc
-            # convergence — but LT8 did not confirm.
+            # Restricting signals fire but only peripheral/terminal,
+            # no scheduling. Timelock-compatible in spirit — no
+            # middle-arc convergence — but LT8 did not confirm.
             return (
                 VERDICT_NOTED, None,
-                f"DSP_limit=Timelock declared; substrate shows LT2 "
-                f"signals ({signal_text}) all in arc-peripheral or "
-                f"terminal bands ({position_text}) and no scheduling "
-                f"predicate (LT8). Middle-arc is clean (consistent "
-                f"with Timelock); LT9 does not fire for lack of "
-                f"scheduling signal. Consider naming the scheduled "
-                f"endpoint to lift the verdict to APPROVED.",
+                f"DSP_limit=Timelock declared; substrate shows "
+                f"restricting LT2 signals ({signal_text}) all in "
+                f"arc-peripheral or terminal bands ({position_text}) "
+                f"and no scheduling predicate (LT8). Middle-arc is "
+                f"clean (consistent with Timelock); LT9 does not "
+                f"fire for lack of scheduling signal. Consider "
+                f"naming the scheduled endpoint to lift the verdict "
+                f"to APPROVED." + enabling_suffix,
             )
         # classification == "optionlock" — substrate exhibits middle-arc
         # convergence, contradicting the Timelock declaration.
@@ -738,10 +908,11 @@ def dsp_limit_characterization_check(
             f"DSP_limit=Timelock declared, but substrate exhibits "
             f"middle-arc LT2 convergence ({signal_text}; "
             f"{position_text}). The arc body looks Optionlock-shaped "
-            f"per LT2+LT7. Either the DSP choice needs revisiting or "
-            f"the substrate's convergence is incidental to a "
-            f"genuinely schedule-driven arc (LT9 does not fire: "
-            f"{scheduling_count} scheduling predicate(s) present).",
+            f"per LT2+LT7+LT12. Either the DSP choice needs "
+            f"revisiting or the substrate's convergence is incidental "
+            f"to a genuinely schedule-driven arc (LT9 does not fire: "
+            f"{scheduling_count} scheduling predicate(s) present)."
+            + enabling_suffix,
         )
     return (
         VERDICT_NOTED, None,

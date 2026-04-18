@@ -2536,6 +2536,194 @@ def test_lt_rocky_scheduling_signals_include_both_fight_props():
 
 
 # ----------------------------------------------------------------------------
+# pressure-shape-taxonomy-sketch-03: LT12 (enabling vs restricting
+# retractions) + LT14 (disposition table with restricting-only counts)
+# ----------------------------------------------------------------------------
+
+
+def test_lt12a_constraint_vocab_retraction_is_enabling():
+    """LT12a: a retraction of a prop whose predicate is in the
+    constraint vocabulary (bound_to, tied_to, imprisoned_in,
+    trapped_in, locked_in) is classified enabling. It does not count
+    toward LT2 convergence."""
+    from verifier_helpers import (
+        classify_arc_limit_shape_strong, DEFAULT_CONSTRAINT_VOCAB,
+    )
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    P = Prop("bound_to", ("x", "tree"))
+    # Assert bound_to (canonical), then retract mid-arc, then a
+    # final event so the arc has > 3 positive events and we're
+    # squarely in middle-arc banding.
+    fabula = (
+        _make_event_at(1, "E_bind", P, asserts=True),
+        _make_event_at(5, "E_freed", P, asserts=False),
+        _make_event_at(10, "E_next", Prop("a", ("p",))),
+        _make_event_at(15, "E_next2", Prop("b", ("q",))),
+        _make_event_at(20, "E_end", Prop("c", ("r",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    # The retraction is counted in flat retraction totals (back-compat)
+    # but excluded from the restricting count used for classification.
+    assert result["enabling_retraction_count"] == 1
+    enabling = result["enabling_retractions"][0]
+    assert enabling[0] == "bound_to"
+    assert enabling[1] == 5
+    assert enabling[2] == "constraint-vocabulary"
+    assert result["middle_arc_kinds"] == 0
+    # Substrate is LT2-clean under LT12 → timelock-consistent.
+    assert result["classification"] == "timelock-consistent"
+    assert "bound_to" in DEFAULT_CONSTRAINT_VOCAB
+
+
+def test_lt12b_subject_reactivation_retraction_is_enabling():
+    """LT12b: a retraction whose subject (first arg of the retracted
+    prop) appears as a named participant in a later event within the
+    enabling window is classified enabling. Catches constraint-
+    removal patterns outside the LT12a lexical vocabulary."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop, Event, WorldEffect
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    # Subject "hero" retracts a non-constraint-vocab prop, then
+    # appears as a participant in a subsequent event within window.
+    P = Prop("asleep", ("hero",))  # not in constraint vocab
+    fabula = (
+        _make_event_at(1, "E_sleep", P, asserts=True),
+        _make_event_at(5, "E_wake", P, asserts=False),
+        Event(
+            id="E_fight", type="g", τ_s=6, τ_a=6,
+            participants={"agent": "hero"},  # subject reactivated
+            effects=(WorldEffect(prop=Prop("won", ("hero",)),
+                                 asserts=True),),
+            branches=frozenset({":canonical"}),
+        ),
+        _make_event_at(15, "E_next", Prop("a", ("p",))),
+        _make_event_at(20, "E_end", Prop("b", ("q",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert result["enabling_retraction_count"] == 1
+    assert result["enabling_retractions"][0][2] == "subject-reactivation"
+
+
+def test_lt12c_unreactivated_retraction_is_restricting():
+    """LT12c: a retraction whose subject does NOT reappear as a
+    participant within the enabling window and whose predicate is
+    not in the constraint vocabulary is classified restricting — LT2
+    convergence as before."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    # "loser" asserted then retracted, and does not reappear anywhere.
+    P = Prop("accused_of", ("loser", "crime"))  # non-constraint
+    fabula = (
+        _make_event_at(1, "E_accused", P, asserts=True),
+        _make_event_at(5, "E_cleared", P, asserts=False),
+        _make_event_at(10, "E_next", Prop("a", ("p",))),
+        _make_event_at(15, "E_next2", Prop("b", ("q",))),
+        _make_event_at(20, "E_end", Prop("c", ("r",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    assert result["enabling_retraction_count"] == 0
+    # Restricting middle-arc retraction counted in LT2.
+    assert result["middle_arc_kinds"] >= 1
+
+
+def test_lt12_does_not_apply_to_peripheral_pre_retraction():
+    """LT12 operates within the middle-arc band only. A peripheral-
+    pre retraction (τ_s < 0) passes through LT7's banding first and
+    is never classified by LT12 — its kind is irrelevant because it
+    was never going to contribute to middle-arc convergence anyway."""
+    from verifier_helpers import classify_arc_limit_shape_strong
+    from substrate import Branch, Prop
+    canonical = Branch(label=":canonical", kind="canonical", parent=None)
+    all_branches = {":canonical": canonical}
+    # bound_to retraction at τ_s=-5 (peripheral-pre) — would be LT12a
+    # enabling in middle-arc, but LT12 doesn't fire here.
+    P = Prop("bound_to", ("x", "y"))
+    fabula = (
+        _make_event_at(-10, "E_bind", P, asserts=True),
+        _make_event_at(-5, "E_freed_pre", P, asserts=False),
+        _make_event_at(5, "E1", Prop("a", ("p",))),
+        _make_event_at(10, "E2", Prop("b", ("q",))),
+        _make_event_at(15, "E3", Prop("c", ("r",))),
+        _make_event_at(20, "E4", Prop("d", ("s",))),
+    )
+    result = classify_arc_limit_shape_strong(
+        fabula, (), canonical, all_branches,
+    )
+    # No middle-arc retraction to classify → no LT12 entries
+    assert result["enabling_retraction_count"] == 0
+    assert result["peripheral_pre_count"] >= 1
+
+
+def test_lt14_rashomon_bandit_timelock_consistent_under_lt12():
+    """LT14 shifted verdict: S_bandit_ver's testimony, under sketch-02,
+    produced NEEDS_WORK 0.67 because `E_t_frees_husband` retracted
+    `bound_to(husband, tree)` in the middle arc (LT2 fired). Under
+    LT12a, that retraction is enabling (constraint vocabulary). The
+    restricting-only middle-arc count drops to 0; classification
+    becomes timelock-consistent; the dsp_limit check returns NOTED."""
+    from verifier_helpers import dsp_limit_characterization_check
+    from rashomon import EVENTS_ALL, B_TAJOMARU, ALL_BRANCHES
+    verdict, _strength, comment = dsp_limit_characterization_check(
+        EVENTS_ALL, (), B_TAJOMARU, ALL_BRANCHES, "timelock",
+    )
+    assert verdict == VERDICT_NOTED
+    assert "LT12 excluded" in comment
+    assert "bound_to" in comment
+    assert "constraint-vocabulary" in comment
+
+
+def test_lt14_rashomon_samurai_timelock_consistent_under_lt12():
+    """Parallel to bandit: S_samurai_ver's `E_h_frees_husband`
+    retracts `bound_to(husband, tree)` mid-arc; under LT12a this is
+    an enabling retraction; verdict is NOTED."""
+    from verifier_helpers import dsp_limit_characterization_check
+    from rashomon import EVENTS_ALL, B_HUSBAND, ALL_BRANCHES
+    verdict, _strength, comment = dsp_limit_characterization_check(
+        EVENTS_ALL, (), B_HUSBAND, ALL_BRANCHES, "timelock",
+    )
+    assert verdict == VERDICT_NOTED
+    assert "LT12 excluded" in comment
+
+
+def test_lt12_preserves_prior_optionlock_verdicts():
+    """LT12 must not shift Macbeth/Oedipus/Ackroyd Optionlock
+    verdicts — their middle-arc retractions are restricting (or
+    they have none), and identity-resolution + rule-emergence
+    signals are unchanged by LT12. Pin the APPROVED 0.67 outcomes."""
+    from macbeth_dramatica_complete_verification import (
+        run as macbeth_run,
+    )
+    from oedipus_dramatica_complete_verification import (
+        run as oedipus_run,
+    )
+    from ackroyd_dramatica_complete_verification import (
+        run as ackroyd_run,
+    )
+    for run_fn in (macbeth_run, oedipus_run, ackroyd_run):
+        reviews = run_fn()
+        dsp_limit_reviews = [
+            r for r in reviews
+            if r.target_record.record_id == "DSP_limit"
+        ]
+        assert len(dsp_limit_reviews) == 1
+        r = dsp_limit_reviews[0]
+        assert r.verdict == VERDICT_APPROVED
+        assert r.match_strength is not None
+        assert 0.6 <= r.match_strength <= 0.7
+
+
+# ----------------------------------------------------------------------------
 # event-agency-taxonomy-sketch-01: AG1-AG6
 # (classify_event_agency_shape; pursuit / consequential / neutral / None)
 # ----------------------------------------------------------------------------
@@ -3460,6 +3648,14 @@ TESTS = [
     test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
     test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
     test_lt_rocky_scheduling_signals_include_both_fight_props,
+    # pressure-shape-taxonomy-sketch-03 (LT12, LT14)
+    test_lt12a_constraint_vocab_retraction_is_enabling,
+    test_lt12b_subject_reactivation_retraction_is_enabling,
+    test_lt12c_unreactivated_retraction_is_restricting,
+    test_lt12_does_not_apply_to_peripheral_pre_retraction,
+    test_lt14_rashomon_bandit_timelock_consistent_under_lt12,
+    test_lt14_rashomon_samurai_timelock_consistent_under_lt12,
+    test_lt12_preserves_prior_optionlock_verdicts,
     # resolve-endpoint-sketch-01 (RE1-RE5)
     test_re5_compute_pre_post_ratios_detects_shift,
     test_re5_returns_zero_shift_when_pre_post_similar,
