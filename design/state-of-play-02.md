@@ -216,9 +216,12 @@ In the order I'd work them:
    which it has). Mechanical refactor. Doing this before #3
    prevents moving files while they're being edited by a later
    research arc.
-3. **Skeleton generator** — a tool that, given Story title +
-   Characters + Throughline count, stubs the four encoding files.
-   Codifies only the mechanical shell; does not thwart research.
+3. ~~**Skeleton generator**~~ **Landed 2026-04-18 as
+   [skeleton-generator-sketch-01](skeleton-generator-sketch-01.md)
+   + `prototype/story_engine/tools/skeleton.py`.** CLI tool that
+   writes the canonical 5-file dramatica-complete encoding stub
+   given a work-id, title, and character list. 8 tests pin the
+   six sketch acceptance criteria; 573 → 581 prototype test total.
 4. ~~**Enabling-retraction preservation**~~ **Banked as an explicit
    deferral sketch — [enabling-retraction-preservation-sketch-01](
    enabling-retraction-preservation-sketch-01.md)** (2026-04-18,

@@ -61,6 +61,7 @@ for t in \
   test_proposal_walker \
   test_rashomon \
   test_save_the_cat \
+  test_skeleton \
   test_substrate \
   test_verification
   do python3 -m "tests.$t" | tail -1
@@ -175,15 +176,31 @@ imports, run conventions, package markers, module-membership rule).
 - `demo_reader_model*.py` and `demo_dramatic_reader_model_*.py` —
   prompt inspection / live-probe drivers.
 
+### Author tools
+
+- `story_engine/tools/skeleton.py` — CLI tool that writes the
+  canonical 5-file encoding stub given a work-id, title, and
+  character list. See
+  [`../design/skeleton-generator-sketch-01.md`](../design/skeleton-generator-sketch-01.md)
+  for commitments SG1–SG6. Invoked as
+  `python3 -m story_engine.tools.skeleton --work-id <id> --title
+  "<Title>" --characters "id1:Name1,id2:Name2" [--out-dir <path>]
+  [--force]`. Step 2 of the 5-step expert-system author flow
+  (start, **skeleton**, fill, walk/check, prose).
+- `story_engine/tools/skeleton_templates.py` — template strings
+  for each of the 5 generated files. Separated from the CLI for
+  independent testability.
+
 ### Tests
 
-The prototype currently has **12 test files / 573 tests** (standard-library core).
+The prototype currently has **13 test files / 581 tests** (standard-library core).
 
 - Standard-library core: `test_substrate.py`, `test_identity.py`,
   `test_inference.py`, `test_dramatic.py`,
   `test_dramatica_template.py`, `test_lowering.py`,
   `test_verification.py`, `test_rashomon.py`,
-  `test_proposal_walker.py`, `test_save_the_cat.py`.
+  `test_proposal_walker.py`, `test_save_the_cat.py`,
+  `test_skeleton.py`.
 - Venv-only client tests: `test_reader_model_client.py`,
   `test_dramatic_reader_model_client.py`.
 
