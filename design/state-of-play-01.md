@@ -1,6 +1,6 @@
 # State of play — sketch 01
 
-**Status:** active
+**Status:** superseded by [state-of-play-02](state-of-play-02.md)
 **Date:** 2026-04-18
 
 A cold-start orientation doc. Written at the Rashomon-arc close
