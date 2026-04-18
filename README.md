@@ -140,7 +140,7 @@ Working prototype, closed-corpus encodings, extensive test surface:
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **588 tests** across 12 test files. Full suite runs in under a
+- **596 tests** across 12 test files. Full suite runs in under a
   second. Standard-library only except for the reader-model probe
   (which needs `anthropic` and `pydantic` from
   `prototype/requirements.txt`).
