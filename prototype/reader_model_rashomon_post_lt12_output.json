@@ -1,0 +1,169 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "max_tokens": 20000,
+    "current_τ_a": 41000,
+    "encoding": {
+      "id": "rashomon_encoding",
+      "title": "Rashomon",
+      "story_ids": [
+        "S_frame",
+        "S_bandit_ver",
+        "S_wife_ver",
+        "S_samurai_ver",
+        "S_woodcutter_ver"
+      ],
+      "relation_count": 10
+    },
+    "lowering_ids": [
+      "L_bandit",
+      "L_wife",
+      "L_samurai",
+      "L_woodcutter",
+      "L_priest_pending",
+      "L_commoner_pending",
+      "L_frame_at_gate_pending",
+      "L_frame_testimonies_reported_pending",
+      "L_frame_woodcutter_breaks_pending",
+      "L_frame_abandoned_baby_pending",
+      "L_frame_rain_stops_pending",
+      "L_bandit_seduction",
+      "L_bandit_duel",
+      "L_wife_violated",
+      "L_wife_killing",
+      "L_samurai_begging",
+      "L_samurai_suicide",
+      "L_woodcutter_fight",
+      "L_woodcutter_theft",
+      "L_bandit_mc_throughline",
+      "L_wife_mc_throughline",
+      "L_samurai_mc_throughline",
+      "L_woodcutter_mc_throughline",
+      "L_frame_overall_pending",
+      "L_frame_mc_pending",
+      "L_frame_ic_pending",
+      "L_frame_rel_pending"
+    ],
+    "verifier_review_count": 5,
+    "lowerings_to_review": [],
+    "reviews_to_comment_on": [
+      "vr_0",
+      "vr_1",
+      "vr_2",
+      "vr_3",
+      "vr_4"
+    ],
+    "substrate_context_included": true,
+    "template_records_included": true
+  },
+  "annotation_reviews": [],
+  "verifier_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 41000,
+      "assessment": "endorses",
+      "comment": "The verifier correctly identifies that all frame-Story Lowerings (L_frame_overall_pending through L_frame_rel_pending, plus all frame-Scene Lowerings) are PENDING because the substrate models only the grove, not the gate. Since the frame Story's six DSPs, four DomainAssignments, Story_goal, and Story_consequence all refer to gate-level dramatic action (the interpretive crisis, the baby, the priest's restored faith), there is genuinely no substrate material to verify against. Reporting the gap rather than producing spurious verdicts is the correct behavior per the verifier's own MS4 principle.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:multi-story:frame-declarations:story=S_frame",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_frame_limit",
+        "comment": "S_frame: full Template declarations (4 DomainAssignments, 6 DSPs, Story_goal, Story_consequence) are encoded, but all frame-Story Lowerings are PENDING — the Rashomon substrate scope is grove-only and does not model the gate narrative. No substrate-based verification possible for the frame Story's declarations. Per multi-story-sketch-01 MS4, the per-Story verifier reports this gap rather than producing spurious verdicts."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 41000,
+      "assessment": "qualifies",
+      "comment": "The verifier's 'noted' verdict is honest: Timelock is declared for S_bandit_ver, and the substrate neither confirms nor contradicts it. However, it's worth recording that the bandit's testimony is extremely short (three branch events: E_t_wife_requests_killing → E_t_frees_husband → E_t_duel), making the Timelock/Optionlock distinction inherently thin. The wife's utterance requesting the killing at τ_s=7 can be read as the speech act that schedules the duel — a concrete candidate for a `scheduled_*` predicate that the verifier's own LT9 suggestion gestures toward. The LT12 retraction of bound_to@τ_s=8 (the unbinding that enables the duel) is reasonably excluded as constraint-vocabulary, since removing a physical constraint is not itself a convergence signal.",
+      "suggested_signature": "Consider treating E_t_wife_requests_killing (type=utterance, with listener=tajomaru and target=husband) as an implicit scheduling act — a 'requested_combat' or 'scheduled_confrontation' predicate — so that LT9 can fire. The utterance's role as the trigger that makes the duel obligatory is precisely the kind of temporal forcing that Timelock encodes.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_bandit_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_bandit_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no restricting middle-arc LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9. LT12 excluded 1 enabling retraction(s): bound_to@τ_s=8 (constraint-vocabulary)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 41000,
+      "assessment": "qualifies",
+      "comment": "Same 'honest weak-fallback' as vr_1, and again appropriate. S_wife_ver is even shorter than S_bandit_ver — only two branch events (E_w_tajomaru_leaves, E_w_killing). The Timelock reading rests on the temporal cascade: once Tajōmaru leaves, the wife is alone with her bound, contemptuous husband, and the killing follows as if compelled by that new situation rather than by options running out. But the substrate carries no scheduling or deadline predicate to make this reading machine-checkable. The verifier is right to report the gap rather than guess.",
+      "suggested_signature": "A predicate like `situational_forcing` on E_w_tajomaru_leaves — marking the departure as the condition that temporally compels the next act — could help LT9 distinguish this from Optionlock, though the two-event arc may be too short for the distinction to carry real weight.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_wife_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_wife_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no restricting middle-arc LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 41000,
+      "assessment": "qualifies",
+      "comment": "The samurai's testimony is the longest branch arc (five events, τ_s=7..11), giving the Timelock/Optionlock distinction its best chance to surface. The verifier's LT12 exclusion of bound_to@τ_s=10 (E_h_frees_husband) is correct as constraint-vocabulary, but the retraction is narratively significant: the unbinding is what makes suicide possible, and the arc reads as a temporal unfolding (betrayal → abandonment → release → suicide) rather than as options being eliminated. The verifier's 'noted' stance is correct given the substrate vocabulary, but the five-event arc is the strongest candidate among the four testimonies for a productive `scheduled_*` annotation.",
+      "suggested_signature": "E_h_wife_requests_killing (type=utterance) could carry a `scheduled_killing` predicate analogous to the suggestion in vr_1 — the wife's plea to the bandit is the act that, in the samurai's account, sets the betrayal arc in temporal motion. Additionally, the bound_to retraction at τ_s=10 might merit a secondary annotation as 'enabling_condition_removed' distinct from 'convergence_signal' to preserve the information LT12 currently discards.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_samurai_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_samurai_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no restricting middle-arc LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9. LT12 excluded 1 enabling retraction(s): bound_to@τ_s=10 (constraint-vocabulary)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 41000,
+      "assessment": "qualifies",
+      "comment": "S_woodcutter_ver has four branch events (τ_s=7..11) and the same 'consistent but not affirmatively detected' result. The Timelock reading is defensible: E_wc_wife_goads initiates a temporal cascade (goading → fight → flight → theft) that unfolds as a forced sequence rather than as options being exhausted. The theft (E_wc_theft) is the self-incriminating endpoint that distinguishes this account from the others, and it follows the combat's outcome rather than closing off a final option. The verifier's honest gap-reporting is appropriate, and the `scheduled_*` suggestion applies here as well — the goading utterance at τ_s=7 is the closest analog to a scheduling act.",
+      "suggested_signature": "E_wc_wife_goads (type=utterance, listeners=[tajomaru, husband]) could carry a 'provoked_confrontation' predicate, marking the goading as the speech act that temporally forces the fight into existence. This would give LT9 a firing condition for the woodcutter's branch.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_woodcutter_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_woodcutter_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no restricting middle-arc LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9."
+      }
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [],
+    "verifier_commentaries": [
+      {
+        "target_review_id": "vr_0",
+        "assessment": "endorses",
+        "rationale": "The verifier correctly identifies that all frame-Story Lowerings (L_frame_overall_pending through L_frame_rel_pending, plus all frame-Scene Lowerings) are PENDING because the substrate models only the grove, not the gate. Since the frame Story's six DSPs, four DomainAssignments, Story_goal, and Story_consequence all refer to gate-level dramatic action (the interpretive crisis, the baby, the priest's restored faith), there is genuinely no substrate material to verify against. Reporting the gap rather than producing spurious verdicts is the correct behavior per the verifier's own MS4 principle.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_1",
+        "assessment": "qualifies",
+        "rationale": "The verifier's 'noted' verdict is honest: Timelock is declared for S_bandit_ver, and the substrate neither confirms nor contradicts it. However, it's worth recording that the bandit's testimony is extremely short (three branch events: E_t_wife_requests_killing → E_t_frees_husband → E_t_duel), making the Timelock/Optionlock distinction inherently thin. The wife's utterance requesting the killing at τ_s=7 can be read as the speech act that schedules the duel — a concrete candidate for a `scheduled_*` predicate that the verifier's own LT9 suggestion gestures toward. The LT12 retraction of bound_to@τ_s=8 (the unbinding that enables the duel) is reasonably excluded as constraint-vocabulary, since removing a physical constraint is not itself a convergence signal.",
+        "suggested_signature": "Consider treating E_t_wife_requests_killing (type=utterance, with listener=tajomaru and target=husband) as an implicit scheduling act — a 'requested_combat' or 'scheduled_confrontation' predicate — so that LT9 can fire. The utterance's role as the trigger that makes the duel obligatory is precisely the kind of temporal forcing that Timelock encodes."
+      },
+      {
+        "target_review_id": "vr_2",
+        "assessment": "qualifies",
+        "rationale": "Same 'honest weak-fallback' as vr_1, and again appropriate. S_wife_ver is even shorter than S_bandit_ver — only two branch events (E_w_tajomaru_leaves, E_w_killing). The Timelock reading rests on the temporal cascade: once Tajōmaru leaves, the wife is alone with her bound, contemptuous husband, and the killing follows as if compelled by that new situation rather than by options running out. But the substrate carries no scheduling or deadline predicate to make this reading machine-checkable. The verifier is right to report the gap rather than guess.",
+        "suggested_signature": "A predicate like `situational_forcing` on E_w_tajomaru_leaves — marking the departure as the condition that temporally compels the next act — could help LT9 distinguish this from Optionlock, though the two-event arc may be too short for the distinction to carry real weight."
+      },
+      {
+        "target_review_id": "vr_3",
+        "assessment": "qualifies",
+        "rationale": "The samurai's testimony is the longest branch arc (five events, τ_s=7..11), giving the Timelock/Optionlock distinction its best chance to surface. The verifier's LT12 exclusion of bound_to@τ_s=10 (E_h_frees_husband) is correct as constraint-vocabulary, but the retraction is narratively significant: the unbinding is what makes suicide possible, and the arc reads as a temporal unfolding (betrayal → abandonment → release → suicide) rather than as options being eliminated. The verifier's 'noted' stance is correct given the substrate vocabulary, but the five-event arc is the strongest candidate among the four testimonies for a productive `scheduled_*` annotation.",
+        "suggested_signature": "E_h_wife_requests_killing (type=utterance) could carry a `scheduled_killing` predicate analogous to the suggestion in vr_1 — the wife's plea to the bandit is the act that, in the samurai's account, sets the betrayal arc in temporal motion. Additionally, the bound_to retraction at τ_s=10 might merit a secondary annotation as 'enabling_condition_removed' distinct from 'convergence_signal' to preserve the information LT12 currently discards."
+      },
+      {
+        "target_review_id": "vr_4",
+        "assessment": "qualifies",
+        "rationale": "S_woodcutter_ver has four branch events (τ_s=7..11) and the same 'consistent but not affirmatively detected' result. The Timelock reading is defensible: E_wc_wife_goads initiates a temporal cascade (goading → fight → flight → theft) that unfolds as a forced sequence rather than as options being exhausted. The theft (E_wc_theft) is the self-incriminating endpoint that distinguishes this account from the others, and it follows the combat's outcome rather than closing off a final option. The verifier's honest gap-reporting is appropriate, and the `scheduled_*` suggestion applies here as well — the goading utterance at τ_s=7 is the closest analog to a scheduling act.",
+        "suggested_signature": "E_wc_wife_goads (type=utterance, listeners=[tajomaru, husband]) could carry a 'provoked_confrontation' predicate, marking the goading as the speech act that temporally forces the fight into existence. This would give LT9 a firing condition for the woodcutter's branch."
+      }
+    ]
+  }
+}
