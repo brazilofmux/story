@@ -150,6 +150,14 @@ Working prototype, closed-corpus encodings, extensive test surface:
   (Rocky's τ_s=45 state-addition vs. Ackroyd's pre-arc trait).
   The DSP_resolve axis has now produced three successive
   probe-surfaced layers across three passes (AG5 → RR3 → RE).
+  **Fourth probe pass (v4)** is a stable plateau — commentary
+  distribution 29E/7Q/0D matches v3 identically. The
+  architectural-depth of the loop appears to have plateaued at
+  ~3 passes; v4 surfaces implementation-refinement observations
+  and a new cross-sketch-composition pattern (use MN2
+  concealment-asymmetry as secondary Be-er signal on Ackroyd
+  DSP_approach — signals from one sketch should compose across
+  axes, not be siloed).
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
