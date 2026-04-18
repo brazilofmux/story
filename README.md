@@ -129,7 +129,13 @@ Working prototype, closed-corpus encodings, extensive test surface:
   AG5 agency, IG2 identification-goal, MN4 concealment-
   manipulation, BW4 beat-type-weighting) — the probe/verifier
   loop replicates reliably, five cycles in two days, every banked
-  proposal closed.
+  proposal closed. **Second probe pass (v2)** against the refactored
+  verifiers: **zero dissents across all 4 encodings** (was 2 in v1)
+  — the loop converges on previously-dissented dimensions without
+  over-correcting. New coherent finding in v2: all four DSP_resolve
+  checks draw qualifications along the same axis (current substrate
+  proxies don't measure Dramatica's IC-relational shape) — banked
+  as the next forcing function.
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
