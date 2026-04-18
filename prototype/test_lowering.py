@@ -435,18 +435,18 @@ def test_oedipus_lowerings_validates_clean():
 
 
 def test_oedipus_lowerings_split_by_status():
-    """After the F5 substrate extension (2026-04-16), 16 ACTIVE + 2
-    PENDING is the encoding's contract. Tiresias/Creon Characters are
-    now ACTIVE (Entities added), and the Scene lowerings for
-    Tiresias-accusation / Jocasta-hangs / Self-blinding / Exile are
-    ACTIVE (new events added). The two remaining PENDING are the
-    prologue (still cut from substrate) and the discovery-and-crown
-    placeholder (no Oedipus Scene corresponds)."""
+    """After the F5 substrate extension (2026-04-16) and the
+    Oedipus-hygiene pass (2026-04-17 — removed the
+    L_discovery_and_crown_pending placeholder which referenced a
+    non-existent Scene), 16 ACTIVE + 1 PENDING is the encoding's
+    contract. Tiresias/Creon Characters are ACTIVE (Entities added).
+    The remaining PENDING is the prologue (still cut from substrate);
+    the discovery-and-crown placeholder was removed during hygiene."""
     import oedipus_lowerings as ol
     active = by_status(ol.LOWERINGS, LoweringStatus.ACTIVE)
     pending = by_status(ol.LOWERINGS, LoweringStatus.PENDING)
     assert len(active) == 16, f"expected 16 ACTIVE, got {len(active)}"
-    assert len(pending) == 2, f"expected 2 PENDING, got {len(pending)}"
+    assert len(pending) == 1, f"expected 1 PENDING, got {len(pending)}"
 
 
 def test_oedipus_lowerings_throughline_realization_uses_position_range():

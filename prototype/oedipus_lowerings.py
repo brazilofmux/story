@@ -164,10 +164,15 @@ L_tiresias = Lowering(
     upper_record=_dramatic("C_tiresias"),
     lower_records=(_substrate("tiresias"),),
     annotation=Annotation(
-        text=("Dramatic Character C_tiresias (the blind prophet, "
-              "IC Throughline participant) realizes as substrate Entity "
-              "'tiresias'. Flipped from PENDING → ACTIVE 2026-04-16 "
-              "when the F5 substrate extension added the Entity."),
+        text=("Dramatic Character C_tiresias (the blind prophet whose "
+              "forced testimony catalyzes Oedipus's investigation arc) "
+              "realizes as substrate Entity 'tiresias'. Tiresias appears "
+              "in S_tiresias_accusation, which advances T_overall_plague "
+              "and T_mc_oedipus — he is NOT an IC-throughline "
+              "participant (the IC throughline T_impact_jocasta is "
+              "owned by C_jocasta and advanced by distinct Scenes). "
+              "Flipped from PENDING → ACTIVE 2026-04-16 when the F5 "
+              "substrate extension added the Entity."),
         attention=ATTENTION_STRUCTURAL,
     ),
     τ_a=204,
@@ -204,11 +209,15 @@ L_jocasta_doubt_speech = Lowering(
         text=("Dramatic Scene S_jocasta_doubt_speech (Jocasta tries to "
               "comfort Oedipus by dismissing prophecy; mentions the "
               "crossroads detail) realizes as substrate event "
-              "E_jocasta_mentions_crossroads. The Dramatic Scene "
-              "names the IC's first beat (B_ic_1) and the MC's first "
-              "private dread (B_mc_3); the substrate event records the "
-              "literal speech-act and its agent-knowledge effects on "
-              "Oedipus."),
+              "E_jocasta_mentions_crossroads. The Scene advances three "
+              "throughlines: the IC's first beat (B_ic_1 — Jocasta's "
+              "counter-premise against prophecy); the relationship "
+              "throughline's B_rel_2 (the marriage becomes the vessel "
+              "for Jocasta's 'wrong answer' about prophecies — the "
+              "counter-premise entering the couple's shared argument); "
+              "and the MC's first private dread (B_mc_3). The substrate "
+              "event records the literal speech-act and its agent-"
+              "knowledge effects on Oedipus."),
     ),
     τ_a=210,
     anchor_τ_a=_substrate_event("E_jocasta_mentions_crossroads").τ_a,
@@ -321,23 +330,6 @@ L_tiresias_accusation = Lowering(
     anchor_τ_a=_substrate_event("E_tiresias_accusation").τ_a,
 )
 
-L_discovery_and_crown_pending = Lowering(
-    id="L_discovery_and_crown_pending",
-    upper_record=_dramatic("S_discovery_and_crown"),
-    lower_records=(),
-    annotation=Annotation(
-        text=("Macbeth's S_discovery_and_crown analog doesn't exist "
-              "in oedipus_dramatic; this Lowering corresponds to "
-              "no Oedipus Scene and is pending only as a placeholder "
-              "for the Oedipus-equivalent event flow that the "
-              "substrate slice elides."),
-        attention=ATTENTION_INTERPRETIVE,
-    ),
-    τ_a=222,
-    status=LoweringStatus.PENDING,
-    metadata={"why_pending": "no Oedipus Scene corresponds; placeholder"},
-)
-
 L_jocasta_hangs = Lowering(
     id="L_jocasta_hangs",
     upper_record=_dramatic("S_jocasta_hangs"),
@@ -422,9 +414,16 @@ L_mc_throughline = Lowering(
               "discovery events, the anagnorisis, and the "
               "post-anagnorisis resolution (self-blinding, exile). "
               "The position_range frames this as fabula τ_s from "
-              "-100 (birth) through 17 (exile). E_jocasta_realizes "
-              "and E_jocasta_suicide are omitted: those are in the "
-              "IC Throughline (T_impact_jocasta), not the MC's."),
+              "-100 (birth) through 17 (exile). "
+              "**E_exposure_and_rescue (τ_s=-99) is omitted** despite "
+              "falling in the position_range: its primary participant "
+              "is `the-exposed-baby` (the abstract identity-class not "
+              "yet resolved to `oedipus` at the fabula layer); the MC-"
+              "Throughline binding is agent-identity-keyed, so events "
+              "about the pre-resolution abstract entity do not count. "
+              "E_jocasta_realizes and E_jocasta_suicide are also "
+              "omitted: those are in the IC Throughline "
+              "(T_impact_jocasta), not the MC's."),
         attention=ATTENTION_INTERPRETIVE,
     ),
     τ_a=230,
@@ -455,7 +454,7 @@ LOWERINGS = (
     L_tiresias_accusation, L_jocasta_hangs, L_self_blinding, L_exile,
     # Scene → no-substrate-event (still pending; these cover the
     # prologue and a placeholder-only Scene the substrate still cuts)
-    L_prologue_plague_pending, L_discovery_and_crown_pending,
+    L_prologue_plague_pending,
     # Throughline → many-events (with position_range)
     L_mc_throughline,
 )
