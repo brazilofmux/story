@@ -88,6 +88,8 @@ from verifier_helpers import (
     classify_event_action_shape, agent_ids_from_entities,
     dsp_limit_characterization_check,
     classify_event_agency_shape,
+    detect_preceding_ic_event,
+    events_advancing_throughline,
 )
 
 
@@ -416,6 +418,35 @@ def dsp_resolve_change_trajectory_check(
     arc_start = min(t for t in all_τ_s if t >= 0)
     arc_span = τ_end - arc_start if τ_end > arc_start else 1
     position = (transition_τ - arc_start) / arc_span
+    # RR3: IC-relational signal per resolve-relational-sketch-01.
+    # Dramatica's Resolve=Change means MC transitions in response to
+    # IC influence — check if Jocasta's throughline events temporally
+    # precede the anagnorisis. Oedipus has no direct T_impact_jocasta
+    # Lowering, so fall back to Scene.advances to recover IC events.
+    ic_events = _events_lowered_from_throughline("T_impact_jocasta")
+    if not ic_events:
+        from oedipus_dramatic import SCENES
+        ic_events = events_advancing_throughline(
+            "T_impact_jocasta", LOWERINGS, SCENES, FABULA,
+        )
+    ic_τs = [e.τ_s for e in ic_events if e.τ_s is not None]
+    ic_rel = detect_preceding_ic_event(transition_τ, ic_τs, window=5)
+    if ic_rel["has_correlation"]:
+        ic_note = (
+            f" [RR3 IC-correlation: Jocasta throughline event at "
+            f"τ_s={ic_rel['nearest_preceding_ic_τ']} precedes "
+            f"anagnorisis by gap={ic_rel['gap']}; IC-driven Change "
+            f"signal present. OQ1: Oedipus's post-transition "
+            f"behavior (self-blinding) does not unambiguously adopt "
+            f"Jocasta's 'don't look' counter-premise — the strict "
+            f"IC-paradigm-adoption test is banked]"
+        )
+    else:
+        ic_note = (
+            " [RR3 IC-correlation: no Jocasta throughline event in "
+            "the [τ-5, τ] window preceding the anagnorisis]"
+        )
+
     if position >= 0.4:
         return (
             VERDICT_APPROVED, 1.0,
@@ -424,14 +455,14 @@ def dsp_resolve_change_trajectory_check(
             f"{τ_end}] arc) — a mid-arc transition consistent with "
             f"Resolve=Change. Distinct from Judgment=Bad: Judgment "
             f"evaluates final state; Resolve evaluates whether a "
-            f"transition occurred.",
+            f"transition occurred.{ic_note}",
         )
     return (
         VERDICT_PARTIAL_MATCH, position,
         f"self-identity transition at τ_s={transition_τ} "
         f"({position:.0%} through the arc) is earlier than Change's "
         f"typical mid-arc placement; may indicate the transition is "
-        f"a pre-existing trait rather than a story-arc shift.",
+        f"a pre-existing trait rather than a story-arc shift.{ic_note}",
     )
 
 

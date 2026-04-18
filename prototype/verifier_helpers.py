@@ -865,6 +865,109 @@ def event_to_beat_type(
     return None
 
 
+def events_advancing_throughline(
+    throughline_id: str,
+    lowerings,
+    scenes,
+    fabula,
+):
+    """Collect substrate events realized by Scenes that advance the
+    named throughline, via Scene.advances. Complementary to direct
+    throughline-Lowering lookup (`_events_lowered_from_throughline`
+    in per-encoding verifiers): some encodings have a direct
+    T_ic_* → events Lowering (Ackroyd, Macbeth), others don't
+    (Oedipus, Rocky), and the Scene.advances path recovers IC-
+    throughline events for the latter.
+
+    Walk:
+      1. For each Scene-level Lowering, check if the Scene's
+         `advances` tuple contains an entry with
+         `throughline_id=target`.
+      2. If yes, collect the Lowering's substrate lower_records.
+      3. Resolve each to an Event via the fabula.
+
+    Returns a tuple of matching Event records (order preserved as
+    encountered; caller sorts by τ_s as needed).
+    """
+    scenes_by_id = {s.id: s for s in scenes}
+    events_by_id = {e.id: e for e in fabula}
+    out: list = []
+    seen: set = set()
+    for lw in lowerings:
+        ur = lw.upper_record
+        if ur.dialect != "dramatic":
+            continue
+        scene = scenes_by_id.get(ur.record_id)
+        if scene is None:
+            continue
+        if not any(
+            adv.throughline_id == throughline_id
+            for adv in scene.advances
+        ):
+            continue
+        if getattr(lw, "status", None) is not None and lw.status != LoweringStatus.ACTIVE:
+            continue
+        for lr in lw.lower_records:
+            if lr.dialect != "substrate":
+                continue
+            if lr.record_id in seen:
+                continue
+            ev = events_by_id.get(lr.record_id)
+            if ev is not None:
+                out.append(ev)
+                seen.add(lr.record_id)
+    return tuple(out)
+
+
+def detect_preceding_ic_event(
+    target_τ,
+    ic_event_τs,
+    window: int = 5,
+) -> dict:
+    """RR2/RR4: check whether any IC-throughline event τ_s falls in
+    the window [target_τ - window, target_τ] — detecting temporal
+    correlation between an IC event and a later MC critical moment.
+
+    Returns a dict with:
+      - has_correlation: bool — True if any IC τ_s is in the window.
+      - nearest_preceding_ic_τ: Optional[int] — the latest IC τ_s
+        in the window (closest before target_τ), or None.
+      - gap: Optional[int] — target_τ - nearest_preceding_ic_τ.
+      - ic_events_in_window: tuple[int] — all IC τ_s in the window,
+        sorted ascending.
+
+    `target_τ` may be None (e.g., Steadfast encodings with no MC
+    transition); returns has_correlation=False and None values in
+    that case. `ic_event_τs` is a list/tuple of τ_s values (ints).
+
+    Per RR6 the frame is verifier-local; per RR1 the detection is
+    purely structural (no type-string dispatch).
+    """
+    if target_τ is None:
+        return {
+            "has_correlation": False,
+            "nearest_preceding_ic_τ": None,
+            "gap": None,
+            "ic_events_in_window": (),
+        }
+    lo = target_τ - window
+    in_window = sorted(t for t in ic_event_τs if t is not None and lo <= t <= target_τ)
+    if not in_window:
+        return {
+            "has_correlation": False,
+            "nearest_preceding_ic_τ": None,
+            "gap": None,
+            "ic_events_in_window": (),
+        }
+    nearest = in_window[-1]
+    return {
+        "has_correlation": True,
+        "nearest_preceding_ic_τ": nearest,
+        "gap": target_τ - nearest,
+        "ic_events_in_window": tuple(in_window),
+    }
+
+
 def classify_event_manipulation_shape(
     event,
     mc_id: str,

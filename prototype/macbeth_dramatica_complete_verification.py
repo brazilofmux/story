@@ -109,6 +109,7 @@ from verifier_helpers import (
     classify_event_action_shape, agent_ids_from_entities,
     dsp_limit_characterization_check,
     beat_type_weight, event_to_beat_type,
+    detect_preceding_ic_event,
 )
 
 
@@ -453,6 +454,27 @@ def dsp_resolve_change_trajectory_check(
     arc_span = τ_end - arc_start if τ_end > arc_start else 1
     position = (transition_τ - arc_start) / arc_span
 
+    # RR3: IC-relational signal per resolve-relational-sketch-01.
+    # Dramatica's Resolve=Change specifically means MC changes in
+    # response to IC influence — check if Lady Macbeth's throughline
+    # events temporally precede the tyrant-transition.
+    ic_events = _events_lowered_from_throughline("T_impact_lady_macbeth")
+    ic_τs = [e.τ_s for e in ic_events if e.τ_s is not None]
+    ic_rel = detect_preceding_ic_event(transition_τ, ic_τs, window=5)
+    if ic_rel["has_correlation"]:
+        ic_note = (
+            f" [RR3 IC-correlation: Lady Macbeth throughline event "
+            f"at τ_s={ic_rel['nearest_preceding_ic_τ']} precedes "
+            f"tyrant-transition by gap={ic_rel['gap']}; Dramatica's "
+            f"IC-driven Change axis structurally supported]"
+        )
+    else:
+        ic_note = (
+            " [RR3 IC-correlation: no Lady Macbeth throughline event "
+            "in the [τ-5, τ] window preceding the tyrant-transition; "
+            "Change verdict rests on MC-state signal alone]"
+        )
+
     if position >= 0.2:
         return (
             VERDICT_APPROVED, 1.0,
@@ -461,13 +483,14 @@ def dsp_resolve_change_trajectory_check(
             f"[{arc_start}, {τ_end}] arc) — a mid-arc transition "
             f"consistent with Resolve=Change. Distinct Dramatica "
             f"read from Judgment=Bad: the transition is the "
-            f"resolve-signal; its badness is the judgment-signal.",
+            f"resolve-signal; its badness is the judgment-signal."
+            f"{ic_note}",
         )
     return (
         VERDICT_PARTIAL_MATCH, position,
         f"tyrant-transition at τ_s={transition_τ} ({position:.0%} "
         f"through the arc) is very early; may read as a pre-existing "
-        f"trait rather than a mid-arc shift.",
+        f"trait rather than a mid-arc shift.{ic_note}",
     )
 
 

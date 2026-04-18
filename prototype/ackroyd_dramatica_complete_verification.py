@@ -104,6 +104,7 @@ from verifier_helpers import (
     classify_event_action_shape, agent_ids_from_entities,
     dsp_limit_characterization_check,
     classify_event_manipulation_shape,
+    detect_preceding_ic_event,
 )
 
 
@@ -507,6 +508,26 @@ def dsp_resolve_steadfast_trajectory_check(
             "trajectory shape.",
         )
 
+    # RR3: IC-relational signal per resolve-relational-sketch-01.
+    # For Steadfast, count the IC throughline's pressure events —
+    # Sheppard's Steadfast holds across Poirot's investigation.
+    # Resistance signal = count of IC events the MC held through.
+    ic_events = _events_lowered_from_throughline("T_ic_poirot")
+    ic_τs = sorted(
+        e.τ_s for e in ic_events
+        if e.τ_s is not None and e.τ_s >= investigation_start
+    )
+    ic_note = (
+        f" [RR3 IC-resistance: Sheppard's betrayer_of_trust held "
+        f"stable through {len(ic_τs)} Poirot-throughline pressure "
+        f"events (τ_s={ic_τs}); Dramatica's IC-driven Steadfast "
+        f"signal structurally supported — MC did not voluntarily "
+        f"change approach before external compulsion]"
+    ) if ic_τs else (
+        " [RR3 IC-resistance: no Poirot-throughline events found "
+        "in investigation arc; resistance claim unverified]"
+    )
+
     if transition_τ <= investigation_start:
         return (
             VERDICT_APPROVED, 1.0,
@@ -515,7 +536,8 @@ def dsp_resolve_steadfast_trajectory_check(
             f"begins at τ_s={investigation_start}; the trait is "
             f"steady across τ_s ∈ [{investigation_start}, {τ_end}]. "
             f"Resolve=Steadfast confirmed — Sheppard's defining "
-            f"role is a pre-arc trait, not a mid-arc transition.",
+            f"role is a pre-arc trait, not a mid-arc transition."
+            f"{ic_note}",
         )
     position = (transition_τ - investigation_start) / arc_span
     return (
@@ -523,7 +545,7 @@ def dsp_resolve_steadfast_trajectory_check(
         f"betrayer_of_trust emerges at τ_s={transition_τ}, "
         f"{position:.0%} through the investigation arc [{investigation_start}, "
         f"{τ_end}]. Resolve=Steadfast would predict emergence "
-        f"before or at the arc's start.",
+        f"before or at the arc's start.{ic_note}",
     )
 
 

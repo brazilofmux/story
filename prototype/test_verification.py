@@ -2686,6 +2686,122 @@ def test_ag5_rocky_dsp_growth_start_unchanged():
 
 
 # ----------------------------------------------------------------------------
+# resolve-relational-sketch-01: RR1-RR6
+# (IC-correlation signal added to DSP_resolve checks; detect_preceding_ic_event
+# helper)
+# ----------------------------------------------------------------------------
+
+
+def test_rr2_detect_preceding_ic_event_correlation_fires():
+    """RR2: an IC τ_s in the [target - window, target] range
+    produces has_correlation=True with the nearest preceding
+    value."""
+    from verifier_helpers import detect_preceding_ic_event
+    result = detect_preceding_ic_event(
+        target_τ=13, ic_event_τs=[5, 9, 11], window=5,
+    )
+    assert result["has_correlation"] is True
+    assert result["nearest_preceding_ic_τ"] == 11
+    assert result["gap"] == 2
+
+
+def test_rr2_detect_preceding_ic_event_no_correlation():
+    """RR2: all IC events outside the window returns
+    has_correlation=False."""
+    from verifier_helpers import detect_preceding_ic_event
+    result = detect_preceding_ic_event(
+        target_τ=13, ic_event_τs=[1, 3], window=5,
+    )
+    assert result["has_correlation"] is False
+    assert result["nearest_preceding_ic_τ"] is None
+    assert result["gap"] is None
+
+
+def test_rr2_detect_preceding_ic_event_target_none_returns_no_correlation():
+    """RR2: target_τ=None (e.g., Steadfast with no transition)
+    returns clean-empty result."""
+    from verifier_helpers import detect_preceding_ic_event
+    result = detect_preceding_ic_event(
+        target_τ=None, ic_event_τs=[1, 2, 3], window=5,
+    )
+    assert result["has_correlation"] is False
+    assert result["ic_events_in_window"] == ()
+
+
+def test_rr3_oedipus_dsp_resolve_carries_ic_correlation():
+    """RR3: Oedipus's DSP_resolve comment names the IC-correlation
+    signal (Jocasta events preceding anagnorisis). Verdict
+    polarity unchanged (still APPROVED 1.0)."""
+    from oedipus_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RR3" in r.comment
+    assert "Jocasta" in r.comment or "T_impact_jocasta" in r.comment
+    assert "IC-correlation" in r.comment
+
+
+def test_rr3_macbeth_dsp_resolve_carries_ic_correlation():
+    """RR3: Macbeth's DSP_resolve comment names the IC-correlation
+    signal (Lady Macbeth events preceding tyrant-transition)."""
+    from macbeth_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RR3" in r.comment
+    assert "Lady Macbeth" in r.comment or "T_impact_lady_macbeth" in r.comment
+
+
+def test_rr3_ackroyd_dsp_resolve_carries_ic_resistance():
+    """RR3: Ackroyd's DSP_resolve comment names the IC-resistance
+    count (Sheppard holds through Poirot pressure events)."""
+    from ackroyd_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RR3" in r.comment
+    assert "Poirot" in r.comment or "IC-resistance" in r.comment
+
+
+def test_rr3_rocky_dsp_resolve_carries_ic_resistance():
+    """RR3: Rocky's DSP_resolve comment names IC-resistance (Rocky
+    holds through Apollo's pressure events). Rocky has no direct
+    T_ic_apollo Lowering — the Scene.advances fallback recovers
+    the events."""
+    from rocky_dramatica_complete_verification import run
+    reviews = run()
+    by_target = {r.target_record.record_id: r for r in reviews}
+    r = by_target["DSP_resolve"]
+    assert r.verdict == VERDICT_APPROVED
+    assert r.match_strength == 1.0
+    assert "RR3" in r.comment
+    assert "Apollo" in r.comment or "IC-resistance" in r.comment
+
+
+def test_rr4_events_advancing_throughline_finds_oedipus_jocasta_events():
+    """Fallback path integration: Oedipus has no direct
+    T_impact_jocasta Lowering, but Scenes like S_jocasta_realizes
+    advance it via Scene.advances. The helper must recover those
+    events."""
+    from verifier_helpers import events_advancing_throughline
+    from oedipus import FABULA
+    from oedipus_dramatic import SCENES
+    from oedipus_lowerings import LOWERINGS
+    events = events_advancing_throughline(
+        "T_impact_jocasta", LOWERINGS, SCENES, FABULA,
+    )
+    assert len(events) >= 2, (
+        f"expected at least 2 Jocasta-advancing events; got {len(events)}"
+    )
+
+
+# ----------------------------------------------------------------------------
 # beat-weight-taxonomy-sketch-01: BW1-BW5
 # (beat_type_weight vocabulary; event_to_beat_type resolver; Macbeth DA_mc
 # weighted ratio)
@@ -3212,6 +3328,15 @@ TESTS = [
     test_lt10_timelock_declared_with_peripheral_only_signals_is_noted,
     test_lt11_sketch01_classify_arc_limit_shape_signature_preserved,
     test_lt_rocky_scheduling_signals_include_both_fight_props,
+    # resolve-relational-sketch-01 (RR1-RR6)
+    test_rr2_detect_preceding_ic_event_correlation_fires,
+    test_rr2_detect_preceding_ic_event_no_correlation,
+    test_rr2_detect_preceding_ic_event_target_none_returns_no_correlation,
+    test_rr3_oedipus_dsp_resolve_carries_ic_correlation,
+    test_rr3_macbeth_dsp_resolve_carries_ic_correlation,
+    test_rr3_ackroyd_dsp_resolve_carries_ic_resistance,
+    test_rr3_rocky_dsp_resolve_carries_ic_resistance,
+    test_rr4_events_advancing_throughline_finds_oedipus_jocasta_events,
     # beat-weight-taxonomy-sketch-01 (BW1-BW5)
     test_bw2_beat_type_weight_canonical_values,
     test_bw2_beat_type_weight_defaults_to_baseline_for_unknown,
