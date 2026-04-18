@@ -154,7 +154,21 @@ L_banquo = Lowering(
     id="L_banquo",
     upper_record=_dramatic("C_banquo"),
     lower_records=(_substrate("banquo"),),
-    annotation=Annotation(text="C_banquo (Sidekick) → Entity 'banquo'."),
+    annotation=Annotation(
+        text=("C_banquo (Sidekick) → Entity 'banquo'. Banquo receives "
+              "the witches' prophecy alongside Macbeth "
+              "(E_prophecy_first lists both as recipients of "
+              "`prophesied(macbeth,...)` / `prophesied(banquo,...)`); "
+              "his moral response is the Sidekick's structural "
+              "function — he resists acting on the prophecy, providing "
+              "the loyal counterweight to Macbeth's ambition. He is "
+              "killed at Macbeth's order at E_banquo_killed, the "
+              "event whose execution widens Macbeth's victim-set "
+              "beyond the politically-necessary Duncan killing. The "
+              "prophecy's second promise (Banquo's descendants as "
+              "kings) persists after his death, keeping the Sidekick's "
+              "narrative force alive past the character's exit."),
+    ),
     τ_a=203,
 )
 
@@ -162,7 +176,21 @@ L_malcolm = Lowering(
     id="L_malcolm",
     upper_record=_dramatic("C_malcolm"),
     lower_records=(_substrate("malcolm"),),
-    annotation=Annotation(text="C_malcolm (Reason) → Entity 'malcolm'."),
+    annotation=Annotation(
+        text=("C_malcolm (Reason) → Entity 'malcolm'. Duncan's elder "
+              "son and rightful heir under primogeniture. Malcolm's "
+              "substrate footprint is deliberately thin — he flees "
+              "offstage between E_duncan_killed (τ_s=5) and "
+              "E_birnam_moves (τ_s=17), returning at the head of the "
+              "army that ends Macbeth's tyranny. The Reason function "
+              "label lands in the substrate via E_malcolm_crowned "
+              "(τ_s=18), which asserts `king(malcolm)` and retracts "
+              "`king(macbeth)` — restoration of the rightful line as "
+              "the rational resolution the tyranny violated. The "
+              "character embodies Reason as political corrective, "
+              "quiet through the arc's chaos, visible at its "
+              "structural resolution."),
+    ),
     τ_a=204,
 )
 

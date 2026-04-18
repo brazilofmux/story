@@ -139,7 +139,25 @@ L_jocasta = Lowering(
     id="L_jocasta",
     upper_record=_dramatic("C_jocasta"),
     lower_records=(_substrate("jocasta"),),
-    annotation=Annotation(text="C_jocasta → Entity 'jocasta'."),
+    annotation=Annotation(
+        text=("C_jocasta (Impact Character owner of T_impact_jocasta) "
+              "→ Entity 'jocasta'. Jocasta is the IC Throughline's "
+              "locus — her counter-premise (prophecy is unreliable; "
+              "ignorance preserves what knowledge would destroy) is "
+              "the structural position Oedipus's investigation has "
+              "to overcome. Substrate signatures: "
+              "E_jocasta_mentions_crossroads (τ_s=5, the Scene that "
+              "advances her first IC beat B_ic_1 alongside the "
+              "relationship-throughline B_rel_2 and the MC's first "
+              "private dread B_mc_3); E_jocasta_realizes (τ_s=9, her "
+              "own recognition, preceding Oedipus's anagnorisis "
+              "per RR3); E_jocasta_suicide (τ_s=14, her paradigm's "
+              "terminal enactment — ignorance as chosen suicide "
+              "rather than knowing continuation). The IC function "
+              "is embodied through three throughline-advancing events "
+              "whose cumulative effect is Oedipus's arc-driving "
+              "IC influence."),
+    ),
     τ_a=201,
 )
 
