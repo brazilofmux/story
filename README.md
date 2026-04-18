@@ -135,7 +135,13 @@ Working prototype, closed-corpus encodings, extensive test surface:
   over-correcting. New coherent finding in v2: all four DSP_resolve
   checks draw qualifications along the same axis (current substrate
   proxies don't measure Dramatica's IC-relational shape) — banked
-  as the next forcing function.
+  as the next forcing function — **landed same day as
+  resolve-relational-sketch-01 (RR1–RR6)**, the first cross-corpus
+  probe-driven sketch: all four encodings' DSP_resolve checks now
+  carry an additive IC-throughline temporal-correlation signal.
+  Sixth probe → sketch cycle; second landing where verdict
+  polarity doesn't change (honesty about MC↔IC relational signal
+  is the deliverable).
 - **Two Save the Cat encodings** (Macbeth, Ackroyd) with
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
