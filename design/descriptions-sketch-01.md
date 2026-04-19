@@ -2,6 +2,7 @@
 
 **Status:** draft, active
 **Date:** 2026-04-13
+**Amended:** 2026-04-19 (see §Amendments)
 **Supersedes:** nothing (new topic)
 **Frames:** [architecture-sketch-01.md](architecture-sketch-01.md), [substrate-sketch-05.md](substrate-sketch-05.md)
 **Superseded by:** nothing yet
@@ -138,19 +139,34 @@ and branch semantics are shared; fold-visibility is not.
 - **promoted_to** — reference to an event id, if an author has
   promoted content from this description into a fact. Immutable
   audit link. See *Promotion mechanics* below.
-- **status** — `committed` or `provisional`. Same axis as events.
-  Provisional descriptions are drafts an author has not signed off
-  on; tooling should render them differently.
+- **status** — `committed`, `provisional`, or `superseded`. The
+  first two share the axis with events: committed descriptions are
+  signed off; provisional descriptions are drafts an author has not
+  yet blessed. `superseded` is the edit-chain marker (see
+  §Record-level invariants): when a successor is authored, the
+  successor is `committed` and carries `metadata.supersedes =
+  <source-id>`, and the source's status flips to `superseded` with
+  `metadata.superseded_by = <successor-id>`. Tooling renders
+  supersession chains as history, not as current state.
 - **metadata** — open dict for tooling-specific extension. The
-  substrate does not read this field.
+  substrate does not interpret most of its contents; the
+  exceptions are the supersession pointers (`supersedes`,
+  `superseded_by`) written by the edit-chain mechanism — see
+  §Record-level invariants.
 
 ### Record-level invariants
 
-- Once authored at τ_a = n, a description is not mutated. Edits
-  append a new description at τ_a = n+k with the same kind and
-  attention (or a new ones, if the edit changes the categorization),
-  linking back via metadata if the tooling wants to preserve the
-  chain.
+- Once authored at τ_a = n, a description's **semantic content**
+  (text, kind, attention, attached_to, authored_by, τ_a,
+  is_question, branches) is immutable. Edits append a new
+  description at τ_a = n+k; the successor is `status=committed`
+  with `metadata.supersedes` pointing at the source, and the
+  source's `status` flips to `superseded` with
+  `metadata.superseded_by` pointing at the successor. These two
+  fields — `status` and the supersession pointers in `metadata` —
+  are the sole mutation surface on an existing record; they exist
+  to make the edit-chain traversable without a parallel journal.
+  Any other mutation is drift.
 - A description's `attached_to` must resolve to an existing anchor
   at the description's τ_a. A description cannot be attached to a
   future event.
@@ -185,6 +201,19 @@ expected; a story introducing a new kind documents what it is for.
   Absorbs the `provenance` tuple from the current Held record (see
   *Provenance absorption* below). Typically `attention=flavor`
   unless the provenance is itself load-bearing.
+- **authoring-note** — commentary about the *encoding choice*
+  itself, addressed to a future reader (human or LLM) who needs to
+  understand why this substrate shape was chosen over a plausible
+  alternative. Distinct from `authorial-uncertainty` (which is
+  doubt about the story) and from `reader-frame` (which is how the
+  reader should approach the story); authoring-notes describe the
+  *representation*, not the represented. Typically
+  `attention=interpretive`; `structural` when a downstream tool or
+  reader could draw the wrong conclusion without the note. Example:
+  "`scheduled_fight(apollo, mac)` and later
+  `scheduled_fight(apollo, rocky)` encode Rocky's Timelock pressure
+  structurally — a future τ_s is committed as early as τ_s=-10..."
+  (rocky.py D_timelock_not_natively_detectable).
 
 ### Extension rule
 
@@ -243,6 +272,8 @@ A rough default mapping (not normative — per-story calls override):
   "I'm not sure" is a flag that a reviewer should act on).
 - `trust-flag` → typically `interpretive`.
 - `provenance` → typically `flavor`.
+- `authoring-note` → typically `interpretive`; `structural` when
+  the encoding choice would be misread without the note.
 
 ## Review state
 
@@ -640,6 +671,108 @@ attached to `D_woodcutter_trust`, carrying the author's open
 question about their own interpretation. The review queue surfaces
 this because `attention=structural` and it is effectively
 unreviewed.
+
+## Amendments
+
+### 2026-04-19 — `authoring-note` kind + `superseded` status
+
+This amendment adds one kind and one status value that the corpus
+and the substrate edit-chain machinery have been using for some
+time without explicit §Kinds or §Optional fields support. Both are
+retroactive recognitions of load-bearing patterns, not new
+commitments.
+
+#### Addition 1 — `authoring-note` as a seventh kind
+
+**What changed.** Added `authoring-note` to §Kinds with typical
+attention, distinguishing semantics, and an example; added the
+corresponding row to §Attention §What goes where, by kind.
+
+**Structural justification.** The rocky encoding uses the kind
+on two descriptions at two distinct attention levels
+(`prototype/story_engine/encodings/rocky.py`):
+
+- `D_scripted_stunt_is_epistemic` — `interpretive`; explains why
+  Apollo's scripted-stunt intention is encoded as a held belief
+  rather than a world fact.
+- `D_timelock_not_natively_detectable` — `structural`; explains
+  how Rocky's Timelock pressure is encoded structurally via early
+  `scheduled_fight` effects rather than a dedicated predicate, and
+  what that means for downstream classifiers.
+
+Two records on one encoding is a smaller corpus than the six
+starting kinds enjoy, but the content each authoring-note carries
+is genuinely distinct from the six. It is not uncertainty about
+the story (`authorial-uncertainty`), not reader framing
+(`reader-frame`), not tonal affect (`texture`), not per-agent
+motivation (`motivation`), not a trust annotation (`trust-flag`),
+and not audit provenance (`provenance`). It is commentary about
+*how the substrate represents the story* — why this event is a
+held belief not a world fact, why this pressure is carried by
+structure not by predicate — addressed to a future reader (human
+or LLM) trying to understand the encoding. Subsumption by an
+existing kind was considered and rejected; a seventh kind is the
+honest home.
+
+Per §Extension rule, a new kind is introduced with a one-line
+description, a typical attention level, and an example; this
+amendment supplies all three.
+
+**Grid-snap posture.** `authoring-note` documents the encoding
+choice; the fold does not touch it, and a downstream tool that
+filters by kind can select or omit it trivially. The kind adds
+authoring-surface richness without asking the substrate to carry
+more structural load — schema grid-snap holds.
+
+#### Addition 2 — `superseded` as a third status value
+
+**What changed.** Extended `status` in §Optional fields from
+`{committed, provisional}` to `{committed, provisional,
+superseded}`; clarified §Record-level invariants to distinguish
+content-immutability (strict, on the semantic fields) from the
+two-field mutation surface (status + supersession metadata) that
+the edit-chain mechanism requires.
+
+**Structural justification.** §Record-level invariants already
+commits to append-on-edit: "Once authored at τ_a = n, a
+description is not mutated. Edits append a new description at τ_a
+= n+k." That commitment was incomplete — it did not name the
+marker distinguishing current head-of-chain from superseded
+predecessors. The substrate's edit-chain code
+(`prototype/story_engine/core/substrate.py
+apply_description_edit`) and the reader-model-client edit paths
+(`prototype/story_engine/core/reader_model_client.py`) have been
+using `DescStatus.SUPERSEDED` plus `metadata.{supersedes,
+superseded_by}` pointers as that marker since the feature was
+added; the macbeth encoding ships superseded descriptions in its
+corpus directly. Without `superseded` in the sketch, the sketch's
+own append-on-edit commitment cannot be implemented.
+
+The revised §Record-level invariants text acknowledges the precise
+scope of the mutation: only the source record's `status` flag and
+supersession metadata change when a successor lands; text, kind,
+attention, and the other semantic fields remain immutable. The
+successor is a fresh record with its own τ_a.
+
+**Grid-snap posture.** `superseded` and the supersession pointers
+are structural — the substrate reads them (see `substrate.py
+descriptions_on_branch` with `include_superseded`) to filter
+supersession chains out of visible-state views. The interpretive
+load — *why* a description was superseded — stays in the
+successor's text, not in the supersession metadata. Schema
+grid-snap holds.
+
+#### Conformance implication
+
+`prototype/tests/test_production_format_sketch_01_conformance.py`
+has carried two dispositions (`DISPOSITION_KIND_AUTHORING_NOTE`,
+`DISPOSITION_STATUS_SUPERSEDED`) that tolerate schema-rejection
+of these values while this amendment was pending. Both retire
+under the follow-on implementation commit for this amendment:
+`schema/description.json` adds each value to its enum, and the
+disposition constants plus their classification branches are
+removed from the conformance test. The Description corpus goes
+clean on both axes.
 
 ## Open questions
 
