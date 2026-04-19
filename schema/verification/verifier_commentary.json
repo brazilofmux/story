@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/verification/verifier_commentary.json",
+  "title": "VerifierCommentary",
+  "description": "A third-party (human reviewer or LLM probe) read on a VerificationReview, per design/verification-sketch-01.md V7 + PFS10-VC1..VC4. Distinct from VerificationReview itself: VerificationReview is the verifier's verdict on a record; VerifierCommentary is a reading of that verdict. Routes through the proposal queue the same way — the author walks and decides whether to act on it (extend the check function, accept the dissent, file away as noted). target_review uses cross-file $ref to verification_review.json per PFS10-X2 (intra-namespace, same-role, larger-evolving-record pattern).",
+  "type": "object",
+  "required": ["commenter_id", "commented_at_τ_a", "assessment", "target_review", "comment"],
+  "properties": {
+    "commenter_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the commenter (human handle or LLM-probe identifier). PFS10-VC2."
+    },
+    "commented_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the commentary was recorded. PFS10-VC2."
+    },
+    "assessment": {
+      "type": "string",
+      "enum": ["endorses", "qualifies", "dissents", "noted"],
+      "description": "Closed enum matching Python's ASSESSMENT_* constants. endorses = verdict is well-grounded; qualifies = verdict stands but with clarification; dissents = commenter disagrees with the verdict with specific counter-argument; noted = read but no position taken. Distinct vocabulary from verdict / severity — the question is different: an assessment judges a verdict, not a record. PFS10-VC3."
+    },
+    "target_review": {
+      "$ref": "https://brazilofmux.github.io/story/schema/verification/verification_review.json",
+      "description": "Nested VerificationReview by value, via cross-file $ref to verification_review.json per PFS10-X2. The Python carries the VerificationReview as a value (frozen dataclass with no id); the schema expresses it via cross-file $ref for same-namespace resolution. Nested-by-value vs. reference-by-id choice banked in PFS10 OQ4. PFS10-VC4."
+    },
+    "comment": {
+      "type": "string",
+      "description": "Required prose explaining the assessment. Empty string admitted (matches StructuralAdvisory.comment posture). PFS10-VC2."
+    },
+    "suggested_signature": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional prose the commenter thinks the check might add (e.g., 'also check told_by listener, not just literal participant'). Free-form, intended as inspiration for the verifier maintainer — not actionable code. Python default None → omitted when None."
+    }
+  },
+  "additionalProperties": false
+}

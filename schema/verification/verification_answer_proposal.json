@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/verification/verification_answer_proposal.json",
+  "title": "VerificationAnswerProposal",
+  "description": "A verifier-sourced proposal answering an upper-dialect open question (a Description with is_question=True, in descriptions-01 terms), per design/verification-sketch-01.md V2 + PFS10-AP1..AP3. Parallels AnswerProposal from reader-model-01 but the proposer is a verifier, not a reader-model partner. question_id uses inline $defs/cross_dialect_ref per PFS10-X1. status is an open non-empty string per PFS10-X3; a close-enum awaits the walker acceptance flow (OQ3).",
+  "type": "object",
+  "required": ["proposer_id", "question_id", "proposed_text", "rationale", "proposed_at_τ_a", "status"],
+  "$defs": {
+    "cross_dialect_ref": {
+      "type": "object",
+      "description": "Typed reference to a record in a specific dialect. Re-inlined per PFS8-V + PFS10-X1. Open dialect-token string per PFS9-X4.",
+      "required": ["dialect", "record_id"],
+      "properties": {
+        "dialect": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dialect token (open string per PFS9-X4)."
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier for the referenced record in its dialect."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "proposer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the verifier proposing the answer. PFS10-AP2."
+    },
+    "question_id": {
+      "$ref": "#/$defs/cross_dialect_ref",
+      "description": "CrossDialectRef pointing at the is_question=True Description the proposal answers. PFS10-AP2."
+    },
+    "proposed_text": {
+      "type": "string",
+      "description": "The proposed answer prose. PFS10-AP2."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Prose explaining why the verifier proposes this answer — grounded in the substrate / upper-dialect records the verifier read. PFS10-AP2."
+    },
+    "proposed_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the proposal was emitted. PFS10-AP2."
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Open non-empty string per PFS10-AP3 + PFS10-X3. Today's Python hard-codes initial value 'pending'; the walker acceptance flow (deferred per verification-sketch-01 §Deferred) would mutate to 'accepted' / 'rejected' / etc. Close-enum deferred to PFS10 OQ3."
+    }
+  },
+  "additionalProperties": false
+}

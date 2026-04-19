@@ -181,6 +181,38 @@ def _load_lowering_schema() -> dict:
         return json.load(f)
 
 
+def _load_verification_review_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "verification" / "verification_review.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_verification_structural_advisory_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "verification" / "structural_advisory.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_verification_answer_proposal_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "verification" / "verification_answer_proposal.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_verifier_commentary_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "verification" / "verifier_commentary.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
@@ -223,6 +255,10 @@ def _build_schema_registry() -> Registry:
         _load_lowering_annotation_review_schema(),
         _load_lowering_observation_schema(),
         _load_lowering_schema(),
+        _load_verification_review_schema(),
+        _load_verification_structural_advisory_schema(),
+        _load_verification_answer_proposal_schema(),
+        _load_verifier_commentary_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -492,6 +528,68 @@ def _discover_encoding_lowerings():
             continue
         out.append((name, list(lowerings)))
     return out
+
+
+def _discover_encoding_verifier_output():
+    """Walks encoding modules matching *_verification.py and calls
+    each module's run() function. Classifies each element of the
+    returned tuple by isinstance on the four verification record
+    types. Returns a quadruple `(reviews, advisories, proposals,
+    commentaries)` — each a list of (encoding_name, records)
+    tuples. Per production-format-sketch-10 PFS10-D5."""
+    from story_engine.core.verification import (
+        VerificationReview, StructuralAdvisory,
+        VerificationAnswerProposal, VerifierCommentary,
+    )
+    encodings_dir = (
+        _repo_root() / "prototype" / "story_engine" / "encodings"
+    )
+    reviews_out: list = []
+    advisories_out: list = []
+    proposals_out: list = []
+    commentaries_out: list = []
+    for py_path in sorted(encodings_dir.glob("*_verification.py")):
+        name = py_path.stem
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{name}"
+            )
+        except Exception:
+            continue
+        run_fn = getattr(module, "run", None)
+        if run_fn is None or not callable(run_fn):
+            continue
+        try:
+            result = run_fn()
+        except Exception:
+            continue
+        if result is None:
+            continue
+        mod_reviews: list = []
+        mod_advisories: list = []
+        mod_proposals: list = []
+        mod_commentaries: list = []
+        for item in result:
+            if isinstance(item, VerificationReview):
+                mod_reviews.append(item)
+            elif isinstance(item, StructuralAdvisory):
+                mod_advisories.append(item)
+            elif isinstance(item, VerificationAnswerProposal):
+                mod_proposals.append(item)
+            elif isinstance(item, VerifierCommentary):
+                mod_commentaries.append(item)
+            # unknown-type elements ignored (defensive)
+        if mod_reviews:
+            reviews_out.append((name, mod_reviews))
+        if mod_advisories:
+            advisories_out.append((name, mod_advisories))
+        if mod_proposals:
+            proposals_out.append((name, mod_proposals))
+        if mod_commentaries:
+            commentaries_out.append((name, mod_commentaries))
+    return reviews_out, advisories_out, proposals_out, commentaries_out
 
 
 # ============================================================================
@@ -1050,6 +1148,82 @@ def _dump_lowering_observation(obs) -> dict:
         "target_id": obs.target_id,
         "message": obs.message,
     }
+
+
+def _dump_verification_review(review) -> dict:
+    """Map a Python VerificationReview to
+    schema/verification/verification_review.json (PFS10-D1).
+    Required fields always emit; target_record rendered via
+    shared _dump_cross_dialect_ref (PFS9-D2); comment and
+    match_strength omitted when None."""
+    out = {
+        "reviewer_id": review.reviewer_id,
+        "reviewed_at_τ_a": review.reviewed_at_τ_a,
+        "verdict": review.verdict,
+        "anchor_τ_a": review.anchor_τ_a,
+        "target_record": _dump_cross_dialect_ref(review.target_record),
+    }
+    if review.comment is not None:
+        out["comment"] = review.comment
+    if review.match_strength is not None:
+        out["match_strength"] = review.match_strength
+    return out
+
+
+def _dump_structural_advisory(advisory) -> dict:
+    """Map a Python StructuralAdvisory to
+    schema/verification/structural_advisory.json (PFS10-D2).
+    Required fields always emit; scope walked via
+    _dump_cross_dialect_ref; match_strength omitted when None."""
+    out = {
+        "advisor_id": advisory.advisor_id,
+        "advised_at_τ_a": advisory.advised_at_τ_a,
+        "severity": advisory.severity,
+        "comment": advisory.comment,
+        "scope": [
+            _dump_cross_dialect_ref(ref) for ref in advisory.scope
+        ],
+    }
+    if advisory.match_strength is not None:
+        out["match_strength"] = advisory.match_strength
+    return out
+
+
+def _dump_verification_answer_proposal(proposal) -> dict:
+    """Map a Python VerificationAnswerProposal to
+    schema/verification/verification_answer_proposal.json
+    (PFS10-D3). All six fields always emit (including status
+    with Python default 'pending'). question_id rendered via
+    _dump_cross_dialect_ref."""
+    return {
+        "proposer_id": proposal.proposer_id,
+        "question_id": _dump_cross_dialect_ref(proposal.question_id),
+        "proposed_text": proposal.proposed_text,
+        "rationale": proposal.rationale,
+        "proposed_at_τ_a": proposal.proposed_at_τ_a,
+        "status": proposal.status,
+    }
+
+
+def _dump_verifier_commentary(commentary) -> dict:
+    """Map a Python VerifierCommentary to
+    schema/verification/verifier_commentary.json (PFS10-D4).
+    Required fields always emit; target_review rendered via
+    _dump_verification_review (full nested shape, matching the
+    Python's by-value carrying). suggested_signature omitted
+    when None."""
+    out = {
+        "commenter_id": commentary.commenter_id,
+        "commented_at_τ_a": commentary.commented_at_τ_a,
+        "assessment": commentary.assessment,
+        "target_review": _dump_verification_review(
+            commentary.target_review
+        ),
+        "comment": commentary.comment,
+    }
+    if commentary.suggested_signature is not None:
+        out["suggested_signature"] = commentary.suggested_signature
+    return out
 
 
 # ============================================================================
@@ -3056,6 +3230,499 @@ def test_lowering_observation_corpus_conformance():
 
     assert not new_findings, (
         f"{len(new_findings)} LoweringObservation conformance "
+        f"finding(s); see output."
+    )
+
+
+# ============================================================================
+# Verification-family conformance — PFS10
+# ============================================================================
+
+
+def test_verification_review_schema_metaschema_valid():
+    """schema/verification/verification_review.json is a valid JSON
+    Schema 2020-12 document (production-format-sketch-10
+    PFS10-VR1..VR5)."""
+    schema = _load_verification_review_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_structural_advisory_schema_metaschema_valid():
+    """schema/verification/structural_advisory.json is a valid JSON
+    Schema 2020-12 document (production-format-sketch-10
+    PFS10-SA1..SA4)."""
+    schema = _load_verification_structural_advisory_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_verification_answer_proposal_schema_metaschema_valid():
+    """schema/verification/verification_answer_proposal.json is a
+    valid JSON Schema 2020-12 document (production-format-sketch-10
+    PFS10-AP1..AP3)."""
+    schema = _load_verification_answer_proposal_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_verifier_commentary_schema_metaschema_valid():
+    """schema/verification/verifier_commentary.json is a valid JSON
+    Schema 2020-12 document (production-format-sketch-10
+    PFS10-VC1..VC4 + PFS10-X2)."""
+    schema = _load_verifier_commentary_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_verification_review_schema_has_expected_shape():
+    """Spot-check of VerificationReview schema structure per
+    verification-sketch-01 V2 + PFS10-VR1..VR5 + PFS10-X1."""
+    schema = _load_verification_review_schema()
+    assert schema["title"] == "VerificationReview"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "verification/verification_review.json"
+    )
+    assert set(schema["required"]) == {
+        "reviewer_id", "reviewed_at_τ_a", "verdict",
+        "anchor_τ_a", "target_record",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "reviewer_id", "reviewed_at_τ_a", "verdict",
+        "anchor_τ_a", "target_record", "comment", "match_strength",
+    }
+    # verdict closed enum (PFS10-VR3)
+    assert set(schema["properties"]["verdict"]["enum"]) == {
+        "approved", "needs-work", "partial-match", "noted",
+    }
+    # target_record uses inline $defs/cross_dialect_ref per PFS10-X1
+    assert schema["properties"]["target_record"]["$ref"] == (
+        "#/$defs/cross_dialect_ref"
+    )
+    assert "cross_dialect_ref" in schema["$defs"]
+    cdr = schema["$defs"]["cross_dialect_ref"]
+    assert set(cdr["required"]) == {"dialect", "record_id"}
+    assert cdr["additionalProperties"] is False
+    # match_strength bounded [0, 1] per PFS10-VR5
+    ms = schema["properties"]["match_strength"]
+    assert ms["type"] == "number"
+    assert ms["minimum"] == 0
+    assert ms["maximum"] == 1
+
+
+def test_structural_advisory_schema_has_expected_shape():
+    """Spot-check of StructuralAdvisory schema structure per V2 +
+    PFS10-SA1..SA4 + PFS10-X1."""
+    schema = _load_verification_structural_advisory_schema()
+    assert schema["title"] == "StructuralAdvisory"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "verification/structural_advisory.json"
+    )
+    assert set(schema["required"]) == {
+        "advisor_id", "advised_at_τ_a", "severity",
+        "comment", "scope",
+    }
+    assert schema["additionalProperties"] is False
+    # severity closed enum (PFS10-SA3)
+    assert set(schema["properties"]["severity"]["enum"]) == {
+        "noted", "suggest-review", "suggest-revise",
+    }
+    # scope uses inline cross_dialect_ref (PFS10-X1)
+    scope = schema["properties"]["scope"]
+    assert scope["type"] == "array"
+    assert scope["items"]["$ref"] == "#/$defs/cross_dialect_ref"
+    assert "cross_dialect_ref" in schema["$defs"]
+
+
+def test_verification_answer_proposal_schema_has_expected_shape():
+    """Spot-check of VerificationAnswerProposal schema structure per
+    V2 + PFS10-AP1..AP3 + PFS10-X1 + PFS10-X3."""
+    schema = _load_verification_answer_proposal_schema()
+    assert schema["title"] == "VerificationAnswerProposal"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "verification/verification_answer_proposal.json"
+    )
+    assert set(schema["required"]) == {
+        "proposer_id", "question_id", "proposed_text",
+        "rationale", "proposed_at_τ_a", "status",
+    }
+    assert schema["additionalProperties"] is False
+    # question_id uses inline cross_dialect_ref (PFS10-X1)
+    assert schema["properties"]["question_id"]["$ref"] == (
+        "#/$defs/cross_dialect_ref"
+    )
+    assert "cross_dialect_ref" in schema["$defs"]
+    # status is open non-empty string per PFS10-AP3 / PFS10-X3
+    status = schema["properties"]["status"]
+    assert status["type"] == "string"
+    assert status["minLength"] == 1
+    assert "enum" not in status
+
+
+def test_verifier_commentary_schema_has_expected_shape():
+    """Spot-check of VerifierCommentary schema structure per V7 +
+    PFS10-VC1..VC4 + PFS10-X2."""
+    schema = _load_verifier_commentary_schema()
+    assert schema["title"] == "VerifierCommentary"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "verification/verifier_commentary.json"
+    )
+    assert set(schema["required"]) == {
+        "commenter_id", "commented_at_τ_a", "assessment",
+        "target_review", "comment",
+    }
+    assert schema["additionalProperties"] is False
+    # assessment closed enum (PFS10-VC3)
+    assert set(schema["properties"]["assessment"]["enum"]) == {
+        "endorses", "qualifies", "dissents", "noted",
+    }
+    # target_review cross-file $ref to verification_review.json per PFS10-X2
+    assert schema["properties"]["target_review"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "verification/verification_review.json"
+    )
+    # No inline cross_dialect_ref (target_review encapsulates it)
+    assert "$defs" not in schema or (
+        "cross_dialect_ref" not in schema.get("$defs", {})
+    )
+
+
+def test_verification_review_corpus_conformance():
+    """Every VerificationReview emitted by running each encoding's
+    *_verification.py run() function validates against
+    schema/verification/verification_review.json (PFS10-VR1..VR5 +
+    PFS10-D1)."""
+    schema = _load_verification_review_schema()
+    validator = Draft202012Validator(schema)
+
+    reviews_by_encoding, _, _, _ = (
+        _discover_encoding_verifier_output()
+    )
+    assert reviews_by_encoding, (
+        "expected at least one encoding emitting VerificationReview "
+        "records; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    verdict_counts: dict = {}
+    match_strength_count = 0
+    comment_count = 0
+    new_findings: list = []
+
+    for encoding_name, reviews in reviews_by_encoding:
+        for review in reviews:
+            total += 1
+            dumped = _dump_verification_review(review)
+            verdict_counts[dumped["verdict"]] = (
+                verdict_counts.get(dumped["verdict"], 0) + 1
+            )
+            if "match_strength" in dumped:
+                match_strength_count += 1
+            if "comment" in dumped:
+                comment_count += 1
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "reviewer_id": review.reviewer_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_verification_review_corpus_conformance: "
+        f"{total} VerificationReview records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(
+        f"  by verdict:                 "
+        f"{dict(sorted(verdict_counts.items()))}"
+    )
+    print(f"  with match_strength:        {match_strength_count}")
+    print(f"  with comment:               {comment_count}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['reviewer_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} VerificationReview conformance "
+        f"finding(s); see output. Resolve per production-format-"
+        f"sketch-10's §Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_structural_advisory_corpus_conformance():
+    """Every StructuralAdvisory emitted by running each encoding's
+    *_verification.py run() function validates against
+    schema/verification/structural_advisory.json (PFS10-SA1..SA4 +
+    PFS10-D2). The skeleton encoding emits at least one; most
+    verifiers emit zero."""
+    schema = _load_verification_structural_advisory_schema()
+    validator = Draft202012Validator(schema)
+
+    _, advisories_by_encoding, _, _ = (
+        _discover_encoding_verifier_output()
+    )
+
+    total = 0
+    clean_passes = 0
+    severity_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, advisories in advisories_by_encoding:
+        for advisory in advisories:
+            total += 1
+            dumped = _dump_structural_advisory(advisory)
+            severity_counts[dumped["severity"]] = (
+                severity_counts.get(dumped["severity"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "advisor_id": advisory.advisor_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_structural_advisory_corpus_conformance: "
+        f"{total} StructuralAdvisory records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if severity_counts:
+        print(
+            f"  by severity:                "
+            f"{dict(sorted(severity_counts.items()))}"
+        )
+        print(
+            f"  emitting encodings:         "
+            f"{sorted(name for name, _ in advisories_by_encoding)}"
+        )
+    else:
+        print(
+            f"  note:                       "
+            f"zero advisories; expected (only skeleton encoding "
+            f"emits one)"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['advisor_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StructuralAdvisory conformance "
+        f"finding(s); see output."
+    )
+
+
+def test_verification_answer_proposal_corpus_conformance():
+    """Every VerificationAnswerProposal emitted by *_verification.py
+    run() functions validates against
+    schema/verification/verification_answer_proposal.json
+    (PFS10-AP1..AP3 + PFS10-D3). Today's corpus emits zero;
+    schema structure validated via metaschema + shape tests."""
+    schema = _load_verification_answer_proposal_schema()
+    validator = Draft202012Validator(schema)
+
+    _, _, proposals_by_encoding, _ = (
+        _discover_encoding_verifier_output()
+    )
+
+    total = 0
+    clean_passes = 0
+    status_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, proposals in proposals_by_encoding:
+        for proposal in proposals:
+            total += 1
+            dumped = _dump_verification_answer_proposal(proposal)
+            status_counts[dumped["status"]] = (
+                status_counts.get(dumped["status"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "proposer_id": proposal.proposer_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_verification_answer_proposal_corpus_conformance: "
+        f"{total} VerificationAnswerProposal records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if status_counts:
+        print(
+            f"  by status:                  "
+            f"{dict(sorted(status_counts.items()))}"
+        )
+    else:
+        print(
+            f"  note:                       "
+            f"zero proposals today; expected per PFS10 §Corpus "
+            f"expectations"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['proposer_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} VerificationAnswerProposal "
+        f"conformance finding(s); see output."
+    )
+
+
+def test_verifier_commentary_corpus_conformance():
+    """Every VerifierCommentary emitted by *_verification.py run()
+    functions validates against
+    schema/verification/verifier_commentary.json (PFS10-VC1..VC4 +
+    PFS10-D4). Uses the registry-bound validator because
+    verifier_commentary.json cross-file-refs
+    verification_review.json per PFS10-X2. Today's corpus emits
+    zero (commentary records live in probe output JSONs, not
+    verifier run() output); schema structure validated via
+    metaschema + shape tests."""
+    registry = _build_schema_registry()
+    schema = _load_verifier_commentary_schema()
+    validator = Draft202012Validator(schema, registry=registry)
+
+    _, _, _, commentaries_by_encoding = (
+        _discover_encoding_verifier_output()
+    )
+
+    total = 0
+    clean_passes = 0
+    assessment_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, commentaries in commentaries_by_encoding:
+        for commentary in commentaries:
+            total += 1
+            dumped = _dump_verifier_commentary(commentary)
+            assessment_counts[dumped["assessment"]] = (
+                assessment_counts.get(dumped["assessment"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "commenter_id": commentary.commenter_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_verifier_commentary_corpus_conformance: "
+        f"{total} VerifierCommentary records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if assessment_counts:
+        print(
+            f"  by assessment:              "
+            f"{dict(sorted(assessment_counts.items()))}"
+        )
+    else:
+        print(
+            f"  note:                       "
+            f"zero commentaries today; expected per PFS10 §Corpus "
+            f"expectations (commentary records live in probe JSONs)"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['commenter_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} VerifierCommentary conformance "
         f"finding(s); see output."
     )
 

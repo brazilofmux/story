@@ -168,6 +168,40 @@ bearing cross-boundary record.
   severity closed enum {noted, advises-review}; code open
   string per PFS9-LO3).
 
+#### Verification (under `schema/verification/`, four records)
+
+Second namespace under the cross-boundary tier (production-
+format-sketch-10 PFS10-N1). Verification-family records encode
+verifier verdicts, advisories, commentaries, and verifier-
+sourced proposals. `CrossDialectRef` is **re-inlined** per
+PFS8-V guidance (lower cross-namespace coupling; same shape
+as lowering.json's inline `$defs/cross_dialect_ref`, duplicated
+independently).
+
+- `verification/verification_review.json` — the
+  `VerificationReview` record (V2: required reviewer_id /
+  reviewed_at_τ_a / verdict / anchor_τ_a / target_record;
+  verdict closed enum {approved, needs-work, partial-match,
+  noted}; optional comment / match_strength where
+  match_strength is a number in [0, 1]).
+- `verification/structural_advisory.json` — the
+  `StructuralAdvisory` record (V2: required advisor_id /
+  advised_at_τ_a / severity / comment / scope where scope is
+  an array of CrossDialectRef; severity closed enum {noted,
+  suggest-review, suggest-revise}).
+- `verification/verification_answer_proposal.json` — the
+  `VerificationAnswerProposal` record (V2: required
+  proposer_id / question_id / proposed_text / rationale /
+  proposed_at_τ_a / status; status open string per PFS10-X3 —
+  close-enum deferred to OQ3 when walker acceptance flow
+  lands).
+- `verification/verifier_commentary.json` — the
+  `VerifierCommentary` record (V7: required commenter_id /
+  commented_at_τ_a / assessment / target_review / comment;
+  assessment closed enum {endorses, qualifies, dissents,
+  noted}; target_review via cross-file `$ref` to
+  `verification_review.json` per PFS10-X2).
+
 ### Cross-file references
 
 Substrate-layer cross-file references resolve via canonical
@@ -176,7 +210,8 @@ conformance test layer (pattern established by production-
 format-sketch-03 PFS3-E1; extended by sketch-04 P4A1 for held;
 extended by sketch-06 PFS6-D5 for the aristotelian dialect;
 extended by sketch-07 PFS7-D6 for the save-the-cat dialect;
-extended by sketch-09 PFS9-D8 for the lowering namespace).
+extended by sketch-09 PFS9-D8 for the lowering namespace;
+extended by sketch-10 PFS10-D6 for the verification namespace).
 Branch's `schema/branch.json` has no outbound cross-file
 references; the Aristotelian mythos has two (phase.json and
 character.json); the four Save-the-Cat schemas have none —
@@ -185,16 +220,23 @@ records per PFS7-X1 (flat-with-id-refs topology). The lowering
 namespace has one outbound cross-file `$ref` —
 `lowering.json`'s inline `$defs/annotation.review_states`
 references `annotation_review.json` per PFS9-X2, extending the
-tree-with-$ref pattern into the cross-boundary tier.
+tree-with-$ref pattern into the cross-boundary tier. The
+verification namespace has one outbound cross-file `$ref` —
+`verifier_commentary.json`'s `target_review` references
+`verification_review.json` per PFS10-X2, same pattern. No
+cross-*namespace* $refs today — CrossDialectRef is re-inlined
+in both namespaces per PFS8-V's guidance (lower cross-namespace
+coupling).
 
 Labels on `event.json`'s `branches` field, event-id strings on
 ArMythos / ArPhase, id-string arrays on StcStory / StcBeat /
-StcStrand, and `CrossDialectRef.dialect` tokens in the
-lowering namespace are all plain strings, not $ref-typed — see
-production-format-sketch-05 §Open questions OQ3, sketch-06 OQ3,
-sketch-07 OQ4, and sketch-09 PFS9-X4 (dialect-token openness
-per architecture-sketch-02 A6) for the cross-reference-
-consistency audit surfaces.
+StcStrand, and `CrossDialectRef.dialect` tokens in the lowering
+and verification namespaces are all plain strings, not $ref-
+typed — see production-format-sketch-05 §Open questions OQ3,
+sketch-06 OQ3, sketch-07 OQ4, sketch-09 PFS9-X4 (dialect-token
+openness per architecture-sketch-02 A6), and sketch-10 OQ1
+(CrossDialectRef referential-integrity audit) for the cross-
+reference-consistency audit surfaces.
 
 ## What's deferred
 
@@ -205,11 +247,6 @@ consistency audit surfaces.
   sketch; Aristotelian-core (three records) shipped under PFS6
   as the first dialect-layer example; Save-the-Cat-core (four
   records) shipped under PFS7 as the second.
-- Verification-family cross-boundary records
-  (VerificationReview, StructuralAdvisory,
-  VerificationAnswerProposal, VerifierCommentary). PFS10 ships
-  these under `schema/verification/` after PFS9's
-  CrossDialectRef decision (re-inlined per PFS8-V guidance).
 - Dialect-internal observation / review / probe records
   (ArObservation, ArAnnotationReview, ArObservationCommentary,
   DialectReading, StcObservation, future DramaticaObservation).

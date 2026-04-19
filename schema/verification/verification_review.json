@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/verification/verification_review.json",
+  "title": "VerificationReview",
+  "description": "A verifier's verdict on a specific record (upper, Lowering, or Template), per design/verification-sketch-01.md V2 + PFS10-VR1..VR5. Carries reviewer_id, reviewed_at_τ_a, verdict (closed enum matching Python's VERDICT_* constants), anchor_τ_a (snapshot of the target's τ_a at review time), and target_record (CrossDialectRef). Optional comment and match_strength (meaningful for partial-match verdicts per V7). target_record uses inline $defs/cross_dialect_ref re-inlined from lowering.json per PFS8-V + PFS10-X1.",
+  "type": "object",
+  "required": ["reviewer_id", "reviewed_at_τ_a", "verdict", "anchor_τ_a", "target_record"],
+  "$defs": {
+    "cross_dialect_ref": {
+      "type": "object",
+      "description": "Typed reference to a record in a specific dialect. Re-inlined from schema/lowering/lowering.json per PFS8-V + PFS10-X1 (duplication cost bounded; lower cross-namespace coupling). Shape is identical. Open dialect-token string per PFS9-X4.",
+      "required": ["dialect", "record_id"],
+      "properties": {
+        "dialect": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dialect token (open string per PFS9-X4)."
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier for the referenced record in its dialect."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "reviewer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the verifier emitting this review (e.g., 'verifier:characterization:domain-assignment'). PFS10-VR2."
+    },
+    "reviewed_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the review was recorded. PFS10-VR2."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["approved", "needs-work", "partial-match", "noted"],
+      "description": "Closed enum matching Python's VERDICT_* constants in core/verification.py. Distinct from Lowering's AnnotationReview verdict vocabulary — the two record types have their own four-value sets (AnnotationReview emits 'rejected' where VerificationReview emits 'partial-match'). PFS10-VR3."
+    },
+    "anchor_τ_a": {
+      "type": "integer",
+      "description": "Snapshot of the target record's τ_a at review time. If the target's current τ_a exceeds this value, downstream tooling surfaces the review as stale. PFS10-VR2."
+    },
+    "target_record": {
+      "$ref": "#/$defs/cross_dialect_ref",
+      "description": "The record this review attaches to, as a CrossDialectRef. PFS10-VR4."
+    },
+    "comment": {
+      "type": "string",
+      "description": "Optional verifier prose explaining the verdict. Python default None → omitted from dump; any set string emits unconditionally. PFS10-VR5."
+    },
+    "match_strength": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Optional confidence score in [0, 1]. Meaningful for partial-match verdicts per V7 (e.g., a Characterization check that holds 70% of the time). Other verdicts may set it for transparency or leave None. Python default None → omitted when None. PFS10-VR5."
+    }
+  },
+  "additionalProperties": false
+}

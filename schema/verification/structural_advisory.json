@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/verification/structural_advisory.json",
+  "title": "StructuralAdvisory",
+  "description": "A cross-record verifier observation that spans multiple records or names a pattern rather than attaching to a specific record, per design/verification-sketch-01.md V2 + PFS10-SA1..SA4. Used when the finding is not naturally a single-record review. Carries advisor_id, advised_at_τ_a, severity (closed enum matching Python's SEVERITY_*), comment (required prose), and scope (array of CrossDialectRef naming the records the pattern touches). Optional match_strength. CrossDialectRef re-inlined per PFS8-V + PFS10-X1.",
+  "type": "object",
+  "required": ["advisor_id", "advised_at_τ_a", "severity", "comment", "scope"],
+  "$defs": {
+    "cross_dialect_ref": {
+      "type": "object",
+      "description": "Typed reference to a record in a specific dialect. Re-inlined per PFS8-V + PFS10-X1. Open dialect-token string per PFS9-X4.",
+      "required": ["dialect", "record_id"],
+      "properties": {
+        "dialect": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dialect token (open string per PFS9-X4)."
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier for the referenced record in its dialect."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "advisor_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the advisor emitting this finding. PFS10-SA2."
+    },
+    "advised_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the advisory was recorded. PFS10-SA2."
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["noted", "suggest-review", "suggest-revise"],
+      "description": "Closed enum matching Python's SEVERITY_* constants. Distinct from LoweringObservation severities (which have only 'noted' and 'advises-review'); StructuralAdvisory adds a third tier ('suggest-revise') for recommended revisions. PFS10-SA3."
+    },
+    "comment": {
+      "type": "string",
+      "description": "Required prose explaining the advisory. Empty string admitted (placeholder authoring), matching Annotation.text posture. PFS10-SA2."
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cross_dialect_ref"
+      },
+      "description": "Records the advisory touches, as an array of CrossDialectRef. Empty array legal (an advisor may flag a corpus-level concern without specific record targets — banked in PFS10 OQ5). PFS10-SA4."
+    },
+    "match_strength": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Optional confidence score in [0, 1]. Same semantics as VerificationReview.match_strength per V7. Python default None → omitted when None."
+    }
+  },
+  "additionalProperties": false
+}
