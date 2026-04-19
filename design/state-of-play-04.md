@@ -1,6 +1,6 @@
 # State of play — sketch 04
 
-**Status:** active
+**Status:** superseded by [state-of-play-05](state-of-play-05.md)
 **Date:** 2026-04-19
 **Supersedes:** [state-of-play-03](state-of-play-03.md)
 
