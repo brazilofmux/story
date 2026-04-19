@@ -148,12 +148,22 @@ Strict shape. Consistent with Description and Entity schemas.
 Undeclared fields fail validation; the Prop is exactly two
 fields.
 
-#### PFS3-P3 — args items are `oneOf` atomic types
+#### PFS3-P3 — args items are `anyOf` atomic types
 
 No nested structures (PL5) encoded as schema restriction:
-`items` uses `oneOf: [{type:string},{type:integer},{type:
+`items` uses `anyOf: [{type:string},{type:integer},{type:
 number},{type:boolean}]`. `null` is not admitted; arrays /
 objects / sub-Props are not admitted.
+
+**`anyOf` not `oneOf`, on discovery during implementation.** In
+JSON Schema, integer values validate against BOTH `{type:
+"integer"}` and `{type: "number"}` (integer is a subset of
+number). `oneOf` requires *exactly one* match — so an integer
+arg would always fail `oneOf(string, integer, number, boolean)`.
+`anyOf` admits "any of these types", which is what PL4 actually
+commits to. The implementation pass caught this before it
+shipped; the sketch's §Conformance dispositions records the
+schema-authoring fix.
 
 ### Event
 
@@ -319,9 +329,9 @@ Authoritative for sketch-03; file lives at `schema/prop.json`:
     },
     "args": {
       "type": "array",
-      "description": "Ordered tuple of atomic primitive values (PL3, PL4). Strings are Entity-id references; int/number/boolean are literal values with structural fold-consequence. PL5 prohibits nested/composite/null values; this is enforced by items' oneOf.",
+      "description": "Ordered tuple of atomic primitive values (PL3, PL4). Strings are Entity-id references; int/number/boolean are literal values with structural fold-consequence. PL5 prohibits nested/composite/null values; enforced by items' anyOf.",
       "items": {
-        "oneOf": [
+        "anyOf": [
           {"type": "string"},
           {"type": "integer"},
           {"type": "number"},
@@ -475,50 +485,129 @@ Notes on design choices:
 
 ## Conformance dispositions
 
-Anticipated from the corpus survey run during this sketch's
-authoring. The scan: look for attributes on Python `Event`
-instances not covered by the schema's properties.
+Populated during the implementation pass. Corpus: 102 distinct
+events across 5 encodings (458 with re-export inflation; 102
+unique). 458/458 pass against the event schema after the
+dump-layer translations described below. Three dispositions,
+one schema-authoring fix found during implementation, one
+recorded audit of a PFS2 gap the Python holds but the schema
+does not admit.
 
-**Anticipated dispositions** (pre-implementation guesses;
-validated or corrected during the implementation pass):
+### Disposition 1: KnowledgeEffect shape translation
 
-- **`Event.metadata`.** Sketch-04 named it; sketch-05 did not
-  carry it forward. If Python has it, disposition: sketch-05
-  was implicit about preservation; amendment to
-  sketch-05 (or this sketch) decides whether metadata is a
-  keeper. Most likely outcome: Python over-specified; field
-  absent from corpus; no schema amendment.
-- **`Event.descriptions`.** Same question. Anticipated: Python
-  may have the field from sketch-04's era; the field may or
-  may not be populated across the corpus. If unpopulated,
-  trivially absorbed; if populated, real decision needed
-  (attach-via-Description vs. inline-on-Event).
-- **Partial-order relations** (sketch-05 mentions but does
-  not shape-specify). If Python has a `partial_order` or
-  similar field, schema cannot admit it (PFS2 says design
-  sketch must specify first); disposition defers to a future
-  sketch.
-- **`Event.effect_count` / computed fields.** Verifier
-  helpers compute these; they are not stored fields. If
-  Python exposes any as attributes on Event, the dump logic
-  excludes them.
-- **Empty ENTITIES-like re-export inflation.** As with
-  sketch-02, lowering + verification modules may re-export
-  FABULA / EVENTS_ALL. The conformance test discovers by
-  naming convention; duplicate validation is harmless.
+**Status:** mechanical dump transformation.
+Python's `KnowledgeEffect` is `(agent_id, held, remove)` where
+`held` is a full `Held(prop, slot, confidence, via,
+provenance)` record — a pre-sketch shape carrying fold-output
+fields inline with the effect. The schema (per
+substrate-effect-shape-sketch-01 ES3) is `(kind, holder, prop,
+via)`. The dump:
 
-**Anticipated-findings-not-dispositions** (schema should pass
-these cleanly):
+- `holder` ← `agent_id`.
+- `prop` ← `held.prop`.
+- `via` ← `held.via`.
+- Discards: `held.slot`, `held.confidence`, `held.provenance`.
+- Discards: `remove` (see Disposition 2).
 
-- Positive and negative `τ_s` values (Oedipus's antecedent
-  action is negative).
-- Various `via` values across the 11-value vocabulary.
-- Events with and without `preconditions`.
-- Events on `:canonical` alone, on a single `:contested`
-  branch, or trans-branch.
+Slot / confidence / provenance are fold-output per ES3; they
+do not belong on the effect record. The dump drops them; the
+schema validates cleanly. This is "Python over-specified" —
+the Python carries richer-than-spec structure which the
+schema conformance check routes around.
 
-Findings land here verbatim during implementation. Absence of
-findings in a category = the field is admitted cleanly.
+**Follow-on work:** eventually the Python `KnowledgeEffect` +
+`Held` split should be refactored to match the sketch's shape
+(effect carries only what fold needs as input; Held is
+fold-output). Not this arc's work.
+
+### Disposition 2: KnowledgeEffect.remove retraction polarity
+
+**Status:** PFS2 finding; Python over-specified; audited.
+Python `KnowledgeEffect` carries `remove: bool` enabling a
+"realization removes old propositions" pattern that
+identity-and-realization-sketch-01 §Prior encoding's workaround,
+and its retirement explicitly argues against. The sketch commits
+realization *asserts identities and removes nothing*;
+substitution handles downstream reference-updating.
+
+Corpus audit at 2026-04-19: **7 KnowledgeEffects with
+remove=True** (deduped by event id; 34 raw occurrences across
+re-exporting modules). All are in the Oedipus encoding, enacting
+the pre-sketch workaround pattern.
+
+A companion test `test_knowledge_effect_remove_audit` counts and
+reports; baseline is 7. Drift from baseline is a finding. The
+resolution path — rewriting Oedipus's realization events per
+identity-and-realization-sketch-01's recommended pattern — is
+research-track work, not production-track.
+
+**Not a schema amendment.** The `remove` field is not admitted
+to `schema/event.json`'s KnowledgeEffect sub-schema. The design
+sketch argues against it; the production schema follows. The
+dump silently drops it; the audit surfaces the count.
+
+### Disposition 3: Event.metadata
+
+**Status:** PFS2 finding; Python over-specified; harmless.
+Python `Event` has a `metadata: dict` field (sketch-04 era).
+Sketch-05 §The five required elements + §Additionally does not
+list it. Corpus: 0/102 events populate it; every metadata value
+is `{}` (an empty dict, the dataclass default).
+
+The dump omits the field entirely. The schema's
+`additionalProperties: false` would reject it if dumped. Given
+0 actual use, the field is a harmless artifact in Python; no
+schema amendment or Python cleanup forced.
+
+**Not a schema amendment.** If a future encoding populates
+metadata and the content proves structural (rather than
+interpretive — in which case Descriptions are the right
+surface per descriptions-sketch-01 + M1), a sketch amendment
+adds the field. Today no forcing function.
+
+### Schema-authoring fix: anyOf not oneOf on Prop args items
+
+**Status:** implementation discovered; sketch + schema both
+amended.
+Initial schema used `items: {oneOf: [{type:"string"}, {type:
+"integer"}, {type:"number"}, {type:"boolean"}]}`. In JSON
+Schema 2020-12, integer values validate against both
+`{type:"integer"}` and `{type:"number"}` (integer is a subset
+of number). `oneOf` requires exactly one match, so any integer
+arg fails validation. Corpus: `fought_rounds(rocky, apollo,
+15)` was the forcing instance.
+
+Amended to `anyOf`, matching PL4's actual commitment ("args
+admit string, integer, number, or boolean" — any of these, not
+exactly one). Both the sketch's inline schema and
+`schema/prop.json` carry `anyOf`.
+
+This is a **schema-authoring discipline finding**: JSON
+Schema's `oneOf` / `anyOf` distinction has real semantic weight;
+defaulting to `oneOf` without checking for type-hierarchy
+overlap is a trap. Production-format-sketch-04+ should use
+`anyOf` for primitive-type unions unless exclusivity is
+actually required.
+
+### Non-dispositions: clean validations
+
+- **Positive and negative τ_s values.** Negatives appear
+  (Oedipus's antecedent action from birth onwards). Schema
+  admits (no minimum).
+- **Four via values exercised** (observation 143, utterance-
+  heard 35, inference 8, realization 7 in the deduplicated
+  count). The 7 narrative vocabulary values are not exercised
+  in the current corpus (no reader-state events authored).
+  Schema admits all 11.
+- **Events with preconditions.** 0/102 events populate
+  preconditions. Schema admits (optional field).
+- **Events on `:canonical` alone or with non-default branch
+  sets.** 14/102 events have non-default branches (Rashomon
+  contested branches). Schema admits.
+- **Re-export inflation.** As with Entity in
+  production-format-sketch-02, lowering / verification modules
+  re-export FABULA / EVENTS_ALL. 458 raw validations, 102
+  distinct event ids; duplicate validations are harmless.
 
 ## Open questions
 

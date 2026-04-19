@@ -44,9 +44,11 @@ import traceback
 try:
     import jsonschema
     from jsonschema import Draft202012Validator
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT202012
 except ImportError as exc:
     raise ImportError(
-        "This test requires jsonschema. Install via "
+        "This test requires jsonschema + referencing. Install via "
         "`pip install -r prototype/requirements.txt`."
     ) from exc
 
@@ -73,6 +75,38 @@ def _load_entity_schema() -> dict:
     schema_path = _repo_root() / "schema" / "entity.json"
     with open(schema_path) as f:
         return json.load(f)
+
+
+def _load_prop_schema() -> dict:
+    schema_path = _repo_root() / "schema" / "prop.json"
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_event_schema() -> dict:
+    schema_path = _repo_root() / "schema" / "event.json"
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _build_schema_registry() -> Registry:
+    """Build a referencing Registry mapping canonical $id URIs to the
+    loaded schemas. Lets cross-file $refs resolve without fetching —
+    schema/event.json $refs schema/prop.json via the canonical URI;
+    schema/description.json (post production-format-sketch-03) does
+    the same for its PropositionAnchor variant.
+
+    Pattern introduced by production-format-sketch-03 P3A4; extends
+    naturally to future cross-file refs (dialect records → substrate,
+    Lowerings → dialect records, etc.)."""
+    registry = Registry()
+    for schema in (
+        _load_prop_schema(), _load_event_schema(),
+        _load_description_schema(),
+    ):
+        resource = Resource.from_contents(schema, default_specification=DRAFT202012)
+        registry = registry.with_resource(uri=schema["$id"], resource=resource)
+    return registry
 
 
 # ============================================================================
@@ -149,6 +183,19 @@ def _discover_encoding_entities() -> list:
     return _discover_encoding_records("ENTITIES")
 
 
+def _discover_encoding_events() -> list:
+    """Events live under different attribute names across encodings:
+    some use FABULA, some use EVENTS_ALL. Try both, in order."""
+    from_fabula = _discover_encoding_records("FABULA")
+    seen = {name for name, _ in from_fabula}
+    from_events_all = [
+        (name, events) for name, events
+        in _discover_encoding_records("EVENTS_ALL")
+        if name not in seen
+    ]
+    return from_fabula + from_events_all
+
+
 # ============================================================================
 # Dump: Python Description → schema-conforming JSON dict
 # ============================================================================
@@ -201,6 +248,122 @@ def _dump_review_entry(review) -> dict:
     }
     if review.comment is not None:
         out["comment"] = review.comment
+    return out
+
+
+def _dump_prop(prop) -> dict:
+    """Map a Python Prop to a JSON-compatible dict conforming to
+    schema/prop.json (per substrate-prop-literal-sketch-01 PL1–PL7).
+
+    Python's Prop has tuple args; JSON has arrays. Items are already
+    atomic primitives (string Entity-ids, int/float/bool). PL5
+    forbids nested structures; the dump does not defensive-check
+    because the Python Prop's frozen dataclass + tuple-of-primitives
+    contract already constrains at construction time."""
+    return {
+        "predicate": prop.predicate,
+        "args": list(prop.args),
+    }
+
+
+def _dump_world_effect(effect) -> dict:
+    """Map a Python WorldEffect to the schema's WorldEffect shape.
+    Adds the 'kind' discriminator (production-format-sketch-03
+    PFS3-E5) which the Python class identity carries implicitly."""
+    return {
+        "kind": "world",
+        "prop": _dump_prop(effect.prop),
+        "asserts": effect.asserts,
+    }
+
+
+def _dump_knowledge_effect(effect) -> dict:
+    """Map a Python KnowledgeEffect to the schema's KnowledgeEffect
+    shape. Two shape divergences per production-format-sketch-03
+    §Conformance dispositions (populated during implementation):
+
+    1. Python's KnowledgeEffect wraps a full Held(prop, slot,
+       confidence, via, provenance) record as `held`. The schema
+       derived from substrate-effect-shape-sketch-01 ES3 has only
+       (holder, prop, via) — slot/confidence/provenance are
+       fold-output per ES3's scope-out. The dump extracts prop and
+       via from held; discards slot, confidence, and provenance.
+       This is "Python over-specified" per PFS2 — the Held fields
+       are not on the effect shape the sketch committed to.
+
+    2. Python carries a `remove: bool` retraction polarity on
+       KnowledgeEffect. The sketch does not admit (ES3 "No asserts
+       field"; identity-and-realization-sketch-01 explicitly argues
+       against realization-removes-propositions). remove=True
+       cases are dropped by the dump; a companion audit test
+       (test_knowledge_effect_remove_audit) counts and reports them
+       as a known disposition.
+    """
+    return {
+        "kind": "knowledge",
+        "holder": effect.agent_id,
+        "prop": _dump_prop(effect.held.prop),
+        "via": effect.held.via,
+    }
+
+
+def _dump_effect(effect) -> dict:
+    """Dispatch on Python class identity to produce the tagged-union
+    shape the schema expects."""
+    # Lazy import to avoid a circular: substrate is imported via
+    # the encoding modules, which import when discover runs.
+    from story_engine.core.substrate import (
+        KnowledgeEffect as _KnowledgeEffect,
+        WorldEffect as _WorldEffect,
+    )
+    if isinstance(effect, _WorldEffect):
+        return _dump_world_effect(effect)
+    if isinstance(effect, _KnowledgeEffect):
+        return _dump_knowledge_effect(effect)
+    raise ValueError(
+        f"unknown effect type {type(effect).__name__!r} — no "
+        f"schema shape defined"
+    )
+
+
+def _dump_event(event) -> dict:
+    """Map a Python Event to schema/event.json shape. Omits optional
+    fields with default values (status='committed', branches=
+    {':canonical'}) to keep the dump small and to match the
+    description-dump convention (omit defaults).
+
+    Omits `metadata` entirely — sketch-05 §The five required elements
+    + §Additionally does not include metadata; Python carries the
+    field (sketch-04 era) but 0/102 current-corpus events populate
+    it. Per PFS2, the schema does not admit. See
+    production-format-sketch-03 §Conformance dispositions."""
+    out = {
+        "id": event.id,
+        "type": event.type,
+        "τ_s": event.τ_s,
+        "τ_a": event.τ_a,
+        "participants": {
+            role: (
+                list(value) if isinstance(value, (list, tuple))
+                else value
+            )
+            for role, value in event.participants.items()
+        },
+        "effects": [_dump_effect(eff) for eff in event.effects],
+    }
+    if event.preconditions:
+        out["preconditions"] = [_dump_prop(p) for p in event.preconditions]
+    status_val = (
+        event.status.value if hasattr(event.status, "value")
+        else event.status
+    )
+    if status_val != "committed":
+        out["status"] = status_val
+    # Python default is frozenset({':canonical'}). Omit only when
+    # exactly that; include when any other branch membership.
+    from story_engine.core.substrate import CANONICAL_LABEL
+    if event.branches != frozenset({CANONICAL_LABEL}):
+        out["branches"] = sorted(event.branches)
     return out
 
 
@@ -325,6 +488,43 @@ def test_entity_schema_metaschema_valid():
     Draft202012Validator.check_schema(schema)
 
 
+def test_prop_schema_metaschema_valid():
+    """schema/prop.json is a valid JSON Schema 2020-12 document."""
+    schema = _load_prop_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_event_schema_metaschema_valid():
+    """schema/event.json is a valid JSON Schema 2020-12 document."""
+    schema = _load_event_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_cross_file_registry_resolves_prop_ref():
+    """The referencing Registry resolves event.json's Prop $ref to
+    schema/prop.json. Guards against build-environment breakage
+    where validators can't follow the canonical $id URIs."""
+    registry = _build_schema_registry()
+    event_schema = _load_event_schema()
+    validator = Draft202012Validator(event_schema, registry=registry)
+    # An Event whose preconditions use Prop exercises the cross-file
+    # ref path.
+    dummy_event = {
+        "id": "E_test", "type": "test",
+        "τ_s": 0, "τ_a": 0,
+        "participants": {},
+        "effects": [],
+        "preconditions": [
+            {"predicate": "test_pred", "args": ["a", "b"]}
+        ],
+    }
+    errors = list(validator.iter_errors(dummy_event))
+    assert errors == [], (
+        f"expected zero validation errors on the dummy event; "
+        f"got: {[e.message for e in errors]}"
+    )
+
+
 def test_description_schema_has_expected_shape():
     """Spot-check of Description schema structure — guards
     against accidental breakage of the schema during unrelated
@@ -356,6 +556,84 @@ def test_description_schema_has_expected_shape():
     # Status enum matches descriptions-sketch-01 §Optional fields
     status_enum = set(schema["properties"]["status"]["enum"])
     assert status_enum == {"committed", "provisional"}
+
+
+def test_prop_schema_has_expected_shape():
+    """Spot-check of Prop schema structure per
+    substrate-prop-literal-sketch-01 PL1–PL7 +
+    production-format-sketch-03 PFS3-P1/P2/P3."""
+    schema = _load_prop_schema()
+    assert schema["title"] == "Prop"
+    assert set(schema["required"]) == {"predicate", "args"}
+    assert schema["additionalProperties"] is False
+    # args items are anyOf over atomic primitives (PL4). Note:
+    # anyOf not oneOf — integers validate against both 'integer'
+    # and 'number', so oneOf would always fail on integer args.
+    item_any_of = schema["properties"]["args"]["items"]["anyOf"]
+    item_types = sorted(variant["type"] for variant in item_any_of)
+    assert item_types == ["boolean", "integer", "number", "string"]
+    # predicate has minLength 1 (non-empty per PL2)
+    assert schema["properties"]["predicate"]["minLength"] == 1
+
+
+def test_event_schema_has_expected_shape():
+    """Spot-check of Event schema structure per
+    substrate-sketch-05 §Event internals +
+    production-format-sketch-03 PFS3-E1 through E7."""
+    schema = _load_event_schema()
+    assert schema["title"] == "Event"
+    assert set(schema["required"]) == {
+        "id", "type", "τ_s", "τ_a", "participants", "effects",
+    }
+    assert schema["additionalProperties"] is False
+    # Three optional fields admitted
+    all_props = set(schema["properties"].keys())
+    optional = all_props - set(schema["required"])
+    assert optional == {"preconditions", "status", "branches"}
+    # Explicit exclusions per PFS3-E7
+    assert "metadata" not in all_props
+    assert "descriptions" not in all_props
+    # Effects $defs: WorldEffect + KnowledgeEffect with kind
+    # discriminators (PFS3-E5)
+    defs = schema["$defs"]
+    assert set(defs.keys()) == {"WorldEffect", "KnowledgeEffect"}
+    assert defs["WorldEffect"]["properties"]["kind"] == {
+        "const": "world"
+    }
+    assert defs["KnowledgeEffect"]["properties"]["kind"] == {
+        "const": "knowledge"
+    }
+    # KnowledgeEffect via enum matches substrate-effect-shape-sketch-01
+    # ES4 (11 values: 6 diegetic + 5 narrative)
+    via_enum = set(
+        defs["KnowledgeEffect"]["properties"]["via"]["enum"]
+    )
+    assert via_enum == {
+        "observation", "utterance-heard", "inference",
+        "deception", "forgetting", "realization",
+        "disclosure", "focalization", "omission",
+        "framing", "retroactive-reframing",
+    }
+
+
+def test_description_schema_references_prop_by_url():
+    """After production-format-sketch-03 PFS3-D1, description.json's
+    PropositionAnchor variant $refs schema/prop.json instead of
+    the PropPlaceholder honest-gap marker. Guards against
+    regression of the PropPlaceholder resolution."""
+    schema = _load_description_schema()
+    # PropPlaceholder entry removed from $defs
+    assert "PropPlaceholder" not in schema.get("$defs", {})
+    # PropositionAnchor variant $refs prop.json
+    prop_anchor = None
+    for variant in schema["properties"]["attached_to"]["oneOf"]:
+        if variant.get("title") == "PropositionAnchor":
+            prop_anchor = variant
+            break
+    assert prop_anchor is not None
+    assert prop_anchor["properties"]["prop"] == {
+        "$ref": "https://brazilofmux.github.io/story/schema/prop.json"
+    }
 
 
 def test_entity_schema_has_expected_shape():
@@ -454,6 +732,130 @@ def test_corpus_conformance():
     # Sanity: expect >0 total — silent-skip everything would mean
     # encoding discovery broke.
     assert total > 0
+
+
+def test_event_corpus_conformance():
+    """Every Event across every encoding validates against
+    schema/event.json (with cross-file $ref to schema/prop.json
+    resolved via the registry). Expected: all pass cleanly after
+    the dump-layer handles the KnowledgeEffect shape translation
+    (Python's held.prop/held.via → schema's prop/via) and effect
+    kind discriminator addition.
+
+    Python over-specifications documented in the sketch's
+    §Conformance dispositions (not tested here): metadata field,
+    KnowledgeEffect.held richer shape, KnowledgeEffect.remove
+    retraction polarity (see test_knowledge_effect_remove_audit)."""
+    registry = _build_schema_registry()
+    event_schema = _load_event_schema()
+    validator = Draft202012Validator(event_schema, registry=registry)
+
+    encodings = _discover_encoding_events()
+    assert encodings, (
+        "expected at least one encoding with FABULA or EVENTS_ALL; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    new_findings: list = []
+
+    for encoding_name, events in encodings:
+        for event in events:
+            total += 1
+            try:
+                dumped = _dump_event(event)
+            except Exception as exc:
+                new_findings.append({
+                    "encoding": encoding_name,
+                    "event_id": getattr(event, "id", "<unknown>"),
+                    "errors": [{
+                        "path": [],
+                        "validator": "dump-failed",
+                        "message": str(exc),
+                    }],
+                })
+                continue
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "event_id": event.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print(f"  total events validated:     {total}")
+    print(f"  clean passes:               {clean_passes}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings[:10]:
+            print(f"    {finding['encoding']}: {finding['event_id']}")
+            for err in finding["errors"][:3]:
+                print(f"      - path={err['path']} "
+                      f"validator={err['validator']}: {err['message']}")
+        if len(new_findings) > 10:
+            print(f"    ... and {len(new_findings) - 10} more")
+
+    assert not new_findings, (
+        f"{len(new_findings)} Event conformance finding(s); see "
+        f"output. Resolve per production-format-sketch-03's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_knowledge_effect_remove_audit():
+    """PFS2 disposition audit: Python's KnowledgeEffect carries
+    a `remove: bool` retraction polarity that the schema-derived
+    shape (substrate-effect-shape-sketch-01 ES3) does not admit.
+    The design sketch + identity-and-realization-sketch-01 both
+    argue against the 'realization removes old propositions'
+    pattern this field enables.
+
+    This test *informs*, not *blocks*. The dump-layer silently
+    drops the remove field (schema doesn't admit it); this audit
+    surfaces the count so a cleanup arc can be scoped.
+
+    Baseline at production-format-sketch-03 commit (2026-04-19):
+    7 KnowledgeEffects with remove=True. A future encoding-side
+    refactor per identity-and-realization-sketch-01 §Prior
+    encoding's workaround, and its retirement drives the count
+    to 0."""
+    from story_engine.core.substrate import KnowledgeEffect
+    seen_event_ids = set()
+    remove_true_count = 0
+    encodings = _discover_encoding_events()
+    for encoding_name, events in encodings:
+        for event in events:
+            # Re-export inflation: the same event objects appear in
+            # multiple modules (FABULA + lowerings re-exports); count
+            # each event once by id to report the corpus-level figure.
+            if event.id in seen_event_ids:
+                continue
+            seen_event_ids.add(event.id)
+            for eff in event.effects:
+                if (isinstance(eff, KnowledgeEffect)
+                        and getattr(eff, "remove", False)):
+                    remove_true_count += 1
+    print(
+        f"  KnowledgeEffect.remove=True count (deduped by event id):"
+        f" {remove_true_count} (baseline: 7 at 2026-04-19; drift "
+        f"from baseline = finding)"
+    )
+    # Informational; no assertion on count. The baseline is
+    # documented in the sketch.
 
 
 def test_entity_corpus_conformance():

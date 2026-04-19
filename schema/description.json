@@ -48,7 +48,7 @@
           "required": ["kind", "prop"],
           "properties": {
             "kind": { "const": "proposition" },
-            "prop": { "$ref": "#/$defs/PropPlaceholder" }
+            "prop": { "$ref": "https://brazilofmux.github.io/story/schema/prop.json" }
           },
           "additionalProperties": false
         },
@@ -167,10 +167,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "PropPlaceholder": {
-      "description": "Prop shape is under-specified at the design-sketch level. Substrate-sketch-05 §Ontology names Props as 'derived, not stored', while descriptions-sketch-01 §Required fields admits proposition-shaped anchors without defining the shape. A future design sketch (candidate: substrate-prop-literal-sketch-01) pins this down. Until then, PropPlaceholder is a permissive 'any object' marker — an honest flag of the gap, not a quiet Python-import.",
-      "type": "object"
     }
   }
 }

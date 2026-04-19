@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/event.json",
+  "title": "Event",
+  "description": "A structural event in the fabula per design/substrate-sketch-05 §Event internals. Six required fields + three optional; effects are a tagged-union array of WorldEffect / KnowledgeEffect sub-records; Props are $ref'd to schema/prop.json.",
+  "type": "object",
+  "required": ["id", "type", "τ_s", "τ_a", "participants", "effects"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier, scoped per story."
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Event-type tag from an open per-story vocabulary (sketch-05 §Event type is a tag, not a key). No closed enum; substrate does not dispatch on type."
+    },
+    "τ_s": {
+      "type": "integer",
+      "description": "Story-time coordinate. Grain is story-dependent; the substrate does not enforce a single scale. Negative τ_s is admitted for pre-play antecedent action."
+    },
+    "τ_a": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Authored time; monotonic per story; shared sequence with descriptions."
+    },
+    "participants": {
+      "type": "object",
+      "description": "Dict from role-name (string) to entity-id (string) or list of entity-ids (array). Role names are per-event-type, open vocabulary (sketch-05 §The five required elements).",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        ]
+      }
+    },
+    "effects": {
+      "type": "array",
+      "description": "Tuple of WorldEffect and/or KnowledgeEffect records (substrate-effect-shape-sketch-01 ES1–ES7). Order is authored (ES6); the 'kind' discriminator on each record disambiguates the two shapes (schema-layer decision production-format-sketch-03 PFS3-E5).",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/WorldEffect" },
+          { "$ref": "#/$defs/KnowledgeEffect" }
+        ]
+      }
+    },
+    "preconditions": {
+      "type": "array",
+      "description": "Optional. Tuple of Prop records that must hold in world state at τ_s for the event to be consistent (sketch-05 §The five required elements, §Additionally).",
+      "items": { "$ref": "https://brazilofmux.github.io/story/schema/prop.json" }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["committed", "provisional"],
+      "description": "Authorial commitment axis (sketch-04 §Event status and branch kinds)."
+    },
+    "branches": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Set of branch labels the event appears on (sketch-04 §Branch representation). Omitted = default to {':canonical'}."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "WorldEffect": {
+      "type": "object",
+      "description": "A fact-assertion or fact-retraction on world state per substrate-effect-shape-sketch-01 ES2. The 'kind' field is a schema-layer discriminator (PFS3-E5), not present in the design-sketch shape but added for validation-dispatch convenience and self-describing records.",
+      "required": ["kind", "prop", "asserts"],
+      "properties": {
+        "kind": { "const": "world" },
+        "prop": { "$ref": "https://brazilofmux.github.io/story/schema/prop.json" },
+        "asserts": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "KnowledgeEffect": {
+      "type": "object",
+      "description": "An update to a specific agent's knowledge state per substrate-effect-shape-sketch-01 ES3–ES4. 'holder' is an Entity-id reference (agent-kind expected); 'via' encodes direction and provenance-kind from a closed 11-value vocabulary (6 diegetic + 5 narrative).",
+      "required": ["kind", "holder", "prop", "via"],
+      "properties": {
+        "kind": { "const": "knowledge" },
+        "holder": {
+          "type": "string",
+          "description": "Entity-id of the agent whose knowledge updates (substrate-entity-record-sketch-01 SE3 kind='agent' expected; substrate does not enforce at record level per ES3)."
+        },
+        "prop": { "$ref": "https://brazilofmux.github.io/story/schema/prop.json" },
+        "via": {
+          "type": "string",
+          "enum": [
+            "observation",
+            "utterance-heard",
+            "inference",
+            "deception",
+            "forgetting",
+            "realization",
+            "disclosure",
+            "focalization",
+            "omission",
+            "framing",
+            "retroactive-reframing"
+          ],
+          "description": "Update-operator vocabulary from substrate-sketch-04 §Update operators + substrate-effect-shape-sketch-01 ES4. Diegetic vocabulary for character-agent holders; narrative vocabulary for the reader."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

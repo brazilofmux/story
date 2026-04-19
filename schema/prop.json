@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/prop.json",
+  "title": "Prop",
+  "description": "A proposition literal — a fact-shaped claim per design/substrate-prop-literal-sketch-01. Two fields; atomic primitive args only; structurally hashable (PL6); timeless at record level (PL7).",
+  "type": "object",
+  "required": ["predicate", "args"],
+  "properties": {
+    "predicate": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relation name from an open per-story vocabulary (PL2). Two substrate-reserved names at v1: 'identity' (identity-and-realization-sketch-01) and 'at_location' (unity-of-place checks)."
+    },
+    "args": {
+      "type": "array",
+      "description": "Ordered tuple of atomic primitive values (PL3, PL4). Strings are Entity-id references; integer/number/boolean are literal values with structural fold-consequence. PL5 prohibits nested/composite/null values; enforced by items' anyOf. (anyOf, not oneOf: in JSON Schema, integers validate against both 'integer' and 'number' types, so oneOf would always fail on integer args; anyOf admits any of the four primitive types correctly.)",
+      "items": {
+        "anyOf": [
+          { "type": "string" },
+          { "type": "integer" },
+          { "type": "number" },
+          { "type": "boolean" }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}
