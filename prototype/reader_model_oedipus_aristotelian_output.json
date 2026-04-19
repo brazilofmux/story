@@ -1,0 +1,152 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_oedipus"
+    ],
+    "observation_count": 0,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_oedipus",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The sentence 'Recognition coincides with reversal' echoes Aristotle's own praise at Poetics 1452a, but the record's structural fields separate peripeteia (E_messenger_adoption_reveal, τ_s=8) from anagnorisis (E_oedipus_anagnorisis, τ_s=13) by five substrate steps. The prose should either acknowledge the gap or explain how the two events belong to a single composite moment; as written it asserts coincidence that the encoding's own fields contradict."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_oedipus_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies the scope events (E_birth through E_marriage_and_crown, all negative τ_s) as antecedent action compressed into exposition. The distinction between the Sophoclean play opening in medias res and the Aristotelian mythos logically including antecedent incidents that make recognition intelligible is well-grounded and faithful to the Poetics' concept of mythos as the whole arrangement of incidents (systasis ton pragmaton)."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_oedipus_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "Characterising the middle as desis ('binding of the ties') is sound Aristotelian usage (Poetics 1455b). The scope events run from the complication event (E_tiresias_accusation) through the denouement event (E_shepherd_testimony), and the annotation correctly presents the shepherd's testimony as the last evidential tie before recognition. The denouement event sits at the boundary of middle and end, marking the completion of the binding rather than the start of the unbinding, which is coherent."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_oedipus_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation names the end phase as lusis ('unbinding of the ties') and correctly identifies the scope events — recognition, Jocasta's suicide, self-blinding, exile — as consequences following from anagnorisis by necessity. The invocation of Poetics 1452a on necessity is appropriate in spirit, even if the exact phrase 'the natural kind of tragic incident' is a loose paraphrase rather than a direct quotation."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_oedipus",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia is grounded as ignorance of identity — 'missing the mark' — rather than moral flaw, which accords with the dominant modern scholarly reading of Poetics 1453a. The ironic structure (the investigator's virtue is the mechanism of destruction) is well-supported by the substrate: every investigation event (E_tiresias_accusation through E_shepherd_testimony) is an utterance Oedipus initiates or receives precisely because he pursues the truth."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_jocasta",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "Two specific problems. First, the claim that Aristotle 'groups her with Oedipus in Poetics 1453a as a secondary figure whose fall contributes to the central peripeteia' overstates the text: 1453a names Oedipus and Thyestes as exemplary tragic figures but does not discuss Jocasta as a secondary contributor to peripeteia. Second, the encoding places peripeteia at E_messenger_adoption_reveal (τ_s=8), which precedes E_jocasta_realizes (τ_s=9); her realization follows the reversal rather than contributing to it. The hamartia characterisation as parallel ignorance of identity is sound, but the causal claim about peripeteia should be corrected to say her fall follows from, rather than contributes to, the reversal."
+    }
+  ],
+  "observation_commentaries": [],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The review engaged exclusively Aristotelian vocabulary: mythos as the arrangement of incidents (systasis ton pragmaton), peripeteia and anagnorisis as structural turning-points located at specific substrate events, hamartia as 'missing the mark' grounded in ignorance of identity, desis and lusis (complication and denouement per Poetics 1455b) as the structural logic of the middle and end phases, and necessity/probability as the causal glue binding incidents. The encoding's complex-plot designation was tested against its structural fields (separate peripeteia and anagnorisis events) and found to create a specific tension with the action_summary's claim of coincidence. Unity of action was legible through the single causal thread (investigation → recognition → catastrophe). No point in the review required recourse to non-Aristotelian structural vocabulary; the dialect's primitives were sufficient to read and critique every prose field presented.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "Jocasta's private anagnorisis (E_jocasta_realizes) precedes Oedipus's and is structurally distinct, but the Aristotelian frame has no native way to model staggered recognitions within a single mythos — anagnorisis_event_id is singular. The encoding handles this by placing Jocasta's realization in the middle phase and reserving the anagnorisis slot for Oedipus, but the dialect has no formal relation expressing the dramatic irony of an earlier, parallel recognition that the hero cannot yet share.",
+      "The substrate timestamps (τ_s) provide a grounding metric for simultaneity vs. sequence that the Aristotelian vocabulary of 'coincidence' (hama) cannot express with precision — Aristotle's claim that recognition and reversal coincide in Oedipus is a qualitative dramatic judgment, not a claim about substrate adjacency, and the dialect has no way to distinguish 'same dramatic beat' from 'same substrate moment'."
+    ],
+    "relations_wanted": [
+      "ArAnagnorisisChain: a relation linking multiple recognition events within one mythos to express staggered recognitions (e.g., Jocasta's realization preceding and precipitating Oedipus's), preserving causal ordering and the dramatic irony of differential knowledge",
+      "ArPeripeteiaAnagnorisisBinding: a structural annotation on ArMythos that formally declares whether the reversal and recognition are encoded as coincident (same event_id), adjacent (consecutive substrate steps), or separated (distinct phases), replacing the prose-level claim with a structural field"
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_oedipus",
+        "field": "action_summary",
+        "verdict": "needs-work",
+        "rationale": "The sentence 'Recognition coincides with reversal' echoes Aristotle's own praise at Poetics 1452a, but the record's structural fields separate peripeteia (E_messenger_adoption_reveal, τ_s=8) from anagnorisis (E_oedipus_anagnorisis, τ_s=13) by five substrate steps. The prose should either acknowledge the gap or explain how the two events belong to a single composite moment; as written it asserts coincidence that the encoding's own fields contradict."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_oedipus_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the scope events (E_birth through E_marriage_and_crown, all negative τ_s) as antecedent action compressed into exposition. The distinction between the Sophoclean play opening in medias res and the Aristotelian mythos logically including antecedent incidents that make recognition intelligible is well-grounded and faithful to the Poetics' concept of mythos as the whole arrangement of incidents (systasis ton pragmaton)."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_oedipus_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "Characterising the middle as desis ('binding of the ties') is sound Aristotelian usage (Poetics 1455b). The scope events run from the complication event (E_tiresias_accusation) through the denouement event (E_shepherd_testimony), and the annotation correctly presents the shepherd's testimony as the last evidential tie before recognition. The denouement event sits at the boundary of middle and end, marking the completion of the binding rather than the start of the unbinding, which is coherent."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_oedipus_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation names the end phase as lusis ('unbinding of the ties') and correctly identifies the scope events — recognition, Jocasta's suicide, self-blinding, exile — as consequences following from anagnorisis by necessity. The invocation of Poetics 1452a on necessity is appropriate in spirit, even if the exact phrase 'the natural kind of tragic incident' is a loose paraphrase rather than a direct quotation."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_oedipus",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia is grounded as ignorance of identity — 'missing the mark' — rather than moral flaw, which accords with the dominant modern scholarly reading of Poetics 1453a. The ironic structure (the investigator's virtue is the mechanism of destruction) is well-supported by the substrate: every investigation event (E_tiresias_accusation through E_shepherd_testimony) is an utterance Oedipus initiates or receives precisely because he pursues the truth."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_jocasta",
+        "field": "hamartia_text",
+        "verdict": "needs-work",
+        "rationale": "Two specific problems. First, the claim that Aristotle 'groups her with Oedipus in Poetics 1453a as a secondary figure whose fall contributes to the central peripeteia' overstates the text: 1453a names Oedipus and Thyestes as exemplary tragic figures but does not discuss Jocasta as a secondary contributor to peripeteia. Second, the encoding places peripeteia at E_messenger_adoption_reveal (τ_s=8), which precedes E_jocasta_realizes (τ_s=9); her realization follows the reversal rather than contributing to it. The hamartia characterisation as parallel ignorance of identity is sound, but the causal claim about peripeteia should be corrected to say her fall follows from, rather than contributes to, the reversal."
+      }
+    ],
+    "observation_commentaries": [],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The review engaged exclusively Aristotelian vocabulary: mythos as the arrangement of incidents (systasis ton pragmaton), peripeteia and anagnorisis as structural turning-points located at specific substrate events, hamartia as 'missing the mark' grounded in ignorance of identity, desis and lusis (complication and denouement per Poetics 1455b) as the structural logic of the middle and end phases, and necessity/probability as the causal glue binding incidents. The encoding's complex-plot designation was tested against its structural fields (separate peripeteia and anagnorisis events) and found to create a specific tension with the action_summary's claim of coincidence. Unity of action was legible through the single causal thread (investigation → recognition → catastrophe). No point in the review required recourse to non-Aristotelian structural vocabulary; the dialect's primitives were sufficient to read and critique every prose field presented.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "Jocasta's private anagnorisis (E_jocasta_realizes) precedes Oedipus's and is structurally distinct, but the Aristotelian frame has no native way to model staggered recognitions within a single mythos — anagnorisis_event_id is singular. The encoding handles this by placing Jocasta's realization in the middle phase and reserving the anagnorisis slot for Oedipus, but the dialect has no formal relation expressing the dramatic irony of an earlier, parallel recognition that the hero cannot yet share.",
+        "The substrate timestamps (τ_s) provide a grounding metric for simultaneity vs. sequence that the Aristotelian vocabulary of 'coincidence' (hama) cannot express with precision — Aristotle's claim that recognition and reversal coincide in Oedipus is a qualitative dramatic judgment, not a claim about substrate adjacency, and the dialect has no way to distinguish 'same dramatic beat' from 'same substrate moment'."
+      ],
+      "relations_wanted": [
+        "ArAnagnorisisChain: a relation linking multiple recognition events within one mythos to express staggered recognitions (e.g., Jocasta's realization preceding and precipitating Oedipus's), preserving causal ordering and the dramatic irony of differential knowledge",
+        "ArPeripeteiaAnagnorisisBinding: a structural annotation on ArMythos that formally declares whether the reversal and recognition are encoded as coincident (same event_id), adjacent (consecutive substrate steps), or separated (distinct phases), replacing the prose-level claim with a structural field"
+      ]
+    }
+  }
+}
