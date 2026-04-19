@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/lowering/annotation_review.json",
+  "title": "AnnotationReview",
+  "description": "One review act on a Lowering's annotation, per design/lowering-record-sketch-01.md L6. Mirrors substrate.ReviewEntry shape. Used in two contexts: (1) inside Annotation.review_states for authored reviews carried with the Lowering; (2) as standalone probe output — the reader-model probe emits AnnotationReview records via annotation_review_candidates. The two-context use per PFS7-X2's sub-record rule promotes this record to a sibling schema file rather than inline $defs. PFS9-AR1..AR4.",
+  "type": "object",
+  "required": ["reviewer_id", "reviewed_at_τ_a", "verdict", "anchor_τ_a"],
+  "properties": {
+    "reviewer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the reviewer (human handle or LLM-probe identifier). PFS9-AR2."
+    },
+    "reviewed_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the review was recorded. PFS9-AR2."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["approved", "needs-work", "rejected", "noted"],
+      "description": "Closed enum matching Python's VERDICT_* constants. approved = fine as-is; needs-work = revision requested with specific concern; rejected = remove / replace; noted = read but no position taken. PFS9-AR3."
+    },
+    "anchor_τ_a": {
+      "type": "integer",
+      "description": "Snapshot of the Lowering's τ_a (or the reviewed record's τ_a) at review time. If the record's τ_a advances past this value, downstream tooling surfaces the review as stale. PFS9-AR2."
+    },
+    "comment": {
+      "type": "string",
+      "description": "Optional reviewer prose. Python default None → omitted from dump; any set string emits unconditionally. PFS9-AR4."
+    }
+  },
+  "additionalProperties": false
+}

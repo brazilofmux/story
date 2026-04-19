@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/lowering/lowering.json",
+  "title": "Lowering",
+  "description": "An authored realization binding from one upper-dialect record to one or more lower-dialect records, per design/lowering-record-sketch-01.md L1-L10. The load-bearing cross-boundary record — every *_lowerings.py encoding module authors these. Realization coupling only (L1 guardrail); Characterization / Claim-moment / Claim-trajectory couplings live on the verifier surface per verification-sketch-01 V3 and ship under schema/verification/. The record carries a CrossDialectRef upper_record, a tuple of CrossDialectRef lower_records, an Annotation with prose rationale, a status (active/pending per L8), and optional position_range + anchor_τ_a + metadata. Inline $defs for the three id-less sub-records per PFS7-X2. PFS9-L1..L10.",
+  "type": "object",
+  "required": ["id", "upper_record", "lower_records", "annotation", "status"],
+  "$defs": {
+    "cross_dialect_ref": {
+      "type": "object",
+      "description": "A typed reference to a record in a specific dialect. Used by Lowering.upper_record and each element of Lowering.lower_records; the same shape also lives in the verification namespace (re-inlined there per PFS8-V guidance). Plain-string dialect token per PFS9-X4 (open — no closed enum at the schema layer; architecture-sketch-02 A6 admits author-defined dialects). PFS9-X1.",
+      "required": ["dialect", "record_id"],
+      "properties": {
+        "dialect": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dialect token (e.g., 'substrate', 'dramatic', 'dramatica_complete', 'aristotelian', 'save_the_cat'). Open string per PFS9-X4; typo-detection is a verifier-runtime concern. Extension path is zero-cost: a new dialect uses its own token."
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier for the referenced record in its dialect (e.g., 'C_oedipus' under dramatic, 'E_oedipus_anagnorisis' under substrate). Resolution is the dialect's own concern — this record just carries the pair."
+        }
+      },
+      "additionalProperties": false
+    },
+    "annotation": {
+      "type": "object",
+      "description": "Prose rationale for the Lowering binding, per L5. The annotation is where the author's reasoning lives — why these lower records realize this upper record. review_states carries reviewer verdicts (via cross-file $ref to annotation_review.json per PFS9-X2). PFS9-X1.",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Free-form prose. Empty string admitted (an author may commit a Lowering with a stub annotation and fill in the rationale later)."
+        },
+        "attention": {
+          "type": "string",
+          "enum": ["structural", "interpretive", "flavor"],
+          "description": "Closed enum matching Python's ATTENTION_* constants (mirrored from descriptions-sketch-01's attention vocabulary). structural = most Lowerings (assertions about realization); interpretive = discussion of how well the binding reads; flavor = author-side commentary not expected to be pressed. Closure commits the three-value vocabulary at the schema layer; reversal path via PFS9 OQ4 if a fourth value ever surfaces."
+        },
+        "authored_by": {
+          "type": "string",
+          "description": "Optional provenance string. Python default 'author'."
+        },
+        "review_states": {
+          "type": "array",
+          "items": {
+            "$ref": "https://brazilofmux.github.io/story/schema/lowering/annotation_review.json"
+          },
+          "description": "Optional array of AnnotationReview objects via cross-file $ref to annotation_review.json (PFS9-X2). Empty array legal; Python default empty tuple."
+        }
+      },
+      "additionalProperties": false
+    },
+    "position_range": {
+      "type": "object",
+      "description": "Positional correspondence when both upper and lower dialects use ordering coordinates and the Lowering covers a range. Per L7. Inclusive integer bounds. PFS9-X1.",
+      "required": ["coord", "min_value", "max_value"],
+      "properties": {
+        "coord": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Lower-dialect coordinate name (e.g., 'τ_d' for substrate sjuzhet ordering, 'narrative_position' for Dramatic scene order)."
+        },
+        "min_value": {
+          "type": "integer",
+          "description": "Inclusive lower bound."
+        },
+        "max_value": {
+          "type": "integer",
+          "description": "Inclusive upper bound."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this Lowering (e.g., 'L_oedipus_anagnorisis', 'L_macbeth_ambition'). No prefix convention enforced; encodings use 'L_' descriptively. PFS9-L2."
+    },
+    "upper_record": {
+      "$ref": "#/$defs/cross_dialect_ref",
+      "description": "The single upper-dialect record this Lowering realizes, as a CrossDialectRef. Per L2 — one upper per Lowering; many-to-many at the collection level (multiple Lowerings can share an upper_record). PFS9-L3."
+    },
+    "lower_records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cross_dialect_ref"
+      },
+      "description": "Array of lower-dialect records that realize the upper. Per L3 + L8 — empty array is admitted ONLY when status is 'pending' (see allOf clause below); active Lowerings require at least one lower record. PFS9-L4."
+    },
+    "annotation": {
+      "$ref": "#/$defs/annotation",
+      "description": "Prose rationale for the binding per L5. See $defs/annotation. PFS9-L5."
+    },
+    "authored_by": {
+      "type": "string",
+      "description": "Optional provenance string. Python default 'author'; dump emits unconditionally. PFS9-L6."
+    },
+    "τ_a": {
+      "type": "integer",
+      "description": "The Lowering's own authored τ_a, distinct from anchor_τ_a (which snapshots the lower side's τ_a at author time for staleness). Python default 0; dump emits unconditionally. PFS9-L7."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "pending"],
+      "description": "Closed enum matching Python's LoweringStatus. ACTIVE is the default (dump always emits); PENDING admits Lowerings authored against upper records whose lower realization doesn't yet exist (promissory bindings — lowering-sketch-01 F5's gap findings are authored as PENDING). PFS9-L8."
+    },
+    "position_range": {
+      "$ref": "#/$defs/position_range",
+      "description": "Optional positional correspondence per L7 (see $defs/position_range). Omitted from dump when None in Python. PFS9-L9."
+    },
+    "anchor_τ_a": {
+      "type": "integer",
+      "description": "Optional snapshot of the lower side's τ_a at author time. Per L6 — used for staleness detection (if a lower record's current τ_a exceeds this snapshot, the Lowering is stale). Python None → omitted from dump. Character → Entity Lowerings typically have anchor_τ_a=None because Entities don't carry τ_a (per oedipus_lowerings.py); anticipated non-finding 3 of PFS9. PFS9-L10."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional open-object metadata. Admits any keys per PFS8 OQ1's posture (matches substrate-sketch-05's metadata-as-string-dict convention). Known keys today: 'supersedes' (points at a superseded Lowering id), 'superseded_by' (back-reference). Dump emits only when non-empty; validate_lowerings carries referential-integrity checks for known keys (supersedes_unresolved, supersession_back_reference_missing codes). Per-key schemas deferred to PFS9 OQ1."
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "L8 conditional per PFS9-X3: status='active' requires at least one lower_record. PENDING Lowerings admit empty lower_records (promissory bindings). Parallel to PFS5-B5 (Branch kind conditional) and PFS6-M6 (plot_kind=complex conditional). The Python __post_init__ raises ValueError on the schema-violating case; this clause encodes the same constraint at the schema layer.",
+      "if": {
+        "properties": {"status": {"const": "active"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "lower_records": {"minItems": 1}
+        },
+        "required": ["lower_records"]
+      }
+    }
+  ]
+}

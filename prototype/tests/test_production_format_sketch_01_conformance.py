@@ -157,6 +157,30 @@ def _load_save_the_cat_story_schema() -> dict:
         return json.load(f)
 
 
+def _load_lowering_annotation_review_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "lowering" / "annotation_review.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_lowering_observation_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "lowering" / "lowering_observation.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_lowering_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "lowering" / "lowering.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
@@ -172,11 +196,19 @@ def _build_schema_registry() -> Registry:
     topology; the registry is present-but-unused at the Save-the-Cat
     dialect layer).
 
+    The lowering namespace (production-format-sketch-09 PFS9-D8)
+    adds three schemas: lowering.json, annotation_review.json,
+    lowering_observation.json. lowering.json's inline
+    $defs/annotation.review_states uses cross-file $ref to
+    annotation_review.json (PFS9-X2) — the registry is load-bearing
+    here.
+
     Pattern introduced by production-format-sketch-03 P3A4; extended
     by production-format-sketch-04 P4A1 for held.json; extended by
     production-format-sketch-06 PFS6-D5 for the aristotelian dialect;
     extended by production-format-sketch-07 PFS7-D6 for the
-    save-the-cat dialect."""
+    save-the-cat dialect; extended by production-format-sketch-09
+    PFS9-D8 for the lowering namespace."""
     registry = Registry()
     for schema in (
         _load_prop_schema(), _load_held_schema(),
@@ -188,6 +220,9 @@ def _build_schema_registry() -> Registry:
         _load_save_the_cat_character_schema(),
         _load_save_the_cat_story_schema(),
         _load_save_the_cat_strand_schema(),
+        _load_lowering_annotation_review_schema(),
+        _load_lowering_observation_schema(),
+        _load_lowering_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -422,6 +457,41 @@ def _discover_encoding_save_the_cat_records():
             chars_out.append((name, list(characters)))
 
     return stories_out, beats_out, strands_out, chars_out
+
+
+def _discover_encoding_lowerings():
+    """Walks encoding modules for Lowering records. Returns a list of
+    (encoding_name, lowerings_list) tuples. Per production-format-
+    sketch-09 PFS9-D7.
+
+    Lowering encodings export `LOWERINGS` as a module-level tuple in
+    files matching `*_lowerings.py` (the canonical naming). Empty
+    tuples skip silently (and_then_there_were_none_lowerings.py
+    scaffolded with an empty tuple for future population)."""
+    from story_engine.core.lowering import Lowering
+    encodings_dir = (
+        _repo_root() / "prototype" / "story_engine" / "encodings"
+    )
+    out: list = []
+    for py_path in sorted(encodings_dir.glob("*_lowerings.py")):
+        name = py_path.stem
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{name}"
+            )
+        except Exception:
+            continue
+        lowerings = getattr(module, "LOWERINGS", None)
+        if lowerings is None:
+            continue
+        if not lowerings:
+            continue
+        if not all(isinstance(lw, Lowering) for lw in lowerings):
+            continue
+        out.append((name, list(lowerings)))
+    return out
 
 
 # ============================================================================
@@ -882,6 +952,104 @@ def _dump_stcstory(story) -> dict:
     if story.stc_genre_id is not None:
         out["stc_genre_id"] = story.stc_genre_id
     return out
+
+
+def _dump_cross_dialect_ref(ref) -> dict:
+    """Map a Python CrossDialectRef sub-record to the inline $defs
+    shape in schema/lowering/lowering.json (PFS9-D2 + PFS9-X1).
+    Field-for-field: {dialect, record_id}."""
+    return {
+        "dialect": ref.dialect,
+        "record_id": ref.record_id,
+    }
+
+
+def _dump_position_range(pr) -> dict:
+    """Map a Python PositionRange sub-record to the inline $defs
+    shape (PFS9-D5)."""
+    return {
+        "coord": pr.coord,
+        "min_value": pr.min_value,
+        "max_value": pr.max_value,
+    }
+
+
+def _dump_annotation_review(review) -> dict:
+    """Map a Python AnnotationReview to
+    schema/lowering/annotation_review.json (PFS9-D4). Required
+    fields always emit; comment omitted when None."""
+    out = {
+        "reviewer_id": review.reviewer_id,
+        "reviewed_at_τ_a": review.reviewed_at_τ_a,
+        "verdict": review.verdict,
+        "anchor_τ_a": review.anchor_τ_a,
+    }
+    if review.comment is not None:
+        out["comment"] = review.comment
+    return out
+
+
+def _dump_annotation(annotation) -> dict:
+    """Map a Python Annotation sub-record to the inline $defs shape
+    in schema/lowering/lowering.json (PFS9-D3 + PFS9-X1). text
+    always emitted (required by schema); attention / authored_by
+    unconditional (Python defaults — empty emission would drop
+    presence-signals the PFS2 discipline wants preserved);
+    review_states walked via _dump_annotation_review."""
+    return {
+        "text": annotation.text,
+        "attention": annotation.attention,
+        "authored_by": annotation.authored_by,
+        "review_states": [
+            _dump_annotation_review(r) for r in annotation.review_states
+        ],
+    }
+
+
+def _dump_lowering(lowering) -> dict:
+    """Map a Python Lowering to schema/lowering/lowering.json
+    (PFS9-D1). Required fields (id, upper_record, lower_records,
+    annotation, status) always emit. authored_by, τ_a always emit
+    (Python defaults). position_range omitted when None. anchor_τ_a
+    omitted when None. metadata omitted when empty dict.
+
+    status dumps as the enum string value ('active' or 'pending')."""
+    status_val = (
+        lowering.status.value if hasattr(lowering.status, "value")
+        else lowering.status
+    )
+    out = {
+        "id": lowering.id,
+        "upper_record": _dump_cross_dialect_ref(lowering.upper_record),
+        "lower_records": [
+            _dump_cross_dialect_ref(lr) for lr in lowering.lower_records
+        ],
+        "annotation": _dump_annotation(lowering.annotation),
+        "authored_by": lowering.authored_by,
+        "τ_a": lowering.τ_a,
+        "status": status_val,
+    }
+    if lowering.position_range is not None:
+        out["position_range"] = _dump_position_range(
+            lowering.position_range
+        )
+    if lowering.anchor_τ_a is not None:
+        out["anchor_τ_a"] = lowering.anchor_τ_a
+    if lowering.metadata:
+        out["metadata"] = dict(lowering.metadata)
+    return out
+
+
+def _dump_lowering_observation(obs) -> dict:
+    """Map a Python LoweringObservation to schema/lowering/
+    lowering_observation.json (PFS9-D6). All four fields required
+    and always emitted."""
+    return {
+        "severity": obs.severity,
+        "code": obs.code,
+        "target_id": obs.target_id,
+        "message": obs.message,
+    }
 
 
 # ============================================================================
@@ -2481,6 +2649,415 @@ def test_save_the_cat_story_corpus_conformance():
         f"§Conformance dispositions protocol."
     )
     assert total > 0
+
+
+# ============================================================================
+# Lowering-family conformance — PFS9
+# ============================================================================
+
+
+def test_lowering_annotation_review_schema_metaschema_valid():
+    """schema/lowering/annotation_review.json is a valid JSON Schema
+    2020-12 document (production-format-sketch-09 PFS9-AR1..AR4)."""
+    schema = _load_lowering_annotation_review_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_lowering_observation_schema_metaschema_valid():
+    """schema/lowering/lowering_observation.json is a valid JSON
+    Schema 2020-12 document (production-format-sketch-09
+    PFS9-LO1..LO4)."""
+    schema = _load_lowering_observation_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_lowering_schema_metaschema_valid():
+    """schema/lowering/lowering.json is a valid JSON Schema 2020-12
+    document (production-format-sketch-09 PFS9-L1..L10 +
+    PFS9-X1/X2/X3)."""
+    schema = _load_lowering_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_lowering_annotation_review_schema_has_expected_shape():
+    """Spot-check of AnnotationReview schema structure per
+    lowering-record-sketch-01 L6 + PFS9-AR1..AR4."""
+    schema = _load_lowering_annotation_review_schema()
+    assert schema["title"] == "AnnotationReview"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "lowering/annotation_review.json"
+    )
+    assert set(schema["required"]) == {
+        "reviewer_id", "reviewed_at_τ_a", "verdict", "anchor_τ_a",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "reviewer_id", "reviewed_at_τ_a", "verdict", "anchor_τ_a",
+        "comment",
+    }
+    assert set(schema["properties"]["verdict"]["enum"]) == {
+        "approved", "needs-work", "rejected", "noted",
+    }
+
+
+def test_lowering_observation_schema_has_expected_shape():
+    """Spot-check of LoweringObservation schema structure per
+    core/lowering.py:validate_lowerings emission pattern +
+    PFS9-LO1..LO4."""
+    schema = _load_lowering_observation_schema()
+    assert schema["title"] == "LoweringObservation"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "lowering/lowering_observation.json"
+    )
+    assert set(schema["required"]) == {
+        "severity", "code", "target_id", "message",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "severity", "code", "target_id", "message",
+    }
+    assert set(schema["properties"]["severity"]["enum"]) == {
+        "noted", "advises-review",
+    }
+    assert "enum" not in schema["properties"]["code"]
+
+
+def test_lowering_schema_has_expected_shape():
+    """Spot-check of Lowering schema structure per lowering-record-
+    sketch-01 L1..L10 + PFS9-L1..L10 + PFS9-X1..X4."""
+    schema = _load_lowering_schema()
+    assert schema["title"] == "Lowering"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/lowering/lowering.json"
+    )
+    assert set(schema["required"]) == {
+        "id", "upper_record", "lower_records", "annotation", "status",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "upper_record", "lower_records", "annotation",
+        "authored_by", "τ_a", "status", "position_range",
+        "anchor_τ_a", "metadata",
+    }
+    assert set(schema["$defs"].keys()) == {
+        "cross_dialect_ref", "annotation", "position_range",
+    }
+    cdr = schema["$defs"]["cross_dialect_ref"]
+    assert set(cdr["required"]) == {"dialect", "record_id"}
+    assert cdr["additionalProperties"] is False
+    assert "enum" not in cdr["properties"]["dialect"]
+    assert cdr["properties"]["dialect"]["minLength"] == 1
+    ann = schema["$defs"]["annotation"]
+    assert set(ann["required"]) == {"text"}
+    assert ann["additionalProperties"] is False
+    assert set(ann["properties"]["attention"]["enum"]) == {
+        "structural", "interpretive", "flavor",
+    }
+    rs = ann["properties"]["review_states"]
+    assert rs["type"] == "array"
+    assert rs["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "lowering/annotation_review.json"
+    )
+    pr = schema["$defs"]["position_range"]
+    assert set(pr["required"]) == {"coord", "min_value", "max_value"}
+    assert pr["additionalProperties"] is False
+    assert schema["properties"]["upper_record"]["$ref"] == (
+        "#/$defs/cross_dialect_ref"
+    )
+    assert schema["properties"]["lower_records"]["items"]["$ref"] == (
+        "#/$defs/cross_dialect_ref"
+    )
+    assert set(schema["properties"]["status"]["enum"]) == {
+        "active", "pending",
+    }
+    all_of = schema.get("allOf", [])
+    assert len(all_of) == 1
+    clause = all_of[0]
+    assert clause["if"]["properties"]["status"]["const"] == "active"
+    assert clause["then"]["properties"]["lower_records"]["minItems"] == 1
+    assert schema["properties"]["metadata"]["type"] == "object"
+    assert (
+        schema["properties"]["metadata"]["additionalProperties"] is True
+    )
+
+
+def test_lowering_corpus_conformance():
+    """Every Lowering in every encoding's LOWERINGS tuple validates
+    against schema/lowering/lowering.json (PFS9-L1..L10 + PFS9-D1).
+    Uses the registry-bound validator because lowering.json's inline
+    $defs/annotation.review_states cross-file-refs
+    annotation_review.json per PFS9-X2."""
+    registry = _build_schema_registry()
+    schema = _load_lowering_schema()
+    validator = Draft202012Validator(schema, registry=registry)
+
+    lowerings_by_encoding = _discover_encoding_lowerings()
+    assert lowerings_by_encoding, (
+        "expected at least one encoding with authored Lowerings; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    status_counts: dict = {}
+    position_range_count = 0
+    anchor_τ_a_count = 0
+    metadata_count = 0
+    new_findings: list = []
+
+    for encoding_name, lowerings in lowerings_by_encoding:
+        for lw in lowerings:
+            total += 1
+            dumped = _dump_lowering(lw)
+            status_counts[dumped["status"]] = (
+                status_counts.get(dumped["status"], 0) + 1
+            )
+            if "position_range" in dumped:
+                position_range_count += 1
+            if "anchor_τ_a" in dumped:
+                anchor_τ_a_count += 1
+            if "metadata" in dumped:
+                metadata_count += 1
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "lowering_id": lw.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_lowering_corpus_conformance: "
+        f"{total} Lowering records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(
+        f"  by status:                  "
+        f"{dict(sorted(status_counts.items()))}"
+    )
+    print(f"  with position_range:        {position_range_count}")
+    print(f"  with anchor_τ_a:            {anchor_τ_a_count}")
+    print(f"  with metadata:              {metadata_count}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['lowering_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} Lowering conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-09's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_lowering_annotation_review_corpus_conformance():
+    """Every AnnotationReview reachable through encoded Lowering's
+    annotation.review_states validates against
+    schema/lowering/annotation_review.json (PFS9-AR1..AR4).
+
+    Today's corpus has zero authored review_states (encodings
+    don't populate reviews; those land from the reader-model
+    probe output surface). Test passes with total=0 and a
+    descriptive note per PFS9 §Corpus expectations."""
+    schema = _load_lowering_annotation_review_schema()
+    validator = Draft202012Validator(schema)
+
+    lowerings_by_encoding = _discover_encoding_lowerings()
+
+    total = 0
+    clean_passes = 0
+    verdict_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, lowerings in lowerings_by_encoding:
+        for lw in lowerings:
+            for review in lw.annotation.review_states:
+                total += 1
+                dumped = _dump_annotation_review(review)
+                verdict_counts[dumped["verdict"]] = (
+                    verdict_counts.get(dumped["verdict"], 0) + 1
+                )
+                errors = sorted(
+                    validator.iter_errors(dumped),
+                    key=lambda e: list(e.absolute_path),
+                )
+                if not errors:
+                    clean_passes += 1
+                    continue
+                new_findings.append({
+                    "encoding": encoding_name,
+                    "lowering_id": lw.id,
+                    "errors": [
+                        {
+                            "path": list(e.absolute_path),
+                            "validator": e.validator,
+                            "message": e.message,
+                        }
+                        for e in errors
+                    ],
+                })
+
+    print()
+    print(
+        f"test_lowering_annotation_review_corpus_conformance: "
+        f"{total} AnnotationReview records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if verdict_counts:
+        print(
+            f"  by verdict:                 "
+            f"{dict(sorted(verdict_counts.items()))}"
+        )
+    else:
+        print(
+            f"  note:                       "
+            f"zero authored review_states today; expected per "
+            f"PFS9 §Corpus expectations"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['lowering_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} AnnotationReview conformance "
+        f"finding(s); see output."
+    )
+
+
+def test_lowering_observation_corpus_conformance():
+    """Every LoweringObservation emitted by validate_lowerings on each
+    encoding's LOWERINGS tuple validates against
+    schema/lowering/lowering_observation.json (PFS9-LO1..LO4). A
+    clean corpus emits zero observations (otherwise the encoding
+    has a self-consistency issue pre-dating PFS9)."""
+    from story_engine.core.lowering import validate_lowerings
+
+    schema = _load_lowering_observation_schema()
+    validator = Draft202012Validator(schema)
+
+    lowerings_by_encoding = _discover_encoding_lowerings()
+    assert lowerings_by_encoding, (
+        "expected at least one encoding with authored Lowerings; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    code_counts: dict = {}
+    severity_counts: dict = {}
+    new_findings: list = []
+    observations_by_encoding: dict = {}
+
+    for encoding_name, lowerings in lowerings_by_encoding:
+        observations = validate_lowerings(tuple(lowerings))
+        if observations:
+            observations_by_encoding[encoding_name] = observations
+        for obs in observations:
+            total += 1
+            dumped = _dump_lowering_observation(obs)
+            code_counts[dumped["code"]] = (
+                code_counts.get(dumped["code"], 0) + 1
+            )
+            severity_counts[dumped["severity"]] = (
+                severity_counts.get(dumped["severity"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "observation_code": obs.code,
+                "observation_target": obs.target_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_lowering_observation_corpus_conformance: "
+        f"{total} LoweringObservation records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if severity_counts:
+        print(
+            f"  by severity:                "
+            f"{dict(sorted(severity_counts.items()))}"
+        )
+        print(
+            f"  by code:                    "
+            f"{dict(sorted(code_counts.items()))}"
+        )
+        print(
+            f"  emitting encodings:         "
+            f"{sorted(observations_by_encoding.keys())}"
+        )
+    else:
+        print(
+            f"  note:                       "
+            f"zero observations — corpus is self-consistent"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['observation_code']} "
+                f"@ {finding['observation_target']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} LoweringObservation conformance "
+        f"finding(s); see output."
+    )
 
 
 # ============================================================================

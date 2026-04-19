@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/lowering/lowering_observation.json",
+  "title": "LoweringObservation",
+  "description": "A self-consistency finding emitted by core/lowering.py:validate_lowerings(). Per PFS9-LO1..LO4. The shape lifts validate_lowerings' single-record-type emission pattern to a schema-level commitment — parallel to how substrate-knowledge-fold-sketch-01 lifted Python docstring claims to KF1-KF5. severity is a closed enum at two values; code is an open non-empty string (validate_lowerings emits five stable codes today but is extension-safe for new codes without a schema amendment). target_id and message carry human-readable routing + explanation.",
+  "type": "object",
+  "required": ["severity", "code", "target_id", "message"],
+  "properties": {
+    "severity": {
+      "type": "string",
+      "enum": ["noted", "advises-review"],
+      "description": "Closed enum matching validate_lowerings' hard-coded severities across its emission sites. PFS9-LO2."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short stable tag identifying the check that emitted this observation. Today's codes: 'lowering_id_duplicate', 'pending_lowering_has_records', 'annotation_attention_unknown', 'supersedes_unresolved', 'supersession_back_reference_missing'. Open string per PFS9-LO3 — new codes from future checks don't require a schema amendment. Code vocabulary closure deferred to PFS9 OQ5."
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Lowering id (or other record id) this observation targets. PFS9-LO4."
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable explanation of the finding. No length constraint. PFS9-LO4."
+    }
+  },
+  "additionalProperties": false
+}

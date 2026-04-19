@@ -131,6 +131,43 @@ records `StcCanonicalBeat` (15 shipped-as-data canonical beats)
 and `StcGenre` (10 shipped-as-data Snyder genres) are deferred
 — the former to Production C, the latter to PFS7 OQ2.
 
+### Cross-boundary layer (Lowering, three records)
+
+Top-level subdirectories for records that sit above the
+substrate + dialect layers, connecting them or observing them.
+The namespace convention is committed by production-format-
+sketch-08 PFS8-N1; per-record arcs follow (PFS9 = Lowering,
+PFS10 = Verification, etc.). Classification principle (PFS8-N2):
+what a dialect produces OR what the dialect alone consumes
+lives in the dialect's namespace; what is shared across
+dialects lives in a top-level role-named namespace.
+
+#### Lowering (under `schema/lowering/`, three records)
+
+First namespace under the cross-boundary tier (production-format-
+sketch-09 PFS9-N1). Lowering is the authored realization binding
+between upper-dialect and lower-dialect records — the load-
+bearing cross-boundary record.
+
+- `lowering/lowering.json` — the `Lowering` record (lowering-
+  record-sketch-01 L1–L10: required id / upper_record /
+  lower_records / annotation / status; optional
+  position_range / anchor_τ_a / metadata; status closed enum
+  {active, pending} with L8 conditional via allOf/if-then-else
+  per PFS9-X3 — active status requires non-empty
+  lower_records). Inline `$defs` for three id-less sub-records
+  per PFS7-X2: `cross_dialect_ref`, `annotation`,
+  `position_range`.
+- `lowering/annotation_review.json` — the `AnnotationReview`
+  record (review act on a Lowering's annotation; verdict
+  closed enum {approved, needs-work, rejected, noted}). Cross-
+  file `$ref` target from `annotation.review_states` in
+  lowering.json per PFS9-X2.
+- `lowering/lowering_observation.json` — the
+  `LoweringObservation` record (validate_lowerings output;
+  severity closed enum {noted, advises-review}; code open
+  string per PFS9-LO3).
+
 ### Cross-file references
 
 Substrate-layer cross-file references resolve via canonical
@@ -138,22 +175,26 @@ Substrate-layer cross-file references resolve via canonical
 conformance test layer (pattern established by production-
 format-sketch-03 PFS3-E1; extended by sketch-04 P4A1 for held;
 extended by sketch-06 PFS6-D5 for the aristotelian dialect;
-extended by sketch-07 PFS7-D6 for the save-the-cat dialect).
+extended by sketch-07 PFS7-D6 for the save-the-cat dialect;
+extended by sketch-09 PFS9-D8 for the lowering namespace).
 Branch's `schema/branch.json` has no outbound cross-file
 references; the Aristotelian mythos has two (phase.json and
 character.json); the four Save-the-Cat schemas have none —
 the dialect uses plain-string id references between sibling
-records per PFS7-X1 (flat-with-id-refs topology). The registry
-is present-but-unused at the Save-the-Cat dialect layer, which
-itself confirms the pattern is forgiving across reference
-topologies.
+records per PFS7-X1 (flat-with-id-refs topology). The lowering
+namespace has one outbound cross-file `$ref` —
+`lowering.json`'s inline `$defs/annotation.review_states`
+references `annotation_review.json` per PFS9-X2, extending the
+tree-with-$ref pattern into the cross-boundary tier.
 
 Labels on `event.json`'s `branches` field, event-id strings on
-ArMythos / ArPhase, and id-string arrays on StcStory / StcBeat /
-StcStrand are all plain strings, not $ref-typed — see
+ArMythos / ArPhase, id-string arrays on StcStory / StcBeat /
+StcStrand, and `CrossDialectRef.dialect` tokens in the
+lowering namespace are all plain strings, not $ref-typed — see
 production-format-sketch-05 §Open questions OQ3, sketch-06 OQ3,
-and sketch-07 OQ4 for the cross-reference-consistency audit
-surface.
+sketch-07 OQ4, and sketch-09 PFS9-X4 (dialect-token openness
+per architecture-sketch-02 A6) for the cross-reference-
+consistency audit surfaces.
 
 ## What's deferred
 
@@ -164,10 +205,20 @@ surface.
   sketch; Aristotelian-core (three records) shipped under PFS6
   as the first dialect-layer example; Save-the-Cat-core (four
   records) shipped under PFS7 as the second.
-- Cross-boundary records (Lowering, VerificationReview,
-  StructuralAdvisory, VerifierCommentary, ArAnnotationReview,
-  ArObservationCommentary, DialectReading). Multiple production
-  sketches.
+- Verification-family cross-boundary records
+  (VerificationReview, StructuralAdvisory,
+  VerificationAnswerProposal, VerifierCommentary). PFS10 ships
+  these under `schema/verification/` after PFS9's
+  CrossDialectRef decision (re-inlined per PFS8-V guidance).
+- Dialect-internal observation / review / probe records
+  (ArObservation, ArAnnotationReview, ArObservationCommentary,
+  DialectReading, StcObservation, future DramaticaObservation).
+  Ship under existing dialect namespaces per PFS8-N2
+  (PFS11 Aristotelian batch, PFS12 Save-the-Cat observation,
+  future Dramatic+Dramatica-complete).
+- Runtime / ephemeral records (CheckRegistration, CoverageGap,
+  DroppedOutput, three ReaderModelResult containers) — named
+  in PFS8-X with forcing-function criteria. Not scheduled.
 - KnowledgeState record (per-agent-per-τ_s state — a
   collection of Helds plus agent_id). No current consumer.
 
