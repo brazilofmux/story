@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/entity.json",
+  "title": "Entity",
+  "description": "A referable thing in a story — a character, place, physical object, or abstract concept — per design/substrate-entity-record-sketch-01.md. Exactly three fields; timeless at record level (SE5); identity per-story-local (SE6).",
+  "type": "object",
+  "required": ["id", "name", "kind"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable identifier, scoped per story (SE2, SE6)."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display handle used by authoring tools, rendering, probe prompts (SE2). Non-empty in practice across the current corpus."
+    },
+    "kind": {
+      "type": "string",
+      "description": "Discriminator naming what sort of referable thing this is (SE3). Each value corresponds to a structural distinction the substrate or a dialect dispatches on.",
+      "enum": ["agent", "object", "location", "abstract"]
+    }
+  },
+  "additionalProperties": false
+}

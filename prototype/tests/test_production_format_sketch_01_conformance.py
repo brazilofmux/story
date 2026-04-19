@@ -1,25 +1,31 @@
 """
 test_production_format_sketch_01_conformance.py — conformance of
-the Python prototype's Description records to the canonical
-spec in schema/description.json.
+the Python prototype's Description AND Entity records to the
+canonical specs in schema/description.json + schema/entity.json.
 
-Specified by design/production-format-sketch-01.md PFS4. The test
-validates every existing encoding's DESCRIPTIONS tuple against
-the schema; failures either match a known disposition (documented
-below) or fail loud as new findings needing attention.
+Specified by design/production-format-sketch-01.md PFS4 (for
+Description) and design/production-format-sketch-02.md PEA2 (for
+Entity). The test validates every existing encoding's ENTITIES
+and DESCRIPTIONS tuples against their schemas; failures either
+match a known disposition (documented in the relevant sketch) or
+fail loud as new findings needing attention.
+
+The module-name retains "sketch_01" for stability — sketches
+01 + 02 share one test surface by design (PEA2 "the sketch-01 +
+sketch-02 surfaces are one test surface; no reason to split").
 
 The test is the **first consumer** of the schemas outside Python.
 It proves: a JSON Schema validator written in any language can
-read schema/description.json and produce conformance verdicts
-against records the Python prototype authored. The Python
-prototype is unchanged by this test.
+read these schema files and produce conformance verdicts against
+records the Python prototype authored. The Python prototype is
+unchanged by this test.
 
 PFS2 discipline applies: the test module reads the Python
-prototype (for dump-and-validate) but the **schema** was authored
-from design sketches alone. When a conformance failure surfaces
-that the schema's enum doesn't accept a value the Python emits,
-the disposition is either "amend the design sketch" or "Python
-over-specified" — NOT "expand the schema to fit Python".
+prototype (for dump-and-validate) but the **schemas** were
+authored from design sketches alone. When a conformance failure
+surfaces that a schema's enum doesn't accept a value the Python
+emits, the disposition is either "amend the design sketch" or
+"Python over-specified" — NOT "expand the schema to fit Python".
 
 Run:
     cd prototype
@@ -63,6 +69,12 @@ def _load_description_schema() -> dict:
         return json.load(f)
 
 
+def _load_entity_schema() -> dict:
+    schema_path = _repo_root() / "schema" / "entity.json"
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 # ============================================================================
 # Known dispositions — discrepancies discovered during PFA4 implementation
 # ============================================================================
@@ -100,11 +112,12 @@ DISPOSITION_STATUS_SUPERSEDED = "superseded"
 # ============================================================================
 
 
-def _discover_encoding_descriptions() -> list:
-    """Return list of (encoding_module_name, descriptions_list)
-    tuples. Discovers encodings under
-    prototype/story_engine/encodings/ that define a DESCRIPTIONS
-    attribute (the naming convention across the current corpus)."""
+def _discover_encoding_records(attribute_name: str) -> list:
+    """Return list of (encoding_module_name, records_list) tuples.
+    Discovers encodings under prototype/story_engine/encodings/
+    that define `attribute_name` (e.g., "ENTITIES" or
+    "DESCRIPTIONS") at module level. Empty lists skip silently —
+    an encoding can legally bootstrap with no entries."""
     encodings_dir = (
         _repo_root() / "prototype" / "story_engine" / "encodings"
     )
@@ -119,15 +132,21 @@ def _discover_encoding_descriptions() -> list:
             )
         except Exception:
             continue
-        descriptions = getattr(module, "DESCRIPTIONS", None)
-        if descriptions is None:
+        records = getattr(module, attribute_name, None)
+        if records is None:
             continue
-        if not descriptions:
-            # An empty DESCRIPTIONS list has nothing to validate;
-            # skip silently.
+        if not records:
             continue
-        out.append((name, list(descriptions)))
+        out.append((name, list(records)))
     return out
+
+
+def _discover_encoding_descriptions() -> list:
+    return _discover_encoding_records("DESCRIPTIONS")
+
+
+def _discover_encoding_entities() -> list:
+    return _discover_encoding_records("ENTITIES")
 
 
 # ============================================================================
@@ -183,6 +202,22 @@ def _dump_review_entry(review) -> dict:
     if review.comment is not None:
         out["comment"] = review.comment
     return out
+
+
+def _dump_entity(entity) -> dict:
+    """Map a Python Entity to a JSON-compatible dict conforming
+    to schema/entity.json (per substrate-entity-record-sketch-01
+    SE1–SE6 + production-format-sketch-02 PFE1–PFE4).
+
+    Trivial: three fields, all strings. No anchor mapping, no
+    Enum coercion — the Python Entity already has plain str
+    fields per substrate-sketch-05's translatable-Python
+    discipline."""
+    return {
+        "id": entity.id,
+        "name": entity.name,
+        "kind": entity.kind,
+    }
 
 
 def _dump_description(description) -> dict:
@@ -277,15 +312,23 @@ def _classify_failure(description, error: jsonschema.ValidationError) -> str:
 # ============================================================================
 
 
-def test_schema_file_metaschema_valid():
-    """The schema itself is a valid JSON Schema 2020-12 document."""
+def test_description_schema_metaschema_valid():
+    """schema/description.json is a valid JSON Schema 2020-12
+    document."""
     schema = _load_description_schema()
     Draft202012Validator.check_schema(schema)
 
 
-def test_schema_has_expected_shape():
-    """Spot-check of schema structure — guards against accidental
-    breakage of the schema during unrelated edits."""
+def test_entity_schema_metaschema_valid():
+    """schema/entity.json is a valid JSON Schema 2020-12 document."""
+    schema = _load_entity_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_description_schema_has_expected_shape():
+    """Spot-check of Description schema structure — guards
+    against accidental breakage of the schema during unrelated
+    edits."""
     schema = _load_description_schema()
     assert schema["$schema"] == (
         "https://json-schema.org/draft/2020-12/schema"
@@ -313,6 +356,26 @@ def test_schema_has_expected_shape():
     # Status enum matches descriptions-sketch-01 §Optional fields
     status_enum = set(schema["properties"]["status"]["enum"])
     assert status_enum == {"committed", "provisional"}
+
+
+def test_entity_schema_has_expected_shape():
+    """Spot-check of Entity schema structure per
+    substrate-entity-record-sketch-01 SE1–SE6 +
+    production-format-sketch-02 PFE1–PFE4."""
+    schema = _load_entity_schema()
+    assert schema["$schema"] == (
+        "https://json-schema.org/draft/2020-12/schema"
+    )
+    assert schema["title"] == "Entity"
+    assert set(schema["required"]) == {"id", "name", "kind"}
+    assert schema["additionalProperties"] is False
+    # Three fields only (SE2; PFE2)
+    assert set(schema["properties"].keys()) == {"id", "name", "kind"}
+    # Closed kind enum (SE3; PFE3)
+    kind_enum = set(schema["properties"]["kind"]["enum"])
+    assert kind_enum == {"agent", "object", "location", "abstract"}
+    # No τ_a (SE5; PFE4) — record is timeless
+    assert "τ_a" not in schema["properties"]
 
 
 def test_corpus_conformance():
@@ -393,6 +456,67 @@ def test_corpus_conformance():
     assert total > 0
 
 
+def test_entity_corpus_conformance():
+    """Every Entity across every encoding validates against
+    schema/entity.json. No dispositions anticipated (see
+    production-format-sketch-02 §Conformance dispositions); any
+    failure is a new finding that requires an amendment before
+    this test can pass."""
+    schema = _load_entity_schema()
+    validator = Draft202012Validator(schema)
+
+    encodings = _discover_encoding_entities()
+    assert encodings, (
+        "expected at least one encoding with ENTITIES; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    new_findings: list = []
+
+    for encoding_name, entities in encodings:
+        for entity in entities:
+            total += 1
+            dumped = _dump_entity(entity)
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: e.absolute_path,
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "entity_id": entity.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print(f"  total entities validated:   {total}")
+    print(f"  clean passes:               {clean_passes}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(f"    {finding['encoding']}: {finding['entity_id']}")
+            for err in finding["errors"]:
+                print(f"      - path={err['path']} "
+                      f"validator={err['validator']}: {err['message']}")
+
+    assert not new_findings, (
+        f"{len(new_findings)} Entity conformance finding(s); see "
+        f"output. Resolve per production-format-sketch-02's "
+        f"§Conformance dispositions protocol (amend the sketch; "
+        f"never silently widen the schema)."
+    )
+    assert total > 0
+
+
 def test_anchor_dump_is_tagged_union():
     """The dump function maps Python's flat AnchorRef to the
     tagged-union shape the schema expects."""
@@ -433,15 +557,13 @@ def test_review_entry_dump_omits_none_comment():
 
 
 def test_dispositions_resolution_paths():
-    """Meta-test: each disposition this test recognizes must be
-    documented in production-format-sketch-01.md. Check by
-    substring presence of the disposition name in the sketch
-    file."""
+    """Meta-test: each Description disposition this test
+    recognizes must be documented in
+    production-format-sketch-01.md."""
     sketch_path = (
         _repo_root() / "design" / "production-format-sketch-01.md"
     )
     content = sketch_path.read_text()
-    # Sketch should mention each disposition by its value string
     assert "authoring-note" in content, (
         "disposition 'authoring-note' not documented in "
         "production-format-sketch-01.md"
@@ -449,6 +571,21 @@ def test_dispositions_resolution_paths():
     assert "superseded" in content, (
         "disposition 'superseded' not documented in "
         "production-format-sketch-01.md"
+    )
+
+
+def test_entity_sketches_exist():
+    """Meta-test: the design sketches the Entity schema derives
+    from exist in design/. Guards against schema-without-sketch
+    drift (the inverse of the Python-as-spec drift PFS2 inverts)."""
+    root = _repo_root() / "design"
+    assert (root / "substrate-entity-record-sketch-01.md").exists(), (
+        "schema/entity.json exists but its design-layer spec "
+        "(substrate-entity-record-sketch-01.md) is missing"
+    )
+    assert (root / "production-format-sketch-02.md").exists(), (
+        "schema/entity.json exists but its production-layer "
+        "spec (production-format-sketch-02.md) is missing"
     )
 
 
