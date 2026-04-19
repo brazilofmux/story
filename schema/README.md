@@ -70,12 +70,18 @@ depend on the Python; the Python depends on the schema.**
   on kind, optional metadata). Shipped by production-format-
   sketch-05.
 
-### Dialect layer (Aristotelian, three core records)
+### Dialect layer (Aristotelian + Save-the-Cat, seven core records)
 
-Under `schema/aristotelian/` per production-format-sketch-06
-PFS6-N1 — first dialect to ship production-layer artifacts;
-establishes the `schema/<dialect>/` namespace convention for
-future dialect-schema arcs.
+Two dialects ship production-layer artifacts. The namespace
+convention (`schema/<dialect>/<record>.json`) is committed by
+production-format-sketch-06 PFS6-N1; production-format-
+sketch-07 PFS7-N1 inherits it. Each dialect's reference
+topology matches its Python shape — Aristotelian is tree-with-
+inline-$ref (PFS6-X1), Save-the-Cat is flat-with-id-refs
+(PFS7-X1). Both are admitted; future dialects choose the
+pattern matching their Python.
+
+#### Aristotelian (under `schema/aristotelian/`, three core records)
 
 - `aristotelian/phase.json` — the `ArPhase` record
   (aristotelian-sketch-01 A2: logical division with id, role
@@ -99,29 +105,65 @@ boundary records (`ArAnnotationReview`,
 `ArObservationCommentary`, `DialectReading`) are deferred to
 the Production C cross-boundary arc, per PFS6 §Scope.
 
+#### Save-the-Cat (under `schema/save_the_cat/`, four core records)
+
+- `save_the_cat/character.json` — the `StcCharacter` record
+  (save-the-cat-sketch-02 S9/S10: id, name, optional
+  description, optional role_labels array with no closed enum
+  per the canonical-plus-open S10 posture).
+- `save_the_cat/strand.json` — the `StcStrand` record
+  (save-the-cat-sketch-01 S3 + sketch-02 S11: id, kind closed
+  enum {a-story, b-story}, optional description, optional
+  focal_character_id).
+- `save_the_cat/beat.json` — the `StcBeat` record (save-the-
+  cat-sketch-01 S1/S2/S3 + sketch-02 S11: required id / slot /
+  page_actual with slot bounded 1..15; `advances` array uses
+  inline `$defs/strand_advancement` per PFS7-X2;
+  `participant_ids` plain-string array per PFS7-X1).
+- `save_the_cat/story.json` — the `StcStory` record (save-the-
+  cat-sketch-01 S4/S5 + sketch-02 S11/S12: the dialect's root;
+  required id / title; optional theme_statement / stc_genre_id /
+  beat_ids / strand_ids / character_ids; `archetype_assignments`
+  via inline `$defs/archetype_assignment` per PFS7-X2).
+
+`StcObservation` (verifier output) and the dialect-catalog
+records `StcCanonicalBeat` (15 shipped-as-data canonical beats)
+and `StcGenre` (10 shipped-as-data Snyder genres) are deferred
+— the former to Production C, the latter to PFS7 OQ2.
+
 ### Cross-file references
 
 Substrate-layer cross-file references resolve via canonical
 `$id` URIs using a `jsonschema.referencing.Registry` in the
 conformance test layer (pattern established by production-
 format-sketch-03 PFS3-E1; extended by sketch-04 P4A1 for held;
-extended by sketch-06 PFS6-D5 for the aristotelian dialect).
+extended by sketch-06 PFS6-D5 for the aristotelian dialect;
+extended by sketch-07 PFS7-D6 for the save-the-cat dialect).
 Branch's `schema/branch.json` has no outbound cross-file
 references; the Aristotelian mythos has two (phase.json and
-character.json). Labels on `event.json`'s `branches` field
-and event-id strings on ArMythos / ArPhase are plain string
-arrays / strings, not $ref-typed — see production-format-
-sketch-05 §Open questions OQ3 and production-format-sketch-06
-§Open questions OQ3 for the cross-reference-consistency audit
+character.json); the four Save-the-Cat schemas have none —
+the dialect uses plain-string id references between sibling
+records per PFS7-X1 (flat-with-id-refs topology). The registry
+is present-but-unused at the Save-the-Cat dialect layer, which
+itself confirms the pattern is forgiving across reference
+topologies.
+
+Labels on `event.json`'s `branches` field, event-id strings on
+ArMythos / ArPhase, and id-string arrays on StcStory / StcBeat /
+StcStrand are all plain strings, not $ref-typed — see
+production-format-sketch-05 §Open questions OQ3, sketch-06 OQ3,
+and sketch-07 OQ4 for the cross-reference-consistency audit
 surface.
 
 ## What's deferred
 
-- Remaining dialect records (Dramatic, Save-the-Cat, Dramatica-
-  complete; `ArObservation` for Aristotelian). Each dialect or
-  record group needs its own production-format sketch;
-  Aristotelian-core (three records) shipped under PFS6 as the
-  first dialect-layer example.
+- Remaining dialect records (Dramatic, Dramatica-complete;
+  `ArObservation` for Aristotelian; `StcObservation` +
+  `StcCanonicalBeat` + `StcGenre` for Save-the-Cat). Each
+  dialect or record group needs its own production-format
+  sketch; Aristotelian-core (three records) shipped under PFS6
+  as the first dialect-layer example; Save-the-Cat-core (four
+  records) shipped under PFS7 as the second.
 - Cross-boundary records (Lowering, VerificationReview,
   StructuralAdvisory, VerifierCommentary, ArAnnotationReview,
   ArObservationCommentary, DialectReading). Multiple production

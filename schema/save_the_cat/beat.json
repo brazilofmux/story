@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/save_the_cat/beat.json",
+  "title": "StcBeat",
+  "description": "One authored Save-the-Cat beat — fills one of 15 canonical beat slots per design/save-the-cat-sketch-01.md S1/S2. `slot` is bounded at 1..15 matching NUM_CANONICAL_BEATS in the Python prototype; `page_actual` is the author-placed page target (interpreted proportionally for non-screenplay encodings per S2). Per save-the-cat-sketch-02 S11, `participant_ids` optionally names characters present in the beat. The `advances` array carries strand_advancement sub-records (inline $defs per PFS7-X2).",
+  "type": "object",
+  "required": ["id", "slot", "page_actual"],
+  "$defs": {
+    "strand_advancement": {
+      "type": "object",
+      "description": "One strand this beat advances. Binding-only record (no authorial id); ships inline per PFS7-X2. Each beat may advance A, B, both, or neither.",
+      "required": ["strand_id"],
+      "properties": {
+        "strand_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Plain-string reference to a sibling StcStrand per PFS7-X1. Resolution audit is PFS7 OQ4. PFS7-BT4."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional authorial commentary on what the advance accomplishes for this strand. Python default empty string; schema admits unconditionally. PFS7-BT4."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this beat (e.g., 'B_01_opening'). No prefix convention enforced. PFS7-BT2."
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 15,
+      "description": "Which of Save-the-Cat's 15 canonical beat slots this beat fills (1=Opening Image ... 15=Final Image). Bounded range matches NUM_CANONICAL_BEATS in save_the_cat.py; Python StcBeat.__post_init__ enforces the same range at construction. Multiple beats may share a slot (S1 admits; verifier surfaces as noted). PFS7-BT2."
+    },
+    "page_actual": {
+      "type": "integer",
+      "description": "Author-placed page target. Interpreted literally on 110-page screenplays; proportionally for other forms (S2). No bound at the schema layer — encodings map to novels / plays / prose at authored page counts. Monotonicity across slot order is a verifier check, not a schema check. PFS7-BT2."
+    },
+    "description_of_change": {
+      "type": "string",
+      "description": "Optional author prose describing what this beat does in the encoding's terms. Python default empty string. PFS7-BT3."
+    },
+    "advances": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/strand_advancement"
+      },
+      "description": "Optional array of strand-advancement sub-records per PFS7-BT4. Inline $defs per PFS7-X2 (StrandAdvancement has no authorial id and appears only here). Python default empty tuple → empty array."
+    },
+    "participant_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Optional array of plain-string references to StcCharacter ids (PFS7-X1). Characters present in this beat per save-the-cat-sketch-02 S11. Empty array legal (some beats describe environmental or collective moments without a named roster). PFS7-BT5."
+    },
+    "authored_by": {
+      "type": "string",
+      "description": "Optional provenance string. Python default 'author'. PFS7-BT."
+    }
+  },
+  "additionalProperties": false
+}

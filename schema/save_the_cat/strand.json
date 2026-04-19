@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/save_the_cat/strand.json",
+  "title": "StcStrand",
+  "description": "A Save-the-Cat strand — the A story (external plot) or B story (internal/relationship arc that carries theme) per design/save-the-cat-sketch-01.md S3. The kind field is a closed enum at two values matching the Python StrandKind enum. Per save-the-cat-sketch-02 S11, `focal_character_id` optionally names the character the strand is structurally about (often the protagonist for the A story, the love-interest for the B story under Snyder's convention).",
+  "type": "object",
+  "required": ["id", "kind"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this strand (e.g., 'Strand_A_scotland', 'Strand_B_marriage'). No prefix convention enforced. PFS7-SR2."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["a-story", "b-story"],
+      "description": "Which of the two Save-the-Cat strand kinds this strand occupies. Closed enum per S3 — Save-the-Cat distinguishes exactly two strand kinds; additional kinds would be a dialect amendment. Matches StrandKind enum values in Python. PFS7-SR2."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional author prose describing this strand's through-line. Python default is an empty string; schema admits the empty string and absence interchangeably. PFS7-SR3."
+    },
+    "focal_character_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional non-empty string naming a StcCharacter id this strand is structurally about. Plain-string reference to a sibling StcCharacter per PFS7-X1 (flat-with-id-refs topology); resolution audit is PFS7 OQ4. Python None → field omitted in dump. PFS7-SR4."
+    },
+    "authored_by": {
+      "type": "string",
+      "description": "Optional provenance string. Python default 'author'. PFS7-SR."
+    }
+  },
+  "additionalProperties": false
+}

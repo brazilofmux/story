@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/save_the_cat/story.json",
+  "title": "StcStory",
+  "description": "A Save-the-Cat story — the dialect's root record per design/save-the-cat-sketch-01.md S4/S5. Aggregates beats, strands, and characters by id-string arrays (PFS7-X1 flat-with-id-refs topology; contrasts Aristotelian's tree-with-inline-$ref pattern per PFS6-X1). Declares an optional genre (S5, plain-string reference to a dialect-catalog StcGenre; resolution audit is PFS7 OQ4) and the canonical theme statement (S4, promoted to Story level so other tooling can reference it without parsing the Theme Stated beat content). Per save-the-cat-sketch-02 S12, archetype_assignments binds each genre archetype to a character or a prose note; the sub-record ships inline per PFS7-X2.",
+  "type": "object",
+  "required": ["id", "title"],
+  "$defs": {
+    "archetype_assignment": {
+      "type": "object",
+      "description": "One binding between a genre archetype label and either a character id or a prose note per save-the-cat-sketch-02 S12. Binding-only record (no authorial id); ships inline per PFS7-X2. The S13 exactly-one-of-character_id-or-note constraint stays at the verifier (empty-vs-non-empty-string is a runtime-semantic check JSON Schema doesn't express cleanly); the schema admits both fields as optional.",
+      "required": ["archetype"],
+      "properties": {
+        "archetype": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The genre archetype label this assignment binds. Must match a label in the declared StcGenre's archetypes for the S13 archetype-coverage check to pass; schema admits any non-empty string (coverage is a verifier concern). PFS7-ST6."
+        },
+        "character_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional plain-string reference to a StcCharacter id when the archetype binds to a character (e.g., Whydunit's 'the detective' → Poirot). Resolution audit is PFS7 OQ4. PFS7-ST6."
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional prose note when the archetype binds to non-character content (e.g., Rites of Passage's 'the life problem' → 'Macbeth's ambition + the witches' prophecy ...'). Python default empty string; schema admits unconditionally. PFS7-ST6."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this story (e.g., 'stc_macbeth', 'stc_ackroyd'). PFS7-ST2."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Title of the work (e.g., 'Macbeth', 'The Murder of Roger Ackroyd'). PFS7-ST2."
+    },
+    "theme_statement": {
+      "type": "string",
+      "description": "Optional theme claim (the content the Theme Stated beat dramatizes, promoted to Story level per S4). Python default empty string; schema admits unconditionally. Verifier surfaces emptiness as NOTED 'theme_statement_empty'. PFS7-ST3."
+    },
+    "stc_genre_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional plain-string reference to a dialect-catalog StcGenre (one of Snyder's ten genres per S5). Resolution to GENRE_BY_ID is the S6 verifier's job; schema treats as plain string per PFS7-X3 (parallel to PFS6-X2 posture). PFS7-ST4."
+    },
+    "beat_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Optional array of plain-string references to sibling StcBeat records per PFS7-X1 (flat-with-id-refs topology). Empty array legal — admits progressive authoring. Full encoding has 15 ids (one per canonical slot per S1); S6 verifier's beat-slot-coverage check enforces. PFS7-ST5."
+    },
+    "strand_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Optional array of plain-string references to sibling StcStrand records per PFS7-X1. Empty array legal. Conventional full encoding has 2 (one A, one B per S3); S6 verifier's strand-kind check surfaces deviations as NOTED. PFS7-ST5."
+    },
+    "character_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Optional array of plain-string references to sibling StcCharacter records per PFS7-X1 + save-the-cat-sketch-02 S11. Empty array legal — encodings pre-dating sketch-02 continue to verify without wiring characters. When set, S13 verifier checks (character-id resolution, one-protagonist advisory, archetype coverage) activate. PFS7-ST5."
+    },
+    "archetype_assignments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/archetype_assignment"
+      },
+      "description": "Optional array of archetype-assignment sub-records per save-the-cat-sketch-02 S12. Inline $defs per PFS7-X2 (StcArchetypeAssignment has no authorial id and appears only on StcStory). Python default empty tuple → empty array. When non-empty without stc_genre_id set, S13 surfaces 'archetype_assignments_without_genre'. PFS7-ST6."
+    },
+    "authored_by": {
+      "type": "string",
+      "description": "Optional provenance string. Python default 'author'. PFS7-ST."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/save_the_cat/character.json",
+  "title": "StcCharacter",
+  "description": "A Save-the-Cat character — one authored character record per design/save-the-cat-sketch-02.md S9. Deliberately minimal (no character-character relations, no per-character arcs at this iteration). `role_labels` is canonical-plus-open per S10 — the verifier recognizes ten canonical labels but the schema admits any non-empty string, so per-genre archetypes and author-introduced labels are admissible. Cross-dialect role-label audit is PFS7 OQ3.",
+  "type": "object",
+  "required": ["id", "name"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this character (e.g., 'C_macbeth', 'C_sheppard'). No prefix convention enforced — the 'C_' convention is descriptive only. PFS7-CH2."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name for this character (e.g., 'Macbeth', 'Dr. James Sheppard'). PFS7-CH2."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional author prose describing this character. Python default is an empty string; schema admits the empty string and absence interchangeably. PFS7-CH3."
+    },
+    "role_labels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Optional array of role labels. The verifier's one-protagonist advisory and archetype-coverage checks recognize ten canonical labels (protagonist, antagonist, love-interest, mentor, confidant, ally, narrator, victim, suspect, threshold-guardian per save-the-cat-sketch-02 S10); open strings are admissible — the schema admits any non-empty string per S10's canonical-plus-open posture. Tuple-ordering is preserved to accommodate overlapping-role cases (e.g., Sheppard's ('protagonist', 'antagonist', 'narrator')). PFS7-CH4."
+    },
+    "authored_by": {
+      "type": "string",
+      "description": "Optional provenance string. Python default 'author'; schema admits the field unconditionally per PFS6-C5-style isomorphic dump. PFS7-CH."
+    }
+  },
+  "additionalProperties": false
+}

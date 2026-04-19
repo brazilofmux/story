@@ -125,6 +125,38 @@ def _load_aristotelian_mythos_schema() -> dict:
         return json.load(f)
 
 
+def _load_save_the_cat_character_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "save_the_cat" / "character.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_save_the_cat_strand_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "save_the_cat" / "strand.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_save_the_cat_beat_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "save_the_cat" / "beat.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_save_the_cat_story_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "save_the_cat" / "story.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
@@ -134,9 +166,17 @@ def _build_schema_registry() -> Registry:
     schema/aristotelian/mythos.json $refs its sibling phase.json +
     character.json (production-format-sketch-06 PFS6-X1).
 
+    The four save_the_cat schemas are registered for symmetry and
+    $id lookup; none of them carry outbound cross-file $refs
+    (production-format-sketch-07 PFS7-X1 — flat-with-id-refs
+    topology; the registry is present-but-unused at the Save-the-Cat
+    dialect layer).
+
     Pattern introduced by production-format-sketch-03 P3A4; extended
     by production-format-sketch-04 P4A1 for held.json; extended by
-    production-format-sketch-06 PFS6-D5 for the aristotelian dialect."""
+    production-format-sketch-06 PFS6-D5 for the aristotelian dialect;
+    extended by production-format-sketch-07 PFS7-D6 for the
+    save-the-cat dialect."""
     registry = Registry()
     for schema in (
         _load_prop_schema(), _load_held_schema(),
@@ -144,6 +184,10 @@ def _build_schema_registry() -> Registry:
         _load_aristotelian_phase_schema(),
         _load_aristotelian_character_schema(),
         _load_aristotelian_mythos_schema(),
+        _load_save_the_cat_beat_schema(),
+        _load_save_the_cat_character_schema(),
+        _load_save_the_cat_story_schema(),
+        _load_save_the_cat_strand_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -318,6 +362,66 @@ def _discover_encoding_aristotelian_records():
         if chars_seen:
             chars_out.append((name, list(chars_seen.values())))
     return mythoi_out, phases_out, chars_out
+
+
+def _discover_encoding_save_the_cat_records():
+    """Walks encoding modules for Save-the-Cat records. Returns a
+    quadruple `(stories, beats, strands, characters)` — four lists
+    of (encoding_name, records). Per production-format-sketch-07
+    PFS7-D5.
+
+    Save-the-Cat encodings export a singleton `STORY`, a tuple
+    `BEATS`, a tuple `STRANDS`, and a tuple `CHARACTERS` at module
+    level. No `STC_*` prefix is used (contrast Aristotelian's
+    `AR_*` prefix) — Save-the-Cat encodings are single-Story per
+    module so the canonical-names convention suffices.
+
+    Sibling `*_save_the_cat_lowerings.py` and
+    `*_save_the_cat_verification.py` modules re-import STORY /
+    BEATS / STRANDS from the base encoding for their own work; we
+    skip them so the same records don't get validated multiple
+    times. The base encoding filename ends exactly with
+    `_save_the_cat.py`."""
+    from story_engine.core.save_the_cat import (
+        StcStory, StcBeat, StcStrand, StcCharacter,
+    )
+    encodings_dir = (
+        _repo_root() / "prototype" / "story_engine" / "encodings"
+    )
+    stories_out: list = []
+    beats_out: list = []
+    strands_out: list = []
+    chars_out: list = []
+    for py_path in sorted(encodings_dir.glob("*_save_the_cat.py")):
+        name = py_path.stem
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{name}"
+            )
+        except Exception:
+            continue
+        story = getattr(module, "STORY", None)
+        if not isinstance(story, StcStory):
+            continue
+        stories_out.append((name, [story]))
+
+        beats = getattr(module, "BEATS", ())
+        if beats and all(isinstance(b, StcBeat) for b in beats):
+            beats_out.append((name, list(beats)))
+
+        strands = getattr(module, "STRANDS", ())
+        if strands and all(isinstance(s, StcStrand) for s in strands):
+            strands_out.append((name, list(strands)))
+
+        characters = getattr(module, "CHARACTERS", ())
+        if characters and all(
+            isinstance(c, StcCharacter) for c in characters
+        ):
+            chars_out.append((name, list(characters)))
+
+    return stories_out, beats_out, strands_out, chars_out
 
 
 # ============================================================================
@@ -671,6 +775,112 @@ def _dump_armythos(mythos) -> dict:
         out["peripeteia_event_id"] = mythos.peripeteia_event_id
     if mythos.anagnorisis_event_id is not None:
         out["anagnorisis_event_id"] = mythos.anagnorisis_event_id
+    return out
+
+
+def _dump_stccharacter(character) -> dict:
+    """Map a Python StcCharacter to a JSON-compatible dict conforming
+    to schema/save_the_cat/character.json (production-format-
+    sketch-07 PFS7-D4). Field-for-field isomorphic: id / name
+    always emitted; description / authored_by pass through (Python
+    default empty string and 'author' respectively; no omit-on-
+    default per PFS6-D2's annotation precedent). role_labels tuple
+    → list (empty tuple → empty array)."""
+    return {
+        "id": character.id,
+        "name": character.name,
+        "description": character.description,
+        "role_labels": list(character.role_labels),
+        "authored_by": character.authored_by,
+    }
+
+
+def _dump_stcstrand(strand) -> dict:
+    """Map a Python StcStrand to schema/save_the_cat/strand.json
+    (production-format-sketch-07 PFS7-D3). Field-for-field
+    isomorphic: id always; kind dumped as its str-subclass Enum
+    value ('a-story' / 'b-story'); description / authored_by pass
+    through; focal_character_id omitted when None."""
+    kind_val = (
+        strand.kind.value if hasattr(strand.kind, "value")
+        else strand.kind
+    )
+    out = {
+        "id": strand.id,
+        "kind": kind_val,
+        "description": strand.description,
+        "authored_by": strand.authored_by,
+    }
+    if strand.focal_character_id is not None:
+        out["focal_character_id"] = strand.focal_character_id
+    return out
+
+
+def _dump_strand_advancement(advance) -> dict:
+    """Map a Python StrandAdvancement sub-record to the inline
+    $defs shape in schema/save_the_cat/beat.json (PFS7-X2 + PFS7-
+    BT4)."""
+    return {
+        "strand_id": advance.strand_id,
+        "note": advance.note,
+    }
+
+
+def _dump_stcbeat(beat) -> dict:
+    """Map a Python StcBeat to schema/save_the_cat/beat.json
+    (production-format-sketch-07 PFS7-D2). Field-for-field
+    isomorphic: id / slot / page_actual always; description_of_change
+    / authored_by pass through; advances tuple walked via
+    _dump_strand_advancement; participant_ids tuple → list."""
+    return {
+        "id": beat.id,
+        "slot": beat.slot,
+        "page_actual": beat.page_actual,
+        "description_of_change": beat.description_of_change,
+        "advances": [_dump_strand_advancement(a) for a in beat.advances],
+        "participant_ids": list(beat.participant_ids),
+        "authored_by": beat.authored_by,
+    }
+
+
+def _dump_archetype_assignment(assignment) -> dict:
+    """Map a Python StcArchetypeAssignment sub-record to the inline
+    $defs shape in schema/save_the_cat/story.json (PFS7-X2 + PFS7-
+    ST6). archetype always emitted; character_id omitted when
+    None; note emitted unconditionally (Python default empty
+    string)."""
+    out = {
+        "archetype": assignment.archetype,
+        "note": assignment.note,
+    }
+    if assignment.character_id is not None:
+        out["character_id"] = assignment.character_id
+    return out
+
+
+def _dump_stcstory(story) -> dict:
+    """Map a Python StcStory to schema/save_the_cat/story.json
+    (production-format-sketch-07 PFS7-D1). Field-for-field
+    isomorphic: id / title always; theme_statement / authored_by
+    pass through; stc_genre_id omitted when None; beat_ids /
+    strand_ids / character_ids tuples → lists;
+    archetype_assignments tuple walked via
+    _dump_archetype_assignment."""
+    out = {
+        "id": story.id,
+        "title": story.title,
+        "theme_statement": story.theme_statement,
+        "beat_ids": list(story.beat_ids),
+        "strand_ids": list(story.strand_ids),
+        "character_ids": list(story.character_ids),
+        "archetype_assignments": [
+            _dump_archetype_assignment(a)
+            for a in story.archetype_assignments
+        ],
+        "authored_by": story.authored_by,
+    }
+    if story.stc_genre_id is not None:
+        out["stc_genre_id"] = story.stc_genre_id
     return out
 
 
@@ -1791,6 +2001,483 @@ def test_aristotelian_mythos_corpus_conformance():
     assert not new_findings, (
         f"{len(new_findings)} ArMythos conformance finding(s); "
         f"see output. Resolve per production-format-sketch-06's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+# ============================================================================
+# Save-the-Cat conformance — PFS7
+# ============================================================================
+
+
+def test_save_the_cat_character_schema_metaschema_valid():
+    """schema/save_the_cat/character.json is a valid JSON Schema
+    2020-12 document (production-format-sketch-07 PFS7-CH1..CH4)."""
+    schema = _load_save_the_cat_character_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_save_the_cat_strand_schema_metaschema_valid():
+    """schema/save_the_cat/strand.json is a valid JSON Schema
+    2020-12 document (production-format-sketch-07 PFS7-SR1..SR4)."""
+    schema = _load_save_the_cat_strand_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_save_the_cat_beat_schema_metaschema_valid():
+    """schema/save_the_cat/beat.json is a valid JSON Schema 2020-12
+    document (production-format-sketch-07 PFS7-BT1..BT5 + PFS7-X2
+    inline strand_advancement $defs)."""
+    schema = _load_save_the_cat_beat_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_save_the_cat_story_schema_metaschema_valid():
+    """schema/save_the_cat/story.json is a valid JSON Schema 2020-12
+    document (production-format-sketch-07 PFS7-ST1..ST6 + PFS7-X2
+    inline archetype_assignment $defs)."""
+    schema = _load_save_the_cat_story_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_save_the_cat_character_schema_has_expected_shape():
+    """Spot-check of StcCharacter schema structure per save-the-cat-
+    sketch-02 S9/S10 + production-format-sketch-07 PFS7-CH1..CH4."""
+    schema = _load_save_the_cat_character_schema()
+    assert schema["title"] == "StcCharacter"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "save_the_cat/character.json"
+    )
+    assert set(schema["required"]) == {"id", "name"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "name", "description", "role_labels", "authored_by",
+    }
+    # role_labels is open per PFS7-CH4 — no enum, any non-empty string
+    role_labels = schema["properties"]["role_labels"]
+    assert role_labels["type"] == "array"
+    assert role_labels["items"]["type"] == "string"
+    assert role_labels["items"]["minLength"] == 1
+    assert "enum" not in role_labels["items"]
+
+
+def test_save_the_cat_strand_schema_has_expected_shape():
+    """Spot-check of StcStrand schema structure per save-the-cat-
+    sketch-01 S3 + sketch-02 S11 + production-format-sketch-07
+    PFS7-SR1..SR4."""
+    schema = _load_save_the_cat_strand_schema()
+    assert schema["title"] == "StcStrand"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "save_the_cat/strand.json"
+    )
+    assert set(schema["required"]) == {"id", "kind"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "kind", "description", "focal_character_id",
+        "authored_by",
+    }
+    # kind closed enum at the two Save-the-Cat strand kinds (PFS7-SR2)
+    assert set(schema["properties"]["kind"]["enum"]) == {
+        "a-story", "b-story",
+    }
+    # focal_character_id optional non-empty string (PFS7-SR4)
+    fci = schema["properties"]["focal_character_id"]
+    assert fci["type"] == "string"
+    assert fci["minLength"] == 1
+
+
+def test_save_the_cat_beat_schema_has_expected_shape():
+    """Spot-check of StcBeat schema structure per save-the-cat-
+    sketch-01 S1/S2/S3 + sketch-02 S11 + production-format-sketch-
+    07 PFS7-BT1..BT5 + PFS7-X2."""
+    schema = _load_save_the_cat_beat_schema()
+    assert schema["title"] == "StcBeat"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "save_the_cat/beat.json"
+    )
+    assert set(schema["required"]) == {"id", "slot", "page_actual"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "slot", "page_actual", "description_of_change",
+        "advances", "participant_ids", "authored_by",
+    }
+    # slot integer 1..15 (PFS7-BT2; matches NUM_CANONICAL_BEATS)
+    slot = schema["properties"]["slot"]
+    assert slot["type"] == "integer"
+    assert slot["minimum"] == 1
+    assert slot["maximum"] == 15
+    # page_actual integer, no bound (PFS7-BT2)
+    page = schema["properties"]["page_actual"]
+    assert page["type"] == "integer"
+    assert "minimum" not in page
+    # advances via inline $defs per PFS7-X2 + PFS7-BT4
+    advances = schema["properties"]["advances"]
+    assert advances["type"] == "array"
+    assert advances["items"]["$ref"] == "#/$defs/strand_advancement"
+    sa = schema["$defs"]["strand_advancement"]
+    assert set(sa["required"]) == {"strand_id"}
+    assert sa["additionalProperties"] is False
+    # participant_ids as plain-string array per PFS7-BT5
+    pids = schema["properties"]["participant_ids"]
+    assert pids["type"] == "array"
+    assert pids["items"]["type"] == "string"
+    assert pids["items"]["minLength"] == 1
+
+
+def test_save_the_cat_story_schema_has_expected_shape():
+    """Spot-check of StcStory schema structure per save-the-cat-
+    sketch-01 S4/S5 + sketch-02 S11/S12 + production-format-
+    sketch-07 PFS7-ST1..ST6 + PFS7-X1 + PFS7-X2."""
+    schema = _load_save_the_cat_story_schema()
+    assert schema["title"] == "StcStory"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "save_the_cat/story.json"
+    )
+    assert set(schema["required"]) == {"id", "title"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "title", "theme_statement", "stc_genre_id",
+        "beat_ids", "strand_ids", "character_ids",
+        "archetype_assignments", "authored_by",
+    }
+    # beat_ids / strand_ids / character_ids: plain-string arrays
+    # per PFS7-X1 (flat-with-id-refs). Guard against accidental
+    # promotion to $ref-typed arrays.
+    for field in ("beat_ids", "strand_ids", "character_ids"):
+        arr = schema["properties"][field]
+        assert arr["type"] == "array"
+        assert arr["items"]["type"] == "string"
+        assert arr["items"]["minLength"] == 1
+        assert "$ref" not in arr["items"], (
+            f"{field} items must be plain strings per PFS7-X1, not "
+            f"$ref-typed"
+        )
+    # archetype_assignments via inline $defs per PFS7-X2 + PFS7-ST6
+    aa_arr = schema["properties"]["archetype_assignments"]
+    assert aa_arr["type"] == "array"
+    assert aa_arr["items"]["$ref"] == "#/$defs/archetype_assignment"
+    aa_def = schema["$defs"]["archetype_assignment"]
+    assert set(aa_def["required"]) == {"archetype"}
+    assert aa_def["additionalProperties"] is False
+    assert set(aa_def["properties"].keys()) == {
+        "archetype", "character_id", "note",
+    }
+
+
+def test_save_the_cat_character_corpus_conformance():
+    """Every StcCharacter in every encoding's CHARACTERS tuple
+    validates against schema/save_the_cat/character.json
+    (production-format-sketch-07 PFS7-CH1..CH4 + PFS7-D4)."""
+    schema = _load_save_the_cat_character_schema()
+    validator = Draft202012Validator(schema)
+
+    _, _, _, chars_by_encoding = (
+        _discover_encoding_save_the_cat_records()
+    )
+    assert chars_by_encoding, (
+        "expected at least one encoding with Save-the-Cat "
+        "characters; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    role_label_total = 0
+    new_findings: list = []
+
+    for encoding_name, characters in chars_by_encoding:
+        for character in characters:
+            total += 1
+            dumped = _dump_stccharacter(character)
+            role_label_total += len(dumped["role_labels"])
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "character_id": character.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_save_the_cat_character_corpus_conformance: "
+        f"{total} StcCharacter records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  total role_labels emitted:  {role_label_total}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['character_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StcCharacter conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-07's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_save_the_cat_strand_corpus_conformance():
+    """Every StcStrand in every encoding's STRANDS tuple validates
+    against schema/save_the_cat/strand.json (production-format-
+    sketch-07 PFS7-SR1..SR4 + PFS7-D3)."""
+    schema = _load_save_the_cat_strand_schema()
+    validator = Draft202012Validator(schema)
+
+    _, _, strands_by_encoding, _ = (
+        _discover_encoding_save_the_cat_records()
+    )
+    assert strands_by_encoding, (
+        "expected at least one encoding with Save-the-Cat strands; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    kind_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, strands in strands_by_encoding:
+        for strand in strands:
+            total += 1
+            dumped = _dump_stcstrand(strand)
+            kind_counts[dumped["kind"]] = (
+                kind_counts.get(dumped["kind"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "strand_id": strand.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_save_the_cat_strand_corpus_conformance: "
+        f"{total} StcStrand records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(
+        f"  by kind:                    "
+        f"{dict(sorted(kind_counts.items()))}"
+    )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: {finding['strand_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StcStrand conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-07's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_save_the_cat_beat_corpus_conformance():
+    """Every StcBeat in every encoding's BEATS tuple validates
+    against schema/save_the_cat/beat.json (production-format-
+    sketch-07 PFS7-BT1..BT5 + PFS7-D2)."""
+    schema = _load_save_the_cat_beat_schema()
+    validator = Draft202012Validator(schema)
+
+    _, beats_by_encoding, _, _ = (
+        _discover_encoding_save_the_cat_records()
+    )
+    assert beats_by_encoding, (
+        "expected at least one encoding with Save-the-Cat beats; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    slot_counts: dict = {}
+    total_advancements = 0
+    new_findings: list = []
+
+    for encoding_name, beats in beats_by_encoding:
+        for beat in beats:
+            total += 1
+            dumped = _dump_stcbeat(beat)
+            slot_counts[dumped["slot"]] = (
+                slot_counts.get(dumped["slot"], 0) + 1
+            )
+            total_advancements += len(dumped["advances"])
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "beat_id": beat.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_save_the_cat_beat_corpus_conformance: "
+        f"{total} StcBeat records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(
+        f"  by slot:                    "
+        f"{dict(sorted(slot_counts.items()))}"
+    )
+    print(f"  total StrandAdvancements:   {total_advancements}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: {finding['beat_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StcBeat conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-07's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_save_the_cat_story_corpus_conformance():
+    """Every StcStory in every encoding's STORY singleton validates
+    against schema/save_the_cat/story.json (production-format-
+    sketch-07 PFS7-ST1..ST6 + PFS7-D1). Uses a plain validator —
+    story.json has no outbound cross-file $ref per PFS7-X1."""
+    schema = _load_save_the_cat_story_schema()
+    validator = Draft202012Validator(schema)
+
+    stories_by_encoding, _, _, _ = (
+        _discover_encoding_save_the_cat_records()
+    )
+    assert stories_by_encoding, (
+        "expected at least one encoding with a Save-the-Cat Story; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    genre_counts: dict = {}
+    total_archetype_assignments = 0
+    new_findings: list = []
+
+    for encoding_name, stories in stories_by_encoding:
+        for story in stories:
+            total += 1
+            dumped = _dump_stcstory(story)
+            genre = dumped.get("stc_genre_id", "<none>")
+            genre_counts[genre] = genre_counts.get(genre, 0) + 1
+            total_archetype_assignments += len(
+                dumped["archetype_assignments"]
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "story_id": story.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_save_the_cat_story_corpus_conformance: "
+        f"{total} StcStory records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(
+        f"  by genre:                   "
+        f"{dict(sorted(genre_counts.items()))}"
+    )
+    print(
+        f"  total archetype_assignments: {total_archetype_assignments}"
+    )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: {finding['story_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StcStory conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-07's "
         f"§Conformance dispositions protocol."
     )
     assert total > 0
