@@ -81,31 +81,22 @@
     },
     "KnowledgeEffect": {
       "type": "object",
-      "description": "An update to a specific agent's knowledge state per substrate-effect-shape-sketch-01 ES3–ES4. 'holder' is an Entity-id reference (agent-kind expected); 'via' encodes direction and provenance-kind from a closed 11-value vocabulary (6 diegetic + 5 narrative).",
-      "required": ["kind", "holder", "prop", "via"],
+      "description": "An update to a specific agent's knowledge state per substrate-effect-shape-sketch-01 ES3 as amended by substrate-held-record-sketch-01 SH5 + SH8. The effect carries a holder reference, a full Held record ($ref to schema/held.json — prop/slot/confidence/via/provenance all live on the Held), and an optional remove polarity for factual dislodgement.",
+      "required": ["kind", "holder", "held"],
       "properties": {
         "kind": { "const": "knowledge" },
         "holder": {
           "type": "string",
           "description": "Entity-id of the agent whose knowledge updates (substrate-entity-record-sketch-01 SE3 kind='agent' expected; substrate does not enforce at record level per ES3)."
         },
-        "prop": { "$ref": "https://brazilofmux.github.io/story/schema/prop.json" },
-        "via": {
-          "type": "string",
-          "enum": [
-            "observation",
-            "utterance-heard",
-            "inference",
-            "deception",
-            "forgetting",
-            "realization",
-            "disclosure",
-            "focalization",
-            "omission",
-            "framing",
-            "retroactive-reframing"
-          ],
-          "description": "Update-operator vocabulary from substrate-sketch-04 §Update operators + substrate-effect-shape-sketch-01 ES4. Diegetic vocabulary for character-agent holders; narrative vocabulary for the reader."
+        "held": {
+          "$ref": "https://brazilofmux.github.io/story/schema/held.json",
+          "description": "The authored Held record (SH5). On a write-effect (remove omitted or false) the fold writes this Held into the agent's KnowledgeState at the event's (branch, τ_s). On a dislodge-effect (remove: true) the fold drops the prior Held at (holder, prop); the nested Held here documents what is being dislodged but is not written (SH8)."
+        },
+        "remove": {
+          "type": "boolean",
+          "default": false,
+          "description": "Polarity flag (SH8). Absent or false = write the Held into the state. True = dislodge the prior Held at (holder, prop); the nested held documents the dislodgement but is not written."
         }
       },
       "additionalProperties": false

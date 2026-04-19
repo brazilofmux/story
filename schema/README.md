@@ -45,33 +45,47 @@ directory:
 The discipline inverts the default: **the schema does not
 depend on the Python; the Python depends on the schema.**
 
-## What's here at v1 (production-format-sketch-01)
+## What's here
+
+Substrate schema layer, complete plus Held (five records):
 
 - `description.json` — the `Description` record
-  (descriptions-sketch-01 §The description record).
+  (descriptions-sketch-01 §The description record). Shipped by
+  production-format-sketch-01.
+- `entity.json` — the `Entity` record
+  (substrate-entity-record-sketch-01 SE1–SE6). Shipped by
+  production-format-sketch-02.
+- `prop.json` — the `Prop` literal (substrate-prop-literal-
+  sketch-01 PL1–PL7). Shipped by production-format-sketch-03.
+- `event.json` — the `Event` record plus inline `WorldEffect`
+  and `KnowledgeEffect` $defs (substrate-sketch-05 §Event
+  internals + substrate-effect-shape-sketch-01 ES1–ES7 as
+  amended by substrate-held-record-sketch-01 SH5+SH8).
+  Shipped by production-format-sketch-03; KnowledgeEffect
+  sub-schema amended by production-format-sketch-04.
+- `held.json` — the `Held` record (substrate-held-record-
+  sketch-01 SH1–SH7). Shipped by production-format-sketch-04.
+
+Cross-file references resolve via canonical `$id` URIs using a
+`jsonschema.referencing.Registry` in the conformance test
+layer (pattern established by production-format-sketch-03
+PFS3-E1; extended by sketch-04 P4A1 for held).
 
 ## What's deferred
 
-- `Entity` — substrate-sketch-05 §Entities describes Entity
-  ontologically (Agent is a subtype of Entity) but does not
-  enumerate the Entity record's fields: no `name`, no `kind`
-  value list. The Python prototype carries those fields; a
-  design sketch structurally specifying Entity's record fields
-  is the blocker. See production-format-sketch-01 §PFS2
-  catches real drift for the detailed finding. Candidate
-  sketch name: `substrate-entity-record-sketch-01`.
-- `Event` — blocked on a design sketch pinning down
-  `KnowledgeEffect` / `WorldEffect` shapes (substrate-sketch-05
-  names both but does not structurally define them). Candidate
-  sketch name: `substrate-effect-shape-sketch-01`.
-- `Prop` — under-specified at the design-sketch level
-  (substrate-sketch-05 names Props as "derived, not stored"
-  but descriptions-sketch-01 admits proposition-shaped
-  anchors). Candidate sketch name:
-  `substrate-prop-literal-sketch-01`.
-- Dialect records (Throughline, ArMythos, DSP, StcBeat, etc.),
-  Lowering, VerificationReview, ArObservation, and other
-  cross-boundary records. Substrate schemas first.
+- Dialect records (Throughline, ArMythos, ArPhase, StcBeat,
+  DSP, Signpost, ThematicPicks, etc.). Each dialect needs its
+  own production-format sketch; Aristotelian is the smallest
+  candidate (~7 records).
+- Cross-boundary records (Lowering, VerificationReview,
+  StructuralAdvisory, VerifierCommentary, ArAnnotationReview,
+  ArObservationCommentary, DialectReading). Multiple production
+  sketches.
+- Branch record (sketch-04 §Branch representation — already
+  design-specified at label/kind/parent/metadata; a slim
+  production sketch suffices).
+- KnowledgeState record (per-agent-per-τ_s state — a
+  collection of Helds plus agent_id). No current consumer.
 
 ## Conformance
 

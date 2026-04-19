@@ -89,20 +89,25 @@ def _load_event_schema() -> dict:
         return json.load(f)
 
 
+def _load_held_schema() -> dict:
+    schema_path = _repo_root() / "schema" / "held.json"
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
-    schema/event.json $refs schema/prop.json via the canonical URI;
-    schema/description.json (post production-format-sketch-03) does
-    the same for its PropositionAnchor variant.
+    schema/event.json $refs schema/prop.json + schema/held.json;
+    schema/held.json $refs schema/prop.json; schema/description.json
+    $refs schema/prop.json for its PropositionAnchor variant.
 
-    Pattern introduced by production-format-sketch-03 P3A4; extends
-    naturally to future cross-file refs (dialect records → substrate,
-    Lowerings → dialect records, etc.)."""
+    Pattern introduced by production-format-sketch-03 P3A4; extended
+    by production-format-sketch-04 P4A1 for held.json."""
     registry = Registry()
     for schema in (
-        _load_prop_schema(), _load_event_schema(),
-        _load_description_schema(),
+        _load_prop_schema(), _load_held_schema(),
+        _load_event_schema(), _load_description_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -277,34 +282,53 @@ def _dump_world_effect(effect) -> dict:
     }
 
 
+def _dump_held(held) -> dict:
+    """Map a Python Held to the schema's Held shape per
+    substrate-held-record-sketch-01 SH2 + production-format-
+    sketch-04 PFS4-D2. Field-for-field isomorphic to the Python
+    dataclass: prop gets recursively dumped; slot/confidence are
+    str-subclass Enums whose .value yields the schema's enum string;
+    via is already a plain string; provenance is a tuple converted
+    to a JSON array."""
+    slot_val = (
+        held.slot.value if hasattr(held.slot, "value") else held.slot
+    )
+    confidence_val = (
+        held.confidence.value if hasattr(held.confidence, "value")
+        else held.confidence
+    )
+    return {
+        "prop": _dump_prop(held.prop),
+        "slot": slot_val,
+        "confidence": confidence_val,
+        "via": held.via,
+        "provenance": list(held.provenance),
+    }
+
+
 def _dump_knowledge_effect(effect) -> dict:
     """Map a Python KnowledgeEffect to the schema's KnowledgeEffect
-    shape. Two shape divergences per production-format-sketch-03
-    §Conformance dispositions (populated during implementation):
+    shape per production-format-sketch-04 PFS4-E-amend-1 + PFS4-D1.
 
-    1. Python's KnowledgeEffect wraps a full Held(prop, slot,
-       confidence, via, provenance) record as `held`. The schema
-       derived from substrate-effect-shape-sketch-01 ES3 has only
-       (holder, prop, via) — slot/confidence/provenance are
-       fold-output per ES3's scope-out. The dump extracts prop and
-       via from held; discards slot, confidence, and provenance.
-       This is "Python over-specified" per PFS2 — the Held fields
-       are not on the effect shape the sketch committed to.
+    The schema's post-sketch-04 shape is (kind, holder, held,
+    remove?). The Python's (agent_id, held, remove) is
+    field-for-field isomorphic under one rename (agent_id → holder)
+    and one omission-when-default (remove omitted when False,
+    relying on the schema's default: false).
 
-    2. Python carries a `remove: bool` retraction polarity on
-       KnowledgeEffect. The sketch does not admit (ES3 "No asserts
-       field"; identity-and-realization-sketch-01 explicitly argues
-       against realization-removes-propositions). remove=True
-       cases are dropped by the dump; a companion audit test
-       (test_knowledge_effect_remove_audit) counts and reports them
-       as a known disposition.
-    """
-    return {
+    Sketch-03's two dispositions both retire under this amendment:
+    Disposition 1 (shape translation) becomes a trivial rename;
+    Disposition 2 (remove polarity) closes — remove is now a
+    first-class schema field per substrate-held-record-sketch-01
+    SH8."""
+    out = {
         "kind": "knowledge",
         "holder": effect.agent_id,
-        "prop": _dump_prop(effect.held.prop),
-        "via": effect.held.via,
+        "held": _dump_held(effect.held),
     }
+    if effect.remove:
+        out["remove"] = True
+    return out
 
 
 def _dump_effect(effect) -> dict:
@@ -500,6 +524,13 @@ def test_event_schema_metaschema_valid():
     Draft202012Validator.check_schema(schema)
 
 
+def test_held_schema_metaschema_valid():
+    """schema/held.json is a valid JSON Schema 2020-12 document
+    (production-format-sketch-04 P4A1)."""
+    schema = _load_held_schema()
+    Draft202012Validator.check_schema(schema)
+
+
 def test_cross_file_registry_resolves_prop_ref():
     """The referencing Registry resolves event.json's Prop $ref to
     schema/prop.json. Guards against build-environment breakage
@@ -579,7 +610,9 @@ def test_prop_schema_has_expected_shape():
 def test_event_schema_has_expected_shape():
     """Spot-check of Event schema structure per
     substrate-sketch-05 §Event internals +
-    production-format-sketch-03 PFS3-E1 through E7."""
+    production-format-sketch-03 PFS3-E1 through E7 +
+    production-format-sketch-04 PFS4-E-amend-1 through E-amend-4
+    (KnowledgeEffect shape revision)."""
     schema = _load_event_schema()
     assert schema["title"] == "Event"
     assert set(schema["required"]) == {
@@ -600,20 +633,137 @@ def test_event_schema_has_expected_shape():
     assert defs["WorldEffect"]["properties"]["kind"] == {
         "const": "world"
     }
-    assert defs["KnowledgeEffect"]["properties"]["kind"] == {
-        "const": "knowledge"
+    # KnowledgeEffect post-sketch-04 shape: (kind, holder, held,
+    # remove?). prop + via moved into the nested Held.
+    ke_def = defs["KnowledgeEffect"]
+    assert ke_def["properties"]["kind"] == {"const": "knowledge"}
+    assert set(ke_def["required"]) == {"kind", "holder", "held"}
+    assert set(ke_def["properties"].keys()) == {
+        "kind", "holder", "held", "remove",
     }
-    # KnowledgeEffect via enum matches substrate-effect-shape-sketch-01
-    # ES4 (11 values: 6 diegetic + 5 narrative)
-    via_enum = set(
-        defs["KnowledgeEffect"]["properties"]["via"]["enum"]
+    assert ke_def["properties"]["remove"]["type"] == "boolean"
+    assert ke_def["properties"]["remove"]["default"] is False
+    # held field $refs schema/held.json (PFS4-E-amend-1)
+    assert ke_def["properties"]["held"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/held.json"
     )
-    assert via_enum == {
+
+
+def test_held_schema_has_expected_shape():
+    """Spot-check of Held schema structure per
+    substrate-held-record-sketch-01 SH1-SH7 +
+    production-format-sketch-04 PFS4-H1 through H7."""
+    schema = _load_held_schema()
+    assert schema["title"] == "Held"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/held.json"
+    )
+    assert set(schema["required"]) == {
+        "prop", "slot", "confidence", "via", "provenance",
+    }
+    assert schema["additionalProperties"] is False
+    # prop $refs prop.json
+    assert schema["properties"]["prop"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/prop.json"
+    )
+    # Slot closed enum — SH3
+    assert set(schema["properties"]["slot"]["enum"]) == {
+        "known", "believed", "suspected", "gap",
+    }
+    # Confidence closed enum — SH4
+    assert set(schema["properties"]["confidence"]["enum"]) == {
+        "certain", "believed", "suspected", "open",
+    }
+    # Via closed enum — 11 values (6 diegetic + 5 narrative) per
+    # substrate-effect-shape-sketch-01 ES4, re-homed to Held by
+    # the ES3-amendment
+    assert set(schema["properties"]["via"]["enum"]) == {
         "observation", "utterance-heard", "inference",
         "deception", "forgetting", "realization",
         "disclosure", "focalization", "omission",
         "framing", "retroactive-reframing",
     }
+    # provenance is array of strings, admits empty
+    prov = schema["properties"]["provenance"]
+    assert prov["type"] == "array"
+    assert prov["items"] == {"type": "string"}
+
+
+def test_held_corpus_conformance():
+    """Every Held nested inside a corpus KnowledgeEffect validates
+    against schema/held.json. Direct per-Held validation, parallel
+    to the per-Entity conformance test but for the fold-output /
+    effect-input record shape (production-format-sketch-04 P4A3)."""
+    held_schema = _load_held_schema()
+    registry = _build_schema_registry()
+    validator = Draft202012Validator(held_schema, registry=registry)
+
+    from story_engine.core.substrate import KnowledgeEffect
+
+    seen_event_ids = set()
+    total = 0
+    clean_passes = 0
+    new_findings: list = []
+
+    encodings = _discover_encoding_events()
+    assert encodings, (
+        "expected at least one encoding with events; found none"
+    )
+
+    for encoding_name, events in encodings:
+        for event in events:
+            # Re-export inflation dedup (match the Entity / Event
+            # pattern — the same event appears in multiple modules
+            # via FABULA re-exports; count each unique event once).
+            if event.id in seen_event_ids:
+                continue
+            seen_event_ids.add(event.id)
+            for eff in event.effects:
+                if not isinstance(eff, KnowledgeEffect):
+                    continue
+                total += 1
+                dumped = _dump_held(eff.held)
+                errors = list(validator.iter_errors(dumped))
+                if not errors:
+                    clean_passes += 1
+                    continue
+                new_findings.append({
+                    "encoding": encoding_name,
+                    "event_id": event.id,
+                    "prop": eff.held.prop,
+                    "errors": [
+                        {
+                            "path": list(e.absolute_path),
+                            "validator": e.validator,
+                            "message": e.message,
+                        }
+                        for e in errors
+                    ],
+                })
+
+    print()
+    print(
+        f"test_held_corpus_conformance: {total} Held records "
+        f"(unique KnowledgeEffects deduped by event id)"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings[:10]:
+            print(f"    {finding['encoding']}: {finding['event_id']}")
+            print(f"      prop={finding['prop']}")
+            for err in finding["errors"][:3]:
+                print(f"      - path={err['path']} "
+                      f"validator={err['validator']}: {err['message']}")
+        if len(new_findings) > 10:
+            print(f"    ... and {len(new_findings) - 10} more")
+
+    assert not new_findings, (
+        f"{len(new_findings)} Held conformance finding(s); see "
+        f"output. Resolve per production-format-sketch-04's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
 
 
 def test_description_schema_references_prop_by_url():
@@ -817,22 +967,34 @@ def test_event_corpus_conformance():
 
 
 def test_knowledge_effect_remove_audit():
-    """PFS2 disposition audit: Python's KnowledgeEffect carries
-    a `remove: bool` retraction polarity that the schema-derived
-    shape (substrate-effect-shape-sketch-01 ES3) does not admit.
-    The design sketch + identity-and-realization-sketch-01 both
-    argue against the 'realization removes old propositions'
-    pattern this field enables.
+    """Operational audit: count KnowledgeEffects with remove=True
+    across the corpus.
 
-    This test *informs*, not *blocks*. The dump-layer silently
-    drops the remove field (schema doesn't admit it); this audit
-    surfaces the count so a cleanup arc can be scoped.
+    Per substrate-held-record-sketch-01 SH8 + production-format-
+    sketch-04 PFS4-E-amend-2, the `remove` polarity is a
+    legitimate first-class KnowledgeEffect field supporting
+    factual dislodgement (the messenger's reveal dislodging
+    Oedipus's BELIEVED `child_of(oedipus, polybus)`; Jocasta's
+    realization dislodging her BELIEVED `dead(the-exposed-baby)`;
+    the anagnorisis closing Oedipus's GAP for his parentage).
+    identity-and-realization-sketch-01 §Sternberg-stays-literal
+    already endorsed the pattern.
 
-    Baseline at production-format-sketch-03 commit (2026-04-19):
-    7 KnowledgeEffects with remove=True. A future encoding-side
-    refactor per identity-and-realization-sketch-01 §Prior
-    encoding's workaround, and its retirement drives the count
-    to 0."""
+    The count at 2026-04-19 is 7 (Oedipus 3 + Macbeth 2 + Ackroyd
+    2 equivalent by deduped event-id). This is the **intended
+    baseline, not a drift-to-zero cleanup target**. The audit
+    remains for operational visibility — a significant jump from
+    7 (to 40+) is worth noticing as either:
+
+    - a new encoding author adopting the dislodgement idiom
+      appropriately (likely fine; the pattern generalizes), or
+    - a regression toward realization-removes-propositions
+      (which identity-and-realization-sketch-01 explicitly
+      retired in favor of identity assertions + query-time
+      substitution).
+
+    State-of-play-06 framed this test as "drives the count to 0".
+    That framing was incorrect; state-of-play-07 rewrites it."""
     from story_engine.core.substrate import KnowledgeEffect
     seen_event_ids = set()
     remove_true_count = 0

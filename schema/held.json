@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/held.json",
+  "title": "Held",
+  "description": "An agent's per-proposition held record per design/substrate-held-record-sketch-01 SH1–SH7. Five required fields; the K1 fold's output cell AND (under the ES3-amendment) the authored shape nested inside a KnowledgeEffect.",
+  "type": "object",
+  "required": ["prop", "slot", "confidence", "via", "provenance"],
+  "properties": {
+    "prop": {
+      "$ref": "https://brazilofmux.github.io/story/schema/prop.json",
+      "description": "The proposition this Held record asserts the agent holds (SH2)."
+    },
+    "slot": {
+      "type": "string",
+      "enum": ["known", "believed", "suspected", "gap"],
+      "description": "Epistemic classification (SH3). BLANK is collapsed to GAP per Python's existing convention. Identity substitution (identity-and-realization-sketch-01 I7) fires only on slot=known for identity/2 propositions."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["certain", "believed", "suspected", "open"],
+      "description": "Ordinal confidence level (SH4). Orthogonal-in-principle to slot; typically co-varies. OQ1 banks a potential future collapse to a single epistemic-strength field."
+    },
+    "via": {
+      "type": "string",
+      "enum": [
+        "observation",
+        "utterance-heard",
+        "inference",
+        "deception",
+        "forgetting",
+        "realization",
+        "disclosure",
+        "focalization",
+        "omission",
+        "framing",
+        "retroactive-reframing"
+      ],
+      "description": "The via-operator that most recently placed this Held into the agent's set (SH2). 6 diegetic values for character-agent holders; 5 narrative values for reader holders. Closed vocabulary from substrate-sketch-04 §Update operators + substrate-effect-shape-sketch-01 ES4."
+    },
+    "provenance": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Free-form authoring trail (SH6). Not substrate-machinery-visible; display-layer content only. Empty array is admissible."
+    }
+  },
+  "additionalProperties": false
+}
