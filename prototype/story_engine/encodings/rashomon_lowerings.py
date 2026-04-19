@@ -516,7 +516,15 @@ L_bandit_mc_throughline = Lowering(
               "branch events — the wife's requested killing that "
               "motivates the duel, the unbinding that makes a fair "
               "fight possible, and the twenty-three-stroke duel "
-              "itself. Arc runs τ_s=7..9."),
+              "itself. Arc runs τ_s=7..9. Branch-scoped per "
+              "throughline-lowering-scope-sketch-01 TL2: the "
+              "subject-named seduction (canonical-floor events "
+              "E_lure, E_bind, E_bring_wife, E_intercourse at "
+              "τ_s=2..5) is shared substrate; Tajōmaru's reading of "
+              "those events as a noble seduction lives in "
+              "D_intercourse_tajomaru_texture (Description on "
+              "E_intercourse), not in this Lowering's "
+              "lower_records."),
         attention=ATTENTION_STRUCTURAL,
     ),
     τ_a=490,
@@ -536,7 +544,14 @@ L_wife_mc_throughline = Lowering(
     annotation=Annotation(
         text=("T_wife_mc (the wife's self-account of violation and a "
               "half-conscious killing) realizes across the two "
-              "B_WIFE branch events. Arc runs τ_s=7..10."),
+              "B_WIFE branch events. Arc runs τ_s=7..10. "
+              "Branch-scoped per throughline-lowering-scope-sketch-"
+              "01 TL2: the subject-named violation is realized by "
+              "canonical-floor E_intercourse at τ_s=5; the wife's "
+              "reading of that event as violation lives in "
+              "D_intercourse_wife_texture (Description on "
+              "E_intercourse), not in this Lowering's "
+              "lower_records."),
         attention=ATTENTION_STRUCTURAL,
     ),
     τ_a=491,
