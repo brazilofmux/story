@@ -478,47 +478,59 @@ empty list. Results:
 
 - **29 of 33 records validate clean** against the v1 schema.
 - **2 records fail on `kind="authoring-note"`** — not in
-  descriptions-sketch-01 §Kinds enumeration.
+  descriptions-sketch-01 §Kinds enumeration. *Retired
+  2026-04-19 — see Disposition 1 below and descriptions-
+  sketch-01 §Amendments Addition 1.*
 - **2 records fail on `status="superseded"`** — not in
   descriptions-sketch-01 §Optional fields enumeration.
+  *Retired 2026-04-19 — see Disposition 2 below and
+  descriptions-sketch-01 §Amendments Addition 2.*
 
 No other discrepancies. Anchor dump transformation
 (tagged-union mapping) is mechanical and covers every anchor
 in the corpus (only `event` and `description` kinds exercised).
 
+Post-retirement status (2026-04-19): Description corpus is
+clean on both axes; all 33+ records validate against the
+amended schema.
+
 ### Disposition 1: `kind = "authoring-note"`
 
-**Status:** known-disposition, sketch-incompleteness.
-**Resolution path:** amend `design/descriptions-sketch-01.md`
-§Kinds to add `"authoring-note"` with (per that sketch's
-§Extension rule) a one-line description, typical attention
-level(s), and an example snippet. Then add `"authoring-note"`
-to `schema/description.json`'s `kind` enum.
+**Status:** retired 2026-04-19 under descriptions-sketch-01
+§Amendments Addition 1. `"authoring-note"` is now enumerated in
+§Kinds with typical attention, distinguishing semantics, and an
+example (rocky.py `D_timelock_not_natively_detectable`);
+`schema/description.json`'s `kind` enum includes it; the
+conformance test's `DISPOSITION_KIND_AUTHORING_NOTE` constant
+and classification branch are removed.
 
-**Why not silent schema-widening:** if the schema enum were
-widened to include `"authoring-note"` without amending
-descriptions-sketch-01, the kind would exist in the schema
-with no design-sketch justification — exactly the Python-drift
-PFS2 inverts. The discipline holds: spec grows through design
-sketches first.
+**Original framing (preserved for audit):** sketch-incompleteness.
+The kind was used in `rocky.py` encodings (two descriptions)
+but not in descriptions-sketch-01 §Kinds. Resolution required
+a design-sketch amendment before schema widening, per PFS2.
+The 2026-04-19 amendment supplied that justification.
 
 ### Disposition 2: `status = "superseded"`
 
-**Status:** known-disposition, sketch-incompleteness.
-**Resolution path:** amend `design/descriptions-sketch-01.md`
-§Optional fields to name `"superseded"` as a third status
-value with semantics (the Python docstring names it as "old
-version of a description that has been edited-over"). Then add
-`"superseded"` to `schema/description.json`'s `status` enum.
+**Status:** retired 2026-04-19 under descriptions-sketch-01
+§Amendments Addition 2. `"superseded"` is now enumerated in
+§Optional fields as a third status value, with the edit-chain
+mechanism it marks named in §Record-level invariants;
+`schema/description.json`'s `status` enum includes it; the
+conformance test's `DISPOSITION_STATUS_SUPERSEDED` constant
+and classification branch are removed.
 
-**Resolution path variant:** alternatively, the Python may be
-over-specified — if "superseded" state is really a
-descriptions-sketch-01 D3 concern (description-on-description
-editing) rather than a record-level status, the Python could
-drop the value and model supersession as an explicit
-edit-replacement relation between two Descriptions instead. The
-design-sketch amendment should decide between the two shapes;
-the schema follows.
+**Original framing (preserved for audit):** sketch-incompleteness.
+The status was set by the substrate's edit-chain machinery
+(`substrate.py apply_description_edit`) and shipped directly
+in the macbeth corpus, but was not enumerated in descriptions-
+sketch-01 §Optional fields. The amendment rejected the
+alternative "model supersession as an explicit edit-replacement
+relation" variant — the existing `status` + `metadata.{
+supersedes, superseded_by}` mechanism was already load-bearing
+and the sketch's own append-on-edit commitment required a
+marker; the amendment made the existing shape canonical rather
+than redesigning it.
 
 ### Not a disposition: anchor shape
 
@@ -533,13 +545,15 @@ kinds. Both shapes are specification-consistent.
 
 ### Recognition protocol
 
-The conformance test (`prototype/tests/
+Post-retirement (2026-04-19), the conformance test
+(`prototype/tests/
 test_production_format_sketch_01_conformance.py`) recognizes
-exactly Disposition 1 and Disposition 2 as
-"known-dispositioned". Any other schema-validation failure
-fails the test loud. Adding a new disposition requires
-amending this section first; the test is not the right place
-to silently accept new drift.
+no Description dispositions — Dispositions 1 and 2 both
+retired under the descriptions-sketch-01 amendment, and the
+test has been simplified accordingly (no `_classify_failure`
+helper; every schema-validation failure is a new finding).
+Adding a new disposition requires amending this section first;
+the test is not the right place to silently accept new drift.
 
 ## Not in scope
 

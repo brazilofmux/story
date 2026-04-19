@@ -76,14 +76,15 @@
     },
     "kind": {
       "type": "string",
-      "description": "Starting vocabulary from descriptions-sketch-01 §Kinds; extensible per story with documentation (§Extension rule).",
+      "description": "Starting vocabulary from descriptions-sketch-01 §Kinds; extensible per story with documentation (§Extension rule). `authoring-note` added 2026-04-19 by §Amendments Addition 1.",
       "enum": [
         "texture",
         "motivation",
         "reader-frame",
         "authorial-uncertainty",
         "trust-flag",
-        "provenance"
+        "provenance",
+        "authoring-note"
       ]
     },
     "attention": {
@@ -125,8 +126,8 @@
     },
     "status": {
       "type": "string",
-      "enum": ["committed", "provisional"],
-      "description": "Authorial commitment axis; same as events."
+      "enum": ["committed", "provisional", "superseded"],
+      "description": "Authorial commitment axis. `committed` and `provisional` share the axis with events; `superseded` is the edit-chain marker — set on the source record when a successor is authored, with `metadata.superseded_by` pointing at the successor (whose `metadata.supersedes` points back). See descriptions-sketch-01 §Record-level invariants and §Amendments Addition 2."
     },
     "metadata": {
       "type": "object",

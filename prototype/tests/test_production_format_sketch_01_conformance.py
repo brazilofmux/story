@@ -115,35 +115,19 @@ def _build_schema_registry() -> Registry:
 
 
 # ============================================================================
-# Known dispositions — discrepancies discovered during PFA4 implementation
+# Known dispositions — discrepancies discovered during implementation
 # ============================================================================
 #
-# Each disposition names a known class of conformance failure that is
-# recorded in design/production-format-sketch-01.md §Conformance
-# dispositions. Records whose failure matches a known pattern are
-# counted as "dispositioned" (test tolerates); records whose failure
-# does NOT match cause the test to fail loudly.
+# No active Description dispositions as of 2026-04-19. Sketch-01's
+# two original Description dispositions (`authoring-note` kind,
+# `superseded` status) both retired under the descriptions-sketch-01
+# §Amendments of 2026-04-19, which added each value to its sketch
+# enumeration with structural justification; `schema/description.json`
+# was updated to match. The Description corpus validates clean.
 #
 # Adding a new disposition requires amending production-format-
-# sketch-01 first; the test is not the right place to silently accept
-# new drift.
-
-
-# Sketch-incompleteness: `authoring-note` is used in encodings
-# (rashomon.py, macbeth.py) but not enumerated in
-# descriptions-sketch-01 §Kinds. Resolution path: amend
-# descriptions-sketch-01 to add `authoring-note` to the kind
-# vocabulary with a one-line description + typical attention +
-# example (§Extension rule).
-DISPOSITION_KIND_AUTHORING_NOTE = "authoring-note"
-
-# Sketch-incompleteness: `superseded` is used on Description.status
-# (representing an edited-over description) but not enumerated in
-# descriptions-sketch-01 §Optional fields (which names only
-# committed/provisional). Resolution path: amend descriptions-
-# sketch-01 to add `superseded` as a third status value with
-# semantics.
-DISPOSITION_STATUS_SUPERSEDED = "superseded"
+# sketch-01 §Conformance dispositions first; the test is not the
+# right place to silently accept new drift.
 
 
 # ============================================================================
@@ -459,42 +443,6 @@ def _dump_description(description) -> dict:
 
 
 # ============================================================================
-# Failure classification
-# ============================================================================
-
-
-def _classify_failure(description, error: jsonschema.ValidationError) -> str:
-    """Return a disposition name if this failure matches a known
-    disposition, else 'new-finding'."""
-    # Kind-enum failure: description.kind not in schema enum
-    if (
-        error.validator == "enum"
-        and list(error.absolute_path) == ["kind"]
-    ):
-        return (
-            DISPOSITION_KIND_AUTHORING_NOTE
-            if description.kind == "authoring-note"
-            else "new-finding"
-        )
-    # Status-enum failure
-    if (
-        error.validator == "enum"
-        and list(error.absolute_path) == ["status"]
-    ):
-        status_val = (
-            description.status.value
-            if hasattr(description.status, "value")
-            else description.status
-        )
-        return (
-            DISPOSITION_STATUS_SUPERSEDED
-            if status_val == "superseded"
-            else "new-finding"
-        )
-    return "new-finding"
-
-
-# ============================================================================
 # Tests
 # ============================================================================
 
@@ -578,15 +526,20 @@ def test_description_schema_has_expected_shape():
         "DescriptionAnchor", "EffectLocatorAnchor", "EventAnchor",
         "PropositionAnchor", "SjuzhetEntryAnchor",
     ]
-    # Kind enum matches descriptions-sketch-01 §Kinds
+    # Kind enum matches descriptions-sketch-01 §Kinds (the six
+    # starting kinds plus `authoring-note` added 2026-04-19 under
+    # §Amendments Addition 1).
     kind_enum = set(schema["properties"]["kind"]["enum"])
     assert kind_enum == {
         "texture", "motivation", "reader-frame",
         "authorial-uncertainty", "trust-flag", "provenance",
+        "authoring-note",
     }
     # Status enum matches descriptions-sketch-01 §Optional fields
+    # (original pair plus `superseded` added 2026-04-19 under
+    # §Amendments Addition 2 — the edit-chain marker).
     status_enum = set(schema["properties"]["status"]["enum"])
-    assert status_enum == {"committed", "provisional"}
+    assert status_enum == {"committed", "provisional", "superseded"}
 
 
 def test_prop_schema_has_expected_shape():
@@ -807,10 +760,12 @@ def test_entity_schema_has_expected_shape():
 
 
 def test_corpus_conformance():
-    """Every Description across every encoding either validates
-    against the schema or matches a known disposition. New
-    findings fail loudly with the specific record id + error
-    location."""
+    """Every Description across every encoding validates against
+    the schema. Dispositions 1 and 2 (authoring-note kind,
+    superseded status) retired 2026-04-19 under descriptions-
+    sketch-01 §Amendments; the corpus is clean on both axes.
+    Any schema-validation failure is a new finding and fails
+    the test loudly with the record id + error location."""
     schema = _load_description_schema()
     validator = Draft202012Validator(schema)
 
@@ -821,7 +776,6 @@ def test_corpus_conformance():
 
     total = 0
     clean_passes = 0
-    dispositioned_by_kind = {}  # disposition_name → count
     new_findings: list = []
 
     for encoding_name, descriptions in encodings:
@@ -835,38 +789,22 @@ def test_corpus_conformance():
             if not errors:
                 clean_passes += 1
                 continue
-            # Classify each error; if every error is dispositioned,
-            # count as dispositioned. Mixed = treat as new-finding
-            # for caution.
-            error_dispositions = [
-                _classify_failure(description, e) for e in errors
-            ]
-            if all(d != "new-finding" for d in error_dispositions):
-                for d in error_dispositions:
-                    dispositioned_by_kind[d] = (
-                        dispositioned_by_kind.get(d, 0) + 1
-                    )
-            else:
-                new_findings.append({
-                    "encoding": encoding_name,
-                    "description_id": description.id,
-                    "errors": [
-                        {
-                            "path": list(e.absolute_path),
-                            "validator": e.validator,
-                            "message": e.message,
-                        }
-                        for e in errors
-                    ],
-                })
+            new_findings.append({
+                "encoding": encoding_name,
+                "description_id": description.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
 
     # Report
     print(f"  total descriptions validated: {total}")
     print(f"  clean passes:               {clean_passes}")
-    if dispositioned_by_kind:
-        print(f"  dispositioned failures:")
-        for name, count in sorted(dispositioned_by_kind.items()):
-            print(f"    - {name}: {count}")
     if new_findings:
         print(f"  NEW findings (fail):        {len(new_findings)}")
         for finding in new_findings:
@@ -876,8 +814,9 @@ def test_corpus_conformance():
                       f"validator={err['validator']}: {err['message']}")
 
     assert not new_findings, (
-        f"{len(new_findings)} new conformance finding(s) not yet "
-        f"dispositioned in production-format-sketch-01; see output"
+        f"{len(new_findings)} new Description conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-01's "
+        f"§Conformance dispositions protocol."
     )
     # Sanity: expect >0 total — silent-skip everything would mean
     # encoding discovery broke.
@@ -1118,24 +1057,6 @@ def test_review_entry_dump_omits_none_comment():
     dumped = _dump_review_entry(entry)
     assert "comment" not in dumped
     assert dumped["verdict"] == "approved"
-
-
-def test_dispositions_resolution_paths():
-    """Meta-test: each Description disposition this test
-    recognizes must be documented in
-    production-format-sketch-01.md."""
-    sketch_path = (
-        _repo_root() / "design" / "production-format-sketch-01.md"
-    )
-    content = sketch_path.read_text()
-    assert "authoring-note" in content, (
-        "disposition 'authoring-note' not documented in "
-        "production-format-sketch-01.md"
-    )
-    assert "superseded" in content, (
-        "disposition 'superseded' not documented in "
-        "production-format-sketch-01.md"
-    )
 
 
 def test_entity_sketches_exist():
