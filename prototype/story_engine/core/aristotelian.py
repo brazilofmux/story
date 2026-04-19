@@ -544,3 +544,182 @@ def group_by_code(observations: list) -> dict:
     for o in observations:
         out.setdefault(o.code, []).append(o)
     return out
+
+
+# ============================================================================
+# Probe-surface records (aristotelian-probe-sketch-01 APA1)
+# ============================================================================
+#
+# Three additive record types that let a reader-model probe land
+# output on this dialect. The existing dialect records (ArMythos,
+# ArPhase, ArCharacter, ArObservation, verify) are unmodified.
+#
+# ArAnnotationReview parallels lowering.AnnotationReview but targets
+# a dialect record's prose field (Aristotelian has no Lowerings per
+# A9). ArObservationCommentary parallels verification.VerifierCommentary
+# but targets an ArObservation (Aristotelian's self-verifier emits
+# ArObservations, not VerificationReviews). DialectReading has no
+# analog in the existing stack — it captures the probe's distinctive
+# methodological signal: did the reader engage the dialect on its
+# own terms or drift into other dialects' vocabularies?
+
+
+# Verdict vocabulary mirrors lowering.VERDICT_*; duplicated here to
+# keep aristotelian.py import-free of lowering.py (parallels
+# verification.py's duplicate VERDICT_* constants).
+
+VERDICT_APPROVED = "approved"
+VERDICT_NEEDS_WORK = "needs-work"
+VERDICT_REJECTED = "rejected"
+VERDICT_NOTED = "noted"
+
+VALID_REVIEW_VERDICTS: frozenset = frozenset({
+    VERDICT_APPROVED, VERDICT_NEEDS_WORK,
+    VERDICT_REJECTED, VERDICT_NOTED,
+})
+
+# Assessment vocabulary mirrors verification.ASSESSMENT_*.
+
+ASSESSMENT_ENDORSES = "endorses"
+ASSESSMENT_QUALIFIES = "qualifies"
+ASSESSMENT_DISSENTS = "dissents"
+ASSESSMENT_NOTED = "noted"
+
+VALID_COMMENTARY_ASSESSMENTS: frozenset = frozenset({
+    ASSESSMENT_ENDORSES, ASSESSMENT_QUALIFIES,
+    ASSESSMENT_DISSENTS, ASSESSMENT_NOTED,
+})
+
+# Target-kind vocabulary for ArAnnotationReview. Each Aristotelian
+# record kind with a reviewable prose field appears here.
+
+TARGET_AR_MYTHOS = "ArMythos"
+TARGET_AR_PHASE = "ArPhase"
+TARGET_AR_CHARACTER = "ArCharacter"
+
+VALID_REVIEW_TARGET_KINDS: frozenset = frozenset({
+    TARGET_AR_MYTHOS, TARGET_AR_PHASE, TARGET_AR_CHARACTER,
+})
+
+# Field-name vocabulary for ArAnnotationReview. Per APS2 each
+# target_kind has exactly one reviewable prose field; the table
+# is fixed and translation-time validators use FIELDS_BY_TARGET_KIND
+# to reject mis-paired reviews.
+
+FIELD_ACTION_SUMMARY = "action_summary"    # ArMythos only
+FIELD_PHASE_ANNOTATION = "annotation"      # ArPhase only
+FIELD_HAMARTIA_TEXT = "hamartia_text"      # ArCharacter only
+
+VALID_REVIEW_FIELDS: frozenset = frozenset({
+    FIELD_ACTION_SUMMARY, FIELD_PHASE_ANNOTATION, FIELD_HAMARTIA_TEXT,
+})
+
+FIELDS_BY_TARGET_KIND: dict = {
+    TARGET_AR_MYTHOS: frozenset({FIELD_ACTION_SUMMARY}),
+    TARGET_AR_PHASE: frozenset({FIELD_PHASE_ANNOTATION}),
+    TARGET_AR_CHARACTER: frozenset({FIELD_HAMARTIA_TEXT}),
+}
+
+# DialectReading's read_on_terms vocabulary — the reader's self-
+# report on whether its review used Aristotelian vocabulary or
+# drifted into other dialects' vocabularies.
+
+READ_ON_TERMS_YES = "yes"
+READ_ON_TERMS_PARTIAL = "partial"
+READ_ON_TERMS_NO = "no"
+
+VALID_READ_ON_TERMS: frozenset = frozenset({
+    READ_ON_TERMS_YES, READ_ON_TERMS_PARTIAL, READ_ON_TERMS_NO,
+})
+
+
+@dataclass(frozen=True)
+class ArAnnotationReview:
+    """One reviewer's verdict on one prose field of one Aristotelian
+    record. Parallels lowering.AnnotationReview in shape and
+    staleness semantics (reader-model-sketch-01 R6: anchor_τ_a
+    snapshots the reviewed record's last-authored τ_a).
+
+    `target_kind` + `target_id` + `field` identifies the prose
+    under review — e.g., `("ArMythos", "ar_oedipus",
+    "action_summary")`. `verdict` ∈ VERDICT_*.
+
+    Aristotelian records don't carry record-level τ_a, so the
+    caller supplies the encoding-level τ_a as `anchor_τ_a`.
+
+    `id` is optional — the target triple is unique within a
+    probe run; a consumer that needs external cross-reference
+    can assign one.
+    """
+    reviewer_id: str
+    reviewed_at_τ_a: int
+    target_kind: str
+    target_id: str
+    field: str
+    verdict: str
+    comment: Optional[str] = None
+    anchor_τ_a: int = 0
+    id: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ArObservationCommentary:
+    """A reviewer's read on an ArObservation. Parallels
+    verification.VerifierCommentary — the target is this dialect's
+    observation shape rather than a VerificationReview.
+
+    `assessment` ∈ ASSESSMENT_*:
+      - endorses: finding is well-grounded, nothing to add.
+      - qualifies: finding stands with a clarification.
+      - dissents: commenter disagrees; must name what the check
+        missed or got wrong.
+      - noted: read but no position taken.
+
+    `target_observation` holds the resolved ArObservation (by
+    value — ArObservation is frozen and has no id).
+    `suggested_signature` is optional free-form prose naming a
+    concrete signature the commenter thinks the A7 check might
+    add; inspiration for the maintainer, not executable code.
+    """
+    commenter_id: str
+    commented_at_τ_a: int
+    assessment: str
+    target_observation: ArObservation
+    comment: Optional[str] = None
+    suggested_signature: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class DialectReading:
+    """A reader-model's read on the Aristotelian surface as a whole.
+    One per probe invocation; captures the methodological signal
+    aristotelian-probe-sketch-01 exists to produce (APS6 P4).
+
+    `read_on_terms` is the reader's self-report. `rationale` is
+    bounded free-form (prompt caps length; record does not
+    enforce).
+
+    `drift_flagged` names specific out-of-dialect phrases or record
+    types the reader noticed itself using or wanting to use (e.g.,
+    "DSP_limit", "pressure-shape", "inciting beat"). Empty tuple =
+    clean in-dialect read.
+
+    `scope_limits_observed` names dialect-scope limits perceived
+    (for Rashomon: meta-anagnorisis — the audience's recognition
+    that no testimony is fully true, which Aristotelian's
+    character-level anagnorisis cannot express).
+
+    `relations_wanted` names structural extensions the reader
+    thought would help. Non-empty is NOT drift — the canonical
+    example is `ArMythosRelation`, which aristotelian-sketch-01
+    A8 / stress-case already flagged as a candidate sketch-02
+    extension. A non-empty `relations_wanted` is a probe-surfaced
+    forcing function, not a failure.
+    """
+    reader_id: str
+    read_at_τ_a: int
+    read_on_terms: str
+    rationale: str
+    drift_flagged: tuple = ()               # tuple[str, ...]
+    scope_limits_observed: tuple = ()       # tuple[str, ...]
+    relations_wanted: tuple = ()            # tuple[str, ...]
