@@ -76,21 +76,35 @@ records. Layer 2 is a sibling sketch; layers 3–5 are downstream.
 
 ## Scope — what the sketch covers
 
-**In:**
+**In (after amendment — see §PFS2 catches real drift during
+sketch-01 authoring):**
 
 - JSON Schema 2020-12 as the schema language.
-- Two schemas: **Entity** and **Description**.
-- Placement of the schemas in a new top-level `schema/`
+- **One** schema: **Description** — the only substrate record
+  that is fully field-specified at the design-sketch level
+  (descriptions-sketch-01 §Required fields + §Optional fields).
+- Placement of the schema in a new top-level `schema/`
   directory, signaling language-independence.
 - A conformance-check test (`prototype/tests/`) that validates
-  every existing encoding's Entity and Description records
-  against the schemas. First-class conformance artifact; fails
-  the build if an encoding drifts.
+  every existing encoding's Description records against the
+  schema. First-class conformance artifact; fails the build if
+  an encoding drifts.
 - The *derivation discipline* (PFS2) that makes this sketch's
   work replicable by a future sketch.
 
 **Out:**
 
+- **Entity.** *Moved to deferred during the sketch-01 authoring
+  pass — see §PFS2 catches real drift.* Substrate-sketch-05
+  §Entities describes Entity **ontologically** (Agent is a
+  subtype of Entity) but does not enumerate the Entity record's
+  fields; no `name`, no `kind` enumeration in the sketch. The
+  Python prototype carries those fields. Writing an Entity
+  schema from sketch content alone yields a near-empty record
+  (id inferred, maybe kind inferred from the subtype axis,
+  `name` and `kind` enumeration nowhere). Defer until a design
+  sketch (candidate: `substrate-entity-record-sketch-01`)
+  structurally specifies Entity's fields.
 - **Event.** The effect-shape sub-records (`KnowledgeEffect`,
   `WorldEffect`) are named but not shape-specified in
   substrate-sketch-05. Writing an Event schema either means
@@ -127,8 +141,9 @@ records. Layer 2 is a sibling sketch; layers 3–5 are downstream.
 ## Commitments
 
 Labels **PFS** (Production Format Sketch). Methodology first
-(PFS1–PFS2); record specs second (PFS3–PFS4); conformance third
-(PFS5–PFS6).
+(PFS1–PFS2); record spec second (PFS3, amended from original
+two-record scope — see §PFS2 catches real drift); conformance
+third (PFS4–PFS5).
 
 ### PFS1 — Schema as canonical spec
 
@@ -180,30 +195,7 @@ exist**. Concretely:
 This discipline inverts the default: the schema does not
 depend on the Python; the Python depends on the schema.
 
-### PFS3 — Schema for `Entity`
-
-One-line description per substrate-sketch-05: *"Anything
-referred to by the story. Agents are entities with kind='agent'
-(substrate-sketch-05 §Entities)."*
-
-Fields derived from the sketch:
-
-- `id` (string, required) — stable identifier, scoped per story.
-  Sketch says "stable identifier"; schema leaves format
-  unconstrained beyond `string`.
-- `name` (string, required) — the sketch does not specify
-  constraints beyond "name". Schema admits any non-empty UTF-8
-  string.
-- `kind` (string, required, enum) — sketch enumerates in its
-  §Entities: `"agent"`, `"object"`, `"location"`, `"abstract"`.
-  Schema uses `"enum": ["agent", "object", "location",
-  "abstract"]`. Extensible by amendment to substrate-sketch-05
-  (or a follow-on) — schema enumeration tracks the sketch's
-  list; adding a kind requires design-sketch pressure first.
-
-No optional fields. The sketch's Entity is exactly three fields.
-
-### PFS4 — Schema for `Description`
+### PFS3 — Schema for `Description`
 
 Derived from descriptions-sketch-01 §The description record.
 Required fields: `id`, `attached_to`, `kind`, `attention`,
@@ -355,11 +347,11 @@ Notes on the authoring choices:
   honestly flags that in the `description` text rather than
   smuggling in a Python-derived shape.
 
-### PFS5 — Conformance is checked, not assumed
+### PFS4 — Conformance is checked, not assumed
 
 A test module `prototype/tests/test_production_format_
 sketch_01_conformance.py` validates every existing encoding's
-Entity and Description records against the schemas. The test:
+Description records against the schema. The test:
 
 - Loads every encoding's Python records via the existing
   import path.
@@ -378,44 +370,176 @@ Python is over-specified (drop the field) or the sketch is
 incomplete (amend the sketch first, then the schema, then the
 Python). Findings land in §Conformance dispositions below.
 
-### PFS6 — Repository layout
+### PFS5 — Repository layout
 
-- **`schema/` at the repo root** — `entity.json`,
-  `description.json`, `README.md`. New directory.
+- **`schema/` at the repo root** — `description.json`,
+  `README.md`. New directory.
 - `schema/README.md` names the discipline (PFS1, PFS2) and
   links back to this sketch.
 - No other repo structure changes. `prototype/` stays where it
   is; `design/` stays where it is.
 
+## PFS2 catches real drift during sketch-01 authoring
+
+**This section is the most important amendment to this sketch.**
+Added after the implementation pass discovered that the
+original PFS3 (Entity schema) was itself PFS2-drifted.
+
+### What happened
+
+The original production-format-sketch-01 committed to two
+record schemas: Entity and Description. When the implementation
+pass began (creating `schema/entity.json`), PFS2 discipline
+required reading substrate-sketch-05 §Entities first, without
+reference to `substrate.py`.
+
+Substrate-sketch-05 §Entities (lines 142–158) turned out to
+describe Entity **ontologically only**:
+
+> - **Agent.** Anything that holds knowledge, can witness or
+>   perform events. Characters are agents.
+> - **Entity.** Anything referred to by the story. Agents are a
+>   subtype.
+
+No field enumeration. No mention of `name`. No `kind` value
+list. The Python prototype carries all three (`id: str`, `name:
+str`, `kind: str  # "agent", "object", "location", "abstract"`)
+— but every one of those commitments lives in Python, not in any
+design sketch.
+
+The original PFS3 said:
+
+> - `name` (string, required) — the sketch does not specify
+>   constraints beyond "name". Schema admits any non-empty UTF-8
+>   string.
+
+But the sketch does not mention "name" at all. The claim
+"derived from the sketch" was itself Python-drifted. The
+implementation pass caught this before any schema file was
+written.
+
+### The resolution
+
+Entity joins Event and Prop in the deferred column. A future
+design sketch (candidate: `substrate-entity-record-sketch-01`)
+structurally specifies Entity's fields; then production-format-
+sketch-02 (or this sketch's §amendments) can ship
+`schema/entity.json`. Until then, the honest answer is: the
+design-sketch record for Entity is under-specified.
+
+### Why this is the sketch working, not failing
+
+The discipline is designed to surface exactly this class of
+drift. The sketch before amendment was a draft; the implementation
+pass refined the draft by running it; the amendment records
+what the implementation learned. Authoring the schema revealed
+the sketch's own derivation-claim was PFS2-invalid — so the
+sketch is corrected, and the scope narrows to what is truly
+supported.
+
+An alternative response — "amend substrate-sketch-05 quickly to
+add `name` and the kind enum" — would have been faster but
+would have skipped the PFS2 friction that makes the spec real.
+The resolution here preserves the friction: spec changes
+propagate through a design sketch first, never through
+production-format-sketch-01 reading Python and calling it
+sketch-derived.
+
+### Lessons for sketch-02 and beyond
+
+1. **Sketch authoring itself is subject to PFS2.** An author
+   writing a production-format sketch cannot assert "field X is
+   derived from sketch Y" without pointing to the specific
+   sketch passage that names field X. Vague ontology-level
+   descriptions (Entity is a subtype of Agent) are insufficient
+   to ground a record schema.
+2. **Record-level specification is design-sketch work.**
+   Substrate-sketch-05 is a *concept* sketch; it establishes
+   the ontology. A *record-shape* sketch per type is
+   complementary, not redundant.
+3. **Scope narrowing during implementation is legitimate.**
+   This sketch began with two records and finished with one.
+   The scope narrowed by surfacing under-specification; that is
+   the correct direction of narrowing, and the sketch records
+   why rather than silently dropping.
+
 ## Conformance dispositions
 
-Run during the implementation pass (PFA5). This section is
-populated in the implementation commit, not the design commit.
-The discipline: every discrepancy between current Python records
+Populated during the implementation pass (PFA4). The
+discipline: every discrepancy between current Python records
 and the sketch-derived schema produces one disposition entry,
 named and resolved.
 
-Known discrepancies anticipated from a pre-implementation read:
+### Corpus survey (n=33 Description records across 4 encodings)
 
-- **`Entity.name` vs `Entity.id` ordering.** Trivial; schema
-  declares `required: ["id", "name", "kind"]`; Python declares
-  `id, name, kind` in the dataclass. No disposition needed —
-  JSON objects are unordered by spec.
-- **Description anchors as Python dataclasses vs. tagged-union
-  JSON objects.** The Python has `AnchorEvent(event_id=...)`,
-  `AnchorEffect(event_id=..., effect_index=...)`, etc. Dump to
-  JSON: add a `kind` discriminator field. Mechanical
-  translation; disposition: "add `kind` field during dump
-  for conformance; sketch-unified".
-- **Descriptions-sketch-01 `kind` vocabulary** vs. current
-  encodings' usage. Scan needed — encodings may have introduced
-  kinds per the "extension rule" without amending
-  descriptions-sketch-01. Any such extensions produce a finding
-  per-kind; resolution is a descriptions-sketch-01 amendment
-  adding the kind.
-- **`branches` as `tuple` in Python vs. `array` in JSON.**
-  Mechanical; tuple/array is a serialization concern, not a
-  shape concern.
+Scan of DESCRIPTIONS in `rashomon.py`, `oedipus.py`,
+`macbeth.py`, `rocky.py`. `and_then_there_were_none.py` has an
+empty list. Results:
+
+- **29 of 33 records validate clean** against the v1 schema.
+- **2 records fail on `kind="authoring-note"`** — not in
+  descriptions-sketch-01 §Kinds enumeration.
+- **2 records fail on `status="superseded"`** — not in
+  descriptions-sketch-01 §Optional fields enumeration.
+
+No other discrepancies. Anchor dump transformation
+(tagged-union mapping) is mechanical and covers every anchor
+in the corpus (only `event` and `description` kinds exercised).
+
+### Disposition 1: `kind = "authoring-note"`
+
+**Status:** known-disposition, sketch-incompleteness.
+**Resolution path:** amend `design/descriptions-sketch-01.md`
+§Kinds to add `"authoring-note"` with (per that sketch's
+§Extension rule) a one-line description, typical attention
+level(s), and an example snippet. Then add `"authoring-note"`
+to `schema/description.json`'s `kind` enum.
+
+**Why not silent schema-widening:** if the schema enum were
+widened to include `"authoring-note"` without amending
+descriptions-sketch-01, the kind would exist in the schema
+with no design-sketch justification — exactly the Python-drift
+PFS2 inverts. The discipline holds: spec grows through design
+sketches first.
+
+### Disposition 2: `status = "superseded"`
+
+**Status:** known-disposition, sketch-incompleteness.
+**Resolution path:** amend `design/descriptions-sketch-01.md`
+§Optional fields to name `"superseded"` as a third status
+value with semantics (the Python docstring names it as "old
+version of a description that has been edited-over"). Then add
+`"superseded"` to `schema/description.json`'s `status` enum.
+
+**Resolution path variant:** alternatively, the Python may be
+over-specified — if "superseded" state is really a
+descriptions-sketch-01 D3 concern (description-on-description
+editing) rather than a record-level status, the Python could
+drop the value and model supersession as an explicit
+edit-replacement relation between two Descriptions instead. The
+design-sketch amendment should decide between the two shapes;
+the schema follows.
+
+### Not a disposition: anchor shape
+
+**Status:** mechanical dump transformation.
+Python's flat `AnchorRef(kind, target_id)` maps cleanly to the
+schema's tagged-union at dump time (see `_dump_anchor` in the
+conformance test). Not a conformance failure; the Python shape
+is a compact affordance for the current corpus's two anchor
+kinds (event, description); the schema preserves the full
+five-variant vocabulary for when future encodings use other
+kinds. Both shapes are specification-consistent.
+
+### Recognition protocol
+
+The conformance test (`prototype/tests/
+test_production_format_sketch_01_conformance.py`) recognizes
+exactly Disposition 1 and Disposition 2 as
+"known-dispositioned". Any other schema-validation failure
+fails the test loud. Adding a new disposition requires
+amending this section first; the test is not the right place
+to silently accept new drift.
 
 ## Not in scope
 
@@ -483,40 +607,36 @@ See §Scope "Out" above. Key items to re-emphasize:
 
 ## Acceptance criteria
 
-Labels **PFA**. Implementation lands in a second commit per the
-sketch-first discipline.
+Labels **PFA**. Implementation lands after this sketch's
+amendment for the Entity deferral (PFS2-driven scope narrowing).
 
 - **[PFA1]** New top-level `schema/` directory with
-  `README.md` + `entity.json` + `description.json`. Each
-  schema validates under JSON Schema 2020-12 (metaschema
-  validation passes).
+  `README.md` + `description.json`. Each schema validates
+  under JSON Schema 2020-12 (metaschema validation passes).
 - **[PFA2]** `schema/README.md` names PFS1 + PFS2 + links to
   this sketch.
-- **[PFA3]** `schema/entity.json` covers the three fields
-  (id, name, kind) per PFS3.
-- **[PFA4]** `schema/description.json` matches the inline
-  spec in PFS4, including the tagged-union `attached_to`,
+- **[PFA3]** `schema/description.json` matches the inline
+  spec in PFS3, including the tagged-union `attached_to`,
   the `kind` enum, `review_states`, and the `PropPlaceholder`
   honest-under-specification marker.
-- **[PFA5]** `prototype/tests/test_production_format_
+- **[PFA4]** `prototype/tests/test_production_format_
   sketch_01_conformance.py` validates every existing
-  encoding's Entity records + Description records (where
-  present) against the schemas. Uses `jsonschema` (added to
+  encoding's Description records (where present) against the
+  schema. Uses `jsonschema` (added to
   `prototype/requirements.txt`). Test iterates all encodings
   under `prototype/story_engine/encodings/` discovering
-  `ENTITIES` / `DESCRIPTIONS` / similar tuples by naming
-  convention.
-- **[PFA6]** All conformance checks pass, OR each failure has
+  `DESCRIPTIONS` / similar tuples by naming convention.
+- **[PFA5]** All conformance checks pass, OR each failure has
   a §Conformance dispositions entry in this sketch (amending
   if needed) naming the discrepancy and its resolution path.
-- **[PFA7]** No change to any Python file outside
+- **[PFA6]** No change to any Python file outside
   `prototype/tests/` + `prototype/requirements.txt`. The
-  prototype's Entity / Description dataclasses are unchanged;
+  prototype's Description dataclasses are unchanged;
   conformance is achieved by schema + dump logic in the test
   module, not by Python modification.
-- **[PFA8]** The existing test suite continues to pass (707
-  standard tests post-aristotelian-probe-sketch-01; +
-  however many conformance tests this adds).
+- **[PFA7]** The existing test suite continues to pass
+  (684 tests post-aristotelian-probe-sketch-01; + however many
+  conformance tests this adds).
 
 If implementation surfaces a Python record that cannot be
 reconciled with the sketch-derived schema without modifying
@@ -530,11 +650,17 @@ First production-layer sketch. Opens the path out of
 Python-as-de-facto-spec drift by committing to JSON Schema as
 the canonical specification language, with a strict derivation
 discipline (PFS2: write schemas from design sketches, never
-from Python source). Scope is deliberately narrow: two schemas
-(Entity, Description); no file layout; no parser; no engine
-change; no DSL. Event and Prop defer pending effect-shape and
-prop-literal design sketches that this work surfaces as
-needed.
+from Python source).
+
+Scope narrowed during the implementation pass from two schemas
+to one: **Description** lands; **Entity** defers because
+substrate-sketch-05's §Entities describes Entity ontologically
+only (no field enumeration, no `name`, no `kind` value list —
+all three come from the Python). That is exactly the drift
+PFS2 is designed to catch; see §PFS2 catches real drift for
+the full finding. Event and Prop were always deferred pending
+effect-shape and prop-literal design sketches. One schema; one
+deferral list of three records; honest scope.
 
 Conformance is a first-class check, not an assumption.
 Implementation lands as a second commit under the acceptance

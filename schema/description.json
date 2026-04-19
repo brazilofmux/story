@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/description.json",
+  "title": "Description",
+  "description": "An immutable interpretive record attached to a substrate anchor, per design/descriptions-sketch-01.md §The description record. Fold-invisible; peer to events per architecture-sketch-01 A2.",
+  "type": "object",
+  "required": [
+    "id",
+    "attached_to",
+    "kind",
+    "attention",
+    "text",
+    "authored_by",
+    "τ_a"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable identifier, scoped per story. Enables cross-reference and linking."
+    },
+    "attached_to": {
+      "description": "Anchor reference. One of: event id, effect-locator, proposition, sjuzhet-entry id, or another description id (D3 allows description-on-description).",
+      "oneOf": [
+        {
+          "type": "object",
+          "title": "EventAnchor",
+          "required": ["kind", "event_id"],
+          "properties": {
+            "kind": { "const": "event" },
+            "event_id": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "title": "EffectLocatorAnchor",
+          "required": ["kind", "event_id", "effect_index"],
+          "properties": {
+            "kind": { "const": "effect" },
+            "event_id": { "type": "string" },
+            "effect_index": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "title": "PropositionAnchor",
+          "required": ["kind", "prop"],
+          "properties": {
+            "kind": { "const": "proposition" },
+            "prop": { "$ref": "#/$defs/PropPlaceholder" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "title": "SjuzhetEntryAnchor",
+          "required": ["kind", "sjuzhet_entry_id"],
+          "properties": {
+            "kind": { "const": "sjuzhet-entry" },
+            "sjuzhet_entry_id": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "title": "DescriptionAnchor",
+          "required": ["kind", "description_id"],
+          "properties": {
+            "kind": { "const": "description" },
+            "description_id": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "description": "Starting vocabulary from descriptions-sketch-01 §Kinds; extensible per story with documentation (§Extension rule).",
+      "enum": [
+        "texture",
+        "motivation",
+        "reader-frame",
+        "authorial-uncertainty",
+        "trust-flag",
+        "provenance"
+      ]
+    },
+    "attention": {
+      "type": "string",
+      "description": "Categorical level signaling the kind of scrutiny the description demands, per descriptions-sketch-01 §Attention.",
+      "enum": ["structural", "interpretive", "flavor"]
+    },
+    "text": {
+      "type": "string",
+      "description": "Free-form UTF-8. The substrate does not parse."
+    },
+    "authored_by": {
+      "type": "string",
+      "description": "Human id, LLM identifier (e.g., 'llm:claude-sonnet-4-6'), or 'unknown' for imported content."
+    },
+    "τ_a": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Authored time; monotonic per story; shared sequence with events."
+    },
+    "is_question": {
+      "type": "boolean",
+      "description": "Description-as-question routes to an answer-me queue rather than being treated as an assertion. Orthogonal to kind."
+    },
+    "branches": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "description": "Explicit branch scope; must be a subset of the anchor's branches at the description's τ_a. Omitted = inherit anchor (D4)."
+    },
+    "review_states": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ReviewEntry" },
+      "description": "Tuple of review entries. Omitted = no reviews yet."
+    },
+    "promoted_to": {
+      "type": "string",
+      "description": "Reference to an event id, if content was promoted from this description into a fact. Immutable audit link."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["committed", "provisional"],
+      "description": "Authorial commitment axis; same as events."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Open dict for tooling-specific extension; substrate does not read."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ReviewEntry": {
+      "type": "object",
+      "description": "One review act on this description, per descriptions-sketch-01 §Review state.",
+      "required": [
+        "reviewer_id",
+        "reviewed_at_τ_a",
+        "verdict",
+        "anchor_τ_a"
+      ],
+      "properties": {
+        "reviewer_id": {
+          "type": "string",
+          "description": "Who reviewed — human id or LLM identifier."
+        },
+        "reviewed_at_τ_a": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["approved", "needs-work", "rejected", "noted"]
+        },
+        "anchor_τ_a": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "τ_a of the anchor at review time; staleness tracking key."
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PropPlaceholder": {
+      "description": "Prop shape is under-specified at the design-sketch level. Substrate-sketch-05 §Ontology names Props as 'derived, not stored', while descriptions-sketch-01 §Required fields admits proposition-shaped anchors without defining the shape. A future design sketch (candidate: substrate-prop-literal-sketch-01) pins this down. Until then, PropPlaceholder is a permissive 'any object' marker — an honest flag of the gap, not a quiet Python-import.",
+      "type": "object"
+    }
+  }
+}
