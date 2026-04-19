@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/branch.json",
+  "title": "Branch",
+  "description": "A branch label with kind and parent (plus optional authorial metadata), per design/substrate-sketch-04.md §Branch representation. The substrate records that organize the fabula into :canonical, :contested, :draft, and :counterfactual lines; kind and parent carry enough structure for fold-scope and enforcement rules (fold rules themselves live in substrate-sketch-04 §Fold scope across branches, not here).",
+  "type": "object",
+  "required": ["label", "kind"],
+  "properties": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this branch (e.g., ':canonical', ':b-tajomaru', ':draft-alt-ending-3', ':cf-remove-E4'). Sketch-04 uses prefix conventions descriptively; this schema admits any non-empty string. See production-format-sketch-05 PFS5-B3 + §Open questions OQ1."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["canonical", "contested", "draft", "counterfactual"],
+      "description": "Role the branch plays under substrate-sketch-04 B1. Each kind has distinct fold-scope and enforcement semantics; the record carries only the kind label — the rules live in substrate-sketch-04 §Fold scope across branches / §Enforcement per branch. PFS5-B4."
+    },
+    "parent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Label of the branch this one diverged from, per substrate-sketch-04 §Branch representation. Conditional on kind: ':canonical' has none; ':contested' defaults to ':canonical' (Python __post_init__ normalizes); ':draft' and ':counterfactual' must name a parent (or source) explicitly. The conditional requirement is expressed in this schema's allOf / if-then-else clause. PFS5-B5."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Open dict for authorial notes, creation τ_a, disposition history (per substrate-sketch-04 §Branch representation — particularly relevant for drafts and counterfactuals). The substrate does not interpret contents; tooling-specific extension only. PFS5-B6."
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "Parent presence conditional on kind per substrate-sketch-04 §Branch representation + PFS5-B5: canonical forbids parent; the other three kinds require it.",
+      "if": {
+        "properties": { "kind": { "const": "canonical" } },
+        "required": ["kind"]
+      },
+      "then": {
+        "not": { "required": ["parent"] }
+      },
+      "else": {
+        "required": ["parent"]
+      }
+    }
+  ]
+}

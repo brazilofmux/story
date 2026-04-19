@@ -95,6 +95,12 @@ def _load_held_schema() -> dict:
         return json.load(f)
 
 
+def _load_branch_schema() -> dict:
+    schema_path = _repo_root() / "schema" / "branch.json"
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
@@ -183,6 +189,34 @@ def _discover_encoding_events() -> list:
         if name not in seen
     ]
     return from_fabula + from_events_all
+
+
+def _discover_encoding_branches() -> list:
+    """Branches are exported as `ALL_BRANCHES` (a dict mapping label
+    → Branch record) by each encoding under
+    prototype/story_engine/encodings/. Per production-format-
+    sketch-05 PFS5-D2."""
+    encodings_dir = (
+        _repo_root() / "prototype" / "story_engine" / "encodings"
+    )
+    out: list = []
+    for py_path in sorted(encodings_dir.glob("*.py")):
+        name = py_path.stem
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{name}"
+            )
+        except Exception:
+            continue
+        all_branches = getattr(module, "ALL_BRANCHES", None)
+        if all_branches is None:
+            continue
+        if not all_branches:
+            continue
+        out.append((name, list(all_branches.values())))
+    return out
 
 
 # ============================================================================
@@ -442,6 +476,29 @@ def _dump_description(description) -> dict:
     return out
 
 
+def _dump_branch(branch) -> dict:
+    """Map a Python Branch to a JSON-compatible dict conforming
+    to schema/branch.json (per substrate-sketch-04 §Branch
+    representation + production-format-sketch-05 PFS5-B1..B6 +
+    PFS5-D1).
+
+    Field-for-field isomorphic: label (string pass-through),
+    kind (enum `.value` extraction), parent (omitted when None —
+    canonical case; included verbatim otherwise). Python's
+    Branch dataclass lacks a `metadata` field; the schema admits
+    it as optional (PFS5-B6), so the dump simply omits it."""
+    out = {
+        "label": branch.label,
+        "kind": (
+            branch.kind.value if hasattr(branch.kind, "value")
+            else branch.kind
+        ),
+    }
+    if branch.parent is not None:
+        out["parent"] = branch.parent
+    return out
+
+
 # ============================================================================
 # Tests
 # ============================================================================
@@ -476,6 +533,13 @@ def test_held_schema_metaschema_valid():
     """schema/held.json is a valid JSON Schema 2020-12 document
     (production-format-sketch-04 P4A1)."""
     schema = _load_held_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_branch_schema_metaschema_valid():
+    """schema/branch.json is a valid JSON Schema 2020-12 document
+    (production-format-sketch-05 PFS5-B1)."""
+    schema = _load_branch_schema()
     Draft202012Validator.check_schema(schema)
 
 
@@ -714,6 +778,118 @@ def test_held_corpus_conformance():
     assert not new_findings, (
         f"{len(new_findings)} Held conformance finding(s); see "
         f"output. Resolve per production-format-sketch-04's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_branch_schema_has_expected_shape():
+    """Spot-check of Branch schema structure per substrate-
+    sketch-04 §Branch representation + production-format-
+    sketch-05 PFS5-B1 through PFS5-B6."""
+    schema = _load_branch_schema()
+    assert schema["title"] == "Branch"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/branch.json"
+    )
+    # Two required fields unconditionally (PFS5-B1)
+    assert set(schema["required"]) == {"label", "kind"}
+    # Strict shape (PFS5-B2)
+    assert schema["additionalProperties"] is False
+    # All four declared properties (PFS5-B3..B6)
+    assert set(schema["properties"].keys()) == {
+        "label", "kind", "parent", "metadata",
+    }
+    # label is non-empty string (PFS5-B3)
+    label = schema["properties"]["label"]
+    assert label["type"] == "string"
+    assert label["minLength"] == 1
+    # kind closed enum at four values (PFS5-B4)
+    assert set(schema["properties"]["kind"]["enum"]) == {
+        "canonical", "contested", "draft", "counterfactual",
+    }
+    # parent is a non-empty string when present (PFS5-B5)
+    parent = schema["properties"]["parent"]
+    assert parent["type"] == "string"
+    assert parent["minLength"] == 1
+    # metadata is open object when present (PFS5-B6)
+    assert schema["properties"]["metadata"]["type"] == "object"
+    # Parent conditional via allOf/if-then-else (PFS5-B5)
+    all_of = schema.get("allOf", [])
+    assert len(all_of) == 1
+    clause = all_of[0]
+    assert clause["if"]["properties"]["kind"]["const"] == "canonical"
+    assert clause["then"] == {"not": {"required": ["parent"]}}
+    assert clause["else"] == {"required": ["parent"]}
+
+
+def test_branch_corpus_conformance():
+    """Every Branch across every encoding's ALL_BRANCHES validates
+    against schema/branch.json. Parallel to the Entity / Held /
+    Description corpus tests (production-format-sketch-05 PFS5-D2).
+
+    Current corpus is heavily canonical-biased: 7 encodings ship
+    `ALL_BRANCHES = {CANONICAL_LABEL: CANONICAL}`; Rashomon
+    additionally ships 4 CONTESTED branches. No DRAFT and no
+    COUNTERFACTUAL records — those two kinds are admitted by the
+    schema (PFS5-B4) but unexercised in the substrate-layer
+    corpus, per §Conformance dispositions Disposition 2 (non-
+    finding)."""
+    schema = _load_branch_schema()
+    validator = Draft202012Validator(schema)
+
+    encodings = _discover_encoding_branches()
+    assert encodings, (
+        "expected at least one encoding with ALL_BRANCHES; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    kind_counts: dict = {}  # kind string → count
+    new_findings: list = []
+
+    for encoding_name, branches in encodings:
+        for branch in branches:
+            total += 1
+            dumped = _dump_branch(branch)
+            kind_counts[dumped["kind"]] = (
+                kind_counts.get(dumped["kind"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "branch_label": branch.label,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(f"test_branch_corpus_conformance: {total} Branch records")
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  by kind:                    {dict(sorted(kind_counts.items()))}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(f"    {finding['encoding']}: {finding['branch_label']}")
+            for err in finding["errors"]:
+                print(f"      - path={err['path']} "
+                      f"validator={err['validator']}: {err['message']}")
+
+    assert not new_findings, (
+        f"{len(new_findings)} Branch conformance finding(s); see "
+        f"output. Resolve per production-format-sketch-05's "
         f"§Conformance dispositions protocol."
     )
     assert total > 0

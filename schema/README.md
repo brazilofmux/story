@@ -47,11 +47,11 @@ depend on the Python; the Python depends on the schema.**
 
 ## What's here
 
-Substrate schema layer, complete plus Held (five records):
+Substrate schema layer, structurally complete (six records):
 
 - `description.json` — the `Description` record
-  (descriptions-sketch-01 §The description record). Shipped by
-  production-format-sketch-01.
+  (descriptions-sketch-01 §The description record as amended
+  2026-04-19). Shipped by production-format-sketch-01.
 - `entity.json` — the `Entity` record
   (substrate-entity-record-sketch-01 SE1–SE6). Shipped by
   production-format-sketch-02.
@@ -65,11 +65,20 @@ Substrate schema layer, complete plus Held (five records):
   sub-schema amended by production-format-sketch-04.
 - `held.json` — the `Held` record (substrate-held-record-
   sketch-01 SH1–SH7). Shipped by production-format-sketch-04.
+- `branch.json` — the `Branch` record (substrate-sketch-04
+  §Branch representation: label, kind, parent conditional
+  on kind, optional metadata). Shipped by production-format-
+  sketch-05.
 
 Cross-file references resolve via canonical `$id` URIs using a
 `jsonschema.referencing.Registry` in the conformance test
 layer (pattern established by production-format-sketch-03
-PFS3-E1; extended by sketch-04 P4A1 for held).
+PFS3-E1; extended by sketch-04 P4A1 for held). Branch's
+`schema/branch.json` has no outbound cross-file references
+today; labels on `event.json`'s `branches` field are plain
+string arrays, not $ref-typed — see production-format-
+sketch-05 §Open questions OQ3 for the cross-reference-
+consistency audit surface.
 
 ## What's deferred
 
@@ -81,9 +90,6 @@ PFS3-E1; extended by sketch-04 P4A1 for held).
   StructuralAdvisory, VerifierCommentary, ArAnnotationReview,
   ArObservationCommentary, DialectReading). Multiple production
   sketches.
-- Branch record (sketch-04 §Branch representation — already
-  design-specified at label/kind/parent/metadata; a slim
-  production sketch suffices).
 - KnowledgeState record (per-agent-per-τ_s state — a
   collection of Helds plus agent_id). No current consumer.
 
