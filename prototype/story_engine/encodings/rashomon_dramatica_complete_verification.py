@@ -50,12 +50,25 @@ What this verifier is built to surface, not hide:
   convergence, and the verdicts become NOTED 0.5. The shift
   closes the probe's first qualification.
 
-- **All four testimonies reach uniform NOTED under LT12.** Wife
-  testimony: no LT2 signals (the `tajomaru_leaves` retraction
-  targets a never-asserted prop). Woodcutter testimony: no
-  retractions. Bandit + samurai: retractions reclassified as
-  enabling per LT12a. Result: consistent-but-not-affirmed across
-  the board, matching the uniform authorial Timelock claim.
+- **Bandit + samurai shift NOTED → APPROVED under scheduling-act-
+  utterance-sketch-01 (SC2 + SC4).** Both testimonies' `E_*_wife_
+  requests_killing` utterance events now carry a `requested_killing
+  (tajomaru, husband)` world effect (SC4). LT8 recognizes the
+  `requested_` prefix per the extended `SCHEDULING_PREFIXES` set
+  (SC2); combined with zero middle-arc LT2 signals (LT12 excludes
+  the `bound_to` retraction as enabling), LT9 fires → timelock-
+  strong, APPROVED strength `min(1.0, 1/2.0) = 0.5`. Substrate
+  polarity shifts from consistent-with to substrate-confirms;
+  numerical strength 0.5 is unchanged.
+
+- **Wife + woodcutter stay NOTED 0.5.** The wife testimony's
+  τ_s=7 event is an action (`E_w_tajomaru_leaves`, OQ2 in
+  sketch-01's deferred list); the woodcutter testimony's event
+  is a dual-party goading (`E_wc_wife_goads`, OQ1). Neither falls
+  under `requested_*`'s one-way-request shape; both stay on LT3's
+  honest weak-fallback verdict. The resulting across-sibling
+  asymmetry is substantive — two testimonies surface explicit
+  speech-act scheduling force; two do not.
 
 Honest scope limit: this verifier does NOT test the frame Story's
 declarations (DSP_limit=Optionlock, Outcome=Success, Judgment=Good)

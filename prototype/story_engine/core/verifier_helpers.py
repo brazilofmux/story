@@ -53,6 +53,30 @@ DEFAULT_CONSTRAINT_VOCAB: frozenset = frozenset({
 })
 
 
+# LT8 scheduling-predicate prefixes (pressure-shape-taxonomy-sketch-02
+# + scheduling-act-utterance-sketch-01). Any `WorldEffect` whose prop
+# predicate begins with one of these prefixes contributes to LT8's
+# scheduling-signal count, and — combined with a zero middle-arc LT2
+# count — fires LT9 (timelock-strong).
+#
+# Semantics per prefix:
+#
+#   - `scheduled_*` — objective external schedule; unconditional until
+#     retracted (Rocky's model).
+#   - `requested_*` — subjective one-party scheduling act carried by
+#     an utterance; structurally force-carrying via the speech-act
+#     itself, contingent on target acceptance (Rashomon's bandit /
+#     samurai model).
+#
+# Match is case-sensitive at string position 0. Both prefixes
+# contribute equally to LT9 strength in sketch-01; per-prefix
+# weighting is deferred (OQ4).
+SCHEDULING_PREFIXES: frozenset = frozenset({
+    "scheduled_",
+    "requested_",
+})
+
+
 def find_substrate_event(event_id: str, fabula: tuple) -> Event:
     """Look up a substrate Event by id, or raise KeyError. Linear
     scan; fabulas are authored tuples and typically under 30 events,
@@ -392,9 +416,11 @@ def classify_arc_limit_shape_strong(
          for backstory), `terminal` (τ_s within top 10% of the
          positive-arc range), or `middle-arc` (the remainder).
       2. **LT8** — scheduling-predicate signals: any `WorldEffect`
-         whose prop's predicate begins with `"scheduled_"` is a
+         whose prop's predicate begins with any recognized scheduling
+         prefix (`SCHEDULING_PREFIXES` — `"scheduled_"` per sketch-02,
+         `"requested_"` per scheduling-act-utterance-sketch-01) is a
          positive Timelock signal, regardless of whether it
-         asserts or retracts. The prefix is verifier-local
+         asserts or retracts. The prefix set is verifier-local
          vocabulary per LT6.
       3. **LT9** — strong Timelock predicate: scheduling signal
          present AND middle-arc LT2 signal count is zero.
@@ -423,9 +449,16 @@ def classify_arc_limit_shape_strong(
         event counts per band across all three LT2 signal kinds
         (flat, enabling-inclusive; used for diagnostics, not verdict).
       - `scheduling_signals`: tuple of predicate names that fired
-        LT8 (distinct `Prop` count, not event count).
+        LT8 (distinct `Prop` count, not event count). Flat across
+        all recognized prefixes.
       - `scheduling_count`: number of distinct `Prop`s in
         `scheduling_signals`.
+      - `scheduling_prefixes`: dict mapping each matched prefix
+        (e.g., `"scheduled_"`, `"requested_"`) to the tuple of Props
+        carrying that prefix, sorted by predicate name. Prefixes
+        with zero matches are omitted. Additive per
+        scheduling-act-utterance-sketch-01 SC3 — sketch-02-only
+        callers can ignore it.
       - `enabling_retractions`: tuple of
         `(predicate, τ_s, reason)` triples — one per middle-arc
         retraction classified enabling by LT12.
@@ -461,6 +494,7 @@ def classify_arc_limit_shape_strong(
             "terminal_count": 0,
             "scheduling_signals": (),
             "scheduling_count": 0,
+            "scheduling_prefixes": {},
             "enabling_retractions": (),
             "enabling_retraction_count": 0,
             "arc_range": (0, 0),
@@ -513,8 +547,10 @@ def classify_arc_limit_shape_strong(
         for ef in e.effects:
             if not isinstance(ef, WorldEffect):
                 continue
-            if ef.prop.predicate.startswith("scheduled_"):
-                scheduling_props.add(ef.prop)
+            for prefix in SCHEDULING_PREFIXES:
+                if ef.prop.predicate.startswith(prefix):
+                    scheduling_props.add(ef.prop)
+                    break
             if ef.asserts:
                 asserted_so_far.add(ef.prop)
             else:
@@ -699,6 +735,20 @@ def classify_arc_limit_shape_strong(
     )
     scheduling_count = len(scheduling_props)
 
+    # SC3 — per-prefix breakdown. One pass, two-arg match (longest
+    # prefix would matter only if the set contained overlapping
+    # prefixes; today it does not, so first-match order is irrelevant).
+    # Empty-tuple values are omitted — the dict lists only prefixes
+    # with at least one match.
+    scheduling_prefixes_map: dict = {}
+    for prefix in SCHEDULING_PREFIXES:
+        matched = tuple(sorted(
+            (p for p in scheduling_props if p.predicate.startswith(prefix)),
+            key=lambda q: q.predicate,
+        ))
+        if matched:
+            scheduling_prefixes_map[prefix] = matched
+
     # Classification per LT7–LT9 + LT12 (sketch-03). Uses restricting-
     # only counts throughout — enabling retractions never shift the
     # classification verdict, only the comment/diagnostics.
@@ -728,6 +778,7 @@ def classify_arc_limit_shape_strong(
         "terminal_count": terminal,
         "scheduling_signals": scheduling_signals_tuple,
         "scheduling_count": scheduling_count,
+        "scheduling_prefixes": scheduling_prefixes_map,
         "enabling_retractions": tuple(enabling_retractions_list),
         "enabling_retraction_count": len(enabling_retractions_list),
         "arc_range": (min_τ, max_τ),
@@ -778,6 +829,7 @@ def dsp_limit_characterization_check(
     terminal = result["terminal_count"]
     middle_arc = result["middle_arc_count"]
     scheduling_count = result["scheduling_count"]
+    scheduling_prefixes = result["scheduling_prefixes"]
     enabling_retractions = result["enabling_retractions"]
     kinds_firing = len(signals)
 
@@ -793,6 +845,20 @@ def dsp_limit_characterization_check(
         ", ".join(scheduling_signals) if scheduling_signals
         else "no scheduling predicates"
     )
+    # SC3 — when more than one scheduling prefix matched, append a
+    # per-prefix breakdown so the verdict rationale shows the LT8
+    # composition (e.g., "LT8 signals: 1 scheduled_, 1 requested_").
+    # Single-prefix cases retain the sketch-02 comment shape.
+    if len(scheduling_prefixes) >= 2:
+        prefix_breakdown = ", ".join(
+            f"{len(props)} {prefix}"
+            for prefix, props in sorted(scheduling_prefixes.items())
+        )
+        scheduling_breakdown_suffix = (
+            f" LT8 signals: {prefix_breakdown}."
+        )
+    else:
+        scheduling_breakdown_suffix = ""
     # LT12: surface enabling-retractions as a comment suffix so the
     # verdict rationale explains what the classifier saw but did not
     # count toward LT2 convergence.
@@ -843,7 +909,7 @@ def dsp_limit_characterization_check(
                 f"scheduling predicate(s) ({scheduling_text}) with no "
                 f"middle-arc LT2 signals. LT9 reads this as "
                 f"Timelock-shape-strong; the declaration and substrate "
-                f"disagree.",
+                f"disagree." + scheduling_breakdown_suffix,
             )
         return (
             VERDICT_NEEDS_WORK, 0.0,
@@ -873,7 +939,8 @@ def dsp_limit_characterization_check(
                 f"zero middle-arc LT2 convergence signals ({position_text}). "
                 f"LT9 affirmatively detects Timelock shape. Strength "
                 f"{result['strength']:.2f} = "
-                f"min(1.0, {scheduling_count}/2).",
+                f"min(1.0, {scheduling_count}/2)."
+                + scheduling_breakdown_suffix,
             )
         if classification == "timelock-consistent":
             return (

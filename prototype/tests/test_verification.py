@@ -2665,35 +2665,207 @@ def test_lt12_does_not_apply_to_peripheral_pre_retraction():
     assert result["peripheral_pre_count"] >= 1
 
 
-def test_lt14_rashomon_bandit_timelock_consistent_under_lt12():
-    """LT14 shifted verdict: S_bandit_ver's testimony, under sketch-02,
-    produced NEEDS_WORK 0.67 because `E_t_frees_husband` retracted
-    `bound_to(husband, tree)` in the middle arc (LT2 fired). Under
-    LT12a, that retraction is enabling (constraint vocabulary). The
-    restricting-only middle-arc count drops to 0; classification
-    becomes timelock-consistent; the dsp_limit check returns NOTED."""
+def test_lt14_rashomon_bandit_timelock_strong_under_sc4():
+    """S_bandit_ver's verdict history: NEEDS_WORK 0.67 under sketch-02
+    (LT2 fired on `bound_to` retraction) → NOTED 0.5 under sketch-03
+    LT12a (retraction reclassified enabling; timelock-consistent) →
+    APPROVED 0.5 under scheduling-act-utterance-sketch-01 SC4
+    (`E_t_wife_requests_killing` now carries a `requested_killing`
+    world effect; LT8 recognizes the `requested_` prefix per SC2;
+    combined with zero restricting middle-arc signals LT9 fires →
+    timelock-strong). Strength = min(1.0, 1/2.0) = 0.5."""
     from story_engine.core.verifier_helpers import dsp_limit_characterization_check
     from story_engine.encodings.rashomon import EVENTS_ALL, B_TAJOMARU, ALL_BRANCHES
-    verdict, _strength, comment = dsp_limit_characterization_check(
+    verdict, strength, comment = dsp_limit_characterization_check(
         EVENTS_ALL, (), B_TAJOMARU, ALL_BRANCHES, "timelock",
     )
-    assert verdict == VERDICT_NOTED
-    assert "LT12 excluded" in comment
-    assert "bound_to" in comment
-    assert "constraint-vocabulary" in comment
+    assert verdict == VERDICT_APPROVED
+    assert strength == 0.5
+    assert "LT9 affirmatively detects Timelock shape" in comment
+    assert "requested_killing" in comment
 
 
-def test_lt14_rashomon_samurai_timelock_consistent_under_lt12():
-    """Parallel to bandit: S_samurai_ver's `E_h_frees_husband`
-    retracts `bound_to(husband, tree)` mid-arc; under LT12a this is
-    an enabling retraction; verdict is NOTED."""
+def test_lt14_rashomon_samurai_timelock_strong_under_sc4():
+    """Parallel to bandit: S_samurai_ver's `E_h_wife_requests_killing`
+    now carries a `requested_killing` world effect per SC4; LT8's
+    `requested_` prefix fires; LT12 still reclassifies the
+    `bound_to` retraction as enabling; LT9 reads the branch as
+    timelock-strong; verdict APPROVED 0.5."""
     from story_engine.core.verifier_helpers import dsp_limit_characterization_check
     from story_engine.encodings.rashomon import EVENTS_ALL, B_HUSBAND, ALL_BRANCHES
-    verdict, _strength, comment = dsp_limit_characterization_check(
+    verdict, strength, comment = dsp_limit_characterization_check(
         EVENTS_ALL, (), B_HUSBAND, ALL_BRANCHES, "timelock",
     )
-    assert verdict == VERDICT_NOTED
-    assert "LT12 excluded" in comment
+    assert verdict == VERDICT_APPROVED
+    assert strength == 0.5
+    assert "LT9 affirmatively detects Timelock shape" in comment
+    assert "requested_killing" in comment
+
+
+def test_sc4_rashomon_wife_and_woodcutter_stay_noted():
+    """Wife (OQ2, non-utterance action) and woodcutter (OQ1, dual-
+    party goading) are named out-of-scope by sketch-01 SC5. Their
+    τ_s=7 events get no `requested_*` Prop; both branches stay at
+    LT3's honest weak-fallback — NOTED, strength None (the sketch-
+    01 predicted substantive across-sibling asymmetry)."""
+    from story_engine.core.verifier_helpers import dsp_limit_characterization_check
+    from story_engine.encodings.rashomon import (
+        EVENTS_ALL, B_WIFE, B_WOODCUTTER, ALL_BRANCHES,
+    )
+    for scope in (B_WIFE, B_WOODCUTTER):
+        verdict, strength, comment = dsp_limit_characterization_check(
+            EVENTS_ALL, (), scope, ALL_BRANCHES, "timelock",
+        )
+        assert verdict == VERDICT_NOTED, (
+            f"expected NOTED on {scope.label}; got {verdict!r}"
+        )
+        assert strength is None
+        assert "requested_killing" not in comment, (
+            f"{scope.label} should not carry a requested_killing Prop"
+        )
+
+
+def test_sc2_requested_prefix_fires_lt8():
+    """SC2 — the `requested_` prefix joins `scheduled_` in
+    SCHEDULING_PREFIXES. A synthetic fabula with one `requested_*`
+    Prop produces scheduling_count=1 and classification timelock-
+    strong when middle-arc is clean."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import classify_arc_limit_shape_strong
+
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+    fabula = (
+        Event(
+            id="E1", type="utterance", τ_s=5, τ_a=1,
+            participants={"speaker": "a", "listener": "b"},
+            effects=(
+                WorldEffect(
+                    prop=Prop("requested_action", ("b", "x")),
+                    asserts=True,
+                ),
+            ),
+        ),
+    )
+    result = classify_arc_limit_shape_strong(fabula, (), scope, all_branches)
+    assert result["scheduling_count"] == 1
+    assert result["scheduling_signals"] == ("requested_action",)
+    assert result["classification"] == "timelock-strong"
+
+
+def test_sc3_scheduling_prefixes_output_shape():
+    """SC3 — `scheduling_prefixes` field maps each matched prefix to
+    the tuple of Props carrying it. Prefixes with zero matches are
+    omitted. Two Props with different prefixes produce a
+    two-entry dict."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import classify_arc_limit_shape_strong
+
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+    fabula = (
+        Event(
+            id="E1", type="utterance", τ_s=5, τ_a=1,
+            participants={"speaker": "a"},
+            effects=(
+                WorldEffect(
+                    prop=Prop("requested_action", ("b", "x")),
+                    asserts=True,
+                ),
+                WorldEffect(
+                    prop=Prop("scheduled_duel", ("a", "b")),
+                    asserts=True,
+                ),
+            ),
+        ),
+    )
+    result = classify_arc_limit_shape_strong(fabula, (), scope, all_branches)
+    prefixes = result["scheduling_prefixes"]
+    assert set(prefixes.keys()) == {"scheduled_", "requested_"}
+    assert prefixes["scheduled_"] == (Prop("scheduled_duel", ("a", "b")),)
+    assert prefixes["requested_"] == (Prop("requested_action", ("b", "x")),)
+    assert result["scheduling_count"] == 2
+
+
+def test_sc3_scheduling_prefixes_empty_when_no_match():
+    """SC3 — `scheduling_prefixes` is an empty dict when no prop
+    carries a recognized prefix."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import classify_arc_limit_shape_strong
+
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+    fabula = (
+        Event(
+            id="E1", type="action", τ_s=5, τ_a=1,
+            participants={"agent": "a"},
+            effects=(
+                WorldEffect(
+                    prop=Prop("did_something", ("a",)),
+                    asserts=True,
+                ),
+            ),
+        ),
+    )
+    result = classify_arc_limit_shape_strong(fabula, (), scope, all_branches)
+    assert result["scheduling_prefixes"] == {}
+    assert result["scheduling_count"] == 0
+
+
+def test_sc3_multi_prefix_comment_breakdown():
+    """SC3 — when more than one scheduling prefix matches,
+    dsp_limit_characterization_check appends an LT8 signal breakdown
+    (e.g., "LT8 signals: 1 requested_, 1 scheduled_"). Single-prefix
+    case preserves sketch-02 comment shape (no breakdown suffix)."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import dsp_limit_characterization_check
+
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+
+    single_prefix_fabula = (
+        Event(
+            id="E1", type="utterance", τ_s=5, τ_a=1,
+            participants={"speaker": "a"},
+            effects=(
+                WorldEffect(
+                    prop=Prop("scheduled_duel", ("a", "b")),
+                    asserts=True,
+                ),
+            ),
+        ),
+    )
+    _, _, comment_single = dsp_limit_characterization_check(
+        single_prefix_fabula, (), scope, all_branches, "timelock",
+    )
+    assert "LT8 signals:" not in comment_single
+
+    multi_prefix_fabula = single_prefix_fabula + (
+        Event(
+            id="E2", type="utterance", τ_s=6, τ_a=2,
+            participants={"speaker": "a"},
+            effects=(
+                WorldEffect(
+                    prop=Prop("requested_action", ("b", "x")),
+                    asserts=True,
+                ),
+            ),
+        ),
+    )
+    _, _, comment_multi = dsp_limit_characterization_check(
+        multi_prefix_fabula, (), scope, all_branches, "timelock",
+    )
+    assert "LT8 signals:" in comment_multi
+    assert "1 requested_" in comment_multi
+    assert "1 scheduled_" in comment_multi
 
 
 def test_lt12_preserves_prior_optionlock_verdicts():
@@ -3653,8 +3825,13 @@ TESTS = [
     test_lt12b_subject_reactivation_retraction_is_enabling,
     test_lt12c_unreactivated_retraction_is_restricting,
     test_lt12_does_not_apply_to_peripheral_pre_retraction,
-    test_lt14_rashomon_bandit_timelock_consistent_under_lt12,
-    test_lt14_rashomon_samurai_timelock_consistent_under_lt12,
+    test_lt14_rashomon_bandit_timelock_strong_under_sc4,
+    test_lt14_rashomon_samurai_timelock_strong_under_sc4,
+    test_sc4_rashomon_wife_and_woodcutter_stay_noted,
+    test_sc2_requested_prefix_fires_lt8,
+    test_sc3_scheduling_prefixes_output_shape,
+    test_sc3_scheduling_prefixes_empty_when_no_match,
+    test_sc3_multi_prefix_comment_breakdown,
     test_lt12_preserves_prior_optionlock_verdicts,
     # resolve-endpoint-sketch-01 (RE1-RE5)
     test_re5_compute_pre_post_ratios_detects_shift,

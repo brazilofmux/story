@@ -199,6 +199,15 @@ def fled(who: str) -> Prop:
 def body_found_by(finder: str, victim: str) -> Prop:
     return Prop("body_found_by", (finder, victim))
 
+def requested_killing(agent: str, target: str) -> Prop:
+    # LT8 scheduling-shape predicate per scheduling-act-utterance-
+    # sketch-01. First argument is the party asked to perform the
+    # killing; second argument is the target. This matches Rocky's
+    # `scheduled_fight(a, b)` convention — the Prop's arguments name
+    # the action's participants, not the speech-act agent who schedules
+    # it.
+    return Prop("requested_killing", (agent, target))
+
 
 # ----------------------------------------------------------------------------
 # Branches (four sibling :contested, plus the root :canonical)
@@ -393,8 +402,13 @@ TAJOMARU_FABULA = [
         branches=frozenset({B_TAJOMARU.label}),
         effects=(
             # Structural: an utterance occurred from wife to tajomaru about
-            # the husband. Content — "kill him so only one man alive will
-            # know my shame" — is a description.
+            # the husband, carrying scheduling-act force — `requested_killing`
+            # per SC1 of scheduling-act-utterance-sketch-01. LT8 recognizes
+            # the `requested_` prefix and, combined with zero middle-arc LT2
+            # signals on this branch, fires LT9. Content (the specific
+            # phrasing, the "one man alive" framing, whether the wife was
+            # pleading or ordering) stays on descriptions per A3 / M1.
+            world(requested_killing("tajomaru", "husband")),
         ),
     ),
 
@@ -511,7 +525,14 @@ HUSBAND_FABULA = [
         participants={"speaker": "wife", "listener": "tajomaru", "target": "husband"},
         branches=frozenset({B_HUSBAND.label}),
         effects=(
-            # Utterance occurred; content is a description.
+            # Structural: the husband's account of the same utterance —
+            # wife asks tajomaru to kill him. Same Prop shape as the
+            # bandit branch (requested_killing(tajomaru, husband));
+            # the interpretive difference — she asked Tajomaru to kill
+            # him so she could follow the bandit, vs. the bandit's
+            # "one man alive" framing — lives on the per-branch
+            # Description attached to this event.
+            world(requested_killing("tajomaru", "husband")),
         ),
     ),
 
