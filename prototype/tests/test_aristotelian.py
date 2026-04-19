@@ -543,6 +543,87 @@ def test_oedipus_aristotelian_records_shape():
 
 
 # ============================================================================
+# Integration — Rashomon stress case (sketch's multi-mythos prediction)
+# ============================================================================
+
+
+def test_rashomon_aristotelian_four_mythoi_all_verify_clean():
+    """Aristotelian-sketch-01's stress-case prediction: Rashomon
+    encodes as four testimony mythoi, each independently
+    satisfying A1-A9's self-verifier. Zero observations per mythos
+    confirms the sketch's 'multi-mythos slots in without
+    modification' claim at the code level."""
+    from story_engine.encodings.rashomon import EVENTS_ALL
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_MYTHOI,
+    )
+    for mythos in AR_RASHOMON_MYTHOI:
+        observations = verify(mythos, substrate_events=EVENTS_ALL)
+        assert observations == [], (
+            f"{mythos.id}: expected zero observations; got "
+            f"{len(observations)}:\n"
+            + "\n".join(f"    [{o.severity}] {o.code}: {o.message}"
+                        for o in observations)
+        )
+
+
+def test_rashomon_aristotelian_mythoi_count_and_ids():
+    """Structural pin: the encoding authors exactly four mythoi,
+    one per testimony, with the expected ids."""
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_MYTHOI,
+    )
+    assert len(AR_RASHOMON_MYTHOI) == 4
+    ids = [m.id for m in AR_RASHOMON_MYTHOI]
+    assert ids == [
+        "ar_rashomon_bandit",
+        "ar_rashomon_wife",
+        "ar_rashomon_samurai",
+        "ar_rashomon_woodcutter",
+    ]
+
+
+def test_rashomon_aristotelian_shared_canonical_floor_beginning():
+    """Each mythos's beginning phase covers the same six canonical-
+    floor events. This is the stress case's central structural
+    claim: testimonies share the undisputed lead-up."""
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_MYTHOI,
+    )
+    expected = frozenset({
+        "E_travel", "E_tajomaru_sees_them", "E_lure", "E_bind",
+        "E_bring_wife", "E_intercourse",
+    })
+    for mythos in AR_RASHOMON_MYTHOI:
+        beginning = [ph for ph in mythos.phases
+                     if ph.role == PHASE_BEGINNING]
+        assert len(beginning) == 1, (
+            f"{mythos.id}: expected exactly one beginning phase")
+        assert set(beginning[0].scope_event_ids) == expected, (
+            f"{mythos.id}: beginning phase scope does not match "
+            f"canonical-floor — got {sorted(beginning[0].scope_event_ids)}"
+        )
+
+
+def test_rashomon_aristotelian_each_testimony_has_own_peripeteia():
+    """Per the sketch's worked encoding, each testimony-mythos
+    carries its own peripeteia pointer into substrate. None
+    carries anagnorisis — testifiers' self-accounts do not
+    include their own character-level recognition (the Rashomon
+    'recognition' is meta-anagnorisis, per the sketch's A8-class
+    dialect-scope limit)."""
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_MYTHOI,
+    )
+    for mythos in AR_RASHOMON_MYTHOI:
+        assert mythos.peripeteia_event_id is not None, (
+            f"{mythos.id} missing peripeteia_event_id")
+        assert mythos.anagnorisis_event_id is None, (
+            f"{mythos.id} unexpectedly has anagnorisis_event_id="
+            f"{mythos.anagnorisis_event_id!r}")
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -579,6 +660,10 @@ TESTS = [
     test_group_by_code_buckets_correctly,
     test_oedipus_aristotelian_verifies_clean,
     test_oedipus_aristotelian_records_shape,
+    test_rashomon_aristotelian_four_mythoi_all_verify_clean,
+    test_rashomon_aristotelian_mythoi_count_and_ids,
+    test_rashomon_aristotelian_shared_canonical_floor_beginning,
+    test_rashomon_aristotelian_each_testimony_has_own_peripeteia,
 ]
 
 
