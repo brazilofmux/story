@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/phase.json",
+  "title": "ArPhase",
+  "description": "One logical phase of an Aristotelian mythos — beginning, middle, or end — per design/aristotelian-sketch-01.md A2. Phases are logical divisions connected by necessity or probability (Poetics 1451a), not equal-page-target beats. `scope_event_ids` names the substrate events authoring this phase; the A7 unity-of-action check enforces disjoint, covering phase scopes at the mythos level (not at the per-phase record level, which is this schema's jurisdiction).",
+  "type": "object",
+  "required": ["id", "role", "scope_event_ids"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this phase (e.g., 'ph_beginning'). No prefix convention enforced — the 'ph_' convention is descriptive only. PFS6-P2."
+    },
+    "role": {
+      "type": "string",
+      "enum": ["beginning", "middle", "end"],
+      "description": "Which of the three Aristotelian logical divisions this phase occupies. Closed enum per A2 — additional role names would be a dialect amendment, not a record-shape authoring choice. PFS6-P3."
+    },
+    "scope_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Substrate event ids comprising this phase. Empty array is legal (a phase may exist as scaffolding before events are authored; A7's self-verifier surfaces this). Plain-string references per PFS6-X2 / PFS5 OQ3 — not $ref-typed to event.json. Cross-reference consistency is a verifier/test-layer audit surface, not a record-shape concern. PFS6-P4."
+    },
+    "annotation": {
+      "type": "string",
+      "description": "Optional author prose annotation. Python default is an empty string; schema admits the empty string and absence interchangeably. PFS6-P5."
+    }
+  },
+  "additionalProperties": false
+}

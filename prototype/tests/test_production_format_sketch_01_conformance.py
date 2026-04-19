@@ -101,19 +101,49 @@ def _load_branch_schema() -> dict:
         return json.load(f)
 
 
+def _load_aristotelian_phase_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "phase.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_aristotelian_character_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "character.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_aristotelian_mythos_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "mythos.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
     schema/event.json $refs schema/prop.json + schema/held.json;
     schema/held.json $refs schema/prop.json; schema/description.json
-    $refs schema/prop.json for its PropositionAnchor variant.
+    $refs schema/prop.json for its PropositionAnchor variant;
+    schema/aristotelian/mythos.json $refs its sibling phase.json +
+    character.json (production-format-sketch-06 PFS6-X1).
 
     Pattern introduced by production-format-sketch-03 P3A4; extended
-    by production-format-sketch-04 P4A1 for held.json."""
+    by production-format-sketch-04 P4A1 for held.json; extended by
+    production-format-sketch-06 PFS6-D5 for the aristotelian dialect."""
     registry = Registry()
     for schema in (
         _load_prop_schema(), _load_held_schema(),
         _load_event_schema(), _load_description_schema(),
+        _load_aristotelian_phase_schema(),
+        _load_aristotelian_character_schema(),
+        _load_aristotelian_mythos_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -217,6 +247,77 @@ def _discover_encoding_branches() -> list:
             continue
         out.append((name, list(all_branches.values())))
     return out
+
+
+def _discover_encoding_aristotelian_records():
+    """Walks encoding modules for Aristotelian records. Returns a
+    triple `(mythoi, phases, characters)` — three lists of
+    (encoding_name, records). Per production-format-sketch-06
+    PFS6-D4.
+
+    Mythoi come from module-level `AR_*` attrs that are either an
+    `ArMythos` (Oedipus's `AR_OEDIPUS_MYTHOS`) or a tuple of
+    `ArMythos` (Rashomon's `AR_RASHOMON_MYTHOI`). Phases and
+    characters are collected by traversing each mythos's `.phases`
+    and `.characters` tuples; deduplication is by id within a
+    single encoding (same-id records across encodings are a
+    corpus-authoring concern, not a discovery concern)."""
+    from story_engine.core.aristotelian import ArMythos
+    encodings_dir = (
+        _repo_root() / "prototype" / "story_engine" / "encodings"
+    )
+    mythoi_out: list = []
+    phases_out: list = []
+    chars_out: list = []
+    for py_path in sorted(encodings_dir.glob("*.py")):
+        name = py_path.stem
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{name}"
+            )
+        except Exception:
+            continue
+        # Dedupe by id — Rashomon exports both singletons
+        # (AR_RASHOMON_BANDIT, etc.) and a tuple (AR_RASHOMON_MYTHOI)
+        # pointing at the same four mythoi; discovery would see them
+        # twice otherwise.
+        mythoi_seen: dict = {}
+        for attr_name in dir(module):
+            if not attr_name.startswith("AR_"):
+                continue
+            value = getattr(module, attr_name, None)
+            if isinstance(value, ArMythos):
+                mythoi_seen[value.id] = value
+            elif (
+                isinstance(value, tuple)
+                and value
+                and all(isinstance(v, ArMythos) for v in value)
+            ):
+                for v in value:
+                    mythoi_seen[v.id] = v
+        mythoi = list(mythoi_seen.values())
+        if not mythoi:
+            continue
+        mythoi_out.append((name, mythoi))
+
+        # Traverse each mythos's phases and characters; dedup by id
+        # within the encoding. (Cross-encoding id collisions are
+        # tolerable — same-id records across unrelated encodings
+        # aren't a shape concern.)
+        phases_seen: dict = {}
+        chars_seen: dict = {}
+        for mythos in mythoi:
+            for phase in mythos.phases:
+                phases_seen[phase.id] = phase
+            for char in mythos.characters:
+                chars_seen[char.id] = char
+        if phases_seen:
+            phases_out.append((name, list(phases_seen.values())))
+        if chars_seen:
+            chars_out.append((name, list(chars_seen.values())))
+    return mythoi_out, phases_out, chars_out
 
 
 # ============================================================================
@@ -499,6 +600,80 @@ def _dump_branch(branch) -> dict:
     return out
 
 
+def _dump_arphase(phase) -> dict:
+    """Map a Python ArPhase to a JSON-compatible dict conforming to
+    schema/aristotelian/phase.json (production-format-sketch-06
+    PFS6-D2). Field-for-field isomorphic: id / role /
+    scope_event_ids pass-through; annotation passes through even
+    when empty (no omit-on-default; the Python record's default
+    is "" not None — presence is invariant)."""
+    return {
+        "id": phase.id,
+        "role": phase.role,
+        "scope_event_ids": list(phase.scope_event_ids),
+        "annotation": phase.annotation,
+    }
+
+
+def _dump_archaracter(character) -> dict:
+    """Map a Python ArCharacter to a JSON-compatible dict conforming
+    to schema/aristotelian/character.json (production-format-
+    sketch-06 PFS6-D3). Field-for-field isomorphic: id / name /
+    is_tragic_hero always emitted; character_ref_id and
+    hamartia_text omitted when None."""
+    out = {
+        "id": character.id,
+        "name": character.name,
+        "is_tragic_hero": character.is_tragic_hero,
+    }
+    if character.character_ref_id is not None:
+        out["character_ref_id"] = character.character_ref_id
+    if character.hamartia_text is not None:
+        out["hamartia_text"] = character.hamartia_text
+    return out
+
+
+def _dump_armythos(mythos) -> dict:
+    """Map a Python ArMythos to a JSON-compatible dict conforming to
+    schema/aristotelian/mythos.json (production-format-sketch-06
+    PFS6-D1). Field-for-field isomorphic with these shapes:
+
+    - Required fields (id / title / action_summary /
+      central_event_ids / plot_kind / phases) pass through; phases
+      each dumped via _dump_arphase.
+    - Optional event-id pointers omitted when None.
+    - Three boolean asserts_* fields always emitted (dataclass
+      always carries them).
+    - unity_of_time_bound / unity_of_place_max_locations /
+      aims_at_catharsis always emitted (dataclass defaults; PFS6
+      anticipated non-finding 2).
+    - characters list; empty list emits as empty array."""
+    out = {
+        "id": mythos.id,
+        "title": mythos.title,
+        "action_summary": mythos.action_summary,
+        "central_event_ids": list(mythos.central_event_ids),
+        "plot_kind": mythos.plot_kind,
+        "phases": [_dump_arphase(p) for p in mythos.phases],
+        "asserts_unity_of_action": mythos.asserts_unity_of_action,
+        "asserts_unity_of_time": mythos.asserts_unity_of_time,
+        "asserts_unity_of_place": mythos.asserts_unity_of_place,
+        "unity_of_time_bound": mythos.unity_of_time_bound,
+        "unity_of_place_max_locations": mythos.unity_of_place_max_locations,
+        "aims_at_catharsis": mythos.aims_at_catharsis,
+        "characters": [_dump_archaracter(c) for c in mythos.characters],
+    }
+    if mythos.complication_event_id is not None:
+        out["complication_event_id"] = mythos.complication_event_id
+    if mythos.denouement_event_id is not None:
+        out["denouement_event_id"] = mythos.denouement_event_id
+    if mythos.peripeteia_event_id is not None:
+        out["peripeteia_event_id"] = mythos.peripeteia_event_id
+    if mythos.anagnorisis_event_id is not None:
+        out["anagnorisis_event_id"] = mythos.anagnorisis_event_id
+    return out
+
+
 # ============================================================================
 # Tests
 # ============================================================================
@@ -540,6 +715,27 @@ def test_branch_schema_metaschema_valid():
     """schema/branch.json is a valid JSON Schema 2020-12 document
     (production-format-sketch-05 PFS5-B1)."""
     schema = _load_branch_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_phase_schema_metaschema_valid():
+    """schema/aristotelian/phase.json is a valid JSON Schema 2020-12
+    document (production-format-sketch-06 PFS6-P1..P5)."""
+    schema = _load_aristotelian_phase_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_character_schema_metaschema_valid():
+    """schema/aristotelian/character.json is a valid JSON Schema
+    2020-12 document (production-format-sketch-06 PFS6-C1..C5)."""
+    schema = _load_aristotelian_character_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_mythos_schema_metaschema_valid():
+    """schema/aristotelian/mythos.json is a valid JSON Schema
+    2020-12 document (production-format-sketch-06 PFS6-M1..M11)."""
+    schema = _load_aristotelian_mythos_schema()
     Draft202012Validator.check_schema(schema)
 
 
@@ -1248,6 +1444,356 @@ def test_entity_sketches_exist():
         "schema/entity.json exists but its production-layer "
         "spec (production-format-sketch-02.md) is missing"
     )
+
+
+def test_aristotelian_phase_schema_has_expected_shape():
+    """Spot-check of ArPhase schema structure per aristotelian-
+    sketch-01 A2 + production-format-sketch-06 PFS6-P1..P5."""
+    schema = _load_aristotelian_phase_schema()
+    assert schema["title"] == "ArPhase"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/phase.json"
+    )
+    assert set(schema["required"]) == {
+        "id", "role", "scope_event_ids",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "role", "scope_event_ids", "annotation",
+    }
+    # role closed enum at the three Aristotelian phases
+    assert set(schema["properties"]["role"]["enum"]) == {
+        "beginning", "middle", "end",
+    }
+    # scope_event_ids is array of non-empty strings
+    scope = schema["properties"]["scope_event_ids"]
+    assert scope["type"] == "array"
+    assert scope["items"]["type"] == "string"
+    assert scope["items"]["minLength"] == 1
+
+
+def test_aristotelian_character_schema_has_expected_shape():
+    """Spot-check of ArCharacter schema structure per aristotelian-
+    sketch-01 A5 + production-format-sketch-06 PFS6-C1..C5."""
+    schema = _load_aristotelian_character_schema()
+    assert schema["title"] == "ArCharacter"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/character.json"
+    )
+    assert set(schema["required"]) == {"id", "name"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "name", "character_ref_id",
+        "hamartia_text", "is_tragic_hero",
+    }
+    # character_ref_id optional non-empty string (PFS6-C3)
+    ref = schema["properties"]["character_ref_id"]
+    assert ref["type"] == "string"
+    assert ref["minLength"] == 1
+    # is_tragic_hero optional boolean (PFS6-C5)
+    assert (
+        schema["properties"]["is_tragic_hero"]["type"] == "boolean"
+    )
+
+
+def test_aristotelian_mythos_schema_has_expected_shape():
+    """Spot-check of ArMythos schema structure per aristotelian-
+    sketch-01 A1 + production-format-sketch-06 PFS6-M1..M11 +
+    PFS6-X1."""
+    schema = _load_aristotelian_mythos_schema()
+    assert schema["title"] == "ArMythos"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/mythos.json"
+    )
+    # Six required fields per PFS6-M1
+    assert set(schema["required"]) == {
+        "id", "title", "action_summary",
+        "central_event_ids", "plot_kind", "phases",
+    }
+    assert schema["additionalProperties"] is False
+    # All declared properties per PFS6-M1..M11
+    assert set(schema["properties"].keys()) == {
+        "id", "title", "action_summary",
+        "central_event_ids", "plot_kind", "phases",
+        "complication_event_id", "denouement_event_id",
+        "peripeteia_event_id", "anagnorisis_event_id",
+        "asserts_unity_of_action", "asserts_unity_of_time",
+        "asserts_unity_of_place",
+        "unity_of_time_bound", "unity_of_place_max_locations",
+        "aims_at_catharsis", "characters",
+    }
+    # central_event_ids non-empty array (PFS6-M3)
+    central = schema["properties"]["central_event_ids"]
+    assert central["type"] == "array"
+    assert central["minItems"] == 1
+    # plot_kind closed enum (PFS6-M4)
+    assert set(schema["properties"]["plot_kind"]["enum"]) == {
+        "simple", "complex",
+    }
+    # phases non-empty array via cross-file $ref (PFS6-M5 + PFS6-X1)
+    phases = schema["properties"]["phases"]
+    assert phases["type"] == "array"
+    assert phases["minItems"] == 1
+    assert phases["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/phase.json"
+    )
+    # characters array via cross-file $ref (PFS6-M11 + PFS6-X1)
+    characters = schema["properties"]["characters"]
+    assert characters["type"] == "array"
+    assert characters["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/character.json"
+    )
+    # Complex-plot conditional via allOf/if-then-else-anyOf (PFS6-M6)
+    all_of = schema.get("allOf", [])
+    assert len(all_of) == 1
+    clause = all_of[0]
+    assert clause["if"]["properties"]["plot_kind"]["const"] == "complex"
+    assert "anyOf" in clause["then"]
+    required_sets = [
+        set(branch["required"])
+        for branch in clause["then"]["anyOf"]
+    ]
+    assert {"peripeteia_event_id"} in required_sets
+    assert {"anagnorisis_event_id"} in required_sets
+
+
+def test_aristotelian_phase_corpus_conformance():
+    """Every ArPhase reachable through encoding-level ArMythos
+    records validates against schema/aristotelian/phase.json
+    (production-format-sketch-06 PFS6-P1..P5)."""
+    schema = _load_aristotelian_phase_schema()
+    validator = Draft202012Validator(schema)
+
+    _, phases_by_encoding, _ = (
+        _discover_encoding_aristotelian_records()
+    )
+    assert phases_by_encoding, (
+        "expected at least one encoding with Aristotelian phases; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    role_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, phases in phases_by_encoding:
+        for phase in phases:
+            total += 1
+            dumped = _dump_arphase(phase)
+            role_counts[dumped["role"]] = (
+                role_counts.get(dumped["role"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "phase_id": phase.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_phase_corpus_conformance: "
+        f"{total} ArPhase records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(
+        f"  by role:                    "
+        f"{dict(sorted(role_counts.items()))}"
+    )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: {finding['phase_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArPhase conformance finding(s); see "
+        f"output. Resolve per production-format-sketch-06's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_aristotelian_character_corpus_conformance():
+    """Every ArCharacter reachable through encoding-level ArMythos
+    records validates against schema/aristotelian/character.json
+    (production-format-sketch-06 PFS6-C1..C5)."""
+    schema = _load_aristotelian_character_schema()
+    validator = Draft202012Validator(schema)
+
+    _, _, chars_by_encoding = (
+        _discover_encoding_aristotelian_records()
+    )
+    assert chars_by_encoding, (
+        "expected at least one encoding with Aristotelian "
+        "characters; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    tragic_hero_count = 0
+    new_findings: list = []
+
+    for encoding_name, characters in chars_by_encoding:
+        for character in characters:
+            total += 1
+            dumped = _dump_archaracter(character)
+            if dumped.get("is_tragic_hero"):
+                tragic_hero_count += 1
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "character_id": character.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_character_corpus_conformance: "
+        f"{total} ArCharacter records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  is_tragic_hero=True:        {tragic_hero_count}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['character_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArCharacter conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-06's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
+
+
+def test_aristotelian_mythos_corpus_conformance():
+    """Every ArMythos across every encoding's AR_*_MYTHOS /
+    AR_*_MYTHOI exports validates against
+    schema/aristotelian/mythos.json (production-format-sketch-06
+    PFS6-M1..M11 + PFS6-X1). Uses the registry-bound validator
+    because mythos.json $refs its sibling phase.json and
+    character.json (PFS6-D5)."""
+    registry = _build_schema_registry()
+    mythos_schema = _load_aristotelian_mythos_schema()
+    validator = Draft202012Validator(
+        mythos_schema, registry=registry,
+    )
+
+    mythoi_by_encoding, _, _ = (
+        _discover_encoding_aristotelian_records()
+    )
+    assert mythoi_by_encoding, (
+        "expected at least one encoding with ArMythos records; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    plot_kind_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, mythoi in mythoi_by_encoding:
+        for mythos in mythoi:
+            total += 1
+            dumped = _dump_armythos(mythos)
+            plot_kind_counts[dumped["plot_kind"]] = (
+                plot_kind_counts.get(dumped["plot_kind"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "mythos_id": mythos.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_mythos_corpus_conformance: "
+        f"{total} ArMythos records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(
+        f"  by plot_kind:               "
+        f"{dict(sorted(plot_kind_counts.items()))}"
+    )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: {finding['mythos_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArMythos conformance finding(s); "
+        f"see output. Resolve per production-format-sketch-06's "
+        f"§Conformance dispositions protocol."
+    )
+    assert total > 0
 
 
 # ============================================================================

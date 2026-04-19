@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/mythos.json",
+  "title": "ArMythos",
+  "description": "The Aristotelian dialect's primary record — mythos, 'the arrangement of the incidents', the soul of tragedy (Poetics 1450a), above character / thought / diction / melody / spectacle. Per design/aristotelian-sketch-01.md A1. Central events, a phase structure (A2), optional peripeteia / anagnorisis pointers (A4), the three unity assertions (A6), cross-dialect character records (A5), and an authorial catharsis claim (A8). The self-verifier's checks (A7) operate over the A3 complex-plot condition (enforced also by this schema's allOf clause), phase scope coverage, unity-of-time / unity-of-place bounds, event-ref integrity, and hamartia participation.",
+  "type": "object",
+  "required": ["id", "title", "action_summary", "central_event_ids", "plot_kind", "phases"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this mythos (e.g., 'ar_oedipus'). PFS6-M2."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Title of the work under Aristotelian analysis (e.g., 'Oedipus Tyrannus'). PFS6-M2."
+    },
+    "action_summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Prose summary of the central action — what happens, not how it's narrated. The author's one-paragraph statement of the mythos. PFS6-M2."
+    },
+    "central_event_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Substrate event ids comprising the central action. Order is preserved for author intent but not semantically required; the phase structure (A2) authorizes the arrangement. Non-empty: a mythos with zero events violates A1's 'arrangement of incidents' — there must be at least one incident. Plain-string references per PFS6-X2 / PFS5 OQ3. PFS6-M3."
+    },
+    "plot_kind": {
+      "type": "string",
+      "enum": ["simple", "complex"],
+      "description": "Per A3: simple plots have a single change of fortune with no peripeteia / no anagnorisis; complex plots involve peripeteia, anagnorisis, or both. If 'complex', the allOf clause below requires at least one of peripeteia_event_id / anagnorisis_event_id. PFS6-M4."
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "https://brazilofmux.github.io/story/schema/aristotelian/phase.json"
+      },
+      "description": "The three logical divisions of the mythos — beginning, middle, end — per A2. Minimum one phase; the self-verifier (A7 unity-of-action check) validates phase-coverage and disjointness against central_event_ids. Cross-file $ref to phase.json per PFS6-X1. PFS6-M5."
+    },
+    "complication_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional substrate event id marking the Aristotelian 'binding' (Poetics 1455b) — where beginning ends and middle begins. Plain-string reference per PFS6-X2. PFS6-M7."
+    },
+    "denouement_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional substrate event id marking the Aristotelian 'unbinding' (Poetics 1455b) — where middle ends and end begins. Plain-string reference per PFS6-X2. PFS6-M7."
+    },
+    "peripeteia_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional substrate event id where fortune reverses direction (Poetics 1452a). Interpretive pointer per A4 — the event structurally exists in the substrate; the 'reversal' claim is interpretive (substrate does not carry fortune-state per substrate-sketch-05's F1 retirement). Plain-string reference per PFS6-X2. PFS6-M7."
+    },
+    "anagnorisis_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional substrate event id where a character moves from ignorance to knowledge (Poetics 1452a). Per A4, anagnorisis is closer to structural than peripeteia — substrate's identity-and-realization machinery carries knowledge-state transitions, so an anagnorisis event IS a substrate-visible realization event. Plain-string reference per PFS6-X2. PFS6-M7."
+    },
+    "asserts_unity_of_action": {
+      "type": "boolean",
+      "description": "Aristotelian (Poetics 1451a) — defaults to true in Python. The A7 unity-of-action check runs unconditionally in the verifier; this field exists for authorial explicitness and for encodings that deliberately reject the assertion. PFS6-M8."
+    },
+    "asserts_unity_of_time": {
+      "type": "boolean",
+      "description": "Neoclassical-leaning (Aristotle mentions the 'single revolution of the sun' as a tendency, not a rule). Python default false. When true, the A7 unity-of-time check is applied against unity_of_time_bound. PFS6-M8."
+    },
+    "asserts_unity_of_place": {
+      "type": "boolean",
+      "description": "Strictly neoclassical (Castelvetro 1570) — not Aristotelian proper. Python default false. When true, the A7 unity-of-place check is applied against unity_of_place_max_locations. PFS6-M8."
+    },
+    "unity_of_time_bound": {
+      "type": "integer",
+      "description": "Configurable bound for the unity-of-time check — max(τ_s) - min(τ_s) over central_event_ids must be ≤ this value when asserts_unity_of_time is true. Python default 24; unit is encoding-defined. Carried unconditionally by the Python dataclass; verifier reads it only when the assertion is true (PFS6's anticipated non-finding 2). PFS6-M9."
+    },
+    "unity_of_place_max_locations": {
+      "type": "integer",
+      "description": "Configurable bound for the unity-of-place check — the distinct at_location set across central_event_ids must have cardinality ≤ this value when asserts_unity_of_place is true. Python default 1. Same unconditional-carry pattern as unity_of_time_bound. PFS6-M9."
+    },
+    "aims_at_catharsis": {
+      "type": "boolean",
+      "description": "Authorial claim about intended effect on pity and fear (A8). The self-verifier does NOT check catharsis — audience response is out of scope for the substrate + dialect stack. This field records the claim. Python default true. PFS6-M10."
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "$ref": "https://brazilofmux.github.io/story/schema/aristotelian/character.json"
+      },
+      "description": "Optional ArCharacter records authored at mythos scope per A5. Empty array is legal (a mythos without Aristotelian-dialect characters is valid — characters may live on the Dramatic side only, or be elided for short-form probes). Cross-file $ref to character.json per PFS6-X1. Python default is an empty tuple. PFS6-M11."
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "Complex-plot conditional per A3 + A7 check 1 + PFS6-M6: if plot_kind is 'complex', at least one of peripeteia_event_id or anagnorisis_event_id must be present. Extends PFS5-B5's if-then-else pattern with an anyOf-in-then shape.",
+      "if": {
+        "properties": { "plot_kind": { "const": "complex" } },
+        "required": ["plot_kind"]
+      },
+      "then": {
+        "anyOf": [
+          { "required": ["peripeteia_event_id"] },
+          { "required": ["anagnorisis_event_id"] }
+        ]
+      }
+    }
+  ]
+}

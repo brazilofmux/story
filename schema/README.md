@@ -47,7 +47,7 @@ depend on the Python; the Python depends on the schema.**
 
 ## What's here
 
-Substrate schema layer, structurally complete (six records):
+### Substrate layer (structurally complete, six records)
 
 - `description.json` — the `Description` record
   (descriptions-sketch-01 §The description record as amended
@@ -70,22 +70,58 @@ Substrate schema layer, structurally complete (six records):
   on kind, optional metadata). Shipped by production-format-
   sketch-05.
 
-Cross-file references resolve via canonical `$id` URIs using a
-`jsonschema.referencing.Registry` in the conformance test
-layer (pattern established by production-format-sketch-03
-PFS3-E1; extended by sketch-04 P4A1 for held). Branch's
-`schema/branch.json` has no outbound cross-file references
-today; labels on `event.json`'s `branches` field are plain
-string arrays, not $ref-typed — see production-format-
-sketch-05 §Open questions OQ3 for the cross-reference-
-consistency audit surface.
+### Dialect layer (Aristotelian, three core records)
+
+Under `schema/aristotelian/` per production-format-sketch-06
+PFS6-N1 — first dialect to ship production-layer artifacts;
+establishes the `schema/<dialect>/` namespace convention for
+future dialect-schema arcs.
+
+- `aristotelian/phase.json` — the `ArPhase` record
+  (aristotelian-sketch-01 A2: logical division with id, role
+  enum {beginning, middle, end}, scope_event_ids, optional
+  annotation).
+- `aristotelian/character.json` — the `ArCharacter` record
+  (aristotelian-sketch-01 A5: id, name, optional
+  character_ref_id cross-dialect hook, optional hamartia_text,
+  optional is_tragic_hero).
+- `aristotelian/mythos.json` — the `ArMythos` record
+  (aristotelian-sketch-01 A1: the dialect's primary record;
+  required id / title / action_summary / central_event_ids /
+  plot_kind / phases; optional peripeteia / anagnorisis /
+  complication / denouement pointers; three unity assertions
+  with configurable bounds per A6; authorial catharsis claim
+  per A8). Cross-file $refs into `phase.json` and
+  `character.json` via PFS6-X1.
+
+`ArObservation` (verifier output) and the Aristotelian cross-
+boundary records (`ArAnnotationReview`,
+`ArObservationCommentary`, `DialectReading`) are deferred to
+the Production C cross-boundary arc, per PFS6 §Scope.
+
+### Cross-file references
+
+Substrate-layer cross-file references resolve via canonical
+`$id` URIs using a `jsonschema.referencing.Registry` in the
+conformance test layer (pattern established by production-
+format-sketch-03 PFS3-E1; extended by sketch-04 P4A1 for held;
+extended by sketch-06 PFS6-D5 for the aristotelian dialect).
+Branch's `schema/branch.json` has no outbound cross-file
+references; the Aristotelian mythos has two (phase.json and
+character.json). Labels on `event.json`'s `branches` field
+and event-id strings on ArMythos / ArPhase are plain string
+arrays / strings, not $ref-typed — see production-format-
+sketch-05 §Open questions OQ3 and production-format-sketch-06
+§Open questions OQ3 for the cross-reference-consistency audit
+surface.
 
 ## What's deferred
 
-- Dialect records (Throughline, ArMythos, ArPhase, StcBeat,
-  DSP, Signpost, ThematicPicks, etc.). Each dialect needs its
-  own production-format sketch; Aristotelian is the smallest
-  candidate (~7 records).
+- Remaining dialect records (Dramatic, Save-the-Cat, Dramatica-
+  complete; `ArObservation` for Aristotelian). Each dialect or
+  record group needs its own production-format sketch;
+  Aristotelian-core (three records) shipped under PFS6 as the
+  first dialect-layer example.
 - Cross-boundary records (Lowering, VerificationReview,
   StructuralAdvisory, VerifierCommentary, ArAnnotationReview,
   ArObservationCommentary, DialectReading). Multiple production
