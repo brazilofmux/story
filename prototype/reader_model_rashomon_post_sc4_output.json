@@ -1,0 +1,516 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "max_tokens": 20000,
+    "current_τ_a": 40000,
+    "encoding": {
+      "id": "rashomon_encoding",
+      "title": "Rashomon",
+      "story_ids": [
+        "S_frame",
+        "S_bandit_ver",
+        "S_wife_ver",
+        "S_samurai_ver",
+        "S_woodcutter_ver"
+      ],
+      "relation_count": 10
+    },
+    "lowering_ids": [
+      "L_bandit",
+      "L_wife",
+      "L_samurai",
+      "L_woodcutter",
+      "L_priest_pending",
+      "L_commoner_pending",
+      "L_frame_at_gate_pending",
+      "L_frame_testimonies_reported_pending",
+      "L_frame_woodcutter_breaks_pending",
+      "L_frame_abandoned_baby_pending",
+      "L_frame_rain_stops_pending",
+      "L_bandit_seduction",
+      "L_bandit_duel",
+      "L_wife_violated",
+      "L_wife_killing",
+      "L_samurai_begging",
+      "L_samurai_suicide",
+      "L_woodcutter_fight",
+      "L_woodcutter_theft",
+      "L_bandit_mc_throughline",
+      "L_wife_mc_throughline",
+      "L_samurai_mc_throughline",
+      "L_woodcutter_mc_throughline",
+      "L_frame_overall_pending",
+      "L_frame_mc_pending",
+      "L_frame_ic_pending",
+      "L_frame_rel_pending"
+    ],
+    "verifier_review_count": 5,
+    "lowerings_to_review": null,
+    "reviews_to_comment_on": null,
+    "substrate_context_included": true,
+    "template_records_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_lowering_id": "L_bandit",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 400,
+      "comment": "The binding of C_bandit (Tajōmaru) to substrate entity 'tajomaru' is clean. The substrate confirms 'tajomaru' as an agent entity; the annotation accurately notes the multi-story role (testimony MC and participant across other testimonies)."
+    },
+    {
+      "target_lowering_id": "L_wife",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 401,
+      "comment": "Straightforward character-to-entity binding. Substrate confirms 'wife' as an agent entity, and the annotation correctly notes the wife's cross-testimony participation."
+    },
+    {
+      "target_lowering_id": "L_samurai",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 402,
+      "comment": "The annotation is exemplary: it explains the naming asymmetry ('samurai' in the Dramatic dialect vs. 'husband' in the substrate) as a difference in foregrounding emphasis, not a mismatch. The substrate confirms 'husband' as an agent entity. Same ontic agent, two naming lenses."
+    },
+    {
+      "target_lowering_id": "L_woodcutter",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 403,
+      "comment": "Clean binding. The annotation usefully flags the dual-Story role (frame MC via T_frame_mc and testimony MC via T_woodcutter_mc) and notes that one substrate Entity carries both. The substrate confirms 'woodcutter' as agent."
+    },
+    {
+      "target_lowering_id": "L_priest_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 404,
+      "comment": "PENDING is well-justified: the substrate scope is grove-only, and the priest appears only at the gate. The annotation correctly identifies what a future extension would require. The 'why_pending' metadata corroborates."
+    },
+    {
+      "target_lowering_id": "L_commoner_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 405,
+      "comment": "Same rationale as L_priest_pending; the commoner is a frame-only character. PENDING is the correct status given the grove-only substrate scope."
+    },
+    {
+      "target_lowering_id": "L_frame_at_gate_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 420,
+      "comment": "The annotation correctly identifies that the gate narrative is unmodeled in the substrate and specifies what a future extension would need (gate/shelter Entities, a frame fabula). Clean PENDING."
+    },
+    {
+      "target_lowering_id": "L_frame_testimonies_reported_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 421,
+      "comment": "The annotation identifies a principled structural reason for deferral: this Scene's relationship to the substrate is mediated by Story-containment (StoryRelation at the encoding layer), not by direct Scene-to-Event binding. The reference to multi-story-sketch-01's allowance grounds the design choice."
+    },
+    {
+      "target_lowering_id": "L_frame_woodcutter_breaks_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 422,
+      "comment": "Same containment-via-reporting rationale as L_frame_testimonies_reported_pending, applied to the woodcutter's belated confession. Consistent treatment of an analogous structural situation."
+    },
+    {
+      "target_lowering_id": "L_frame_abandoned_baby_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 423,
+      "comment": "Frame-only scene; the annotation correctly identifies the substrate extension needed (a 'baby' Entity and a gate fabula). Clean PENDING."
+    },
+    {
+      "target_lowering_id": "L_frame_rain_stops_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 424,
+      "comment": "Frame-only scene; consistent with all other frame-scene PENDINGs. Clean."
+    },
+    {
+      "target_lowering_id": "L_bandit_seduction",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 440,
+      "comment": "The annotation is well-constructed. It carefully distinguishes four canonical-floor events from two branch-scoped events, and correctly notes that the seduction's modality (yielding vs. violation) lives in the description surface, not event facts. The Scene result ('she agrees to the duel; the samurai agrees to fight') aligns with including the branch events E_t_wife_requests_killing and E_t_frees_husband. Position range τ_s=2..8 correctly spans all six listed events."
+    },
+    {
+      "target_lowering_id": "L_bandit_duel",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 441,
+      "comment": "Clean one-to-one binding of S_bandit_duel to E_t_duel. The annotation correctly separates the 'noble-duel' interpretive framing (description surface) from the structural combat event."
+    },
+    {
+      "target_lowering_id": "L_wife_violated",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 450,
+      "comment": "The annotation thoughtfully distinguishes the 'violation' framing as description-level texture (D_intercourse_wife_texture) from the event facts, and honestly acknowledges that the husband's contempt gaze is prose-carried rather than event-modeled. The position range max of 8 slightly exceeds the latest listed event (E_w_tajomaru_leaves at τ_s=7) but this appears to be a minor range convention or a buffer for the unmodeled dramatic content (pleading, contempt gaze) that the scene describes."
+    },
+    {
+      "target_lowering_id": "L_wife_killing",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 451,
+      "comment": "Clean binding: S_wife_killing maps to E_w_killing on B_WIFE. The annotation correctly notes that 'half-conscious' is prose/testimony texture, while the substrate asserts the killing as the branch's factual claim."
+    },
+    {
+      "target_lowering_id": "L_samurai_begging",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 460,
+      "comment": "Three B_HUSBAND branch events cleanly realize the Scene's action (wife requests, bandit refuses, wife flees). The annotation properly identifies the 'disgust' framing as a motivation description rather than an event effect. Position range τ_s=7..9 matches the listed events."
+    },
+    {
+      "target_lowering_id": "L_samurai_suicide",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 461,
+      "comment": "Two B_HUSBAND events (E_h_frees_husband, E_h_suicide) cleanly realize the Scene. The 'ritual' and 'humiliated' framings are correctly identified as description-layer. Position range τ_s=10..11 matches."
+    },
+    {
+      "target_lowering_id": "L_woodcutter_fight",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 470,
+      "comment": "Three B_WOODCUTTER events realize the Scene's content (goading, fight, wife fleeing). The annotation carefully separates tonal framing ('cowardly') and motivational content ('goading') from structural event facts. Position range τ_s=7..10 spans all events."
+    },
+    {
+      "target_lowering_id": "L_woodcutter_theft",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 471,
+      "comment": "Clean one-to-one binding. The annotation adds value by noting the description-on-description pattern (D_woodcutter_trust with authorial-uncertainty child D_wc_authorial_doubt), which is a structural claim about the substrate's representational depth at this event."
+    },
+    {
+      "target_lowering_id": "L_bandit_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 490,
+      "comment": "The Throughline subject explicitly names 'the seduction' as part of Tajōmaru's self-account, yet the lowering maps only to three branch-scoped events (τ_s=7..9), excluding the canonical-floor events (E_lure, E_bind, E_bring_wife, E_intercourse at τ_s=2..5) that realize the seduction. The annotation should either include the canonical events in the lower_records or explicitly state that the throughline lowering is scoped to branch-divergent events only, with canonical floor events understood as shared substrate available to but not bound by this throughline."
+    },
+    {
+      "target_lowering_id": "L_wife_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "needs-work",
+      "anchor_τ_a": 491,
+      "comment": "The Throughline subject names 'violation' as the opening element of the wife's self-account, yet the lowering maps only to two B_WIFE branch events, excluding E_intercourse (the canonical-floor event that carries the violation). The same gap as L_bandit_mc_throughline: the annotation should either include the canonical event or explain the scoping principle for throughline lowerings."
+    },
+    {
+      "target_lowering_id": "L_samurai_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 492,
+      "comment": "The Throughline subject ('betrayal and ritual self-erasure') aligns well with the five B_HUSBAND branch events. The 'betrayal' here is specifically the wife's post-intercourse behavior (requesting the husband's death), which is entirely branch-scoped — unlike the bandit and wife throughlines, no canonical-floor event is named by the subject. The annotation's claim that this is the longest testimony-MC arc is verifiable from the τ_s range."
+    },
+    {
+      "target_lowering_id": "L_woodcutter_mc_throughline",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 493,
+      "comment": "All four B_WOODCUTTER events are branch-scoped and align with the Throughline subject (cowardly fight, goading wife, self-incriminating theft). The annotation adds interpretive value by explaining why the theft is INCLUDED in the arc — it's the pivot of the woodcutter's self-incrimination, not a separate aftermath."
+    },
+    {
+      "target_lowering_id": "L_frame_overall_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 495,
+      "comment": "PENDING is correct: the interpretive crisis at the gate is entirely frame-side, and the substrate does not model the gate. The annotation is concise and accurate."
+    },
+    {
+      "target_lowering_id": "L_frame_mc_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 496,
+      "comment": "The annotation's dual-arc explanation is valuable: same Entity ('woodcutter') carries both a frame-side arc (PENDING here) and a testimony-side arc (lowered via L_woodcutter_mc_throughline). This is the clearest articulation of the multi-Story encoding shape in the Lowering set."
+    },
+    {
+      "target_lowering_id": "L_frame_ic_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 497,
+      "comment": "PENDING is justified for the same grove-only scope reason. Concise and consistent with the other frame-only throughline PENDINGs."
+    },
+    {
+      "target_lowering_id": "L_frame_rel_pending",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 40000,
+      "verdict": "approved",
+      "anchor_τ_a": 498,
+      "comment": "PENDING is justified. The priest-woodcutter relationship arc is entirely gate-side. Consistent with other frame-only PENDINGs."
+    }
+  ],
+  "verifier_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "The verifier correctly identifies that all four frame-Story DomainAssignments, all six DSPs, and the Story_goal/Story_consequence are encoded but have no substrate realization to verify against. Reporting the gap rather than producing spurious verdicts is the right behavior per the multi-story verification contract. The 25 PENDING Lowerings for frame-side records in the Lowering set corroborate the verifier's finding.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:multi-story:frame-declarations:story=S_frame",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_frame_limit",
+        "comment": "S_frame: full Template declarations (4 DomainAssignments, 6 DSPs, Story_goal, Story_consequence) are encoded, but all frame-Story Lowerings are PENDING — the Rashomon substrate scope is grove-only and does not model the gate narrative. No substrate-based verification possible for the frame Story's declarations. Per multi-story-sketch-01 MS4, the per-Story verifier reports this gap rather than producing spurious verdicts."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The approval is well-grounded: E_t_wife_requests_killing (type 'utterance', τ_s=7, participants include speaker=wife, target=husband) functions as a scheduling predicate — it names a killing that sets up the duel endpoint. However, the strength of 0.50 could benefit from noting that in Tajōmaru's account, the 'scheduling' is indirect: the wife requests the killing, but Tajōmaru converts this into a duel rather than an execution. The scheduling predicate identifies a demanded endpoint; the arc's resolution mode (combat rather than murder) is a branch-specific transformation of that demand. This is still Timelock, but the shape is richer than a simple scheduled-endpoint model.",
+      "suggested_signature": "Consider distinguishing between 'scheduling predicates that name the endpoint directly' and 'scheduling predicates whose demanded endpoint is transformed by the MC's agency' — in the bandit's testimony, the wife requests killing but Tajōmaru converts this to a duel, which is a Timelock with MC-mediated endpoint substitution.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_bandit_ver",
+        "verdict": "approved",
+        "match_strength": 0.5,
+        "target_record": "dramatica-complete:DSP_bandit_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows scheduling predicate(s) (requested_killing) and zero middle-arc LT2 convergence signals (positions: 1 middle-arc, 0 peripheral-pre, 0 terminal). LT9 affirmatively detects Timelock shape. Strength 0.50 = min(1.0, 1/2)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The 'noted' verdict is honest: B_WIFE has no event with a scheduling predicate naming a specific endpoint. However, the wife's account has a clear temporal driver — the husband's gaze of contempt — that is acknowledged as prose-carried and not event-modeled (per L_wife_violated's annotation). If this gaze were modeled as an event (e.g., type 'provocation' with a target effect on the wife's state), it would function as a scheduling predicate analogous to the 'requested_killing' events. The verifier's suggestion to name a scheduled endpoint with a `scheduled_*` predicate is sound but undersells the structural issue: the wife's Timelock driver exists in the narrative but is representationally absent from the substrate.",
+      "suggested_signature": "Consider flagging Timelock-declared stories where the narrative's temporal driver is identified in a Lowering annotation as 'prose-carried' but absent from the event model — this is a stronger signal than generic 'no scheduling predicate found' and points to a specific representational gap.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_wife_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_wife_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no restricting middle-arc LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "endorses",
+      "comment": "E_h_wife_requests_killing (type 'utterance', τ_s=7) on B_HUSBAND parallels E_t_wife_requests_killing on B_TAJOMARU — same structural role as a scheduling predicate, different branch. The approval at strength 0.50 is consistent with vr_1's reasoning, and the parallel structure across the bandit and samurai branches reinforces the Timelock reading: in both accounts, the wife's demand for the husband's death sets a terminal horizon.",
+      "suggested_signature": null,
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_samurai_ver",
+        "verdict": "approved",
+        "match_strength": 0.5,
+        "target_record": "dramatica-complete:DSP_samurai_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows scheduling predicate(s) (requested_killing) and zero middle-arc LT2 convergence signals (positions: 1 middle-arc, 0 peripheral-pre, 0 terminal). LT9 affirmatively detects Timelock shape. Strength 0.50 = min(1.0, 1/2)."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 40000,
+      "assessment": "qualifies",
+      "comment": "The 'noted' verdict is honest but E_wc_wife_goads (type 'utterance', τ_s=7, speaker=wife, listeners=[tajomaru, husband]) serves a function structurally parallel to the 'requested_killing' events in the bandit and samurai branches — it provokes the fight that ends in the husband's death. The verifier doesn't detect it because 'goading' is more diffuse than 'requesting killing': it doesn't name a specific target action. Still, the structural parallelism across all four branches is notable: in each testimony, a wife-initiated utterance event at τ_s=7 drives the arc toward its lethal conclusion. The check might benefit from recognizing this cross-branch pattern.",
+      "suggested_signature": "Consider a cross-branch signature: when the same participant role (here, the wife as speaker) initiates an utterance event at the same τ_s position across multiple branches, and each branch's arc ends in the same outcome (husband's death), the utterance may function as a scheduling predicate even without explicit scheduling semantics in its type or predicate name.",
+      "target_review": {
+        "reviewer_id": "verifier:characterization:dsp-limit:story=S_woodcutter_ver",
+        "verdict": "noted",
+        "match_strength": null,
+        "target_record": "dramatica-complete:DSP_woodcutter_limit",
+        "comment": "DSP_limit=Timelock declared; substrate shows no restricting middle-arc LT2 convergence signals AND no scheduling predicate (LT8). Consistent with Timelock but not affirmatively detected — LT3's honest weak-fallback asymmetry (sketch-01). Consider naming the scheduled endpoint with a `scheduled_*` predicate to fire LT9."
+      }
+    }
+  ],
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "lowering_id": "L_bandit",
+        "verdict": "approved",
+        "rationale": "The binding of C_bandit (Tajōmaru) to substrate entity 'tajomaru' is clean. The substrate confirms 'tajomaru' as an agent entity; the annotation accurately notes the multi-story role (testimony MC and participant across other testimonies)."
+      },
+      {
+        "lowering_id": "L_wife",
+        "verdict": "approved",
+        "rationale": "Straightforward character-to-entity binding. Substrate confirms 'wife' as an agent entity, and the annotation correctly notes the wife's cross-testimony participation."
+      },
+      {
+        "lowering_id": "L_samurai",
+        "verdict": "approved",
+        "rationale": "The annotation is exemplary: it explains the naming asymmetry ('samurai' in the Dramatic dialect vs. 'husband' in the substrate) as a difference in foregrounding emphasis, not a mismatch. The substrate confirms 'husband' as an agent entity. Same ontic agent, two naming lenses."
+      },
+      {
+        "lowering_id": "L_woodcutter",
+        "verdict": "approved",
+        "rationale": "Clean binding. The annotation usefully flags the dual-Story role (frame MC via T_frame_mc and testimony MC via T_woodcutter_mc) and notes that one substrate Entity carries both. The substrate confirms 'woodcutter' as agent."
+      },
+      {
+        "lowering_id": "L_priest_pending",
+        "verdict": "approved",
+        "rationale": "PENDING is well-justified: the substrate scope is grove-only, and the priest appears only at the gate. The annotation correctly identifies what a future extension would require. The 'why_pending' metadata corroborates."
+      },
+      {
+        "lowering_id": "L_commoner_pending",
+        "verdict": "approved",
+        "rationale": "Same rationale as L_priest_pending; the commoner is a frame-only character. PENDING is the correct status given the grove-only substrate scope."
+      },
+      {
+        "lowering_id": "L_frame_at_gate_pending",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies that the gate narrative is unmodeled in the substrate and specifies what a future extension would need (gate/shelter Entities, a frame fabula). Clean PENDING."
+      },
+      {
+        "lowering_id": "L_frame_testimonies_reported_pending",
+        "verdict": "approved",
+        "rationale": "The annotation identifies a principled structural reason for deferral: this Scene's relationship to the substrate is mediated by Story-containment (StoryRelation at the encoding layer), not by direct Scene-to-Event binding. The reference to multi-story-sketch-01's allowance grounds the design choice."
+      },
+      {
+        "lowering_id": "L_frame_woodcutter_breaks_pending",
+        "verdict": "approved",
+        "rationale": "Same containment-via-reporting rationale as L_frame_testimonies_reported_pending, applied to the woodcutter's belated confession. Consistent treatment of an analogous structural situation."
+      },
+      {
+        "lowering_id": "L_frame_abandoned_baby_pending",
+        "verdict": "approved",
+        "rationale": "Frame-only scene; the annotation correctly identifies the substrate extension needed (a 'baby' Entity and a gate fabula). Clean PENDING."
+      },
+      {
+        "lowering_id": "L_frame_rain_stops_pending",
+        "verdict": "approved",
+        "rationale": "Frame-only scene; consistent with all other frame-scene PENDINGs. Clean."
+      },
+      {
+        "lowering_id": "L_bandit_seduction",
+        "verdict": "approved",
+        "rationale": "The annotation is well-constructed. It carefully distinguishes four canonical-floor events from two branch-scoped events, and correctly notes that the seduction's modality (yielding vs. violation) lives in the description surface, not event facts. The Scene result ('she agrees to the duel; the samurai agrees to fight') aligns with including the branch events E_t_wife_requests_killing and E_t_frees_husband. Position range τ_s=2..8 correctly spans all six listed events."
+      },
+      {
+        "lowering_id": "L_bandit_duel",
+        "verdict": "approved",
+        "rationale": "Clean one-to-one binding of S_bandit_duel to E_t_duel. The annotation correctly separates the 'noble-duel' interpretive framing (description surface) from the structural combat event."
+      },
+      {
+        "lowering_id": "L_wife_violated",
+        "verdict": "approved",
+        "rationale": "The annotation thoughtfully distinguishes the 'violation' framing as description-level texture (D_intercourse_wife_texture) from the event facts, and honestly acknowledges that the husband's contempt gaze is prose-carried rather than event-modeled. The position range max of 8 slightly exceeds the latest listed event (E_w_tajomaru_leaves at τ_s=7) but this appears to be a minor range convention or a buffer for the unmodeled dramatic content (pleading, contempt gaze) that the scene describes."
+      },
+      {
+        "lowering_id": "L_wife_killing",
+        "verdict": "approved",
+        "rationale": "Clean binding: S_wife_killing maps to E_w_killing on B_WIFE. The annotation correctly notes that 'half-conscious' is prose/testimony texture, while the substrate asserts the killing as the branch's factual claim."
+      },
+      {
+        "lowering_id": "L_samurai_begging",
+        "verdict": "approved",
+        "rationale": "Three B_HUSBAND branch events cleanly realize the Scene's action (wife requests, bandit refuses, wife flees). The annotation properly identifies the 'disgust' framing as a motivation description rather than an event effect. Position range τ_s=7..9 matches the listed events."
+      },
+      {
+        "lowering_id": "L_samurai_suicide",
+        "verdict": "approved",
+        "rationale": "Two B_HUSBAND events (E_h_frees_husband, E_h_suicide) cleanly realize the Scene. The 'ritual' and 'humiliated' framings are correctly identified as description-layer. Position range τ_s=10..11 matches."
+      },
+      {
+        "lowering_id": "L_woodcutter_fight",
+        "verdict": "approved",
+        "rationale": "Three B_WOODCUTTER events realize the Scene's content (goading, fight, wife fleeing). The annotation carefully separates tonal framing ('cowardly') and motivational content ('goading') from structural event facts. Position range τ_s=7..10 spans all events."
+      },
+      {
+        "lowering_id": "L_woodcutter_theft",
+        "verdict": "approved",
+        "rationale": "Clean one-to-one binding. The annotation adds value by noting the description-on-description pattern (D_woodcutter_trust with authorial-uncertainty child D_wc_authorial_doubt), which is a structural claim about the substrate's representational depth at this event."
+      },
+      {
+        "lowering_id": "L_bandit_mc_throughline",
+        "verdict": "needs-work",
+        "rationale": "The Throughline subject explicitly names 'the seduction' as part of Tajōmaru's self-account, yet the lowering maps only to three branch-scoped events (τ_s=7..9), excluding the canonical-floor events (E_lure, E_bind, E_bring_wife, E_intercourse at τ_s=2..5) that realize the seduction. The annotation should either include the canonical events in the lower_records or explicitly state that the throughline lowering is scoped to branch-divergent events only, with canonical floor events understood as shared substrate available to but not bound by this throughline."
+      },
+      {
+        "lowering_id": "L_wife_mc_throughline",
+        "verdict": "needs-work",
+        "rationale": "The Throughline subject names 'violation' as the opening element of the wife's self-account, yet the lowering maps only to two B_WIFE branch events, excluding E_intercourse (the canonical-floor event that carries the violation). The same gap as L_bandit_mc_throughline: the annotation should either include the canonical event or explain the scoping principle for throughline lowerings."
+      },
+      {
+        "lowering_id": "L_samurai_mc_throughline",
+        "verdict": "approved",
+        "rationale": "The Throughline subject ('betrayal and ritual self-erasure') aligns well with the five B_HUSBAND branch events. The 'betrayal' here is specifically the wife's post-intercourse behavior (requesting the husband's death), which is entirely branch-scoped — unlike the bandit and wife throughlines, no canonical-floor event is named by the subject. The annotation's claim that this is the longest testimony-MC arc is verifiable from the τ_s range."
+      },
+      {
+        "lowering_id": "L_woodcutter_mc_throughline",
+        "verdict": "approved",
+        "rationale": "All four B_WOODCUTTER events are branch-scoped and align with the Throughline subject (cowardly fight, goading wife, self-incriminating theft). The annotation adds interpretive value by explaining why the theft is INCLUDED in the arc — it's the pivot of the woodcutter's self-incrimination, not a separate aftermath."
+      },
+      {
+        "lowering_id": "L_frame_overall_pending",
+        "verdict": "approved",
+        "rationale": "PENDING is correct: the interpretive crisis at the gate is entirely frame-side, and the substrate does not model the gate. The annotation is concise and accurate."
+      },
+      {
+        "lowering_id": "L_frame_mc_pending",
+        "verdict": "approved",
+        "rationale": "The annotation's dual-arc explanation is valuable: same Entity ('woodcutter') carries both a frame-side arc (PENDING here) and a testimony-side arc (lowered via L_woodcutter_mc_throughline). This is the clearest articulation of the multi-Story encoding shape in the Lowering set."
+      },
+      {
+        "lowering_id": "L_frame_ic_pending",
+        "verdict": "approved",
+        "rationale": "PENDING is justified for the same grove-only scope reason. Concise and consistent with the other frame-only throughline PENDINGs."
+      },
+      {
+        "lowering_id": "L_frame_rel_pending",
+        "verdict": "approved",
+        "rationale": "PENDING is justified. The priest-woodcutter relationship arc is entirely gate-side. Consistent with other frame-only PENDINGs."
+      }
+    ],
+    "verifier_commentaries": [
+      {
+        "target_review_id": "vr_0",
+        "assessment": "endorses",
+        "rationale": "The verifier correctly identifies that all four frame-Story DomainAssignments, all six DSPs, and the Story_goal/Story_consequence are encoded but have no substrate realization to verify against. Reporting the gap rather than producing spurious verdicts is the right behavior per the multi-story verification contract. The 25 PENDING Lowerings for frame-side records in the Lowering set corroborate the verifier's finding.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_1",
+        "assessment": "qualifies",
+        "rationale": "The approval is well-grounded: E_t_wife_requests_killing (type 'utterance', τ_s=7, participants include speaker=wife, target=husband) functions as a scheduling predicate — it names a killing that sets up the duel endpoint. However, the strength of 0.50 could benefit from noting that in Tajōmaru's account, the 'scheduling' is indirect: the wife requests the killing, but Tajōmaru converts this into a duel rather than an execution. The scheduling predicate identifies a demanded endpoint; the arc's resolution mode (combat rather than murder) is a branch-specific transformation of that demand. This is still Timelock, but the shape is richer than a simple scheduled-endpoint model.",
+        "suggested_signature": "Consider distinguishing between 'scheduling predicates that name the endpoint directly' and 'scheduling predicates whose demanded endpoint is transformed by the MC's agency' — in the bandit's testimony, the wife requests killing but Tajōmaru converts this to a duel, which is a Timelock with MC-mediated endpoint substitution."
+      },
+      {
+        "target_review_id": "vr_2",
+        "assessment": "qualifies",
+        "rationale": "The 'noted' verdict is honest: B_WIFE has no event with a scheduling predicate naming a specific endpoint. However, the wife's account has a clear temporal driver — the husband's gaze of contempt — that is acknowledged as prose-carried and not event-modeled (per L_wife_violated's annotation). If this gaze were modeled as an event (e.g., type 'provocation' with a target effect on the wife's state), it would function as a scheduling predicate analogous to the 'requested_killing' events. The verifier's suggestion to name a scheduled endpoint with a `scheduled_*` predicate is sound but undersells the structural issue: the wife's Timelock driver exists in the narrative but is representationally absent from the substrate.",
+        "suggested_signature": "Consider flagging Timelock-declared stories where the narrative's temporal driver is identified in a Lowering annotation as 'prose-carried' but absent from the event model — this is a stronger signal than generic 'no scheduling predicate found' and points to a specific representational gap."
+      },
+      {
+        "target_review_id": "vr_3",
+        "assessment": "endorses",
+        "rationale": "E_h_wife_requests_killing (type 'utterance', τ_s=7) on B_HUSBAND parallels E_t_wife_requests_killing on B_TAJOMARU — same structural role as a scheduling predicate, different branch. The approval at strength 0.50 is consistent with vr_1's reasoning, and the parallel structure across the bandit and samurai branches reinforces the Timelock reading: in both accounts, the wife's demand for the husband's death sets a terminal horizon.",
+        "suggested_signature": null
+      },
+      {
+        "target_review_id": "vr_4",
+        "assessment": "qualifies",
+        "rationale": "The 'noted' verdict is honest but E_wc_wife_goads (type 'utterance', τ_s=7, speaker=wife, listeners=[tajomaru, husband]) serves a function structurally parallel to the 'requested_killing' events in the bandit and samurai branches — it provokes the fight that ends in the husband's death. The verifier doesn't detect it because 'goading' is more diffuse than 'requesting killing': it doesn't name a specific target action. Still, the structural parallelism across all four branches is notable: in each testimony, a wife-initiated utterance event at τ_s=7 drives the arc toward its lethal conclusion. The check might benefit from recognizing this cross-branch pattern.",
+        "suggested_signature": "Consider a cross-branch signature: when the same participant role (here, the wife as speaker) initiates an utterance event at the same τ_s position across multiple branches, and each branch's arc ends in the same outcome (husband's death), the utterance may function as a scheduling predicate even without explicit scheduling semantics in its type or predicate name."
+      }
+    ]
+  }
+}
