@@ -132,9 +132,9 @@ AR_JOCASTA = ArCharacter(
         "Parallel hamartia — ignorance of identity. She realizes "
         "before Oedipus does (E_jocasta_realizes, τ_s=9); her "
         "suicide at recognition mirrors Oedipus's self-blinding. "
-        "Aristotle groups her with Oedipus in Poetics 1453a as a "
-        "secondary figure whose fall contributes to the central "
-        "peripeteia."
+        "The peripeteia (E_messenger_adoption_reveal, τ_s=8) "
+        "strips the reassurance she had offered Oedipus; her fall "
+        "follows from, rather than contributes to, the reversal."
     ),
     is_tragic_hero=False,
 )
@@ -151,8 +151,11 @@ AR_OEDIPUS_MYTHOS = ArMythos(
         "A king, investigating a plague sent to punish his city's "
         "unpurged blood-guilt, discovers through a chain of "
         "witnesses that he himself is the murderer of his "
-        "predecessor — and the son of his wife. Recognition "
-        "coincides with reversal; catastrophe follows."
+        "predecessor — and the son of his wife. Reversal and "
+        "recognition are staged as a two-beat movement — "
+        "peripeteia fires at the messenger's reveal (τ_s=8), "
+        "five steps before explicit anagnorisis at the shepherd's "
+        "testimony (τ_s=13). Catastrophe follows."
     ),
     central_event_ids=(
         "E_birth",

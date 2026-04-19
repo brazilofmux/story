@@ -105,10 +105,11 @@ AR_RASHOMON_BANDIT = ArMythos(
             scope_event_ids=_CANONICAL_FLOOR_BEGINNING_SCOPE,
             annotation=(
                 "Canonical-floor lead-up; undisputed across all four "
-                "testimonies. Tajōmaru's distinctive reading of "
-                "E_intercourse lives in the Dramatic-layer "
-                "Description (D_intercourse_tajomaru_texture) — see "
-                "throughline-lowering-scope-sketch-01 TL2."
+                "testimonies. These incidents function as what "
+                "Aristotle calls that which does not itself follow "
+                "anything by causal necessity (Poetics 1450b) — the "
+                "shared given from which the bandit's distinctive "
+                "action (seduction, not violation) proceeds."
             ),
         ),
         ArPhase(
@@ -190,9 +191,12 @@ AR_RASHOMON_WIFE = ArMythos(
             role=PHASE_BEGINNING,
             scope_event_ids=_CANONICAL_FLOOR_BEGINNING_SCOPE,
             annotation=(
-                "Canonical-floor lead-up. The wife's reading of "
-                "E_intercourse as violation lives in "
-                "D_intercourse_wife_texture."
+                "Canonical-floor lead-up; the same shared incidents "
+                "the other testimonies begin from. In the wife's "
+                "mythos these events take on a different character "
+                "— the arrangement aims toward her distinctive "
+                "pathos, violation rather than the bandit's "
+                "seduction."
             ),
         ),
         ArPhase(
@@ -201,10 +205,11 @@ AR_RASHOMON_WIFE = ArMythos(
             scope_event_ids=("E_w_tajomaru_leaves",),
             annotation=(
                 "Tajōmaru leaves. The wife is alone with her bound "
-                "husband. The narrative temporal driver — the "
-                "husband's gaze of contempt that, per the Lowering "
-                "annotation, lives in prose rather than in the "
-                "event model — kicks in here."
+                "husband. The husband's gaze of contempt is the "
+                "proximate cause of her pathos — authored in this "
+                "encoding's prose rather than in the typed event "
+                "model — and compels the movement toward "
+                "denouement."
             ),
         ),
         ArPhase(
@@ -275,10 +280,11 @@ AR_RASHOMON_SAMURAI = ArMythos(
             role=PHASE_BEGINNING,
             scope_event_ids=_CANONICAL_FLOOR_BEGINNING_SCOPE,
             annotation=(
-                "Canonical-floor lead-up. The samurai's reading of "
-                "E_intercourse is the worst of the four: he sees "
-                "consent where his wife was violated (per the "
-                "Descriptions on E_intercourse)."
+                "Canonical-floor lead-up; the shared given. The "
+                "samurai's reading of E_intercourse is the worst "
+                "of the four — his testimony arranges these events "
+                "to see consent where his wife was violated, an "
+                "ethos that shapes the mythos he moves toward."
             ),
         ),
         ArPhase(
@@ -400,9 +406,12 @@ AR_RASHOMON_WOODCUTTER = ArMythos(
                 "The wife's flight, the husband's death, and the "
                 "woodcutter's theft of the dagger. The theft is "
                 "the pivot of the woodcutter's self-incrimination "
-                "— the reason his confession is late, the reason "
-                "the frame's meta-epistemic arc (priest's crisis "
-                "of faith) has any closing material."
+                "— the reason his confession is late, and the "
+                "reason his testimony cannot resolve into clean "
+                "authority. The film's framing narrative (priest's "
+                "crisis of faith) sits outside this mythos's "
+                "substrate events; it is named here for context "
+                "but not grounded in this record."
             ),
         ),
     ),
