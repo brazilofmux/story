@@ -61,7 +61,7 @@ to expand coverage once a shared pattern emerges worth extracting.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Optional
 
 # Substrate-side imports.
 from story_engine.core.substrate import (
@@ -95,7 +95,8 @@ from story_engine.core.lowering import (
 )
 from story_engine.encodings.ackroyd_lowerings import LOWERINGS
 from story_engine.core.verification import (
-    VerificationReview, StructuralAdvisory,
+    StructuralAdvisory,
+    DirectCheckRegistration, run_direct_review_checks,
     VERDICT_APPROVED, VERDICT_NEEDS_WORK, VERDICT_PARTIAL_MATCH,
     VERDICT_NOTED,
     SEVERITY_NOTED,
@@ -804,25 +805,53 @@ def story_consequence_moment_check(
 # ============================================================================
 
 
-def _wrap_check(
-    upper_dialect: str,
-    upper_record_id: str,
-    check_fn: Callable,
-    reviewer_id: str,
-    *,
-    reviewed_at_τ_a: int = 0,
-) -> VerificationReview:
-    upper_ref = cross_ref(upper_dialect, upper_record_id)
-    verdict, strength, comment = check_fn(upper_ref)
-    return VerificationReview(
-        reviewer_id=reviewer_id,
-        reviewed_at_τ_a=reviewed_at_τ_a,
-        verdict=verdict,
-        anchor_τ_a=0,
-        target_record=upper_ref,
-        comment=comment,
-        match_strength=strength,
-    )
+CHECK_REGISTRY = (
+    DirectCheckRegistration(
+        "dramatica-complete", "DA_mc",
+        mc_throughline_manipulation_domain_check,
+        "verifier:characterization:domain-assignment",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_approach",
+        sheppard_be_er_approach_check,
+        "verifier:characterization:dsp-approach",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_limit",
+        dsp_limit_optionlock_check,
+        "verifier:characterization:dsp-limit",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_outcome",
+        outcome_success_claim_at_end_check,
+        "verifier:claim-moment:dsp-outcome",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_judgment",
+        judgment_bad_trajectory_check,
+        "verifier:claim-trajectory:dsp-judgment",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_resolve",
+        dsp_resolve_steadfast_trajectory_check,
+        "verifier:claim-trajectory:dsp-resolve",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_growth",
+        dsp_growth_start_trajectory_check,
+        "verifier:claim-trajectory:dsp-growth",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "Story_goal",
+        story_goal_trajectory_check,
+        "verifier:claim-trajectory:story-goal",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "Story_consequence",
+        story_consequence_moment_check,
+        "verifier:claim-moment:story-consequence",
+    ),
+)
 
 
 def run() -> tuple:
@@ -837,53 +866,7 @@ def run() -> tuple:
       inverted from Oedipus/Macbeth's Change), DSP_growth (Start —
       inverted from Oedipus/Macbeth's Stop), Story_goal
     """
-    return (
-        _wrap_check(
-            "dramatica-complete", "DA_mc",
-            mc_throughline_manipulation_domain_check,
-            reviewer_id="verifier:characterization:domain-assignment",
-        ),
-        _wrap_check(
-            "dramatica-complete", "DSP_approach",
-            sheppard_be_er_approach_check,
-            reviewer_id="verifier:characterization:dsp-approach",
-        ),
-        _wrap_check(
-            "dramatica-complete", "DSP_limit",
-            dsp_limit_optionlock_check,
-            reviewer_id="verifier:characterization:dsp-limit",
-        ),
-        _wrap_check(
-            "dramatica-complete", "DSP_outcome",
-            outcome_success_claim_at_end_check,
-            reviewer_id="verifier:claim-moment:dsp-outcome",
-        ),
-        _wrap_check(
-            "dramatica-complete", "DSP_judgment",
-            judgment_bad_trajectory_check,
-            reviewer_id="verifier:claim-trajectory:dsp-judgment",
-        ),
-        _wrap_check(
-            "dramatica-complete", "DSP_resolve",
-            dsp_resolve_steadfast_trajectory_check,
-            reviewer_id="verifier:claim-trajectory:dsp-resolve",
-        ),
-        _wrap_check(
-            "dramatica-complete", "DSP_growth",
-            dsp_growth_start_trajectory_check,
-            reviewer_id="verifier:claim-trajectory:dsp-growth",
-        ),
-        _wrap_check(
-            "dramatica-complete", "Story_goal",
-            story_goal_trajectory_check,
-            reviewer_id="verifier:claim-trajectory:story-goal",
-        ),
-        _wrap_check(
-            "dramatica-complete", "Story_consequence",
-            story_consequence_moment_check,
-            reviewer_id="verifier:claim-moment:story-consequence",
-        ),
-    )
+    return run_direct_review_checks(CHECK_REGISTRY)
 
 
 if __name__ == "__main__":

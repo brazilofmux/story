@@ -32,6 +32,7 @@ from story_engine.core.verification import (
     verify_characterization, run_characterization_checks,
     verify_claim_trajectory, run_claim_trajectory_checks,
     verify_claim_moment, run_claim_moment_checks,
+    DirectCheckRegistration, run_direct_review_checks,
     CheckRegistration, orchestrate_checks,
     COUPLING_REALIZATION, COUPLING_CHARACTERIZATION,
     COUPLING_CLAIM_MOMENT, COUPLING_CLAIM_TRAJECTORY, COUPLING_FLAVOR,
@@ -722,6 +723,56 @@ def _always_approved_trajectory(upper_ref, lower_refs, position_ranges):
 
 def _always_approved_moment(upper_ref, lower_refs, position_ranges):
     return (VERDICT_APPROVED, 1.0, "always-approved-moment")
+
+
+def test_run_direct_review_checks_wraps_registration_as_review():
+    reg = DirectCheckRegistration(
+        upper_dialect="dramatica-complete",
+        upper_record_id="DSP_limit",
+        check_fn=lambda upper_ref: (
+            VERDICT_APPROVED, 0.75,
+            f"checked {upper_ref.record_id}",
+        ),
+        reviewer_id="verifier:characterization:dsp-limit",
+    )
+    out = run_direct_review_checks((reg,), reviewed_at_τ_a=500)
+    assert len(out) == 1
+    review = out[0]
+    assert isinstance(review, VerificationReview)
+    assert review.reviewer_id == "verifier:characterization:dsp-limit"
+    assert review.target_record == cross_ref("dramatica-complete", "DSP_limit")
+    assert review.match_strength == 0.75
+    assert review.comment == "checked DSP_limit"
+    assert review.anchor_τ_a == 0
+
+
+def test_run_direct_review_checks_preserves_registration_order():
+    regs = (
+        DirectCheckRegistration(
+            upper_dialect="dramatica-complete",
+            upper_record_id="DSP_outcome",
+            check_fn=lambda upper_ref: (
+                VERDICT_APPROVED, 1.0, upper_ref.record_id,
+            ),
+            reviewer_id="verifier:claim-moment:dsp-outcome",
+        ),
+        DirectCheckRegistration(
+            upper_dialect="dramatica-complete",
+            upper_record_id="DSP_judgment",
+            check_fn=lambda upper_ref: (
+                VERDICT_NOTED, None, upper_ref.record_id,
+            ),
+            reviewer_id="verifier:claim-trajectory:dsp-judgment",
+        ),
+    )
+    out = run_direct_review_checks(regs, reviewed_at_τ_a=501)
+    assert [r.target_record.record_id for r in out] == [
+        "DSP_outcome", "DSP_judgment",
+    ]
+    assert [r.reviewer_id for r in out] == [
+        "verifier:claim-moment:dsp-outcome",
+        "verifier:claim-trajectory:dsp-judgment",
+    ]
 
 
 def test_check_registration_rejects_non_orchestratable_kind():

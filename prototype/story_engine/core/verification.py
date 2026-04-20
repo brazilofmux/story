@@ -576,6 +576,69 @@ def run_claim_moment_checks(
 
 
 # ============================================================================
+# Direct upper-record review orchestrator
+# ============================================================================
+#
+# Some verifier layers already know their exact upper-record target and
+# do not route through Lowerings at all. The dramatica-complete
+# verifiers are the current example: each check function takes one
+# authored upper-record ref (e.g. `dramatica-complete:DSP_limit`) and
+# returns a verdict tuple directly. The helper below centralizes the
+# "wrap this direct check in a VerificationReview" pattern so authored
+# encodings stop hand-rolling identical `_wrap_check()` helpers.
+
+
+@dataclass(frozen=True)
+class DirectCheckRegistration:
+    """One direct upper-record check to wrap as a VerificationReview.
+
+    `upper_dialect` + `upper_record_id` identify the authored record
+    the check is judging. `check_fn` takes that CrossDialectRef and
+    returns the standard `(verdict, match_strength, comment)` tuple.
+    `reviewer_id` is passed through verbatim so callers can use either
+    a stable verifier id or a story-scoped suffix (as Rashomon does).
+    """
+    upper_dialect: str
+    upper_record_id: str
+    check_fn: Callable
+    reviewer_id: str
+
+
+def run_direct_review_checks(
+    registrations: tuple,
+    *,
+    reviewed_at_τ_a: int = 0,
+    anchor_τ_a: int = 0,
+) -> tuple:
+    """Run a tuple of DirectCheckRegistrations and return
+    VerificationReviews in registration order.
+
+    This is the direct-check analogue to the lowering-aware
+    orchestrators above: no record enumeration, no coupling-kind
+    dispatch, no advisory path. Each registration names exactly one
+    upper record and one check function; this helper only provides the
+    common review-wrapping logic.
+    """
+    out: list = []
+    for registration in registrations:
+        upper_ref = cross_ref(
+            registration.upper_dialect,
+            registration.upper_record_id,
+        )
+        verdict, strength, comment = registration.check_fn(upper_ref)
+        out.append(VerificationReview(
+            reviewer_id=registration.reviewer_id,
+            reviewed_at_τ_a=reviewed_at_τ_a,
+            verdict=verdict,
+            anchor_τ_a=anchor_τ_a,
+            target_record=upper_ref,
+            comment=comment,
+            match_strength=strength,
+        ))
+    return tuple(out)
+
+
+# ============================================================================
 # Per-record-type orchestrator (V5 — auto-enumerate from declarations)
 # ============================================================================
 #

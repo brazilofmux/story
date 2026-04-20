@@ -79,8 +79,6 @@ runs.
 
 from __future__ import annotations
 
-from typing import Callable
-
 from story_engine.core.substrate import CANONICAL
 from story_engine.encodings.rashomon import (
     EVENTS_ALL, ALL_BRANCHES,
@@ -98,7 +96,7 @@ from story_engine.encodings.rashomon_lowerings import LOWERINGS_BY_STORY
 
 from story_engine.core.lowering import CrossDialectRef, cross_ref
 from story_engine.core.verification import (
-    VerificationReview,
+    DirectCheckRegistration, run_direct_review_checks,
     VERDICT_APPROVED, VERDICT_NEEDS_WORK, VERDICT_PARTIAL_MATCH,
     VERDICT_NOTED,
 )
@@ -233,26 +231,33 @@ def frame_declarations_not_substrate_bound_check(upper_ref, _unused=()):
 # ============================================================================
 
 
-def _wrap_check(
-    story_id: str,
-    upper_dialect: str,
-    upper_record_id: str,
-    check_fn: Callable,
-    reviewer_id: str,
-    *,
-    reviewed_at_τ_a: int = 0,
-) -> VerificationReview:
-    upper_ref = cross_ref(upper_dialect, upper_record_id)
-    verdict, strength, comment = check_fn(upper_ref)
-    return VerificationReview(
-        reviewer_id=f"{reviewer_id}:story={story_id}",
-        reviewed_at_τ_a=reviewed_at_τ_a,
-        verdict=verdict,
-        anchor_τ_a=0,
-        target_record=upper_ref,
-        comment=comment,
-        match_strength=strength,
-    )
+CHECK_REGISTRY = (
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_frame_limit",
+        frame_declarations_not_substrate_bound_check,
+        f"verifier:multi-story:frame-declarations:story={S_frame.id}",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_bandit_limit",
+        bandit_dsp_limit_check,
+        f"verifier:characterization:dsp-limit:story={S_bandit_ver.id}",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_wife_limit",
+        wife_dsp_limit_check,
+        f"verifier:characterization:dsp-limit:story={S_wife_ver.id}",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_samurai_limit",
+        samurai_dsp_limit_check,
+        f"verifier:characterization:dsp-limit:story={S_samurai_ver.id}",
+    ),
+    DirectCheckRegistration(
+        "dramatica-complete", "DSP_woodcutter_limit",
+        woodcutter_dsp_limit_check,
+        f"verifier:characterization:dsp-limit:story={S_woodcutter_ver.id}",
+    ),
+)
 
 
 def run() -> tuple:
@@ -269,38 +274,7 @@ def run() -> tuple:
     5 checks total — one per Story, matching the multi-Story encoding's
     per-Story discipline.
     """
-    return (
-        _wrap_check(
-            S_frame.id,
-            "dramatica-complete", "DSP_frame_limit",
-            frame_declarations_not_substrate_bound_check,
-            reviewer_id="verifier:multi-story:frame-declarations",
-        ),
-        _wrap_check(
-            S_bandit_ver.id,
-            "dramatica-complete", "DSP_bandit_limit",
-            bandit_dsp_limit_check,
-            reviewer_id="verifier:characterization:dsp-limit",
-        ),
-        _wrap_check(
-            S_wife_ver.id,
-            "dramatica-complete", "DSP_wife_limit",
-            wife_dsp_limit_check,
-            reviewer_id="verifier:characterization:dsp-limit",
-        ),
-        _wrap_check(
-            S_samurai_ver.id,
-            "dramatica-complete", "DSP_samurai_limit",
-            samurai_dsp_limit_check,
-            reviewer_id="verifier:characterization:dsp-limit",
-        ),
-        _wrap_check(
-            S_woodcutter_ver.id,
-            "dramatica-complete", "DSP_woodcutter_limit",
-            woodcutter_dsp_limit_check,
-            reviewer_id="verifier:characterization:dsp-limit",
-        ),
-    )
+    return run_direct_review_checks(CHECK_REGISTRY)
 
 
 if __name__ == "__main__":
