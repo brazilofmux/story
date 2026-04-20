@@ -116,7 +116,9 @@ from story_engine.core.aristotelian_reader_model_client import (
     invoke_aristotelian_reader_model,
 )
 from story_engine.encodings.hamlet import FABULA
-from story_engine.encodings.hamlet_aristotelian import AR_HAMLET_MYTHOS
+from story_engine.encodings.hamlet_aristotelian import (
+    AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+)
 
 
 def _cli_args():
@@ -269,6 +271,8 @@ def main() -> int:
     # observations per test_hamlet_aristotelian_verifies_clean.
     observations = tuple(verify(
         AR_HAMLET_MYTHOS, substrate_events=FABULA,
+        mythoi=(AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
     ))
 
     tragic_heroes = [
@@ -291,8 +295,13 @@ def main() -> int:
     )
     print(
         f"  anagnorisis_chain: "
-        f"{len(AR_HAMLET_MYTHOS.anagnorisis_chain)} step "
-        f"(non-precipitating, antagonist-occupant)"
+        f"{len(AR_HAMLET_MYTHOS.anagnorisis_chain)} steps "
+        f"(2 staging × Hamlet + 1 parallel × Claudius; sketch-03)"
+    )
+    print(
+        f"  character_arc_relations: "
+        f"{len(AR_HAMLET_CHARACTER_ARC_RELATIONS)} "
+        f"(mirror Hamlet-Laertes, foil Hamlet-Claudius; sketch-03)"
     )
     print(
         f"  complication_event_id: "

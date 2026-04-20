@@ -1,6 +1,7 @@
 """
 hamlet_aristotelian.py — *Hamlet* encoded under the Aristotelian
-dialect (aristotelian-sketch-01 A1–A9 + sketch-02 A10–A12).
+dialect (aristotelian-sketch-01 A1–A9 + sketch-02 A10–A12 +
+sketch-03 A13–A14).
 
 Fourth Aristotelian encoding after Oedipus (single mythos, complex
 plot, separated peripeteia/anagnorisis at distance 5), Rashomon
@@ -9,27 +10,44 @@ coincident binding, non-precipitating staggered step). Substrate
 layer lives in `prototype/story_engine/encodings/hamlet.py`; this
 file references event ids by string only.
 
+Sketch-03 migration (2026-04-20): A13 `ArCharacterArcRelation` and
+A14 `step_kind` land as closures to two Hamlet-probe-surfaced
+forcing functions. The encoding now authors two `ArCharacterArcRelation`
+records (mirror Hamlet-Laertes + foil Hamlet-Claudius) expressing the
+three-way tragic-hero parallelism structurally, and the anagnorisis
+chain expands from one step to three: two same-character staging
+steps (Ghost commission, Mousetrap verification) plus the existing
+parallel-antagonist step (Claudius at prayer). OQ-AP5 formally
+retires on two-negative-probe grounds; see `OQ_AP5_FINDING` prose.
+
 Hamlet is the forcing case for two research forcing functions banked
-from `aristotelian-probe-sketch-03`:
+from `aristotelian-probe-sketch-03`, both closed by sketch-03:
 
-- **OQ-AP5 — ArFateAgent / ArProphecyStructure.** Hamlet's Ghost has
-  a causal posture distinct from Macbeth's Witches: direct factual
-  revelation (Claudius poisoned the king, method named) + commission
-  to act (revenge demand), where the Witches offered equivocating
-  prophecy. A second fate-agent encoding with a *different* causal
-  posture is the forcing case sketch-03 banked. Finding: the Ghost's
-  role is structurally invisible at the Aristotelian layer — carried
-  entirely at substrate (`apparition_of` + `ghost_claims_killed_by`
-  + `ghost_demands_revenge`). See `OQ_AP5_FINDING` below.
+- **OQ-AP5 — ArFateAgent / ArProphecyStructure. RETIRED.** Hamlet's
+  Ghost has a causal posture distinct from Macbeth's Witches: direct
+  factual revelation (Claudius poisoned the king, method named) +
+  commission to act (revenge demand), where the Witches offered
+  equivocating prophecy. A second fate-agent encoding with a
+  *different* causal posture was the forcing case probe-sketch-03
+  banked. Both the Macbeth probe (2026-04-19) and the Hamlet probe
+  (2026-04-20) read the fate-agent structurally without demanding a
+  typed dialect record; sketch-03 formally retires OQ-AP5 on
+  two-negative-probe grounds. The fate-agent function is recorded as
+  correctly substrate-only. See `OQ_AP5_FINDING` below (prose
+  preserved + retirement note appended).
 
-- **OQ-AP6 — Intra-mythos parallel tragic-heroes.** Hamlet authors
-  three `ArCharacter`s with `is_tragic_hero=True` (Hamlet, Claudius,
-  Laertes) within one mythos. A10's `ArMythosRelation(kind="parallel")`
-  types *inter*-mythos today; Hamlet forces the question of whether
-  intra-mythos parallelism needs its own structural hook. Finding:
-  the dialect admits the multiplicity (three booleans flip True) but
-  has no structural way to say "these three are parallel WITHIN one
-  mythos." See `OQ_AP6_FINDING` below.
+- **OQ-AP6 — Intra-mythos parallel tragic-heroes. CLOSED.** Hamlet
+  authors three `ArCharacter`s with `is_tragic_hero=True` (Hamlet,
+  Claudius, Laertes) within one mythos. Sketch-03 A13
+  `ArCharacterArcRelation` types the parallelism structurally:
+  `AR_HAMLET_LAERTES_MIRROR` (both sons avenging murdered fathers via
+  opposite tempers) and `AR_HAMLET_CLAUDIUS_FOIL` (will-to-act vs.
+  will-to-retain) are authored below as pairwise decompositions of
+  the three-way parallelism. Laertes-Claudius has no structural pair
+  authored — the probe's language was pairwise ("between Hamlet's and
+  Laertes's revenge paths"), and three-way single relations are
+  deferred per sketch-03 OQ7. The dialect now has a structural hook
+  for "these characters are in parallel WITHIN one mythos."
 
 Sketch-02 axis exercise:
 
@@ -48,17 +66,20 @@ Sketch-02 axis exercise:
   vs "distant-separated") is warranted is a probe-surface question;
   recorded as `OQ_AP7_FINDING` for future probes.
 
-- **A11 anagnorisis chain: one non-precipitating step.** Claudius at
-  `E_claudius_prays` (τ_s=7) — his private recognition of moral
-  bankruptcy ("May one be pardon'd and retain th'offence?"). Parallels
-  Lady Macbeth's sleepwalking structurally: character-level,
-  precipitates_main=False (his recognition does not causally drive
-  Hamlet's τ_s=17 recognition — Hamlet observes Claudius praying but
-  does not act, and the later reveal comes from Laertes, not
-  Claudius). Macbeth's non-precipitating step lands at a different
-  hero's collapse; Hamlet's lands at the antagonist's collapse —
-  the same structural field (non-precipitating chain step) with a
-  different character-role occupant.
+- **A11 + A14 anagnorisis chain: three steps across two step_kinds.**
+  Sketch-03 expands the chain from one step to three. Two same-
+  character staging steps (A14 `step_kind="staging"`, precipitating
+  by definition) stage Hamlet's own epistemic progression:
+  `AR_STEP_HAMLET_GHOST_CLAIM` at `E_hamlet_meets_ghost` (τ_s=1,
+  provisional revelation — held but not yet acted on) and
+  `AR_STEP_HAMLET_MOUSETRAP` at `E_mousetrap_performance` (τ_s=6,
+  the Ghost's claim promoted to verified certainty). The existing
+  parallel step (A14 `step_kind="parallel"`) is retained:
+  `AR_STEP_CLAUDIUS_PRAYS` at `E_claudius_prays` (τ_s=7) — Claudius's
+  private recognition of moral bankruptcy, different character,
+  non-precipitating. Together: Hamlet's three-stage coming-to-know
+  (staging × 2) plus the antagonist's parallel-character recognition,
+  orthogonal axes both carried by A14's step_kind vocabulary.
 
 - **A11 forcing function for same-event staggered recognition.**
   Laertes's deathbed recognition of his own pawn-status is
@@ -67,7 +88,8 @@ Sketch-02 axis exercise:
   a chain step at the main event; Laertes is therefore NOT authored
   as a chain step. Recorded as `OQ_AP8_FINDING` — the dialect
   cannot currently express "staggered recognitions that land at the
-  same substrate beat."
+  same substrate beat." Stays banked under sketch-03 (probe did not
+  pressure relaxation).
 
 Unities. Unity of action: asserts=True (single tragic action, from
 Ghost's commission through Hamlet's revenge-and-death). Unity of
@@ -89,16 +111,23 @@ villain, tragic-hero) strains any uniform pathos record.
 
 No ArMythosRelation authored. Hamlet is single-mythos; no Rashomon-
 style contest; no frame narrative. `AR_HAMLET_MYTHOS` stands alone.
+Sketch-03 authors two A13 `ArCharacterArcRelation` records (see
+`AR_HAMLET_CHARACTER_ARC_RELATIONS`) — intra-mythos, not inter-mythos.
 
 Running:
     cd prototype
     python3 -c "
     from story_engine.encodings.hamlet import FABULA
     from story_engine.encodings.hamlet_aristotelian import (
-        AR_HAMLET_MYTHOS,
+        AR_HAMLET_MYTHOS, AR_HAMLET_CHARACTER_ARC_RELATIONS,
     )
     from story_engine.core.aristotelian import verify
-    observations = verify(AR_HAMLET_MYTHOS, substrate_events=FABULA)
+    observations = verify(
+        AR_HAMLET_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
     print(f'{len(observations)} observation(s)')
     for o in observations:
         print(f'  [{o.severity}] {o.code}: {o.message}')
@@ -110,13 +139,18 @@ from __future__ import annotations
 from story_engine.core.aristotelian import (
     ArAnagnorisisStep,
     ArCharacter,
+    ArCharacterArcRelation,
     ArMythos,
     ArPhase,
+    ARC_RELATION_FOIL,
+    ARC_RELATION_MIRROR,
     BINDING_SEPARATED,
     PHASE_BEGINNING,
     PHASE_END,
     PHASE_MIDDLE,
     PLOT_COMPLEX,
+    STEP_KIND_PARALLEL,
+    STEP_KIND_STAGING,
 )
 
 
@@ -301,16 +335,27 @@ AR_LAERTES = ArCharacter(
 
 
 # ============================================================================
-# Anagnorisis chain — A11 (sketch-02)
+# Anagnorisis chain — A11 (sketch-02) + A14 (sketch-03)
 # ============================================================================
 #
-# One step: Claudius at the prayer scene (τ_s=7), non-precipitating.
-# Structurally parallels Lady Macbeth's sleepwalking (Macbeth) —
-# same non-precipitating-chain-step field, different occupant role
-# (antagonist, not parallel protagonist). Macbeth's chain step
-# stages the *protagonist's wife's* private recognition of guilt;
-# Hamlet's stages the *antagonist's* private recognition of
-# inability-to-repent.
+# Three steps across two step_kinds:
+#
+# 1. AR_STEP_HAMLET_GHOST_CLAIM (step_kind="staging", τ_s=1). Hamlet's
+#    first epistemic waypoint: the Ghost's direct revelation, held
+#    provisionally pending verification.
+# 2. AR_STEP_HAMLET_MOUSETRAP (step_kind="staging", τ_s=6). Hamlet's
+#    second epistemic waypoint: the Mousetrap converts the Ghost's
+#    claim from tentative to verified.
+# 3. AR_STEP_CLAUDIUS_PRAYS (step_kind="parallel", τ_s=7). Claudius's
+#    private recognition of moral bankruptcy — different character,
+#    non-precipitating, parallels Lady Macbeth's sleepwalking step
+#    in Macbeth with a different occupant role (antagonist, not
+#    parallel protagonist).
+#
+# Main anagnorisis lands at E_laertes_reveals_plot (τ_s=17) on
+# Hamlet himself; AR_HAMLET_MYTHOS names anagnorisis_character_ref_id=
+# "ar_hamlet" (A14) so the staging steps verify same-character-as-
+# main against it.
 #
 # Laertes's deathbed recognition IS at the same substrate beat as
 # Hamlet's main anagnorisis (both at E_laertes_reveals_plot, τ_s=17).
@@ -319,14 +364,59 @@ AR_LAERTES = ArCharacter(
 # function is recorded in OQ_AP8_FINDING below — the dialect cannot
 # currently express "staggered recognitions that land at the same
 # substrate beat." Laertes's parallel-hero status is carried by his
-# ArCharacter record (is_tragic_hero=True); the structural
-# recognition-relation to Hamlet's main anagnorisis is invisible
-# at this dialect layer.
+# ArCharacter record (is_tragic_hero=True) and by the
+# AR_HAMLET_LAERTES_MIRROR relation authored below; the structural
+# recognition-relation to Hamlet's main anagnorisis is invisible at
+# this dialect layer.
+
+AR_STEP_HAMLET_GHOST_CLAIM = ArAnagnorisisStep(
+    id="arstep_hamlet_ghost_claim",
+    event_id="E_hamlet_meets_ghost",
+    character_ref_id="ar_hamlet",
+    step_kind=STEP_KIND_STAGING,
+    precipitates_main=True,
+    annotation=(
+        "Hamlet's first epistemic waypoint: the Ghost's direct "
+        "revelation of Claudius's guilt. Not the recognition — Hamlet "
+        "holds it provisionally ('The spirit that I have seen / May "
+        "be the devil'), does not yet act on it, requires "
+        "corroboration via the Mousetrap. Structurally: the "
+        "commission grounds the action (without it, Hamlet has no "
+        "cause for revenge), but the knowledge stays tentative until "
+        "verified. First of three staging steps culminating in the "
+        "main anagnorisis at E_laertes_reveals_plot (τ_s=17); the "
+        "distance from here (τ_s=1) to there (16 substrate steps) is "
+        "the structural weight of the famous Hamlet delay."
+    ),
+)
+
+AR_STEP_HAMLET_MOUSETRAP = ArAnagnorisisStep(
+    id="arstep_hamlet_mousetrap",
+    event_id="E_mousetrap_performance",
+    character_ref_id="ar_hamlet",
+    step_kind=STEP_KIND_STAGING,
+    precipitates_main=True,
+    annotation=(
+        "Hamlet's second epistemic waypoint: the Mousetrap "
+        "performance converts the Ghost's claim from tentative-"
+        "revelation to verified-certainty. 'I'll take the ghost's "
+        "word for a thousand pound' (III.ii). The Ghost's "
+        "commission-revelation at τ_s=1 held as BELIEVED; Claudius's "
+        "flinching exit from the play-within-the-play at τ_s=6 "
+        "promotes the belief to KNOWN. Second staging step; narrows "
+        "the remaining epistemic gap to the structural shape of "
+        "Claudius's counter-response (the sealed execution orders, "
+        "the exile to England, the duel plot) which Hamlet does not "
+        "yet understand is a counter-plot in motion. Precedes the "
+        "main anagnorisis at τ_s=17 by 11 τ_s-steps."
+    ),
+)
 
 AR_STEP_CLAUDIUS_PRAYS = ArAnagnorisisStep(
     id="arstep_claudius_prays",
     event_id="E_claudius_prays",
     character_ref_id="ar_claudius",
+    step_kind=STEP_KIND_PARALLEL,
     precipitates_main=False,
     annotation=(
         "Claudius's prayer scene — 'O, my offence is rank, it smells "
@@ -335,17 +425,106 @@ AR_STEP_CLAUDIUS_PRAYS = ArAnagnorisisStep(
         "while retaining its gains ('Of those effects for which I "
         "did the murder, / My crown, mine own ambition, and my "
         "queen'). This is his character-level anagnorisis: "
-        "recognition of moral bankruptcy. precipitates_main=False: "
-        "the scene does not causally drive Hamlet's τ_s=17 "
-        "recognition — Hamlet enters behind Claudius but declines to "
-        "kill him at prayer (misreading the scene as true confession "
-        "rather than failed confession), and the later anagnorisis "
-        "comes through Laertes's deathbed reveal, not through any "
-        "channel from Claudius. Parallel collapse, not causal "
-        "pressure — same structural role as Lady Macbeth's "
-        "sleepwalking in Macbeth, with antagonist rather than "
-        "parallel-protagonist as occupant."
+        "recognition of moral bankruptcy. step_kind='parallel' "
+        "(different character from main): the scene does not causally "
+        "drive Hamlet's τ_s=17 recognition — Hamlet enters behind "
+        "Claudius but declines to kill him at prayer (misreading the "
+        "scene as true confession rather than failed confession), and "
+        "the later anagnorisis comes through Laertes's deathbed "
+        "reveal, not through any channel from Claudius. Parallel "
+        "collapse, not causal pressure — same structural role as "
+        "Lady Macbeth's sleepwalking in Macbeth, with antagonist "
+        "rather than parallel-protagonist as occupant."
     ),
+)
+
+
+# ============================================================================
+# Character-arc relations — A13 (sketch-03)
+# ============================================================================
+#
+# Two pairwise ArCharacterArcRelation records express Hamlet's
+# three-way tragic-hero parallelism. A third Laertes-Claudius
+# relation is NOT authored — the structural content is the pawn/
+# puppeteer dynamic, which is handled at substrate-level (via
+# Claudius redirecting Laertes's grief) and in hamartia_text prose;
+# the probe's language was pairwise, and a three-way single relation
+# would lose the mirror-vs-foil distinction. See sketch-03 OQ7 for
+# the three-way-relation deferral.
+
+AR_HAMLET_LAERTES_MIRROR = ArCharacterArcRelation(
+    id="arc_hamlet_laertes_mirror",
+    kind=ARC_RELATION_MIRROR,
+    character_ref_ids=("ar_hamlet", "ar_laertes"),
+    mythos_id="ar_hamlet",
+    over_event_ids=(
+        "E_hamlet_meets_ghost",       # (Ghost's commission —
+        #                               Hamlet's revenge ground)
+        "E_hamlet_kills_polonius",    # (Laertes's father, Hamlet's
+        #                               deed — the mirror's trigger)
+        "E_ophelia_drowns",
+        "E_laertes_returns",
+        "E_duel_plotted",
+        "E_duel_begins",
+        "E_hamlet_laertes_wounded",
+        "E_laertes_reveals_plot",
+        "E_laertes_dies",
+        "E_hamlet_dies",
+    ),
+    annotation=(
+        "Hamlet and Laertes mirror each other as sons avenging "
+        "murdered fathers. The structural inversion: Hamlet's revenge "
+        "proceeds via delay, verification, and internal dialogue "
+        "with moral scruple; Laertes's proceeds via immediate return "
+        "and immediate commitment to violent action. Both fathers "
+        "killed by Claudius's agency (King Hamlet directly; Polonius "
+        "indirectly via the arras-stabbing Claudius provoked Hamlet "
+        "toward). Both sons die at the end having accomplished the "
+        "revenge; Laertes recognizes his pawn-status in the same "
+        "beat that reveals the shape of Claudius's plot to Hamlet. "
+        "The mirror is not decorative — it is what makes the duel-"
+        "plot work dramatically, and it is what the play's catharsis "
+        "depends on. Structural parallelism of this weight belongs "
+        "at dialect scope; hamartia_text prose alone cannot render "
+        "it to the walker. Laertes's own line names it: 'by the "
+        "image of my cause, I see / the portraiture of his.'"
+    ),
+)
+
+AR_HAMLET_CLAUDIUS_FOIL = ArCharacterArcRelation(
+    id="arc_hamlet_claudius_foil",
+    kind=ARC_RELATION_FOIL,
+    character_ref_ids=("ar_hamlet", "ar_claudius"),
+    mythos_id="ar_hamlet",
+    over_event_ids=(
+        "E_king_hamlet_poisoned",
+        "E_claudius_crowned",
+        "E_mousetrap_performance",
+        "E_claudius_prays",
+        "E_hamlet_kills_claudius",
+    ),
+    annotation=(
+        "Hamlet and Claudius are structurally opposed tragic heroes: "
+        "Hamlet's hamartia is failure-of-action (scruple, delay, "
+        "'enterprise of great pith and moment / lose the name of "
+        "action'); Claudius's is failure-of-renunciation (will to "
+        "retain the crime's gains while knowing the moral cost — "
+        "'may one be pardon'd and retain th'offence?'). Each "
+        "recognizes the other's failure in the moment of their own "
+        "catastrophe: Claudius's prayer-scene names the scourge he "
+        "has earned; Hamlet's final killing of Claudius is the act "
+        "his hamartia delayed throughout. Foil, not mirror: the "
+        "structural shape is opposition, not symmetry. The two sons "
+        "(Hamlet, Laertes) mirror; the revenger and the criminal "
+        "(Hamlet, Claudius) foil; the criminal and the pawn "
+        "(Claudius, Laertes) is a pawn/puppeteer dynamic carried at "
+        "substrate not at dialect scope."
+    ),
+)
+
+AR_HAMLET_CHARACTER_ARC_RELATIONS = (
+    AR_HAMLET_LAERTES_MIRROR,
+    AR_HAMLET_CLAUDIUS_FOIL,
 )
 
 
@@ -465,14 +644,26 @@ AR_HAMLET_MYTHOS = ArMythos(
     asserts_unity_of_place=False,
     aims_at_catharsis=True,
     characters=(AR_HAMLET, AR_CLAUDIUS, AR_LAERTES),
-    # A11 — Claudius's prayer-scene recognition as non-precipitating
-    # staggered step. Parallels Macbeth's Lady-Macbeth-sleepwalking
-    # step in shape; differs in occupant (antagonist, not parallel
-    # protagonist).
-    anagnorisis_chain=(AR_STEP_CLAUDIUS_PRAYS,),
+    # A11 + A14 — three-step chain. Two staging steps stage Hamlet's
+    # own coming-to-know (Ghost commission at τ_s=1, Mousetrap
+    # verification at τ_s=6), both same-character-as-main and
+    # precipitating by A14 definition. One parallel step
+    # (Claudius at prayer, τ_s=7) carries the antagonist's non-
+    # precipitating private recognition. Chain order matches τ_s
+    # order (1 → 6 → 7 → main at 17).
+    anagnorisis_chain=(
+        AR_STEP_HAMLET_GHOST_CLAIM,
+        AR_STEP_HAMLET_MOUSETRAP,
+        AR_STEP_CLAUDIUS_PRAYS,
+    ),
     # A12 — SEPARATED with distance 9. Exercises the widest end of
     # the separated category.
     peripeteia_anagnorisis_binding=BINDING_SEPARATED,
+    # A14 — the character whose recognition lands at
+    # anagnorisis_event_id. Required for the staging steps above to
+    # verify (A7.11 invariant 2: staging steps' character_ref_id
+    # must equal this value).
+    anagnorisis_character_ref_id="ar_hamlet",
 )
 
 
@@ -487,7 +678,21 @@ AR_HAMLET_MYTHOS = ArMythos(
 # encoding surfaced, structured for future extraction.
 
 OQ_AP5_FINDING = (
-    "OQ-AP5 — ArFateAgent / ArProphecyStructure. Pressure confirmed. "
+    "OQ-AP5 — ArFateAgent / ArProphecyStructure. RETIRED by sketch-03 "
+    "(2026-04-20) on two-negative-probe grounds. Authorial pressure "
+    "below preserved as the cross-session record of what this "
+    "encoding surfaced, but the dialect has formally declined to "
+    "absorb the fate-agent function: both the Macbeth probe "
+    "(probe-sketch-03, 2026-04-19) and the Hamlet live probe "
+    "(Session 5, 2026-04-20) read their respective fate-agents "
+    "structurally without proposing a typed dialect record. The "
+    "sketch-02 forcing-function discipline names 'no probe surfaces "
+    "the pressure across two complementary encodings' as the "
+    "retirement signal; that is what happened. The fate-agent "
+    "function is recorded as correctly substrate-only — an "
+    "Aristotelian-dialect observation about substrate-layer causal "
+    "mechanics, not a dialect extension.\n\n"
+    "Author-pressure (preserved for the record): "
     "The Ghost's causal posture (direct factual revelation + "
     "commission, no equivocation) is structurally invisible at the "
     "Aristotelian layer. Carried entirely at substrate: "
@@ -508,31 +713,27 @@ OQ_AP5_FINDING = (
     "trigger (Hamlet does not fail by believing the Ghost — the "
     "Ghost tells him the truth) but a structural cause of the action "
     "itself. A typed ArFateAgent with posture ∈ "
-    "{prophecy, revelation, commission} would let the Ghost's role "
-    "be named at dialect scope. Sketch-04 candidate."
+    "{prophecy, revelation, commission} would have let the Ghost's "
+    "role be named at dialect scope. Two probes, two encodings, no "
+    "probe-side pressure: retirement."
 )
 
 OQ_AP6_FINDING = (
-    "OQ-AP6 — Intra-mythos parallel tragic-heroes. Pressure "
-    "confirmed. Three `ArCharacter` records author `is_tragic_hero="
-    "True`: Hamlet, Claudius, Laertes. The dialect admits the "
-    "multiplicity but has no structural way to declare 'these three "
-    "are in parallel WITHIN one mythos.' Workaround attempts that "
-    "do not work: (1) authoring three ArMythos records and an "
-    "ArMythosRelation(kind='parallel') treats them as three "
-    "different arrangements of the action, which is wrong — they are "
-    "three characters within one arrangement. (2) The "
-    "`anagnorisis_chain` expresses staggered recognitions, which is "
-    "a thinner relation than parallel tragic-hero-ship. (3) "
-    "`hamartia_text` on each character describes the parallelism in "
-    "prose, which works for the walker's review but puts the "
-    "structural relation below the verify surface. Candidate "
-    "dialect extension: a typed `ArParallelHeroes` record naming "
-    "≥2 ArCharacter ids (or a `parallel_to` field on ArCharacter "
-    "itself) with a 'kind' vocabulary {mirror, foil, doubled-fall}. "
-    "Mirror: Hamlet-Laertes (both sons avenging fathers). Foil: "
-    "Hamlet-Claudius (will to act vs. will to retain). Doubled-fall: "
-    "all three dying in the same beat. Sketch-04 candidate."
+    "OQ-AP6 — Intra-mythos parallel tragic-heroes. CLOSED by "
+    "sketch-03 (2026-04-20). Three `ArCharacter` records author "
+    "`is_tragic_hero=True`: Hamlet, Claudius, Laertes. Sketch-03 "
+    "A13 `ArCharacterArcRelation` types the parallelism "
+    "structurally; the two pairwise relations authored in this "
+    "encoding — `AR_HAMLET_LAERTES_MIRROR` (kind='mirror') and "
+    "`AR_HAMLET_CLAUDIUS_FOIL` (kind='foil') — realize what this "
+    "finding proposed (kinds 'mirror' and 'foil' ship canonical; "
+    "'doubled-fall' deferred per sketch-03 OQ8 without corpus "
+    "pressure beyond the single Hamlet case). The pairwise "
+    "decomposition matches the probe's language ('between Hamlet's "
+    "and Laertes's revenge paths') and preserves the mirror-vs-foil "
+    "distinction that a three-way single relation would lose; "
+    "sketch-03 OQ7 tracks whether a three-way relation with "
+    "structurally-distinct-from-pairwise content ever emerges."
 )
 
 OQ_AP7_FINDING = (

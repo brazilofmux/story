@@ -17,16 +17,19 @@ import sys
 import traceback
 
 from story_engine.core.aristotelian import (
-    ArAnagnorisisStep, ArCharacter, ArMythos, ArMythosRelation,
-    ArObservation, ArPhase,
+    ArAnagnorisisStep, ArCharacter, ArCharacterArcRelation,
+    ArMythos, ArMythosRelation, ArObservation, ArPhase,
+    ARC_RELATION_FOIL, ARC_RELATION_MIRROR, ARC_RELATION_PARALLEL,
     BINDING_ADJACENT, BINDING_COINCIDENT, BINDING_SEPARATED,
+    CANONICAL_CHARACTER_ARC_RELATION_KINDS,
     CANONICAL_RELATION_KINDS,
     PHASE_BEGINNING, PHASE_END, PHASE_MIDDLE,
     PLOT_COMPLEX, PLOT_SIMPLE,
     RELATION_CONTAINS, RELATION_CONTESTS, RELATION_PARALLEL,
     SEVERITY_ADVISES_REVIEW, SEVERITY_NOTED,
+    STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
     VALID_PERIPETEIA_ANAGNORISIS_BINDINGS,
-    VALID_PHASE_ROLES, VALID_PLOT_KINDS,
+    VALID_PHASE_ROLES, VALID_PLOT_KINDS, VALID_STEP_KINDS,
     group_by_code, group_by_severity, verify,
 )
 from story_engine.core.substrate import (
@@ -1119,6 +1122,380 @@ def test_rashomon_aristotelian_verifies_clean_with_relations():
 
 
 # ============================================================================
+# Sketch-03 — A13 ArCharacterArcRelation + A14 step_kind
+# ============================================================================
+
+
+def test_archaracterarc_relation_defaults():
+    """A13 record defaults: over_event_ids empty tuple; annotation
+    empty string. Both optional per the sketch."""
+    r = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c1", "c2"), mythos_id="m1",
+    )
+    assert r.over_event_ids == ()
+    assert r.annotation == ""
+
+
+def test_canonical_character_arc_relation_kinds_contents():
+    """A13 canonical kind vocabulary."""
+    assert CANONICAL_CHARACTER_ARC_RELATION_KINDS == frozenset({
+        ARC_RELATION_PARALLEL, ARC_RELATION_MIRROR, ARC_RELATION_FOIL,
+    })
+
+
+def test_valid_step_kinds_contents():
+    """A14 canonical step_kind vocabulary — closed enum."""
+    assert VALID_STEP_KINDS == frozenset({
+        STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
+    })
+
+
+def test_aranagnorisis_step_sketch03_field_default():
+    """A14 adds `step_kind` with empty-string default (back-compat)."""
+    s = ArAnagnorisisStep(id="s1", event_id="E_x", character_ref_id="c1")
+    assert s.step_kind == ""
+
+
+def test_armythos_sketch03_anagnorisis_character_default():
+    """A14 adds `anagnorisis_character_ref_id` with None default."""
+    m = _three_phase_mythos()
+    assert m.anagnorisis_character_ref_id is None
+
+
+# ----------------------------------------------------------------------------
+# A7.10 — ArCharacterArcRelation structural integrity
+# ----------------------------------------------------------------------------
+
+
+def _two_character_mythos() -> ArMythos:
+    """A synthetic mythos with two ArCharacter records, usable by A13
+    tests that need a mythos_id to resolve against."""
+    return _three_phase_mythos(characters=(
+        ArCharacter(id="c1", name="Alpha"),
+        ArCharacter(id="c2", name="Beta"),
+    ))
+
+
+def test_arcrelation_noncanonical_kind_emits_noted():
+    """A7.10 check 1 — non-canonical kind admitted at severity NOTED
+    (canonical-plus-open, matches A10's discipline)."""
+    m = _two_character_mythos()
+    rel = ArCharacterArcRelation(
+        id="arc1", kind="shadow",
+        character_ref_ids=("c1", "c2"), mythos_id="m_test",
+    )
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    findings = [
+        o for o in obs
+        if o.code == "character_arc_relation_kind_noncanonical"
+    ]
+    assert len(findings) == 1
+    assert findings[0].severity == SEVERITY_NOTED
+
+
+def test_arcrelation_too_few_refs_flags():
+    """A7.10 check 2 — ≥2 character_ref_ids required."""
+    m = _two_character_mythos()
+    rel = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c1",), mythos_id="m_test",
+    )
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    assert _has_code(obs, "character_arc_relation_refs_too_few")
+
+
+def test_arcrelation_mythos_unresolved_flags():
+    """A7.10 check 3a — mythos_id must resolve against `mythoi`."""
+    m = _two_character_mythos()
+    rel = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c1", "c2"), mythos_id="m_ghost",
+    )
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    assert _has_code(obs, "character_arc_relation_mythos_unresolved")
+
+
+def test_arcrelation_character_unresolved_flags():
+    """A7.10 check 3b — each character_ref_id must resolve against
+    the named mythos's `characters` tuple."""
+    m = _two_character_mythos()
+    rel = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c1", "c_ghost"), mythos_id="m_test",
+    )
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    assert _has_code(obs, "character_arc_relation_character_unresolved")
+
+
+def test_arcrelation_resolution_skipped_when_mythoi_empty():
+    """A7.10 check 3 skips when `mythoi` is not threaded — matches
+    A7.6's discipline on optional kwargs."""
+    m = _two_character_mythos()
+    rel = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c_ghost", "c_other"), mythos_id="m_ghost",
+    )
+    obs = verify(m, character_arc_relations=(rel,))
+    assert not _has_code(
+        obs, "character_arc_relation_mythos_unresolved"
+    )
+    assert not _has_code(
+        obs, "character_arc_relation_character_unresolved"
+    )
+
+
+def test_arcrelation_event_ref_unresolved_flags():
+    """A7.10 check 4 — over_event_ids must resolve in substrate when
+    threaded; flagged when a referenced event is missing."""
+    m = _two_character_mythos()
+    rel = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c1", "c2"), mythos_id="m_test",
+        over_event_ids=("E1", "E_ghost"),
+    )
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=1),
+        _synthetic_event("E3", τ_s=2),
+    )
+    obs = verify(
+        m, substrate_events=events, mythoi=(m,),
+        character_arc_relations=(rel,),
+    )
+    assert _has_code(obs, "character_arc_relation_event_ref_unresolved")
+
+
+def test_arcrelation_event_ref_skipped_without_substrate():
+    """A7.10 check 4 skips when substrate is not threaded."""
+    m = _two_character_mythos()
+    rel = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c1", "c2"), mythos_id="m_test",
+        over_event_ids=("E_ghost",),
+    )
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    assert not _has_code(
+        obs, "character_arc_relation_event_ref_unresolved"
+    )
+
+
+# ----------------------------------------------------------------------------
+# A7.11 — ArAnagnorisisStep step_kind consistency
+# ----------------------------------------------------------------------------
+
+
+def _staging_fixture_mythos(
+    step_kind: str = STEP_KIND_STAGING,
+    step_character: str = "c_hero",
+    step_event: str = "E2",
+    step_precipitates: bool = True,
+    anagnorisis_character_ref_id: Optional[str] = "c_hero",
+    anagnorisis_event_id: str = "E3",
+) -> ArMythos:
+    """A synthetic three-phase mythos with one chain step — parametric
+    so each A7.11 invariant can be pressured individually."""
+    step = ArAnagnorisisStep(
+        id="s_staging", event_id=step_event,
+        character_ref_id=step_character,
+        step_kind=step_kind,
+        precipitates_main=step_precipitates,
+    )
+    return _three_phase_mythos(
+        anagnorisis=anagnorisis_event_id,
+        characters=(
+            ArCharacter(id="c_hero", name="Hero"),
+            ArCharacter(id="c_other", name="Other"),
+        ),
+        anagnorisis_chain=(step,),
+        anagnorisis_character_ref_id=anagnorisis_character_ref_id,
+    )
+
+
+def test_step_kind_invalid_value_flags():
+    """A7.11 invariant 1 — step_kind set to a value outside
+    VALID_STEP_KINDS flags anagnorisis_step_kind_invalid."""
+    m = _staging_fixture_mythos(step_kind="revelation")
+    obs = verify(m)
+    assert _has_code(obs, "anagnorisis_step_kind_invalid")
+
+
+def test_step_kind_staging_requires_main_character():
+    """A7.11 invariant 2 (first half) — staging without
+    anagnorisis_character_ref_id flags."""
+    m = _staging_fixture_mythos(anagnorisis_character_ref_id=None)
+    obs = verify(m)
+    assert _has_code(
+        obs, "anagnorisis_step_staging_requires_main_character"
+    )
+
+
+def test_step_kind_staging_character_mismatch_flags():
+    """A7.11 invariant 2 (second half) — staging with
+    character_ref_id ≠ anagnorisis_character_ref_id flags."""
+    m = _staging_fixture_mythos(step_character="c_other")
+    obs = verify(m)
+    assert _has_code(obs, "anagnorisis_step_staging_character_mismatch")
+
+
+def test_step_kind_staging_ordering_flags():
+    """A7.11 invariant 6 — staging τ_s must strictly precede main
+    anagnorisis τ_s (enforceable only with substrate threaded)."""
+    m = _staging_fixture_mythos(step_event="E3", anagnorisis_event_id="E3")
+    # The step event and the main event are both E3 — but invariant 3
+    # (from A7.7) would also flag "step event equals main"; this test
+    # uses a distinct-event case to isolate ordering. Rebuild with a
+    # *later* event for the step: step at E2, main at E1.
+    events = (
+        _synthetic_event("E1", τ_s=10),
+        _synthetic_event("E2", τ_s=20),
+        _synthetic_event("E3", τ_s=30),
+    )
+    m2 = _staging_fixture_mythos(
+        step_event="E3", anagnorisis_event_id="E2",
+    )
+    # Overwrite: step at τ_s=30, main at τ_s=20 (step is LATER than
+    # main → ordering violation).
+    obs = verify(m2, substrate_events=events)
+    assert _has_code(obs, "anagnorisis_step_staging_ordering")
+
+
+def test_step_kind_staging_precipitates_mismatch_noted():
+    """A7.11 invariant 5 — staging with precipitates_main=False
+    flags at severity NOTED (author declared staging but also
+    declared the step does not precipitate; staging precipitates by
+    definition)."""
+    m = _staging_fixture_mythos(step_precipitates=False)
+    obs = verify(m)
+    findings = [
+        o for o in obs
+        if o.code == "anagnorisis_step_kind_precipitates_mismatch"
+    ]
+    assert len(findings) >= 1
+    assert findings[0].severity == SEVERITY_NOTED
+
+
+def test_step_kind_precipitating_precipitates_mismatch_noted():
+    """A7.11 invariant 3 — step_kind='precipitating' with
+    precipitates_main=False flags NOTED."""
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2", character_ref_id="c2",
+        step_kind=STEP_KIND_PRECIPITATING,
+        precipitates_main=False,
+    )
+    m = _three_phase_mythos(
+        characters=(
+            ArCharacter(id="c1", name="Hero"),
+            ArCharacter(id="c2", name="Other"),
+        ),
+        anagnorisis_chain=(step,),
+        anagnorisis_character_ref_id="c1",
+    )
+    obs = verify(m)
+    findings = [
+        o for o in obs
+        if o.code == "anagnorisis_step_kind_precipitates_mismatch"
+    ]
+    assert len(findings) >= 1
+    assert findings[0].severity == SEVERITY_NOTED
+
+
+def test_step_kind_parallel_precipitates_mismatch_noted():
+    """A7.11 invariant 4 — step_kind='parallel' with
+    precipitates_main=True flags NOTED."""
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2", character_ref_id="c2",
+        step_kind=STEP_KIND_PARALLEL,
+        precipitates_main=True,
+    )
+    m = _three_phase_mythos(
+        characters=(
+            ArCharacter(id="c1", name="Hero"),
+            ArCharacter(id="c2", name="Other"),
+        ),
+        anagnorisis_chain=(step,),
+        anagnorisis_character_ref_id="c1",
+    )
+    obs = verify(m)
+    findings = [
+        o for o in obs
+        if o.code == "anagnorisis_step_kind_precipitates_mismatch"
+    ]
+    assert len(findings) >= 1
+    assert findings[0].severity == SEVERITY_NOTED
+
+
+def test_step_kind_empty_back_compat_verifies_clean():
+    """Back-compat — an encoding that leaves step_kind="" and
+    anagnorisis_character_ref_id=None (pre-sketch-03 shape) sees no
+    new A7.11 observations. The chain step below is a non-
+    precipitating parallel-style step (Macbeth's Lady-Macbeth
+    shape); pre-sketch-03 semantics are preserved."""
+    step = ArAnagnorisisStep(
+        id="s_legacy", event_id="E2", character_ref_id="c_other",
+        precipitates_main=False,
+    )
+    m = _three_phase_mythos(
+        characters=(
+            ArCharacter(id="c_hero", name="Hero"),
+            ArCharacter(id="c_other", name="Other"),
+        ),
+        anagnorisis_chain=(step,),
+    )
+    obs = verify(m)
+    # No sketch-03 codes on a pre-sketch-03-shape encoding.
+    sketch03_codes = {
+        "anagnorisis_step_kind_invalid",
+        "anagnorisis_step_staging_character_mismatch",
+        "anagnorisis_step_staging_requires_main_character",
+        "anagnorisis_step_kind_precipitates_mismatch",
+        "anagnorisis_step_staging_ordering",
+    }
+    assert not any(o.code in sketch03_codes for o in obs)
+
+
+def test_arcrelation_verifies_clean_when_all_resolve():
+    """Integration — a cleanly-authored arc relation over a two-
+    character mythos with all events resolving in substrate emits
+    zero observations."""
+    m = _two_character_mythos()
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=1),
+        _synthetic_event("E3", τ_s=2),
+    )
+    rel = ArCharacterArcRelation(
+        id="arc1", kind=ARC_RELATION_MIRROR,
+        character_ref_ids=("c1", "c2"), mythos_id="m_test",
+        over_event_ids=("E1", "E2"),
+    )
+    obs = verify(
+        m, substrate_events=events, mythoi=(m,),
+        character_arc_relations=(rel,),
+    )
+    sketch03_codes = {
+        o.code for o in obs
+        if o.code.startswith("character_arc_relation_")
+        or o.code.startswith("anagnorisis_step_kind_")
+        or o.code.startswith("anagnorisis_step_staging_")
+    }
+    assert sketch03_codes == set(), (
+        f"Expected zero sketch-03 findings; got {sketch03_codes}"
+    )
+
+
+def test_verify_signature_accepts_character_arc_relations_kwarg():
+    """AA13 — verify's new kwarg defaults to empty tuple; calling
+    verify without it preserves pre-sketch-03 behavior."""
+    m = _three_phase_mythos()
+    # Without the kwarg (pre-sketch-03 call site):
+    obs_without = verify(m)
+    # With the kwarg but empty tuple:
+    obs_with_empty = verify(m, character_arc_relations=())
+    assert obs_without == obs_with_empty
+
+
+# ============================================================================
 # Integration — Macbeth (third Aristotelian encoding)
 # ============================================================================
 
@@ -1204,13 +1581,22 @@ def test_macbeth_aristotelian_chain_non_precipitating():
 
 
 def test_hamlet_aristotelian_verifies_clean():
-    """Fourth worked case: Hamlet under A1-A12 verifies with zero
-    observations against the real hamlet.py FABULA."""
+    """Fourth worked case: Hamlet under A1-A14 verifies with zero
+    observations against the real hamlet.py FABULA. Threads all
+    sketch-03 kwargs (mythoi + character_arc_relations) so the A7.10
+    structural-integrity check runs over the two pairwise arc
+    relations and the A7.11 staging-ordering check runs over the
+    full three-step chain."""
     from story_engine.encodings.hamlet import FABULA
     from story_engine.encodings.hamlet_aristotelian import (
-        AR_HAMLET_MYTHOS,
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
     )
-    obs = verify(AR_HAMLET_MYTHOS, substrate_events=FABULA)
+    obs = verify(
+        AR_HAMLET_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
     assert obs == [], (
         f"Expected zero observations; got {len(obs)}:\n"
         + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
@@ -1297,25 +1683,49 @@ def test_hamlet_aristotelian_binding_is_separated_distance_nine():
     assert ana.τ_s - per.τ_s == 9
 
 
-def test_hamlet_aristotelian_chain_non_precipitating_antagonist():
-    """Hamlet's anagnorisis_chain step (Claudius at prayer) has
-    precipitates_main=False — Claudius's private recognition of
-    moral bankruptcy does not causally drive Hamlet's τ_s=17
-    recognition. Structurally parallels Macbeth's
-    AR_STEP_LADY_MACBETH_SLEEPWALKING (same shape: non-
-    precipitating chain step) with a different occupant role:
-    the antagonist, not a parallel protagonist. Distinct from
-    Oedipus's AR_STEP_JOCASTA, which is precipitates_main=True."""
+def test_hamlet_aristotelian_chain_three_steps_two_kinds():
+    """Under sketch-03, Hamlet's anagnorisis_chain is three steps
+    across two step_kinds: two staging (Hamlet Ghost commission at
+    τ_s=1, Hamlet Mousetrap verification at τ_s=6) plus one parallel
+    (Claudius prayer at τ_s=7). The staging steps close OQ-AP10 —
+    same-character epistemic staging toward the main anagnorisis at
+    τ_s=17. The parallel step is retained, carrying the antagonist's
+    private recognition; its step_kind flips from implicit (pre-
+    sketch-03 derived-from-precipitates_main=False) to explicit
+    'parallel' for honest authoring."""
+    from story_engine.core.aristotelian import (
+        STEP_KIND_PARALLEL, STEP_KIND_STAGING,
+    )
     from story_engine.encodings.hamlet_aristotelian import (
-        AR_HAMLET_MYTHOS, AR_STEP_CLAUDIUS_PRAYS,
+        AR_HAMLET_MYTHOS,
+        AR_STEP_CLAUDIUS_PRAYS,
+        AR_STEP_HAMLET_GHOST_CLAIM,
+        AR_STEP_HAMLET_MOUSETRAP,
     )
     assert AR_HAMLET_MYTHOS.anagnorisis_chain == (
+        AR_STEP_HAMLET_GHOST_CLAIM,
+        AR_STEP_HAMLET_MOUSETRAP,
         AR_STEP_CLAUDIUS_PRAYS,
     )
-    step = AR_STEP_CLAUDIUS_PRAYS
-    assert step.event_id == "E_claudius_prays"
-    assert step.character_ref_id == "ar_claudius"
-    assert step.precipitates_main is False
+    assert AR_HAMLET_MYTHOS.anagnorisis_character_ref_id == "ar_hamlet"
+
+    # Staging steps — same character as main, precipitating by A14
+    # definition.
+    for step in (AR_STEP_HAMLET_GHOST_CLAIM, AR_STEP_HAMLET_MOUSETRAP):
+        assert step.step_kind == STEP_KIND_STAGING
+        assert step.character_ref_id == "ar_hamlet"
+        assert step.precipitates_main is True
+
+    # Parallel step — different character, non-precipitating.
+    claudius = AR_STEP_CLAUDIUS_PRAYS
+    assert claudius.step_kind == STEP_KIND_PARALLEL
+    assert claudius.character_ref_id == "ar_claudius"
+    assert claudius.precipitates_main is False
+
+    # Events resolve to the expected substrate ids.
+    assert AR_STEP_HAMLET_GHOST_CLAIM.event_id == "E_hamlet_meets_ghost"
+    assert AR_STEP_HAMLET_MOUSETRAP.event_id == "E_mousetrap_performance"
+    assert claudius.event_id == "E_claudius_prays"
 
 
 def test_hamlet_aristotelian_probe_findings_authored():
@@ -1434,6 +1844,29 @@ TESTS = [
     test_oedipus_aristotelian_still_verifies_clean_with_sketch02,
     test_rashomon_contest_relation_authored,
     test_rashomon_aristotelian_verifies_clean_with_relations,
+    # Sketch-03 — A13 + A14
+    test_archaracterarc_relation_defaults,
+    test_canonical_character_arc_relation_kinds_contents,
+    test_valid_step_kinds_contents,
+    test_aranagnorisis_step_sketch03_field_default,
+    test_armythos_sketch03_anagnorisis_character_default,
+    test_arcrelation_noncanonical_kind_emits_noted,
+    test_arcrelation_too_few_refs_flags,
+    test_arcrelation_mythos_unresolved_flags,
+    test_arcrelation_character_unresolved_flags,
+    test_arcrelation_resolution_skipped_when_mythoi_empty,
+    test_arcrelation_event_ref_unresolved_flags,
+    test_arcrelation_event_ref_skipped_without_substrate,
+    test_step_kind_invalid_value_flags,
+    test_step_kind_staging_requires_main_character,
+    test_step_kind_staging_character_mismatch_flags,
+    test_step_kind_staging_ordering_flags,
+    test_step_kind_staging_precipitates_mismatch_noted,
+    test_step_kind_precipitating_precipitates_mismatch_noted,
+    test_step_kind_parallel_precipitates_mismatch_noted,
+    test_step_kind_empty_back_compat_verifies_clean,
+    test_arcrelation_verifies_clean_when_all_resolve,
+    test_verify_signature_accepts_character_arc_relations_kwarg,
     # Macbeth — third Aristotelian encoding
     test_macbeth_aristotelian_verifies_clean,
     test_macbeth_aristotelian_records_shape,
@@ -1444,7 +1877,7 @@ TESTS = [
     test_hamlet_aristotelian_records_shape,
     test_hamlet_aristotelian_three_parallel_tragic_heroes,
     test_hamlet_aristotelian_binding_is_separated_distance_nine,
-    test_hamlet_aristotelian_chain_non_precipitating_antagonist,
+    test_hamlet_aristotelian_chain_three_steps_two_kinds,
     test_hamlet_aristotelian_probe_findings_authored,
     test_hamlet_aristotelian_no_mythos_relation_authored,
 ]

@@ -81,6 +81,33 @@ VALID_PERIPETEIA_ANAGNORISIS_BINDINGS: frozenset = frozenset({
     BINDING_COINCIDENT, BINDING_ADJACENT, BINDING_SEPARATED,
 })
 
+# A13 (sketch-03) — ArCharacterArcRelation kind vocabulary (canonical-
+# plus-open). Non-canonical kinds are admitted but flagged at
+# SEVERITY_NOTED per A7.10 check 1; canonical values match the sketch-
+# 03 Hamlet worked cases.
+
+ARC_RELATION_PARALLEL = "parallel"
+ARC_RELATION_MIRROR = "mirror"
+ARC_RELATION_FOIL = "foil"
+
+CANONICAL_CHARACTER_ARC_RELATION_KINDS: frozenset = frozenset({
+    ARC_RELATION_PARALLEL, ARC_RELATION_MIRROR, ARC_RELATION_FOIL,
+})
+
+# A14 (sketch-03) — ArAnagnorisisStep step_kind vocabulary. Unlike
+# A10/A13's canonical-plus-open discipline, this enum is closed:
+# invalid values emit SEVERITY_ADVISES_REVIEW. Empty string is
+# distinct from the vocabulary — it means "derive from
+# precipitates_main + character identity" (see A7.11).
+
+STEP_KIND_PARALLEL = "parallel"
+STEP_KIND_PRECIPITATING = "precipitating"
+STEP_KIND_STAGING = "staging"
+
+VALID_STEP_KINDS: frozenset = frozenset({
+    STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
+})
+
 SEVERITY_NOTED = "noted"
 SEVERITY_ADVISES_REVIEW = "advises-review"
 
@@ -150,11 +177,27 @@ class ArAnagnorisisStep:
     A step's `event_id` must be in the enclosing mythos's
     `central_event_ids` (A7.7 invariant 1) and must not equal
     `anagnorisis_event_id` (A7.7 invariant 3).
+
+    `step_kind` (A14, sketch-03) splits the A11 `precipitates_main`
+    binary along a second axis: same-character-as-main vs. different-
+    character. Canonical values:
+
+      - "parallel"      — different character; non-precipitating.
+      - "precipitating" — different character; causally drives main.
+      - "staging"       — same character as main; epistemic waypoint.
+
+    Empty string (default) means "derive from precipitates_main +
+    character identity" — A7.11's back-compat path. Pre-sketch-03
+    encodings leave step_kind="" and continue to verify under A11's
+    binary semantics. `precipitates_main` is soft-deprecated by A14;
+    see the sketch's A14 invariants for the consistency rules the
+    verifier enforces when both fields are set.
     """
     id: str
     event_id: str
     character_ref_id: str
     precipitates_main: bool = False
+    step_kind: str = ""
     annotation: str = ""
 
 
@@ -223,11 +266,55 @@ class ArMythos:
     # adjacency_bound`.
     peripeteia_anagnorisis_binding: Optional[str] = None
     peripeteia_anagnorisis_adjacency_bound: int = 3
+    # A14 (sketch-03) — the character whose recognition lands at
+    # anagnorisis_event_id. Required for step_kind="staging" to
+    # verify (A7.11 invariant 2). None default leaves pre-sketch-03
+    # encodings unchanged; A7.11's back-compat derivation treats
+    # None as "no staging classification available" and any empty-
+    # step_kind chain step derives to "parallel" (different char)
+    # or "precipitating" (from precipitates_main).
+    anagnorisis_character_ref_id: Optional[str] = None
 
 
 # ============================================================================
 # Mythos relation (A10 — sketch-02)
 # ============================================================================
+
+
+@dataclass(frozen=True)
+class ArCharacterArcRelation:
+    """A13 (sketch-03). Structural relation between two or more
+    ArCharacter records *within a single ArMythos*. Hamlet's three-way
+    tragic-hero parallelism (pairwise mirror Hamlet-Laertes + foil
+    Hamlet-Claudius) is the canonical case.
+
+    Distinguished from A10 `ArMythosRelation` by scope: A10 ties
+    ≥2 ArMythos records (inter-mythos); A13 ties ≥2 ArCharacter ids
+    within one ArMythos named by `mythos_id`.
+
+    `kind` is canonical-plus-open. Canonical values:
+      - "parallel" — umbrella; two or more arcs run within one mythos
+        without a more specific structural sub-shape.
+      - "mirror"   — parallelism plus structural symmetry (Hamlet-
+        Laertes: both sons avenging murdered fathers with opposite
+        tempers).
+      - "foil"     — parallelism plus structural opposition (Hamlet-
+        Claudius: will-to-act vs. will-to-retain).
+    Non-canonical values are admitted at severity=NOTED (A7.10 check 1).
+
+    `character_ref_ids` lists the participating ArCharacter ids within
+    `mythos_id`'s ArCharacter tuple; ≥2 required (A7.10 check 2). All
+    ids must resolve against the named mythos's `characters`.
+
+    `over_event_ids` names substrate events where the arcs track /
+    mirror — optional, substrate-check skipped when not threaded.
+    """
+    id: str
+    kind: str
+    character_ref_ids: Tuple[str, ...]
+    mythos_id: str
+    over_event_ids: Tuple[str, ...] = ()
+    annotation: str = ""
 
 
 @dataclass(frozen=True)
@@ -891,6 +978,257 @@ def _check_relation_event_refs(
 
 
 # ============================================================================
+# Sketch-03 checks — A7.10 + A7.11
+# ============================================================================
+
+
+def _check_character_arc_relations(
+    character_arc_relations: tuple,
+    mythoi: tuple,
+    events_by_id: dict,
+) -> list:
+    """A7.10. Structural integrity for ArCharacterArcRelation records.
+
+    1. `kind` in CANONICAL_CHARACTER_ARC_RELATION_KINDS — non-canonical
+       emits severity=NOTED.
+    2. `len(character_ref_ids) ≥ 2`.
+    3. `mythos_id` resolves against `mythoi`, and every id in
+       `character_ref_ids` resolves to an ArCharacter within that
+       mythos's `characters` tuple. Requires `mythoi` threaded;
+       resolution-subchecks skip when `mythoi` is empty (consistent
+       with A7.6 discipline).
+    4. Every event id in `over_event_ids` resolves in substrate events
+       when substrate threaded. Skips when substrate empty.
+    """
+    out: list = []
+    mythoi_by_id = {m.id: m for m in mythoi}
+
+    for rel in character_arc_relations:
+        # Check 1 — canonical-plus-open kind
+        if rel.kind not in CANONICAL_CHARACTER_ARC_RELATION_KINDS:
+            out.append(ArObservation(
+                severity=SEVERITY_NOTED,
+                code="character_arc_relation_kind_noncanonical",
+                target_id=rel.id,
+                message=(f"ArCharacterArcRelation {rel.id!r} declares "
+                         f"kind={rel.kind!r} which is not in "
+                         f"{sorted(CANONICAL_CHARACTER_ARC_RELATION_KINDS)}"
+                         f"; admitted under canonical-plus-open "
+                         f"discipline."),
+            ))
+
+        # Check 2 — cardinality
+        if len(rel.character_ref_ids) < 2:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="character_arc_relation_refs_too_few",
+                target_id=rel.id,
+                message=(f"ArCharacterArcRelation {rel.id!r} lists "
+                         f"{len(rel.character_ref_ids)} character id(s); "
+                         f"A13 requires at least 2."),
+            ))
+
+        # Check 3 — mythos + character resolution (requires mythoi)
+        if mythoi:
+            target_mythos = mythoi_by_id.get(rel.mythos_id)
+            if target_mythos is None:
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="character_arc_relation_mythos_unresolved",
+                    target_id=rel.id,
+                    message=(f"ArCharacterArcRelation {rel.id!r} names "
+                             f"mythos_id={rel.mythos_id!r} which does "
+                             f"not resolve against the mythoi "
+                             f"collection."),
+                ))
+            else:
+                char_ids = {c.id for c in target_mythos.characters}
+                for cid in rel.character_ref_ids:
+                    if cid not in char_ids:
+                        out.append(ArObservation(
+                            severity=SEVERITY_ADVISES_REVIEW,
+                            code=("character_arc_relation_character"
+                                  "_unresolved"),
+                            target_id=rel.id,
+                            message=(f"ArCharacterArcRelation {rel.id!r} "
+                                     f"names character_ref_id={cid!r} "
+                                     f"which does not resolve against "
+                                     f"mythos {target_mythos.id!r}'s "
+                                     f"characters tuple."),
+                        ))
+
+        # Check 4 — over_event_ids resolve in substrate (when threaded)
+        if events_by_id:
+            seen_missing: set = set()
+            for eid in rel.over_event_ids:
+                if eid not in events_by_id and eid not in seen_missing:
+                    seen_missing.add(eid)
+                    out.append(ArObservation(
+                        severity=SEVERITY_ADVISES_REVIEW,
+                        code=("character_arc_relation_event_ref"
+                              "_unresolved"),
+                        target_id=rel.id,
+                        message=(f"ArCharacterArcRelation {rel.id!r} "
+                                 f"references over_event_id {eid!r} "
+                                 f"which is not in the substrate events "
+                                 f"collection."),
+                    ))
+    return out
+
+
+def _derived_step_kind(
+    step: ArAnagnorisisStep,
+    anagnorisis_character_ref_id: Optional[str],
+) -> str:
+    """Back-compat derivation for A14. When `step.step_kind` is
+    empty, derive from `precipitates_main` + character identity.
+
+    If `anagnorisis_character_ref_id` is None, same-character-as-main
+    cannot be distinguished structurally; the conservative default is
+    "parallel" (or "precipitating" when the flag is set). Authors who
+    want "staging" must both set `step_kind="staging"` explicitly and
+    name `anagnorisis_character_ref_id` on the mythos.
+    """
+    if step.step_kind:
+        return step.step_kind
+    if (anagnorisis_character_ref_id is not None
+            and step.character_ref_id == anagnorisis_character_ref_id):
+        return STEP_KIND_STAGING
+    if step.precipitates_main:
+        return STEP_KIND_PRECIPITATING
+    return STEP_KIND_PARALLEL
+
+
+def _check_anagnorisis_step_kind(
+    mythos: ArMythos,
+    events_by_id: dict,
+) -> list:
+    """A7.11. Enforce the five A14 invariants for `step_kind`.
+
+    1. Non-empty step_kind in VALID_STEP_KINDS.
+    2. step_kind="staging": anagnorisis_character_ref_id must be non-
+       None and equal the step's character_ref_id.
+    3. step_kind="precipitating": precipitates_main must be True.
+    4. step_kind="parallel": precipitates_main must be False.
+    5. step_kind="staging": precipitates_main must be True.
+    6. Staging steps: step's τ_s < main anagnorisis event's τ_s (when
+       substrate threaded).
+    """
+    out: list = []
+    main_char = mythos.anagnorisis_character_ref_id
+
+    for step in mythos.anagnorisis_chain:
+        # Invariant 1 — vocabulary (only if explicitly set)
+        if step.step_kind and step.step_kind not in VALID_STEP_KINDS:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="anagnorisis_step_kind_invalid",
+                target_id=step.id,
+                message=(f"ArAnagnorisisStep {step.id!r} declares "
+                         f"step_kind={step.step_kind!r} which is not in "
+                         f"{sorted(VALID_STEP_KINDS)}."),
+            ))
+            # Further checks on this step would be noise; skip.
+            continue
+
+        effective_kind = _derived_step_kind(step, main_char)
+
+        # Invariants 2, 5, 6 — staging-specific
+        if effective_kind == STEP_KIND_STAGING:
+            if main_char is None:
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code=("anagnorisis_step_staging_requires_main"
+                          "_character"),
+                    target_id=step.id,
+                    message=(f"ArAnagnorisisStep {step.id!r} is "
+                             f"step_kind='staging' but enclosing mythos "
+                             f"{mythos.id!r} has no "
+                             f"anagnorisis_character_ref_id; A14 "
+                             f"invariant 2 requires it."),
+                ))
+            elif step.character_ref_id != main_char:
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code=("anagnorisis_step_staging_character"
+                          "_mismatch"),
+                    target_id=step.id,
+                    message=(f"ArAnagnorisisStep {step.id!r} is "
+                             f"step_kind='staging' with "
+                             f"character_ref_id="
+                             f"{step.character_ref_id!r}, but mythos "
+                             f"{mythos.id!r} names "
+                             f"anagnorisis_character_ref_id="
+                             f"{main_char!r}; A14 invariant 2 requires "
+                             f"them to match."),
+                ))
+            # Invariant 5 — staging precipitates (noted if user set
+            # step_kind explicitly and precipitates_main contradicts;
+            # derived staging from same-character already implies
+            # precipitates_main should be True — flag if not).
+            if not step.precipitates_main:
+                out.append(ArObservation(
+                    severity=SEVERITY_NOTED,
+                    code="anagnorisis_step_kind_precipitates_mismatch",
+                    target_id=step.id,
+                    message=(f"ArAnagnorisisStep {step.id!r} is "
+                             f"step_kind='staging' with "
+                             f"precipitates_main=False; A14 invariant 5 "
+                             f"requires staging steps to precipitate "
+                             f"the main recognition."),
+                ))
+            # Invariant 6 — staging ordering (substrate-threaded only)
+            if (events_by_id
+                    and mythos.anagnorisis_event_id is not None):
+                step_event = events_by_id.get(step.event_id)
+                main_event = events_by_id.get(mythos.anagnorisis_event_id)
+                if (step_event is not None
+                        and main_event is not None
+                        and step_event.τ_s >= main_event.τ_s):
+                    out.append(ArObservation(
+                        severity=SEVERITY_ADVISES_REVIEW,
+                        code="anagnorisis_step_staging_ordering",
+                        target_id=step.id,
+                        message=(f"ArAnagnorisisStep {step.id!r} "
+                                 f"(step_kind='staging') has τ_s "
+                                 f"({step_event.τ_s}) not strictly less "
+                                 f"than main anagnorisis τ_s "
+                                 f"({main_event.τ_s}); A14 invariant 6 "
+                                 f"requires strict precedence."),
+                    ))
+
+        # Invariants 3, 4 — precipitating / parallel precipitates_main
+        # consistency. Only flag when step_kind is explicitly set
+        # (empty-string derivation is always self-consistent by
+        # construction of `_derived_step_kind`).
+        if step.step_kind == STEP_KIND_PRECIPITATING:
+            if not step.precipitates_main:
+                out.append(ArObservation(
+                    severity=SEVERITY_NOTED,
+                    code="anagnorisis_step_kind_precipitates_mismatch",
+                    target_id=step.id,
+                    message=(f"ArAnagnorisisStep {step.id!r} is "
+                             f"step_kind='precipitating' with "
+                             f"precipitates_main=False; A14 invariant 3 "
+                             f"requires precipitating steps to have "
+                             f"precipitates_main=True."),
+                ))
+        elif step.step_kind == STEP_KIND_PARALLEL:
+            if step.precipitates_main:
+                out.append(ArObservation(
+                    severity=SEVERITY_NOTED,
+                    code="anagnorisis_step_kind_precipitates_mismatch",
+                    target_id=step.id,
+                    message=(f"ArAnagnorisisStep {step.id!r} is "
+                             f"step_kind='parallel' with "
+                             f"precipitates_main=True; A14 invariant 4 "
+                             f"requires parallel steps to have "
+                             f"precipitates_main=False."),
+                ))
+    return out
+
+
+# ============================================================================
 # Public verify — A7 orchestrator
 # ============================================================================
 
@@ -901,8 +1239,9 @@ def verify(
     substrate_events: tuple = (),
     mythoi: tuple = (),
     relations: tuple = (),
+    character_arc_relations: tuple = (),
 ) -> list:
-    """Run A7 checks 1-5 + A7.6-A7.9 on a single mythos.
+    """Run A7 checks 1-5 + A7.6-A7.9 + A7.10-A7.11 on a single mythos.
 
     `substrate_events` is the encoding's Event records. Empty by
     default — event-ref integrity, unity-of-time, unity-of-place,
@@ -927,6 +1266,13 @@ def verify(
     surfaces on every call of every mythos in the relation; callers
     that want dedupe should invoke the `_check_mythos_relations` +
     `_check_relation_event_refs` helpers directly at encoding scope.
+
+    `character_arc_relations` (A13, sketch-03) is the encoding's
+    ArCharacterArcRelation tuple. A7.10 evaluates each relation's
+    structural integrity; finds surface once per `verify` call
+    regardless of which mythos it targets (the relation's `mythos_id`
+    selects which mythos it binds to). Default empty; pre-sketch-03
+    encodings change nothing.
     """
     events_by_id = {e.id: e for e in substrate_events}
 
@@ -942,6 +1288,10 @@ def verify(
     out.extend(_check_peripeteia_anagnorisis_binding(mythos, events_by_id))
     out.extend(_check_mythos_relations(relations, mythoi))
     out.extend(_check_relation_event_refs(relations, events_by_id))
+    out.extend(_check_character_arc_relations(
+        character_arc_relations, mythoi, events_by_id,
+    ))
+    out.extend(_check_anagnorisis_step_kind(mythos, events_by_id))
     return out
 
 
