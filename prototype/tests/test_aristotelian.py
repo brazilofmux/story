@@ -1199,6 +1199,163 @@ def test_macbeth_aristotelian_chain_non_precipitating():
 
 
 # ============================================================================
+# Integration — Hamlet (fourth Aristotelian encoding)
+# ============================================================================
+
+
+def test_hamlet_aristotelian_verifies_clean():
+    """Fourth worked case: Hamlet under A1-A12 verifies with zero
+    observations against the real hamlet.py FABULA."""
+    from story_engine.encodings.hamlet import FABULA
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    obs = verify(AR_HAMLET_MYTHOS, substrate_events=FABULA)
+    assert obs == [], (
+        f"Expected zero observations; got {len(obs)}:\n"
+        + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
+                    for o in obs)
+    )
+
+
+def test_hamlet_aristotelian_records_shape():
+    """Structural pins on AR_HAMLET_MYTHOS. Distinctive from the
+    earlier three encodings: complication_event_id and
+    denouement_event_id are authored (neither Oedipus nor Macbeth
+    pin them); three tragic-hero characters (first in corpus);
+    peripeteia and anagnorisis are distinct events separated
+    across the entire middle phase."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    m = AR_HAMLET_MYTHOS
+    assert m.plot_kind == PLOT_COMPLEX
+    assert len(m.phases) == 3
+    assert [ph.role for ph in m.phases] == [
+        PHASE_BEGINNING, PHASE_MIDDLE, PHASE_END,
+    ]
+    assert m.peripeteia_event_id == "E_hamlet_kills_polonius"
+    assert m.anagnorisis_event_id == "E_laertes_reveals_plot"
+    assert m.peripeteia_event_id != m.anagnorisis_event_id
+    assert m.complication_event_id == "E_mousetrap_performance"
+    assert m.denouement_event_id == "E_duel_plotted"
+    assert m.asserts_unity_of_action is True
+    assert m.asserts_unity_of_time is False
+    assert m.asserts_unity_of_place is False
+    assert m.aims_at_catharsis is True
+    assert len(m.characters) == 3
+    ids = sorted(c.id for c in m.characters)
+    assert ids == ["ar_claudius", "ar_hamlet", "ar_laertes"]
+    for char in m.characters:
+        assert char.is_tragic_hero is True
+        assert char.hamartia_text is not None
+        assert char.character_ref_id is not None
+
+
+def test_hamlet_aristotelian_three_parallel_tragic_heroes():
+    """OQ-AP6 pressure pin. Hamlet is the first corpus encoding to
+    author three `is_tragic_hero=True` characters in one mythos
+    (Oedipus has 2, Macbeth has 2, Rashomon has 0 mythos-scope
+    tragic heroes because each testimony authors its own). The
+    dialect admits the multiplicity but has no structural hook
+    for intra-mythos parallel — the probe surface recorded by
+    `OQ_AP6_FINDING`."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    tragic = [c for c in AR_HAMLET_MYTHOS.characters
+              if c.is_tragic_hero]
+    assert len(tragic) == 3
+    refs = sorted(c.character_ref_id for c in tragic)
+    assert refs == ["claudius", "hamlet", "laertes"]
+
+
+def test_hamlet_aristotelian_binding_is_separated_distance_nine():
+    """Hamlet exercises BINDING_SEPARATED at distance 9 — the widest
+    separation in the corpus. Oedipus is BINDING_SEPARATED at
+    distance 5; Macbeth is BINDING_COINCIDENT. The raw τ_s
+    distance is recovered from substrate (peripeteia at τ_s=8,
+    anagnorisis at τ_s=17) because the dialect today records only
+    the categorical binding, not the numerical distance. This pin
+    is load-bearing for the OQ_AP7 forcing function (whether
+    'separated' should distinguish near- from distant-)."""
+    from story_engine.encodings.hamlet import FABULA
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    assert (AR_HAMLET_MYTHOS.peripeteia_anagnorisis_binding
+            == BINDING_SEPARATED)
+    # Default bound 3 preserved — any distance > 3 is SEPARATED;
+    # the encoding does not shift the bound to force a finer
+    # category.
+    assert AR_HAMLET_MYTHOS.peripeteia_anagnorisis_adjacency_bound == 3
+    by_id = {e.id: e for e in FABULA}
+    per = by_id[AR_HAMLET_MYTHOS.peripeteia_event_id]
+    ana = by_id[AR_HAMLET_MYTHOS.anagnorisis_event_id]
+    assert per.τ_s == 8
+    assert ana.τ_s == 17
+    assert ana.τ_s - per.τ_s == 9
+
+
+def test_hamlet_aristotelian_chain_non_precipitating_antagonist():
+    """Hamlet's anagnorisis_chain step (Claudius at prayer) has
+    precipitates_main=False — Claudius's private recognition of
+    moral bankruptcy does not causally drive Hamlet's τ_s=17
+    recognition. Structurally parallels Macbeth's
+    AR_STEP_LADY_MACBETH_SLEEPWALKING (same shape: non-
+    precipitating chain step) with a different occupant role:
+    the antagonist, not a parallel protagonist. Distinct from
+    Oedipus's AR_STEP_JOCASTA, which is precipitates_main=True."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS, AR_STEP_CLAUDIUS_PRAYS,
+    )
+    assert AR_HAMLET_MYTHOS.anagnorisis_chain == (
+        AR_STEP_CLAUDIUS_PRAYS,
+    )
+    step = AR_STEP_CLAUDIUS_PRAYS
+    assert step.event_id == "E_claudius_prays"
+    assert step.character_ref_id == "ar_claudius"
+    assert step.precipitates_main is False
+
+
+def test_hamlet_aristotelian_probe_findings_authored():
+    """OQ-AP5 (fate-agent), OQ-AP6 (parallel heroes), OQ-AP7
+    (range of separated), and OQ-AP8 (same-beat staggered
+    recognition) findings are authored as non-empty prose
+    constants — the research payoff Session 2 committed to. These
+    are the probe-surface answers the encoding commits to before
+    the live probe run consumes them."""
+    from story_engine.encodings import hamlet_aristotelian as ha
+    for name in ("OQ_AP5_FINDING", "OQ_AP6_FINDING",
+                 "OQ_AP7_FINDING", "OQ_AP8_FINDING"):
+        val = getattr(ha, name)
+        assert isinstance(val, str), f"{name} not a string"
+        assert len(val) > 100, f"{name} is too short to be meaningful"
+        # Prose uses the hyphenated id form (e.g. "OQ-AP5") while the
+        # constant name uses underscores — convert for the self-
+        # reference check.
+        prose_id = name.split("_FINDING")[0].replace("_", "-")
+        assert prose_id in val, (
+            f"{name} body does not reference its own forcing-function "
+            f"id ({prose_id!r})"
+        )
+
+
+def test_hamlet_aristotelian_no_mythos_relation_authored():
+    """Hamlet is single-mythos. Unlike Rashomon, no ArMythosRelation
+    is authored. The module exposes no `AR_HAMLET_RELATIONS`
+    attribute (parallel to rashomon's `AR_RASHOMON_RELATIONS`) —
+    the encoding commits that intra-mythos parallelism is NOT
+    expressed via A10 today."""
+    from story_engine.encodings import hamlet_aristotelian as ha
+    assert not hasattr(ha, "AR_HAMLET_RELATIONS"), (
+        "Hamlet should not author relations at dialect scope; "
+        "OQ_AP6_FINDING explicitly rejects the three-mythos "
+        "workaround."
+    )
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -1282,6 +1439,14 @@ TESTS = [
     test_macbeth_aristotelian_records_shape,
     test_macbeth_aristotelian_binding_is_coincident,
     test_macbeth_aristotelian_chain_non_precipitating,
+    # Hamlet — fourth Aristotelian encoding
+    test_hamlet_aristotelian_verifies_clean,
+    test_hamlet_aristotelian_records_shape,
+    test_hamlet_aristotelian_three_parallel_tragic_heroes,
+    test_hamlet_aristotelian_binding_is_separated_distance_nine,
+    test_hamlet_aristotelian_chain_non_precipitating_antagonist,
+    test_hamlet_aristotelian_probe_findings_authored,
+    test_hamlet_aristotelian_no_mythos_relation_authored,
 ]
 
 
