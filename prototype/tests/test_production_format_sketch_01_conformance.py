@@ -263,6 +263,22 @@ def _load_aristotelian_dialect_reading_schema() -> dict:
         return json.load(f)
 
 
+def _load_aristotelian_mythos_relation_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "mythos_relation.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_aristotelian_anagnorisis_step_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "anagnorisis_step.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
@@ -337,6 +353,8 @@ def _build_schema_registry() -> Registry:
         _load_aristotelian_annotation_review_schema(),
         _load_aristotelian_observation_commentary_schema(),
         _load_aristotelian_dialect_reading_schema(),
+        _load_aristotelian_mythos_relation_schema(),
+        _load_aristotelian_anagnorisis_step_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -444,17 +462,21 @@ def _discover_encoding_branches() -> list:
 
 def _discover_encoding_aristotelian_records():
     """Walks encoding modules for Aristotelian records. Returns a
-    triple `(mythoi, phases, characters)` — three lists of
+    quadruple `(mythoi, phases, characters, steps)` — four lists of
     (encoding_name, records). Per production-format-sketch-06
-    PFS6-D4.
+    PFS6-D4, extended by production-format-sketch-13 PFS13-D5 for
+    ArAnagnorisisStep (reached transitively via
+    `mythos.anagnorisis_chain`, same discipline as phases and
+    characters).
 
     Mythoi come from module-level `AR_*` attrs that are either an
     `ArMythos` (Oedipus's `AR_OEDIPUS_MYTHOS`) or a tuple of
-    `ArMythos` (Rashomon's `AR_RASHOMON_MYTHOI`). Phases and
-    characters are collected by traversing each mythos's `.phases`
-    and `.characters` tuples; deduplication is by id within a
-    single encoding (same-id records across encodings are a
-    corpus-authoring concern, not a discovery concern)."""
+    `ArMythos` (Rashomon's `AR_RASHOMON_MYTHOI`). Phases,
+    characters, and anagnorisis steps are collected by traversing
+    each mythos's `.phases`, `.characters`, and `.anagnorisis_chain`
+    tuples; deduplication is by id within a single encoding (same-id
+    records across encodings are a corpus-authoring concern, not a
+    discovery concern)."""
     from story_engine.core.aristotelian import ArMythos
     encodings_dir = (
         _repo_root() / "prototype" / "story_engine" / "encodings"
@@ -462,6 +484,7 @@ def _discover_encoding_aristotelian_records():
     mythoi_out: list = []
     phases_out: list = []
     chars_out: list = []
+    steps_out: list = []
     for py_path in sorted(encodings_dir.glob("*.py")):
         name = py_path.stem
         if name.startswith("_"):
@@ -495,22 +518,73 @@ def _discover_encoding_aristotelian_records():
             continue
         mythoi_out.append((name, mythoi))
 
-        # Traverse each mythos's phases and characters; dedup by id
-        # within the encoding. (Cross-encoding id collisions are
-        # tolerable — same-id records across unrelated encodings
-        # aren't a shape concern.)
+        # Traverse each mythos's phases, characters, and anagnorisis
+        # steps; dedup by id within the encoding. (Cross-encoding id
+        # collisions are tolerable — same-id records across unrelated
+        # encodings aren't a shape concern.)
         phases_seen: dict = {}
         chars_seen: dict = {}
+        steps_seen: dict = {}
         for mythos in mythoi:
             for phase in mythos.phases:
                 phases_seen[phase.id] = phase
             for char in mythos.characters:
                 chars_seen[char.id] = char
+            for step in mythos.anagnorisis_chain:
+                steps_seen[step.id] = step
         if phases_seen:
             phases_out.append((name, list(phases_seen.values())))
         if chars_seen:
             chars_out.append((name, list(chars_seen.values())))
-    return mythoi_out, phases_out, chars_out
+        if steps_seen:
+            steps_out.append((name, list(steps_seen.values())))
+    return mythoi_out, phases_out, chars_out, steps_out
+
+
+def _discover_encoding_aristotelian_relations():
+    """Walks encoding modules for module-level attributes holding
+    ArMythosRelation records. Returns a list of (encoding_name,
+    relations). Per production-format-sketch-13 PFS13-D4.
+
+    Relations come from attrs whose value is either an
+    `ArMythosRelation` or a tuple of `ArMythosRelation`. Dedup by id
+    within each module matches the mythoi dedup discipline in
+    `_discover_encoding_aristotelian_records` — Rashomon exports
+    both `AR_RASHOMON_CONTEST` (singleton) and `AR_RASHOMON_RELATIONS`
+    (tuple containing it)."""
+    from story_engine.core.aristotelian import ArMythosRelation
+    encodings_dir = (
+        _repo_root() / "prototype" / "story_engine" / "encodings"
+    )
+    rels_out: list = []
+    for py_path in sorted(encodings_dir.glob("*.py")):
+        name = py_path.stem
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{name}"
+            )
+        except Exception:
+            continue
+        rels_seen: dict = {}
+        for attr_name in dir(module):
+            if not attr_name.startswith("AR_"):
+                continue
+            value = getattr(module, attr_name, None)
+            if isinstance(value, ArMythosRelation):
+                rels_seen[value.id] = value
+            elif (
+                isinstance(value, tuple)
+                and value
+                and all(isinstance(v, ArMythosRelation) for v in value)
+            ):
+                for v in value:
+                    rels_seen[v.id] = v
+        if not rels_seen:
+            continue
+        rels_out.append((name, list(rels_seen.values())))
+    return rels_out
 
 
 def _discover_encoding_save_the_cat_records():
@@ -1012,6 +1086,12 @@ def _dump_armythos(mythos) -> dict:
         "unity_of_place_max_locations": mythos.unity_of_place_max_locations,
         "aims_at_catharsis": mythos.aims_at_catharsis,
         "characters": [_dump_archaracter(c) for c in mythos.characters],
+        "anagnorisis_chain": [
+            _dump_ar_anagnorisis_step(s) for s in mythos.anagnorisis_chain
+        ],
+        "peripeteia_anagnorisis_adjacency_bound": (
+            mythos.peripeteia_anagnorisis_adjacency_bound
+        ),
     }
     if mythos.complication_event_id is not None:
         out["complication_event_id"] = mythos.complication_event_id
@@ -1021,6 +1101,48 @@ def _dump_armythos(mythos) -> dict:
         out["peripeteia_event_id"] = mythos.peripeteia_event_id
     if mythos.anagnorisis_event_id is not None:
         out["anagnorisis_event_id"] = mythos.anagnorisis_event_id
+    if mythos.peripeteia_anagnorisis_binding is not None:
+        out["peripeteia_anagnorisis_binding"] = (
+            mythos.peripeteia_anagnorisis_binding
+        )
+    return out
+
+
+def _dump_ar_anagnorisis_step(step) -> dict:
+    """Map a Python ArAnagnorisisStep to a JSON-compatible dict
+    conforming to schema/aristotelian/anagnorisis_step.json
+    (production-format-sketch-13 PFS13-D2). Required fields always
+    emit (id, event_id, character_ref_id); precipitates_main always
+    emits (dataclass always carries a boolean, same posture as the
+    asserts_unity_* booleans in _dump_armythos); annotation omits
+    when empty string (matching ArPhase.annotation convention)."""
+    out = {
+        "id": step.id,
+        "event_id": step.event_id,
+        "character_ref_id": step.character_ref_id,
+        "precipitates_main": step.precipitates_main,
+    }
+    if step.annotation:
+        out["annotation"] = step.annotation
+    return out
+
+
+def _dump_ar_mythos_relation(rel) -> dict:
+    """Map a Python ArMythosRelation to a JSON-compatible dict
+    conforming to schema/aristotelian/mythos_relation.json
+    (production-format-sketch-13 PFS13-D1). Required fields always
+    emit (id, kind, mythoi_ids); tuple fields always emit as arrays
+    — mythoi_ids and over_event_ids include empty-array renderings,
+    matching the characters/phases convention in _dump_armythos.
+    annotation omits when empty string."""
+    out = {
+        "id": rel.id,
+        "kind": rel.kind,
+        "mythoi_ids": list(rel.mythoi_ids),
+        "over_event_ids": list(rel.over_event_ids),
+    }
+    if rel.annotation:
+        out["annotation"] = rel.annotation
     return out
 
 
@@ -2295,7 +2417,7 @@ def test_aristotelian_mythos_schema_has_expected_shape():
         "central_event_ids", "plot_kind", "phases",
     }
     assert schema["additionalProperties"] is False
-    # All declared properties per PFS6-M1..M11
+    # All declared properties per PFS6-M1..M11 + PFS13-M12..M14
     assert set(schema["properties"].keys()) == {
         "id", "title", "action_summary",
         "central_event_ids", "plot_kind", "phases",
@@ -2305,6 +2427,10 @@ def test_aristotelian_mythos_schema_has_expected_shape():
         "asserts_unity_of_place",
         "unity_of_time_bound", "unity_of_place_max_locations",
         "aims_at_catharsis", "characters",
+        # PFS13-M12..M14 amendments (aristotelian-sketch-02 A11/A12)
+        "anagnorisis_chain",
+        "peripeteia_anagnorisis_binding",
+        "peripeteia_anagnorisis_adjacency_bound",
     }
     # central_event_ids non-empty array (PFS6-M3)
     central = schema["properties"]["central_event_ids"]
@@ -2341,6 +2467,108 @@ def test_aristotelian_mythos_schema_has_expected_shape():
     ]
     assert {"peripeteia_event_id"} in required_sets
     assert {"anagnorisis_event_id"} in required_sets
+    # PFS13-M12 — anagnorisis_chain is array of $ref to anagnorisis_step.json
+    chain = schema["properties"]["anagnorisis_chain"]
+    assert chain["type"] == "array"
+    assert chain["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/anagnorisis_step.json"
+    )
+    # PFS13-M13 — peripeteia_anagnorisis_binding closed enum
+    binding = schema["properties"]["peripeteia_anagnorisis_binding"]
+    assert binding["type"] == "string"
+    assert set(binding["enum"]) == {"coincident", "adjacent", "separated"}
+    # PFS13-M14 — peripeteia_anagnorisis_adjacency_bound integer, no
+    # schema-level default (Python carries it).
+    bound = schema["properties"]["peripeteia_anagnorisis_adjacency_bound"]
+    assert bound["type"] == "integer"
+    assert "default" not in bound
+
+
+def test_aristotelian_mythos_relation_schema_metaschema_valid():
+    """ArMythosRelation schema validates against JSON Schema 2020-12
+    metaschema per production-format-sketch-01 PFS1 + PFS13-MR1..MR4."""
+    schema = _load_aristotelian_mythos_relation_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_anagnorisis_step_schema_metaschema_valid():
+    """ArAnagnorisisStep schema validates against JSON Schema 2020-12
+    metaschema per production-format-sketch-01 PFS1 + PFS13-AS1..AS4."""
+    schema = _load_aristotelian_anagnorisis_step_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_mythos_relation_schema_has_expected_shape():
+    """Spot-check of ArMythosRelation schema structure per
+    aristotelian-sketch-02 A10 + production-format-sketch-13
+    PFS13-MR1..MR4."""
+    schema = _load_aristotelian_mythos_relation_schema()
+    assert schema["title"] == "ArMythosRelation"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/mythos_relation.json"
+    )
+    # PFS13-MR1 — required trio
+    assert set(schema["required"]) == {"id", "kind", "mythoi_ids"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "kind", "mythoi_ids", "over_event_ids", "annotation",
+    }
+    # PFS13-MR2 — kind is open non-empty string (no enum)
+    kind = schema["properties"]["kind"]
+    assert kind["type"] == "string"
+    assert kind["minLength"] == 1
+    assert "enum" not in kind
+    # PFS13-MR3 — mythoi_ids minItems=2 array of non-empty strings
+    mythoi_ids = schema["properties"]["mythoi_ids"]
+    assert mythoi_ids["type"] == "array"
+    assert mythoi_ids["minItems"] == 2
+    assert mythoi_ids["items"]["type"] == "string"
+    assert mythoi_ids["items"]["minLength"] == 1
+    # PFS13-MR4 — over_event_ids array of non-empty strings, no minItems
+    over = schema["properties"]["over_event_ids"]
+    assert over["type"] == "array"
+    assert "minItems" not in over
+    assert over["items"]["type"] == "string"
+    # PFS13-MR4 — annotation open string
+    annotation = schema["properties"]["annotation"]
+    assert annotation["type"] == "string"
+    assert "minLength" not in annotation
+
+
+def test_aristotelian_anagnorisis_step_schema_has_expected_shape():
+    """Spot-check of ArAnagnorisisStep schema structure per
+    aristotelian-sketch-02 A11 + production-format-sketch-13
+    PFS13-AS1..AS4."""
+    schema = _load_aristotelian_anagnorisis_step_schema()
+    assert schema["title"] == "ArAnagnorisisStep"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/anagnorisis_step.json"
+    )
+    # PFS13-AS1 — required trio (character_ref_id required per A11)
+    assert set(schema["required"]) == {
+        "id", "event_id", "character_ref_id",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "event_id", "character_ref_id",
+        "precipitates_main", "annotation",
+    }
+    # PFS13-AS2 — three id fields are non-empty strings
+    for field in ("id", "event_id", "character_ref_id"):
+        prop = schema["properties"][field]
+        assert prop["type"] == "string"
+        assert prop["minLength"] == 1
+    # PFS13-AS3 — precipitates_main boolean, no schema-level default
+    precipitates = schema["properties"]["precipitates_main"]
+    assert precipitates["type"] == "boolean"
+    assert "default" not in precipitates
+    # PFS13-AS4 — annotation open string
+    annotation = schema["properties"]["annotation"]
+    assert annotation["type"] == "string"
+    assert "minLength" not in annotation
 
 
 def test_aristotelian_phase_corpus_conformance():
@@ -2350,7 +2578,7 @@ def test_aristotelian_phase_corpus_conformance():
     schema = _load_aristotelian_phase_schema()
     validator = Draft202012Validator(schema)
 
-    _, phases_by_encoding, _ = (
+    _, phases_by_encoding, _, _ = (
         _discover_encoding_aristotelian_records()
     )
     assert phases_by_encoding, (
@@ -2427,7 +2655,7 @@ def test_aristotelian_character_corpus_conformance():
     schema = _load_aristotelian_character_schema()
     validator = Draft202012Validator(schema)
 
-    _, _, chars_by_encoding = (
+    _, _, chars_by_encoding, _ = (
         _discover_encoding_aristotelian_records()
     )
     assert chars_by_encoding, (
@@ -2507,7 +2735,7 @@ def test_aristotelian_mythos_corpus_conformance():
         mythos_schema, registry=registry,
     )
 
-    mythoi_by_encoding, _, _ = (
+    mythoi_by_encoding, _, _, _ = (
         _discover_encoding_aristotelian_records()
     )
     assert mythoi_by_encoding, (
@@ -2575,6 +2803,160 @@ def test_aristotelian_mythos_corpus_conformance():
         f"§Conformance dispositions protocol."
     )
     assert total > 0
+
+
+def test_aristotelian_anagnorisis_step_corpus_conformance():
+    """Every ArAnagnorisisStep reachable through encoding-level
+    ArMythos.anagnorisis_chain validates against
+    schema/aristotelian/anagnorisis_step.json (production-format-
+    sketch-13 PFS13-AS1..AS4 + PFS13-D5). Two steps expected today
+    per PFS13 corpus expectations (Oedipus AR_STEP_JOCASTA with
+    precipitates_main=True; Macbeth AR_STEP_LADY_MACBETH_SLEEPWALKING
+    with precipitates_main=False — both polarities exercised)."""
+    schema = _load_aristotelian_anagnorisis_step_schema()
+    validator = Draft202012Validator(schema)
+
+    _, _, _, steps_by_encoding = _discover_encoding_aristotelian_records()
+    assert steps_by_encoding, (
+        "expected at least one encoding with ArAnagnorisisStep "
+        "records; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    precipitates_counts: dict = {True: 0, False: 0}
+    new_findings: list = []
+
+    for encoding_name, steps in steps_by_encoding:
+        for step in steps:
+            total += 1
+            dumped = _dump_ar_anagnorisis_step(step)
+            precipitates_counts[step.precipitates_main] = (
+                precipitates_counts[step.precipitates_main] + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "step_id": step.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_anagnorisis_step_corpus_conformance: "
+        f"{total} ArAnagnorisisStep records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  precipitates_main counts:   {dict(precipitates_counts)}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(f"    {finding['encoding']}: {finding['step_id']}")
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArAnagnorisisStep conformance "
+        f"finding(s); see output. Resolve per production-format-"
+        f"sketch-13's §Conformance dispositions protocol."
+    )
+    assert total >= 2, (
+        f"expected at least 2 ArAnagnorisisStep records per PFS13 "
+        f"corpus expectations; found {total}"
+    )
+
+
+def test_aristotelian_mythos_relation_corpus_conformance():
+    """Every ArMythosRelation discovered at encoding scope validates
+    against schema/aristotelian/mythos_relation.json (production-
+    format-sketch-13 PFS13-MR1..MR4 + PFS13-D4). One relation
+    expected today per PFS13 corpus expectations (Rashomon's
+    AR_RASHOMON_CONTEST in AR_RASHOMON_RELATIONS)."""
+    schema = _load_aristotelian_mythos_relation_schema()
+    validator = Draft202012Validator(schema)
+
+    rels_by_encoding = _discover_encoding_aristotelian_relations()
+    assert rels_by_encoding, (
+        "expected at least one encoding with ArMythosRelation "
+        "records; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    kind_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, relations in rels_by_encoding:
+        for rel in relations:
+            total += 1
+            dumped = _dump_ar_mythos_relation(rel)
+            kind_counts[dumped["kind"]] = (
+                kind_counts.get(dumped["kind"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "relation_id": rel.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_mythos_relation_corpus_conformance: "
+        f"{total} ArMythosRelation records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  by kind:                    {dict(sorted(kind_counts.items()))}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: {finding['relation_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArMythosRelation conformance "
+        f"finding(s); see output. Resolve per production-format-"
+        f"sketch-13's §Conformance dispositions protocol."
+    )
+    assert total >= 1, (
+        f"expected at least 1 ArMythosRelation record per PFS13 "
+        f"corpus expectations; found {total}"
+    )
 
 
 # ============================================================================
@@ -4282,7 +4664,7 @@ def test_aristotelian_observation_corpus_conformance():
     schema = _load_aristotelian_observation_schema()
     validator = Draft202012Validator(schema)
 
-    mythoi_by_encoding, _, _ = _discover_encoding_aristotelian_records()
+    mythoi_by_encoding, _, _, _ = _discover_encoding_aristotelian_records()
     observations_by_encoding = (
         _discover_encoding_aristotelian_observations(mythoi_by_encoding)
     )

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/anagnorisis_step.json",
+  "title": "ArAnagnorisisStep",
+  "description": "A11 (aristotelian-sketch-02). One staggered character-level recognition within an ArMythos, supplementary to the mythos's singular anagnorisis_event_id. Reached via ArMythos.anagnorisis_chain; not authored at encoding scope. `character_ref_id` is required — A11 keeps steps strictly character-level (audience-level recognition is sketch-01 A4 / A8 scope-out). `precipitates_main=True` declares that this step causes the mythos's main anagnorisis; A7.7 invariant 2 enforces that the step's τ_s strictly precedes the main anagnorisis event when substrate events are threaded. Step event_ids must appear in the enclosing mythos's central_event_ids (A7.7 invariant 1) and must not equal anagnorisis_event_id (A7.7 invariant 3). PFS13-AS1..AS4.",
+  "type": "object",
+  "required": ["id", "event_id", "character_ref_id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this step (e.g., 'arstep_jocasta_realizes'). PFS13-AS1."
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Substrate event id at which the recognition lands. Plain-string reference per PFS6-X2. Existence / central-event membership / non-equality with anagnorisis_event_id are A7.7 invariants enforced by the verifier. PFS13-AS2."
+    },
+    "character_ref_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Character who realizes — points at an ArCharacter id in the enclosing mythos's characters tuple. Required per A11 (anonymous step would be audience-level, sketch-02 rejects). Plain-string reference per PFS6-X2. PFS13-AS2."
+    },
+    "precipitates_main": {
+      "type": "boolean",
+      "description": "Does this step cause the mythos's main anagnorisis? When true, A7.7 invariant 2 enforces the step's τ_s strictly precedes the main anagnorisis event's τ_s (when substrate events are threaded). Python default is false; schema admits absence and false interchangeably. PFS13-AS3."
+    },
+    "annotation": {
+      "type": "string",
+      "description": "Optional author prose annotation. Python default is empty string; schema admits the empty string and absence interchangeably. PFS13-AS4."
+    }
+  },
+  "additionalProperties": false
+}

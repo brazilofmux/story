@@ -93,6 +93,22 @@
         "$ref": "https://brazilofmux.github.io/story/schema/aristotelian/character.json"
       },
       "description": "Optional ArCharacter records authored at mythos scope per A5. Empty array is legal (a mythos without Aristotelian-dialect characters is valid — characters may live on the Dramatic side only, or be elided for short-form probes). Cross-file $ref to character.json per PFS6-X1. Python default is an empty tuple. PFS6-M11."
+    },
+    "anagnorisis_chain": {
+      "type": "array",
+      "items": {
+        "$ref": "https://brazilofmux.github.io/story/schema/aristotelian/anagnorisis_step.json"
+      },
+      "description": "Optional staggered character-level recognitions supplementing the singular anagnorisis_event_id, per aristotelian-sketch-02 A11. Empty array is legal and is the Python default; pre-sketch-02 encodings carry no chain. A7.7 enforces the A11 invariants (step event_ids in central_event_ids; steps distinct from the main anagnorisis; precipitates_main → τ_s precedes the main; character_ref_id resolves in characters). Cross-file $ref to anagnorisis_step.json per PFS13-X. PFS13-M12."
+    },
+    "peripeteia_anagnorisis_binding": {
+      "type": "string",
+      "enum": ["coincident", "adjacent", "separated"],
+      "description": "Optional structural claim about the relation between peripeteia_event_id and anagnorisis_event_id, per aristotelian-sketch-02 A12. Three canonical values: 'coincident' (equal event ids), 'adjacent' (τ_s distance ≤ peripeteia_anagnorisis_adjacency_bound), 'separated' (τ_s distance > bound). None / absent means no structural claim (pre-sketch-02 default). A7.8 enforces substrate-consistency of the declared value when substrate events are threaded. Closed enum at schema level; unknown values emit the `peripeteia_anagnorisis_binding_invalid_value` observation from the verifier as a second line of defense for Python-level misvalues that bypass the schema. PFS13-M13."
+    },
+    "peripeteia_anagnorisis_adjacency_bound": {
+      "type": "integer",
+      "description": "Configurable τ_s bound for the peripeteia_anagnorisis_binding='adjacent' check — |τ_s(peripeteia) − τ_s(anagnorisis)| ≤ this value. Python default is 3 (Oedipus-scale pacing); encodings with a different dramatic clock (decades-long fabula; single-dramatic-day compression) override. Carried unconditionally by the dataclass; verifier reads it only when peripeteia_anagnorisis_binding='adjacent' (same unconditional-carry pattern as unity_of_time_bound and unity_of_place_max_locations). Per PFS13-M14 / OQ4, no schema-level default is declared — Python carries it. PFS13-M14."
     }
   },
   "additionalProperties": false,

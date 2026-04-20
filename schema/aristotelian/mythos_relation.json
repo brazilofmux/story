@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/mythos_relation.json",
+  "title": "ArMythosRelation",
+  "description": "A10 (aristotelian-sketch-02). Structural relation between two or more ArMythos records. The Rashomon four-testimony contest is the canonical case — four mythoi render the same six canonical-floor events toward distinct pathos arrangements. `kind` is canonical-plus-open with canonical vocabulary `{contests, parallel, contains}`; non-canonical values are admitted and flagged at severity=noted by the verifier (A7.6 check 1). Relations live at encoding scope (tupled as AR_*_RELATIONS at module level); the dialect does not track them on ArMythos itself. Mythos-id / event-id resolution is A7.6 / A7.9 verifier work, not a schema concern. PFS13-MR1..MR4.",
+  "type": "object",
+  "required": ["id", "kind", "mythoi_ids"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this relation (e.g., 'arel_rashomon_contest'). PFS13-MR1."
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relation kind — canonical-plus-open. Canonical vocabulary: 'contests' (mythoi differ structurally over shared events), 'parallel' (mythoi run alongside without contesting), 'contains' (first mythos envelopes each subsequent one). Non-canonical values admitted at shape; A7.6 check 1 emits severity=noted. Open-string posture parallels PFS7 role_labels / PFS9-LO3 / PFS11-AO3 / PFS12-O3. Close-enum deferred to PFS13 OQ1. PFS13-MR2."
+    },
+    "mythoi_ids": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Mythos ids participating in the relation — minItems 2 per A10 (a relation needs at least two mythoi). A7.6 check 2 separately enforces that all ids resolve to mythoi in the encoding; the schema enforces cardinality at shape time. For kind='contains' the first listed mythos is the container, all subsequent are contained (order carries meaning). For kind='contests' / 'parallel' order is author-preserved but not semantically required. Plain-string references per PFS6-X2. PFS13-MR3."
+    },
+    "over_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Substrate event ids at stake in the relation (typically the canonical-floor events that appear in every participating mythos's central_event_ids for kind='contests'). Optional; empty array is the Python default. A7.6 check 3 (for kind='contests') and A7.9 enforce resolution and per-mythos membership at verification time. Plain-string references per PFS6-X2. PFS13-MR4."
+    },
+    "annotation": {
+      "type": "string",
+      "description": "Optional author prose annotation explaining the relation. Python default is empty string; schema admits the empty string and absence interchangeably. PFS13-MR4."
+    }
+  },
+  "additionalProperties": false
+}
