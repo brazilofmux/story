@@ -322,6 +322,57 @@ resolve, even if the Lowering itself is promissory
 (`validate_lowerings` separately flags this as
 `pending_lowering_has_records` NOTED).
 
+## Dispositions
+
+Per RI6, if the audit surfaces findings that are intentional
+design conventions rather than typos, the sketch is amended
+with a §Dispositions section naming each accepted case. The
+implementation landing surfaced **one disposition**:
+
+### D1 — Story-level axis labels on dramatica-complete verifier output
+
+**Finding shape:** `VerificationReview.target_record =
+CrossDialectRef(dialect="dramatica-complete",
+record_id="Story_goal")` or `record_id="Story_consequence"`,
+emitted by `*_dramatica_complete_verification.py` modules'
+`story_goal_trajectory_check` and
+`story_consequence_moment_check` functions.
+
+**Why it doesn't resolve.** Each dramatica-complete encoding
+authors `STORY_GOAL` and `STORY_CONSEQUENCE` as module-level
+**string constants**, not as DynamicStoryPoint records. The
+verifier's `target_record` uses the strings `"Story_goal"`
+and `"Story_consequence"` as conceptual axis labels rather
+than pointers to authored records. Under RI10's collection
+rule (union of authored-id sets), these labels don't resolve.
+
+**Why it's intentional (for now).** The dramatica-complete
+verifier convention treats Story-level Goal and Consequence
+as verification-axes rather than DynamicStoryPoint records.
+The Python side ships the story goal / consequence as
+prose-valued constants; authoring them as DynamicStoryPoints
+would require a dialect-level design decision (do they take
+ids? what axis values? which constraints?).
+
+**Disposition.** The audit accepts two specific
+`(dialect, record_id)` pairs as non-findings:
+
+- `("dramatica-complete", "Story_goal")`
+- `("dramatica-complete", "Story_consequence")`
+
+**Scope-limited.** These are the only two axis-label tokens
+dispositioned. Any other unresolved dramatica-complete token
+(including a typo of these two) still surfaces as a finding.
+
+**Reversal path.** A future sketch — likely dramatic-sketch-02
+per PFS6 OQ2 (addressing dramatica-template-sketch-01's six
+forcing functions) — may elect to author Story_goal /
+Story_consequence as DynamicStoryPoint records with those
+literal ids. When that lands, this disposition is retired
+(the `target_record` values would resolve naturally under
+RI10's generic id-collection). No action required in the
+encoding until the design layer makes the call.
+
 ## Open questions
 
 1. **OQ1 — `record_id` disambiguation on same-id-across-
