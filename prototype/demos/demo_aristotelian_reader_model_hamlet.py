@@ -237,7 +237,16 @@ def _serialize_result(result, context: dict) -> dict:
 
 def _token_hits(hay_list, tokens):
     """Return the subset of `hay_list` strings that contain any
-    token in `tokens` (case-insensitive substring match)."""
+    token in `tokens` (case-insensitive substring match).
+
+    This is a first-cut scan, not a definitive forcing-function
+    classifier. Substrings are loose — e.g., "Laertes" or "Ghost"
+    match any scope_limit or relation_wanted that mentions the
+    character for unrelated reasons. Commit 6e5e41c documented
+    three false positives from this matcher on Session 5 (P6/P7/P8).
+    Treat hits as candidates for manual review against the JSON
+    artifact, not as confirmed forcing signals.
+    """
     return [
         s for s in hay_list
         if any(t.lower() in s.lower() for t in tokens)
@@ -440,6 +449,13 @@ def main() -> int:
             + list(dr.relations_wanted)
         )
 
+        print(
+            "  [P5-P9 below use unconstrained substring matching; "
+            "'candidate' results must be verified against the JSON "
+            "artifact. See commit 6e5e41c for false-positive "
+            "examples.]"
+        )
+
         # P5 — OQ-AP6 parallel-heroes forcing check.
         p5_tokens = (
             "parallel", "mirror", "foil", "intra-mythos",
@@ -451,7 +467,7 @@ def main() -> int:
         p5_hit = bool(p5_scope or p5_rel)
         print(
             f"  P5 (forcing — OQ-AP6 parallel-heroes): "
-            f"{'YES — OQ-AP6 FORCES' if p5_hit else 'no'}"
+            f"{'candidate — verify in JSON' if p5_hit else 'no substring matches'}"
         )
         if p5_scope:
             print(f"       scope_limits hits: {p5_scope}")
@@ -468,7 +484,7 @@ def main() -> int:
         p6_hit = bool(p6_scope or p6_rel)
         print(
             f"  P6 (forcing — OQ-AP7 range-of-separated): "
-            f"{'YES — OQ-AP7 FORCES' if p6_hit else 'no'}"
+            f"{'candidate — verify in JSON' if p6_hit else 'no substring matches'}"
         )
         if p6_scope:
             print(f"       scope_limits hits: {p6_scope}")
@@ -486,7 +502,7 @@ def main() -> int:
         p7_hit = bool(p7_hits)
         print(
             f"  P7 (forcing — OQ-AP8 same-beat staggered): "
-            f"{'YES — OQ-AP8 FORCES' if p7_hit else 'no'}"
+            f"{'candidate — verify in JSON' if p7_hit else 'no substring matches'}"
         )
         if p7_hits:
             print(f"       hits: {p7_hits}")
@@ -503,7 +519,7 @@ def main() -> int:
         p8_hit = bool(p8_hits)
         print(
             f"  P8 (exploratory — OQ-AP5 fate-agent): "
-            f"{'YES — OQ-AP5 FORCES at dialect' if p8_hit else 'no (supports OQ_AP5_FINDING negative)'}"
+            f"{'candidate — verify in JSON' if p8_hit else 'no substring matches (consistent with OQ_AP5_FINDING negative)'}"
         )
         if p8_hits:
             print(f"       hits: {p8_hits}")
@@ -519,7 +535,7 @@ def main() -> int:
         p9_hit = bool(p9_hits)
         print(
             f"  P9 (exploratory — OQ-AP1 pathos-typing): "
-            f"{'YES — OQ-AP1 FORCES (third independent signal)' if p9_hit else 'no'}"
+            f"{'candidate — verify in JSON' if p9_hit else 'no substring matches'}"
         )
         if p9_hits:
             print(f"       hits: {p9_hits}")
