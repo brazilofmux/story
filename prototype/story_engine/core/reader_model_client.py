@@ -49,6 +49,14 @@ except ImportError as exc:
         "`pip install -r prototype/requirements.txt`."
     ) from exc
 
+# Shared primitives used by all three reader-model clients; factored
+# out per state-of-play-10 production-track item G.
+from story_engine.core.reader_model_client_base import (
+    DroppedOutput,
+    SYSTEM_PROMPT_OPENING,
+    invoke_parse_helper,
+)
+
 from story_engine.core.substrate import (
     AnswerProposal,
     Attention,
@@ -171,20 +179,9 @@ class ReaderOutput(BaseModel):
 # ============================================================================
 
 
-@dataclass(frozen=True)
-class DroppedOutput:
-    """A raw LLM output record that failed scope or structural validation
-    at ingest time. `reason` is a short human-readable explanation;
-    `raw` is the Pydantic record (ReaderReview or ReaderAnswer) so a
-    reviewing author can see exactly what was dropped and why.
-
-    R5 enforcement: the prompt tells the LLM what's in scope, but we
-    verify in code. An LLM that reviews a description outside
-    reviews_for, or proposes an answer for a non-question description,
-    lands here — never in reviews / proposed_answers.
-    """
-    reason: str
-    raw: object  # ReaderReview | ReaderAnswer
+# DroppedOutput is imported above from reader_model_client_base.
+# Re-exported here so `from story_engine.core.reader_model_client
+# import DroppedOutput` keeps working for existing callers and tests.
 
 
 @dataclass
@@ -219,9 +216,7 @@ class ReaderModelResult:
 # message so the system prompt can be cached per the claude-api skill's
 # silent-invalidator audit. If you need to tweak behavior per call,
 # adjust the task section, not this string.
-SYSTEM_PROMPT = """You are a reader-model — an interpretive peer to a \
-structured story-telling engine. Your role is specified by \
-reader-model-sketch-01 in the project's design/ directory.
+SYSTEM_PROMPT = f"""{SYSTEM_PROMPT_OPENING}
 
 Your contract:
 
@@ -839,16 +834,18 @@ def invoke_reader_model(
         view, events, descriptions, reviews_for, answers_for, edits_for
     )
 
-    if dry_run:
-        print("=" * 76)
-        print("SYSTEM PROMPT")
-        print("=" * 76)
-        print(SYSTEM_PROMPT)
-        print()
-        print("=" * 76)
-        print("USER PROMPT")
-        print("=" * 76)
-        print(user_prompt)
+    raw = invoke_parse_helper(
+        system_prompt=SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        output_format=ReaderOutput,
+        model=model,
+        max_tokens=max_tokens,
+        effort=effort,
+        dry_run=dry_run,
+        client=client,
+    )
+    if raw is None:
+        # dry_run path — return an empty result of the substrate shape.
         return ReaderModelResult(
             review_candidates=[],
             answer_proposals=[],
@@ -856,30 +853,6 @@ def invoke_reader_model(
             dropped=[],
             raw_output=ReaderOutput(),
         )
-
-    if client is None:
-        client = anthropic.Anthropic()
-
-    # `parse()` doesn't accept top-level cache_control. Put the directive
-    # on the system block itself — this caches the system prompt (the
-    # frozen prefix) across calls, which is what we wanted anyway.
-    response = client.messages.parse(
-        model=model,
-        max_tokens=max_tokens,
-        thinking={"type": "adaptive"},
-        output_config={"effort": effort},
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": user_prompt}],
-        output_format=ReaderOutput,
-    )
-
-    raw: ReaderOutput = response.parsed_output
 
     review_candidates: list = []
     answer_proposals: list = []

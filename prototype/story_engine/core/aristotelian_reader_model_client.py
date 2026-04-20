@@ -65,6 +65,14 @@ except ImportError as exc:
         "`pip install -r prototype/requirements.txt`."
     ) from exc
 
+# Shared primitives used by all three reader-model clients; factored
+# out per state-of-play-10 production-track item G.
+from story_engine.core.reader_model_client_base import (
+    DroppedOutput,
+    SYSTEM_PROMPT_OPENING,
+    invoke_parse_helper,
+)
+
 from story_engine.core.aristotelian import (
     ArAnnotationReview,
     ArCharacter,
@@ -267,19 +275,10 @@ class AristotelianReaderOutput(BaseModel):
 # ============================================================================
 
 
-@dataclass(frozen=True)
-class DroppedOutput:
-    """A raw LLM output that failed scope or structural validation
-    at translation time. `reason` is a short human-readable
-    explanation; `raw` is the Pydantic record so a reviewing author
-    can see exactly what was dropped.
-
-    R5 enforcement: the prompt tells the LLM what's in scope, but
-    we verify in code. A review that targets a record id not shown,
-    a (target_kind, field) mismatch, or an ArObservation id that
-    doesn't resolve lands here — never in the accepted lists."""
-    reason: str
-    raw: object
+# DroppedOutput is imported above from reader_model_client_base.
+# Re-exported here so existing `from story_engine.core.
+# aristotelian_reader_model_client import DroppedOutput` keeps
+# working for callers and tests.
 
 
 @dataclass
@@ -302,10 +301,8 @@ class AristotelianReaderModelResult:
 # ============================================================================
 
 
-SYSTEM_PROMPT = """You are a reader-model — an interpretive peer to a \
-structured story-telling engine. Your role is specified by \
-reader-model-sketch-01 in the project's design/ directory. This \
-invocation is specified by aristotelian-probe-sketch-01.
+SYSTEM_PROMPT = f"""{SYSTEM_PROMPT_OPENING} This invocation is specified \
+by aristotelian-probe-sketch-01.
 
 This invocation puts you on the **Aristotelian dialect surface**. \
 The dialect encodes narrative in Aristotle's *Poetics* vocabulary: \
@@ -1033,16 +1030,18 @@ def invoke_aristotelian_reader_model(
         relations=relations,
     )
 
-    if dry_run:
-        print("=" * 76)
-        print("SYSTEM PROMPT")
-        print("=" * 76)
-        print(SYSTEM_PROMPT)
-        print()
-        print("=" * 76)
-        print("USER PROMPT")
-        print("=" * 76)
-        print(user_prompt)
+    raw = invoke_parse_helper(
+        system_prompt=SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        output_format=AristotelianReaderOutput,
+        model=model,
+        max_tokens=max_tokens,
+        effort=effort,
+        dry_run=dry_run,
+        client=client,
+    )
+    if raw is None:
+        # dry_run path — empty result of the Aristotelian shape.
         return AristotelianReaderModelResult(
             annotation_reviews=[],
             observation_commentaries=[],
@@ -1050,27 +1049,6 @@ def invoke_aristotelian_reader_model(
             dropped=[],
             raw_output=AristotelianReaderOutput(),
         )
-
-    if client is None:
-        client = anthropic.Anthropic()
-
-    response = client.messages.parse(
-        model=model,
-        max_tokens=max_tokens,
-        thinking={"type": "adaptive"},
-        output_config={"effort": effort},
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": user_prompt}],
-        output_format=AristotelianReaderOutput,
-    )
-
-    raw: AristotelianReaderOutput = response.parsed_output
     return translate_raw_output(
         raw=raw,
         mythoi=mythoi,
