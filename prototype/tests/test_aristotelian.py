@@ -1119,6 +1119,86 @@ def test_rashomon_aristotelian_verifies_clean_with_relations():
 
 
 # ============================================================================
+# Integration — Macbeth (third Aristotelian encoding)
+# ============================================================================
+
+
+def test_macbeth_aristotelian_verifies_clean():
+    """Third worked case: Macbeth under A1-A12 verifies with zero
+    observations against the real macbeth.py FABULA."""
+    from story_engine.encodings.macbeth import FABULA
+    from story_engine.encodings.macbeth_aristotelian import (
+        AR_MACBETH_MYTHOS,
+    )
+    obs = verify(AR_MACBETH_MYTHOS, substrate_events=FABULA)
+    assert obs == [], (
+        f"Expected zero observations; got {len(obs)}:\n"
+        + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
+                    for o in obs)
+    )
+
+
+def test_macbeth_aristotelian_records_shape():
+    """Structural pins on AR_MACBETH_MYTHOS."""
+    from story_engine.encodings.macbeth_aristotelian import (
+        AR_MACBETH_MYTHOS,
+    )
+    m = AR_MACBETH_MYTHOS
+    assert m.plot_kind == PLOT_COMPLEX
+    assert len(m.phases) == 3
+    assert [ph.role for ph in m.phases] == [
+        PHASE_BEGINNING, PHASE_MIDDLE, PHASE_END,
+    ]
+    assert m.peripeteia_event_id == "E_macduff_reveals_birth"
+    assert m.anagnorisis_event_id == "E_macduff_reveals_birth"
+    assert m.asserts_unity_of_action is True
+    assert m.asserts_unity_of_time is False
+    assert m.asserts_unity_of_place is False
+    assert m.aims_at_catharsis is True
+    assert len(m.characters) == 2
+    macbeth_char = [c for c in m.characters if c.id == "ar_macbeth"][0]
+    assert macbeth_char.is_tragic_hero is True
+    assert macbeth_char.character_ref_id == "macbeth"
+    assert macbeth_char.hamartia_text is not None
+    lady_char = [c for c in m.characters
+                 if c.id == "ar_lady_macbeth"][0]
+    assert lady_char.is_tragic_hero is True
+    assert lady_char.character_ref_id == "lady_macbeth"
+
+
+def test_macbeth_aristotelian_binding_is_coincident():
+    """Macbeth exercises BINDING_COINCIDENT for the first time in
+    the corpus. Oedipus uses BINDING_SEPARATED; both bindings
+    thus have corpus coverage."""
+    from story_engine.encodings.macbeth_aristotelian import (
+        AR_MACBETH_MYTHOS,
+    )
+    assert (AR_MACBETH_MYTHOS.peripeteia_anagnorisis_binding
+            == BINDING_COINCIDENT)
+    # Coincident implies the two event ids are equal; the
+    # A7.8 check would otherwise flag inconsistency.
+    assert (AR_MACBETH_MYTHOS.peripeteia_event_id
+            == AR_MACBETH_MYTHOS.anagnorisis_event_id)
+
+
+def test_macbeth_aristotelian_chain_non_precipitating():
+    """Macbeth's anagnorisis_chain step (Lady Macbeth's sleepwalking)
+    has precipitates_main=False — her recognition does not cause
+    Macbeth's. Contrasts Oedipus's AR_STEP_JOCASTA
+    (precipitates_main=True)."""
+    from story_engine.encodings.macbeth_aristotelian import (
+        AR_MACBETH_MYTHOS, AR_STEP_LADY_MACBETH_SLEEPWALKING,
+    )
+    assert AR_MACBETH_MYTHOS.anagnorisis_chain == (
+        AR_STEP_LADY_MACBETH_SLEEPWALKING,
+    )
+    step = AR_STEP_LADY_MACBETH_SLEEPWALKING
+    assert step.event_id == "E_sleepwalking"
+    assert step.character_ref_id == "ar_lady_macbeth"
+    assert step.precipitates_main is False
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -1197,6 +1277,11 @@ TESTS = [
     test_oedipus_aristotelian_still_verifies_clean_with_sketch02,
     test_rashomon_contest_relation_authored,
     test_rashomon_aristotelian_verifies_clean_with_relations,
+    # Macbeth — third Aristotelian encoding
+    test_macbeth_aristotelian_verifies_clean,
+    test_macbeth_aristotelian_records_shape,
+    test_macbeth_aristotelian_binding_is_coincident,
+    test_macbeth_aristotelian_chain_non_precipitating,
 ]
 
 
