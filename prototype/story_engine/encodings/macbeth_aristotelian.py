@@ -98,7 +98,7 @@ PH_BEGINNING = ArPhase(
         "Glamis, Duncan's kingship) establish the terrain on which "
         "ambition can act; the Witches' first prophecy converts "
         "latent possibility into articulated temptation; the Cawdor "
-        "award confirms the prophecy's first clause and supplies the "
+        "award confirms the prophecy's second clause and supplies the "
         "empirical foothold for believing the rest; the letter and "
         "Duncan's visit set the scene for the crime."
     ),
