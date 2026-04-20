@@ -52,6 +52,16 @@ except ImportError as exc:
         "`pip install -r prototype/requirements.txt`."
     ) from exc
 
+# Audit primitives live in story_engine.core.conformance; each test
+# below invokes the matching audit_* function and asserts clean.
+from story_engine.core.conformance import (
+    audit_aristotelian_event_refs,
+    audit_branch_labels,
+    audit_character_ref_ids,
+    audit_cross_dialect_refs,
+    audit_save_the_cat_intra_story,
+)
+
 
 # ============================================================================
 # Schema loading
@@ -3744,417 +3754,40 @@ def test_verifier_commentary_corpus_conformance():
 def test_branch_label_resolution_audit():
     """Every Event's `branches` tuple contains only labels that
     resolve in the encoding's ALL_BRANCHES dict. Per referential-
-    integrity-sketch-01 RI7 (1) — closes PFS5 OQ3."""
-    from story_engine.core.substrate import CANONICAL_LABEL
-
-    events_by_encoding = _discover_encoding_events()
-    assert events_by_encoding, (
+    integrity-sketch-01 RI7 (1) — closes PFS5 OQ3. Implementation
+    in story_engine.core.conformance.audit_branch_labels."""
+    report = audit_branch_labels()
+    assert report.stats["total_events"] > 0, (
         "expected at least one encoding with events; found none"
     )
-
-    total_refs = 0
-    total_events = 0
-    clean_events = 0
-    findings: list = []
-    encodings_covered: list = []
-
-    for encoding_name, events in events_by_encoding:
-        # Collect target set: ALL_BRANCHES keys for this encoding.
-        # The CANONICAL_LABEL is always implicit even if the encoding
-        # doesn't explicitly list it (corpus convention includes it).
-        try:
-            module = importlib.import_module(
-                f"story_engine.encodings.{encoding_name}"
-            )
-        except Exception:
-            continue
-        all_branches = getattr(module, "ALL_BRANCHES", None)
-        if all_branches is None:
-            continue
-        target_set = set(all_branches.keys())
-        target_set.add(CANONICAL_LABEL)
-        encodings_covered.append(encoding_name)
-
-        for event in events:
-            total_events += 1
-            event_clean = True
-            for label in event.branches:
-                total_refs += 1
-                if label not in target_set:
-                    event_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "event_id": event.id,
-                        "field": "branches",
-                        "unresolved_ref": label,
-                        "target_set_size": len(target_set),
-                    })
-            if event_clean:
-                clean_events += 1
-
-    print()
-    print(
-        f"test_branch_label_resolution_audit: {total_events} Events "
-        f"carrying {total_refs} branch-label references"
-    )
-    print(f"  clean events:               {clean_events}")
-    print(f"  encodings audited:          {len(encodings_covered)}")
-    if findings:
-        print(f"  unresolved references:      {len(findings)}")
-        for f in findings:
-            print(
-                f"    {f['encoding']}: Event {f['event_id']!r} "
-                f".branches → {f['unresolved_ref']!r} "
-                f"(not in ALL_BRANCHES; target-set size "
-                f"{f['target_set_size']})"
-            )
-
-    assert not findings, (
-        f"{len(findings)} unresolved branch label reference(s); see "
-        f"output. Resolve per referential-integrity-sketch-01 RI6 "
-        f"dispositions protocol."
-    )
+    report.print_report()
+    assert report.is_clean(), report.failure_message()
 
 
 def test_aristotelian_event_ref_resolution_audit():
     """Every ArMythos and ArPhase event-id reference resolves to an
     Event id in the paired substrate encoding. Per referential-
-    integrity-sketch-01 RI7 (2) — closes PFS6 OQ3.
-
-    Pairing rule: an Aristotelian encoding named `{work}_aristotelian`
-    pairs with the substrate encoding named `{work}`. Event target
-    set = FABULA or EVENTS_ALL ids in the substrate module."""
-    mythoi_by_encoding, _, _ = (
-        _discover_encoding_aristotelian_records()
-    )
-    assert mythoi_by_encoding, (
+    integrity-sketch-01 RI7 (2) — closes PFS6 OQ3. Implementation
+    in story_engine.core.conformance.audit_aristotelian_event_refs."""
+    report = audit_aristotelian_event_refs()
+    assert report.stats["total_records"] > 0, (
         "expected at least one Aristotelian encoding; found none"
     )
-
-    total_refs = 0
-    total_records = 0
-    clean_records = 0
-    findings: list = []
-    encodings_covered: list = []
-
-    for encoding_name, mythoi in mythoi_by_encoding:
-        # Derive the paired substrate encoding: strip _aristotelian.
-        if not encoding_name.endswith("_aristotelian"):
-            findings.append({
-                "encoding": encoding_name,
-                "record_id": "<discovery>",
-                "field": "<naming>",
-                "unresolved_ref": (
-                    f"encoding name {encoding_name!r} does not end in "
-                    f"'_aristotelian' — cannot derive substrate pair"
-                ),
-                "target_set_size": 0,
-            })
-            continue
-        substrate_name = encoding_name[: -len("_aristotelian")]
-        try:
-            substrate_module = importlib.import_module(
-                f"story_engine.encodings.{substrate_name}"
-            )
-        except Exception as exc:
-            findings.append({
-                "encoding": encoding_name,
-                "record_id": "<discovery>",
-                "field": "<substrate-import>",
-                "unresolved_ref": (
-                    f"cannot import paired substrate "
-                    f"{substrate_name!r}: {exc}"
-                ),
-                "target_set_size": 0,
-            })
-            continue
-
-        # Collect Event ids from the substrate module.
-        substrate_events: list = []
-        fabula = getattr(substrate_module, "FABULA", None)
-        if fabula is not None:
-            substrate_events = list(fabula)
-        else:
-            events_all = getattr(substrate_module, "EVENTS_ALL", None)
-            if events_all is not None:
-                substrate_events = list(events_all)
-        target_set = {e.id for e in substrate_events}
-        encodings_covered.append(
-            f"{encoding_name} → {substrate_name} "
-            f"({len(target_set)} events)"
-        )
-
-        # Iterate the Aristotelian records, checking each event-id
-        # reference.
-        for mythos in mythoi:
-            total_records += 1
-            mythos_clean = True
-
-            # ArMythos.central_event_ids (array)
-            for ev_id in mythos.central_event_ids:
-                total_refs += 1
-                if ev_id not in target_set:
-                    mythos_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": mythos.id,
-                        "field": "central_event_ids",
-                        "unresolved_ref": ev_id,
-                        "target_set_size": len(target_set),
-                    })
-            # ArMythos optional pointer fields
-            for field_name in (
-                "complication_event_id",
-                "denouement_event_id",
-                "peripeteia_event_id",
-                "anagnorisis_event_id",
-            ):
-                ev_id = getattr(mythos, field_name)
-                if ev_id is None:
-                    continue
-                total_refs += 1
-                if ev_id not in target_set:
-                    mythos_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": mythos.id,
-                        "field": field_name,
-                        "unresolved_ref": ev_id,
-                        "target_set_size": len(target_set),
-                    })
-
-            if mythos_clean:
-                clean_records += 1
-
-            # ArPhase records reached through mythos.phases
-            for phase in mythos.phases:
-                total_records += 1
-                phase_clean = True
-                for ev_id in phase.scope_event_ids:
-                    total_refs += 1
-                    if ev_id not in target_set:
-                        phase_clean = False
-                        findings.append({
-                            "encoding": encoding_name,
-                            "record_id": (
-                                f"{mythos.id}.phases[{phase.id}]"
-                            ),
-                            "field": "scope_event_ids",
-                            "unresolved_ref": ev_id,
-                            "target_set_size": len(target_set),
-                        })
-                if phase_clean:
-                    clean_records += 1
-
-    print()
-    print(
-        f"test_aristotelian_event_ref_resolution_audit: "
-        f"{total_records} Aristotelian records carrying "
-        f"{total_refs} event-id references"
-    )
-    print(f"  clean records:              {clean_records}")
-    print(f"  encodings audited:")
-    for line in encodings_covered:
-        print(f"    {line}")
-    if findings:
-        print(f"  unresolved references:      {len(findings)}")
-        for f in findings:
-            print(
-                f"    {f['encoding']}: {f['record_id']} "
-                f".{f['field']} → {f['unresolved_ref']!r} "
-                f"(not in substrate target-set of size "
-                f"{f['target_set_size']})"
-            )
-
-    assert not findings, (
-        f"{len(findings)} unresolved Aristotelian event-id "
-        f"reference(s); see output. Resolve per referential-"
-        f"integrity-sketch-01 RI6 dispositions protocol."
-    )
+    report.print_report()
+    assert report.is_clean(), report.failure_message()
 
 
 def test_save_the_cat_intra_story_resolution_audit():
     """Every Save-the-Cat id reference resolves to a sibling record
     in the same encoding module. Per referential-integrity-sketch-
-    01 RI7 (3) — closes PFS7 OQ4.
-
-    Audited references: StcStory.beat_ids / strand_ids /
-    character_ids; StcStory.archetype_assignments[].character_id
-    (when set); StcBeat.participant_ids; StcBeat.advances[].strand_id;
-    StcStrand.focal_character_id (when set)."""
-    stories_by_encoding, beats_by_encoding, strands_by_encoding, \
-        characters_by_encoding = (
-            _discover_encoding_save_the_cat_records()
-        )
-    assert stories_by_encoding, (
+    01 RI7 (3) — closes PFS7 OQ4. Implementation in
+    story_engine.core.conformance.audit_save_the_cat_intra_story."""
+    report = audit_save_the_cat_intra_story()
+    assert report.stats["total_records"] > 0, (
         "expected at least one Save-the-Cat encoding; found none"
     )
-
-    # Index sibling records by encoding.
-    beats_index = {name: {b.id for b in beats} for name, beats in beats_by_encoding}
-    strands_index = {name: {s.id for s in strands} for name, strands in strands_by_encoding}
-    characters_index = {name: {c.id for c in chars} for name, chars in characters_by_encoding}
-
-    total_refs = 0
-    total_records = 0
-    clean_records = 0
-    findings: list = []
-    encodings_covered: list = []
-
-    for encoding_name, stories in stories_by_encoding:
-        beat_ids = beats_index.get(encoding_name, set())
-        strand_ids = strands_index.get(encoding_name, set())
-        character_ids = characters_index.get(encoding_name, set())
-        encodings_covered.append(
-            f"{encoding_name} "
-            f"({len(beat_ids)} beats / {len(strand_ids)} strands / "
-            f"{len(character_ids)} characters)"
-        )
-
-        for story in stories:
-            total_records += 1
-            story_clean = True
-
-            # Story.beat_ids → beat_ids set
-            for bid in story.beat_ids:
-                total_refs += 1
-                if bid not in beat_ids:
-                    story_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": story.id,
-                        "field": "beat_ids",
-                        "unresolved_ref": bid,
-                        "target_set_size": len(beat_ids),
-                    })
-            # Story.strand_ids → strand_ids set
-            for sid in story.strand_ids:
-                total_refs += 1
-                if sid not in strand_ids:
-                    story_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": story.id,
-                        "field": "strand_ids",
-                        "unresolved_ref": sid,
-                        "target_set_size": len(strand_ids),
-                    })
-            # Story.character_ids → character_ids set
-            for cid in story.character_ids:
-                total_refs += 1
-                if cid not in character_ids:
-                    story_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": story.id,
-                        "field": "character_ids",
-                        "unresolved_ref": cid,
-                        "target_set_size": len(character_ids),
-                    })
-            # Story.archetype_assignments[].character_id (when set)
-            for aa in story.archetype_assignments:
-                if aa.character_id is None:
-                    continue
-                total_refs += 1
-                if aa.character_id not in character_ids:
-                    story_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": story.id,
-                        "field": (
-                            f"archetype_assignments[{aa.archetype}]"
-                            f".character_id"
-                        ),
-                        "unresolved_ref": aa.character_id,
-                        "target_set_size": len(character_ids),
-                    })
-
-            if story_clean:
-                clean_records += 1
-
-        # Iterate beats for this encoding (each beat is a separate
-        # audited record).
-        beats_for_encoding = dict(beats_by_encoding).get(
-            encoding_name, []
-        )
-        for beat in beats_for_encoding:
-            total_records += 1
-            beat_clean = True
-            # StcBeat.participant_ids → character_ids set
-            for cid in beat.participant_ids:
-                total_refs += 1
-                if cid not in character_ids:
-                    beat_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": beat.id,
-                        "field": "participant_ids",
-                        "unresolved_ref": cid,
-                        "target_set_size": len(character_ids),
-                    })
-            # StcBeat.advances[].strand_id → strand_ids set
-            for adv in beat.advances:
-                total_refs += 1
-                if adv.strand_id not in strand_ids:
-                    beat_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": beat.id,
-                        "field": (
-                            f"advances[{adv.strand_id}].strand_id"
-                        ),
-                        "unresolved_ref": adv.strand_id,
-                        "target_set_size": len(strand_ids),
-                    })
-            if beat_clean:
-                clean_records += 1
-
-        # Iterate strands for this encoding.
-        strands_for_encoding = dict(strands_by_encoding).get(
-            encoding_name, []
-        )
-        for strand in strands_for_encoding:
-            total_records += 1
-            strand_clean = True
-            if strand.focal_character_id is not None:
-                total_refs += 1
-                if strand.focal_character_id not in character_ids:
-                    strand_clean = False
-                    findings.append({
-                        "encoding": encoding_name,
-                        "record_id": strand.id,
-                        "field": "focal_character_id",
-                        "unresolved_ref": strand.focal_character_id,
-                        "target_set_size": len(character_ids),
-                    })
-            if strand_clean:
-                clean_records += 1
-
-    print()
-    print(
-        f"test_save_the_cat_intra_story_resolution_audit: "
-        f"{total_records} Save-the-Cat records carrying "
-        f"{total_refs} id references"
-    )
-    print(f"  clean records:              {clean_records}")
-    print(f"  encodings audited:")
-    for line in encodings_covered:
-        print(f"    {line}")
-    if findings:
-        print(f"  unresolved references:      {len(findings)}")
-        for f in findings:
-            print(
-                f"    {f['encoding']}: {f['record_id']!r} "
-                f".{f['field']} → {f['unresolved_ref']!r} "
-                f"(not in target-set of size "
-                f"{f['target_set_size']})"
-            )
-
-    assert not findings, (
-        f"{len(findings)} unresolved Save-the-Cat reference(s); "
-        f"see output. Resolve per referential-integrity-sketch-01 "
-        f"RI6 dispositions protocol."
-    )
+    report.print_report()
+    assert report.is_clean(), report.failure_message()
 
 
 # ============================================================================
@@ -4163,378 +3796,39 @@ def test_save_the_cat_intra_story_resolution_audit():
 #
 # Second-arc audits: CrossDialectRef resolution (closes PFS10 OQ1) and
 # ArCharacter.character_ref_id multi-dialect resolution (closes PFS6
-# OQ4). Per RI9..RI14.
-
-
-# RI9 — Dialect-token → module-path mapping. The dialect token lives
-# in CrossDialectRef records; module paths follow Python's
-# underscore-joined convention. 'save-the-cat' → 'save_the_cat' is
-# the one name-mangling case in today's corpus.
-_DIALECT_TOKEN_SUFFIX: dict = {
-    "substrate": "",          # paired substrate module is {work} itself
-    "dramatic": "_dramatic",
-    "save-the-cat": "_save_the_cat",
-    # Extension slots for dialects that don't produce Lowerings yet
-    "dramatica-complete": "_dramatica_complete",
-    "aristotelian": "_aristotelian",
-}
-
-
-def _work_from_lowerings_module(name: str) -> str:
-    """Per RI11: strip _lowerings suffix; if what remains ends in
-    _save_the_cat, strip that too. (and_then_there_were_none_lowerings
-    → and_then_there_were_none)."""
-    if name.endswith("_lowerings"):
-        name = name[: -len("_lowerings")]
-    for suffix in ("_save_the_cat",):
-        if name.endswith(suffix):
-            name = name[: -len(suffix)]
-            break
-    return name
-
-
-def _work_from_verification_module(name: str) -> str:
-    """Per RI11 for *_verification.py modules."""
-    if name.endswith("_verification"):
-        name = name[: -len("_verification")]
-    for suffix in ("_dramatica_complete", "_save_the_cat"):
-        if name.endswith(suffix):
-            name = name[: -len(suffix)]
-            break
-    return name
-
-
-def _collect_dialect_record_ids(work: str, dialect_token: str) -> tuple:
-    """Per RI10: load the paired module for (work, dialect_token) and
-    collect the authored-id set. Returns (module_name, id_set) so
-    callers can report missing-module errors with context. If the
-    module can't be loaded, returns (expected_module_name, None).
-
-    Id-collection walks module-level tuple/list attributes whose
-    elements carry an `.id` attribute, plus module-level singletons
-    with `.id`. The walk is dialect-agnostic — the same rule covers
-    substrate ENTITIES / FABULA / DESCRIPTIONS, dramatic CHARACTERS /
-    THROUGHLINES / SCENES / BEATS / ARGUMENTS / STAKES / STORY,
-    save-the-cat BEATS / STRANDS / CHARACTERS / STORY, and
-    dramatica-complete DOMAIN_ASSIGNMENTS / DYNAMIC_STORY_POINTS /
-    *SIGNPOSTS* / CHARACTER_ELEMENT_ASSIGNMENTS / ALL_THEMATIC_PICKS
-    (including Rashomon's multi-story suffixed variants like
-    DOMAIN_ASSIGNMENTS_BANDIT)."""
-    suffix = _DIALECT_TOKEN_SUFFIX.get(dialect_token)
-    if suffix is None:
-        return (f"<unknown-dialect-token:{dialect_token}>", None)
-    module_name = work + suffix
-    try:
-        module = importlib.import_module(
-            f"story_engine.encodings.{module_name}"
-        )
-    except Exception:
-        return (module_name, None)
-
-    id_set: set = set()
-    for attr_name in dir(module):
-        if attr_name.startswith("_"):
-            continue
-        # Skip known non-record attributes. These aren't records:
-        # they're catalog-data imports (from core dialect modules),
-        # enum values, or dialect-catalog constants that happen to
-        # share the encoding module's namespace via re-export.
-        if attr_name in ("GENRES", "CANONICAL_BEATS"):
-            continue
-        value = getattr(module, attr_name, None)
-        if value is None:
-            continue
-        if isinstance(value, (tuple, list)) and value:
-            if all(hasattr(v, "id") and isinstance(v.id, str) for v in value):
-                id_set.update(v.id for v in value)
-        elif hasattr(value, "id") and isinstance(
-            getattr(value, "id"), str
-        ):
-            id_set.add(value.id)
-    return (module_name, id_set)
-
-
-# Per referential-integrity-sketch-02 §Dispositions D1:
-# VerificationReviews emitted by dramatica-complete verifiers use
-# these two axis-label tokens as target_record.record_id rather
-# than pointers to authored records. The Python-side STORY_GOAL /
-# STORY_CONSEQUENCE constants are strings, not records. Reversal
-# path: dramatic-sketch-02 per PFS6 OQ2 may author these as
-# DynamicStoryPoint records, at which point this disposition
-# retires.
-_AXIS_LABEL_DISPOSITIONS: frozenset = frozenset({
-    ("dramatica-complete", "Story_goal"),
-    ("dramatica-complete", "Story_consequence"),
-})
+# OQ4). Implementation moved to story_engine.core.conformance
+# (DIALECT_TOKEN_SUFFIX, AXIS_LABEL_DISPOSITIONS,
+# work_from_lowerings_module, work_from_verification_module,
+# collect_dialect_record_ids, audit_cross_dialect_refs,
+# audit_character_ref_ids).
 
 
 def test_cross_dialect_ref_resolution_audit():
     """Every CrossDialectRef on Lowering / VerificationReview /
     StructuralAdvisory / VerificationAnswerProposal records
     resolves to an existing record-id in the paired encoding.
-    Per referential-integrity-sketch-02 RI9..RI12 — closes PFS10 OQ1.
-
-    Cross-encoding lookup: work-id extracted from the source
-    module's name (RI11); dialect-token resolved to module path
-    (RI9); target id-set collected from the module's authored-
-    record attributes (RI10); CrossDialectRef.record_id checked
-    for membership.
-
-    Per §Dispositions D1, a small fixed set of axis-label tokens
-    emitted by dramatica-complete verifiers is accepted without
-    resolving."""
-    lowerings_by_encoding = _discover_encoding_lowerings()
-    reviews_by_encoding, advisories_by_encoding, \
-        proposals_by_encoding, _ = (
-            _discover_encoding_verifier_output()
-        )
-
-    # Cache (work, dialect_token) → (module_name, id_set) to avoid
-    # re-importing modules across many records.
-    cache: dict = {}
-
-    def lookup(work: str, dialect_token: str):
-        key = (work, dialect_token)
-        if key not in cache:
-            cache[key] = _collect_dialect_record_ids(
-                work, dialect_token
-            )
-        return cache[key]
-
-    findings: list = []
-    total_refs = 0
-    resolved_refs = 0
-    dispositioned_refs = 0
-    sources_audited = 0
-
-    def audit_ref(source_kind: str, source_module: str,
-                  source_record_id: str, field: str,
-                  ref, work: str):
-        nonlocal total_refs, resolved_refs, dispositioned_refs
-        total_refs += 1
-        # Dispositioned axis-label tokens per sketch-02 §D1.
-        if (ref.dialect, ref.record_id) in _AXIS_LABEL_DISPOSITIONS:
-            dispositioned_refs += 1
-            return
-        module_name, id_set = lookup(work, ref.dialect)
-        if id_set is None:
-            findings.append({
-                "source_kind": source_kind,
-                "source_module": source_module,
-                "source_record_id": source_record_id,
-                "field": field,
-                "dialect": ref.dialect,
-                "record_id": ref.record_id,
-                "reason": (
-                    f"paired module {module_name!r} cannot be loaded"
-                ),
-            })
-            return
-        if ref.record_id not in id_set:
-            findings.append({
-                "source_kind": source_kind,
-                "source_module": source_module,
-                "source_record_id": source_record_id,
-                "field": field,
-                "dialect": ref.dialect,
-                "record_id": ref.record_id,
-                "reason": (
-                    f"not in {module_name!r} authored-id set "
-                    f"(size {len(id_set)})"
-                ),
-            })
-        else:
-            resolved_refs += 1
-
-    # Lowerings: upper_record + each lower_records entry.
-    for encoding_name, lowerings in lowerings_by_encoding:
-        work = _work_from_lowerings_module(encoding_name)
-        for lw in lowerings:
-            sources_audited += 1
-            audit_ref(
-                "Lowering", encoding_name, lw.id, "upper_record",
-                lw.upper_record, work,
-            )
-            for i, lr in enumerate(lw.lower_records):
-                audit_ref(
-                    "Lowering", encoding_name, lw.id,
-                    f"lower_records[{i}]", lr, work,
-                )
-
-    # VerificationReview: target_record.
-    for encoding_name, reviews in reviews_by_encoding:
-        work = _work_from_verification_module(encoding_name)
-        for review in reviews:
-            sources_audited += 1
-            audit_ref(
-                "VerificationReview", encoding_name,
-                review.reviewer_id, "target_record",
-                review.target_record, work,
-            )
-
-    # StructuralAdvisory: each scope entry.
-    for encoding_name, advisories in advisories_by_encoding:
-        work = _work_from_verification_module(encoding_name)
-        for advisory in advisories:
-            sources_audited += 1
-            for i, ref in enumerate(advisory.scope):
-                audit_ref(
-                    "StructuralAdvisory", encoding_name,
-                    advisory.advisor_id, f"scope[{i}]",
-                    ref, work,
-                )
-
-    # VerificationAnswerProposal: question_id.
-    for encoding_name, proposals in proposals_by_encoding:
-        work = _work_from_verification_module(encoding_name)
-        for proposal in proposals:
-            sources_audited += 1
-            audit_ref(
-                "VerificationAnswerProposal", encoding_name,
-                proposal.proposer_id, "question_id",
-                proposal.question_id, work,
-            )
-
-    print()
-    print(
-        f"test_cross_dialect_ref_resolution_audit: "
-        f"{sources_audited} source records carrying {total_refs} "
-        f"CrossDialectRef references"
-    )
-    print(f"  resolved references:        {resolved_refs}")
-    print(f"  dispositioned references:   {dispositioned_refs}")
-    print(f"  modules cached:             {len(cache)}")
-    if findings:
-        print(f"  unresolved references:      {len(findings)}")
-        for f in findings:
-            print(
-                f"    {f['source_kind']} in {f['source_module']}: "
-                f"{f['source_record_id']!r} .{f['field']} → "
-                f"({f['dialect']!r}, {f['record_id']!r}): "
-                f"{f['reason']}"
-            )
-
-    assert not findings, (
-        f"{len(findings)} unresolved CrossDialectRef reference(s); "
-        f"see output. Resolve per referential-integrity-sketch-01 "
-        f"RI6 dispositions protocol."
-    )
+    Per referential-integrity-sketch-02 RI9..RI12 — closes
+    PFS10 OQ1. Per §Dispositions D1, a small fixed set of axis-
+    label tokens is accepted without resolution. Implementation
+    in story_engine.core.conformance.audit_cross_dialect_refs."""
+    report = audit_cross_dialect_refs()
+    report.print_report()
+    assert report.is_clean(), report.failure_message()
 
 
 def test_character_ref_id_resolution_audit():
     """Every ArCharacter.character_ref_id (when set) resolves to
     either a substrate Entity id OR a Dramatic Character id in the
     paired encoding. Per referential-integrity-sketch-02 RI13 —
-    closes PFS6 OQ4.
-
-    Multi-dialect fallback: membership in EITHER the substrate
-    Entity set OR the Dramatic Character set suffices, per
-    aristotelian-sketch-01 A5's cross-dialect-identity-hook
-    semantics."""
-    _, _, chars_by_encoding = (
-        _discover_encoding_aristotelian_records()
-    )
-    assert chars_by_encoding, (
+    closes PFS6 OQ4. Implementation in
+    story_engine.core.conformance.audit_character_ref_ids."""
+    report = audit_character_ref_ids()
+    assert report.stats["characters_audited"] > 0, (
         "expected at least one Aristotelian encoding with "
         "characters; found none"
     )
-
-    findings: list = []
-    total_refs = 0
-    resolved_refs = 0
-    characters_audited = 0
-    encodings_covered: list = []
-
-    for encoding_name, characters in chars_by_encoding:
-        if not encoding_name.endswith("_aristotelian"):
-            continue
-        work = encoding_name[: -len("_aristotelian")]
-
-        # Collect substrate Entity ids from the paired {work}
-        # module.
-        substrate_module_name, substrate_ids = (
-            _collect_dialect_record_ids(work, "substrate")
-        )
-        # But we only want Entity ids, not all substrate ids.
-        # Re-collect specifically.
-        try:
-            substrate_module = importlib.import_module(
-                f"story_engine.encodings.{work}"
-            )
-        except Exception:
-            substrate_module = None
-        entity_ids: set = set()
-        if substrate_module is not None:
-            entities = getattr(substrate_module, "ENTITIES", ())
-            entity_ids = {
-                e.id for e in entities if hasattr(e, "id")
-            }
-
-        # Collect Dramatic Character ids from {work}_dramatic if it
-        # exists.
-        try:
-            dramatic_module = importlib.import_module(
-                f"story_engine.encodings.{work}_dramatic"
-            )
-        except Exception:
-            dramatic_module = None
-        dramatic_character_ids: set = set()
-        if dramatic_module is not None:
-            drams_chars = getattr(dramatic_module, "CHARACTERS", ())
-            dramatic_character_ids = {
-                c.id for c in drams_chars if hasattr(c, "id")
-            }
-
-        target_set = entity_ids | dramatic_character_ids
-        encodings_covered.append(
-            f"{encoding_name} ({len(entity_ids)} substrate "
-            f"entities + {len(dramatic_character_ids)} dramatic "
-            f"characters = {len(target_set)} union)"
-        )
-
-        for char in characters:
-            characters_audited += 1
-            if char.character_ref_id is None:
-                continue
-            total_refs += 1
-            if char.character_ref_id not in target_set:
-                findings.append({
-                    "encoding": encoding_name,
-                    "character_id": char.id,
-                    "character_ref_id": char.character_ref_id,
-                    "substrate_set_size": len(entity_ids),
-                    "dramatic_set_size": len(dramatic_character_ids),
-                })
-            else:
-                resolved_refs += 1
-
-    print()
-    print(
-        f"test_character_ref_id_resolution_audit: "
-        f"{characters_audited} ArCharacter records "
-        f"({total_refs} carrying non-None character_ref_id)"
-    )
-    print(f"  resolved references:        {resolved_refs}")
-    print(f"  encodings audited:")
-    for line in encodings_covered:
-        print(f"    {line}")
-    if findings:
-        print(f"  unresolved references:      {len(findings)}")
-        for f in findings:
-            print(
-                f"    {f['encoding']}: ArCharacter "
-                f"{f['character_id']!r} "
-                f"character_ref_id={f['character_ref_id']!r} "
-                f"(not in substrate+dramatic union of size "
-                f"{f['substrate_set_size']}+"
-                f"{f['dramatic_set_size']})"
-            )
-
-    assert not findings, (
-        f"{len(findings)} unresolved character_ref_id reference(s); "
-        f"see output. Resolve per referential-integrity-sketch-01 "
-        f"RI6 dispositions protocol."
-    )
+    report.print_report()
+    assert report.is_clean(), report.failure_message()
 
 
 # ============================================================================
