@@ -100,10 +100,12 @@ pattern matching their Python.
   per A8). Cross-file $refs into `phase.json` and
   `character.json` via PFS6-X1.
 
-`ArObservation` (verifier output) and the Aristotelian cross-
-boundary records (`ArAnnotationReview`,
-`ArObservationCommentary`, `DialectReading`) are deferred to
-the Production C cross-boundary arc, per PFS6 §Scope.
+The Aristotelian cross-boundary batch (`ArObservation`,
+`ArAnnotationReview`, `ArObservationCommentary`,
+`DialectReading`) ships under this namespace per PFS8-N2 +
+PFS11-N1 — see the "Aristotelian cross-boundary batch"
+subsection below under "Cross-boundary records living in
+dialect namespaces."
 
 #### Save-the-Cat (under `schema/save_the_cat/`, four core records)
 
@@ -202,6 +204,48 @@ independently).
   noted}; target_review via cross-file `$ref` to
   `verification_review.json` per PFS10-X2).
 
+### Cross-boundary records living in dialect namespaces
+
+Per PFS8-N2: dialect-internal cross-boundary records (self-
+verifier observations, probe-methodology review / commentary /
+reading) ship under the **dialect's own namespace**, not under
+a top-level role-named namespace. Produced by or about the
+dialect itself, not shared across dialects.
+
+#### Aristotelian cross-boundary batch (under `schema/aristotelian/`, four records)
+
+First dialect-internal cross-boundary arc (production-format-
+sketch-11 PFS11-N1). Four records ship — one self-verifier
+observation + three probe-methodology surface records.
+
+- `aristotelian/observation.json` — the `ArObservation` record
+  (A7 self-verifier finding; severity closed enum {noted,
+  advises-review}; code open string per PFS11-AO3; target_id
+  + message non-empty strings). Parallels
+  `lowering/lowering_observation.json`.
+- `aristotelian/annotation_review.json` — the
+  `ArAnnotationReview` record (APA1 reviewer verdict on an
+  Aristotelian record's prose field; target_kind closed enum
+  {ArMythos, ArPhase, ArCharacter}; field closed enum
+  {action_summary, annotation, hamartia_text}; verdict closed
+  enum matching lowering's AnnotationReview; pair-consistency
+  between target_kind and field enforced via allOf/if-then-
+  else per PFS11-X1). Optional id field kept per Python (PFS8
+  OQ4 closure).
+- `aristotelian/observation_commentary.json` — the
+  `ArObservationCommentary` record (APA1 reader-model
+  commentary on an ArObservation; assessment closed enum
+  matching VerifierCommentary; target_observation via cross-
+  file `$ref` to `observation.json` per PFS11-X2). Differs
+  from VerifierCommentary in one field — comment optional.
+- `aristotelian/dialect_reading.json` — the `DialectReading`
+  record (APA1 reader-model methodology self-report; one per
+  probe invocation; read_on_terms closed enum {yes, partial,
+  no}; drift_flagged / scope_limits_observed /
+  relations_wanted as always-emitted arrays of non-empty
+  strings, empty-allowable). No analog in PFS9/PFS10 —
+  dialect-probe distinctive surface.
+
 ### Cross-file references
 
 Substrate-layer cross-file references resolve via canonical
@@ -223,10 +267,18 @@ references `annotation_review.json` per PFS9-X2, extending the
 tree-with-$ref pattern into the cross-boundary tier. The
 verification namespace has one outbound cross-file `$ref` —
 `verifier_commentary.json`'s `target_review` references
-`verification_review.json` per PFS10-X2, same pattern. No
-cross-*namespace* $refs today — CrossDialectRef is re-inlined
-in both namespaces per PFS8-V's guidance (lower cross-namespace
-coupling).
+`verification_review.json` per PFS10-X2, same pattern. The
+Aristotelian cross-boundary batch (PFS11) adds one more
+intra-namespace `$ref` — `observation_commentary.json`'s
+`target_observation` references `observation.json` per
+PFS11-X2, extending `schema/aristotelian/`'s cross-file graph
+to four references (mythos → phase, mythos → character, and
+the new observation_commentary → observation). No cross-
+*namespace* $refs today — CrossDialectRef is re-inlined in
+lowering + verification namespaces per PFS8-V's guidance
+(lower cross-namespace coupling); the PFS11 batch ships
+without CrossDialectRef entirely per PFS11-X3 (all references
+intra-dialect).
 
 Labels on `event.json`'s `branches` field, event-id strings on
 ArMythos / ArPhase, id-string arrays on StcStory / StcBeat /
@@ -241,18 +293,24 @@ reference-consistency audit surfaces.
 ## What's deferred
 
 - Remaining dialect records (Dramatic, Dramatica-complete;
-  `ArObservation` for Aristotelian; `StcObservation` +
-  `StcCanonicalBeat` + `StcGenre` for Save-the-Cat). Each
-  dialect or record group needs its own production-format
-  sketch; Aristotelian-core (three records) shipped under PFS6
-  as the first dialect-layer example; Save-the-Cat-core (four
-  records) shipped under PFS7 as the second.
-- Dialect-internal observation / review / probe records
-  (ArObservation, ArAnnotationReview, ArObservationCommentary,
-  DialectReading, StcObservation, future DramaticaObservation).
-  Ship under existing dialect namespaces per PFS8-N2
-  (PFS11 Aristotelian batch, PFS12 Save-the-Cat observation,
-  future Dramatic+Dramatica-complete).
+  `StcObservation` + `StcCanonicalBeat` + `StcGenre` for
+  Save-the-Cat). Each dialect or record group needs its own
+  production-format sketch; Aristotelian-core (three records)
+  shipped under PFS6 as the first dialect-layer example; Save-
+  the-Cat-core (four records) shipped under PFS7 as the
+  second; Aristotelian cross-boundary (four records —
+  ArObservation + three probe-surface records) shipped under
+  PFS11 as the dialect's second arc.
+- Dialect-internal observation / review / probe records for
+  remaining dialects (`StcObservation` — PFS12 candidate;
+  future `DramaticaObservation` for Dramatic +
+  Dramatica-complete). Ship under existing dialect namespaces
+  per PFS8-N2.
+- Aristotelian A10–A12 schema landing (ArMythosRelation +
+  ArAnagnorisisStep + ArMythos sketch-02 optional fields).
+  Deferred by aristotelian-sketch-02 AA11; candidate for a
+  future PFS extending `schema/aristotelian/mythos.json` +
+  shipping new `mythos_relation.json` + `anagnorisis_step.json`.
 - Runtime / ephemeral records (CheckRegistration, CoverageGap,
   DroppedOutput, three ReaderModelResult containers) — named
   in PFS8-X with forcing-function criteria. Not scheduled.

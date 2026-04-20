@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/observation.json",
+  "title": "ArObservation",
+  "description": "A self-verifier finding emitted by core/aristotelian.py:verify(). Per aristotelian-sketch-01 A7 + production-format-sketch-11 PFS11-AO1..AO4. Parallels schema/lowering/lowering_observation.json and the anticipated schema/save_the_cat/observation.json: four-field structural-finding shape. severity is a closed two-value enum; code is an open non-empty string (A7 emits five-plus stable codes today but is extension-safe for new checks without a schema amendment — code close-enum deferred to PFS11 OQ1). target_id names an intra-dialect record (ArMythos / ArPhase / ArCharacter id); resolution banked as PFS11 OQ3.",
+  "type": "object",
+  "required": ["severity", "code", "target_id", "message"],
+  "properties": {
+    "severity": {
+      "type": "string",
+      "enum": ["noted", "advises-review"],
+      "description": "Closed enum matching core/aristotelian.py SEVERITY_NOTED / SEVERITY_ADVISES_REVIEW. noted = observation recorded, no review required; advises-review = check uncovered a structural issue the author should see. PFS11-AO2."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short stable tag identifying the A7 check that emitted this observation. Today's codes: 'plot_kind_invalid', 'phase_roles_not_beginning_middle_end', 'peripeteia_not_in_central_events', 'anagnorisis_not_in_central_events', plus sketch-02 additions (A7.6–A7.9). Open string per PFS11-AO3 — new checks don't require a schema amendment. Code vocabulary closure deferred to PFS11 OQ1."
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Intra-dialect record id (ArMythos / ArPhase / ArCharacter) this observation targets. Referential-integrity audit banked as PFS11 OQ3. PFS11-AO4."
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable explanation of the finding. No length constraint. PFS11-AO4."
+    }
+  },
+  "additionalProperties": false
+}

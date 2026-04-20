@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/dialect_reading.json",
+  "title": "DialectReading",
+  "description": "A reader-model's read on the Aristotelian surface as a whole — one per probe invocation. Per aristotelian-probe-sketch-01 APA1 + production-format-sketch-11 PFS11-DR1..DR5. No analog in PFS9/PFS10 — DialectReading is the dialect-probe surface's distinctive record type. Captures the probe's methodological self-report: did the reader engage the dialect on its own terms, or drift into other dialects' vocabularies? read_on_terms is the principal three-valued ordinal signal. drift_flagged / scope_limits_observed / relations_wanted are always-emitted arrays (empty-allowable) carrying free-form tokens — no per-element enum (PFS11 OQ2 banks a close-enum if probe vocabulary stabilizes across runs).",
+  "type": "object",
+  "required": [
+    "reader_id",
+    "read_at_τ_a",
+    "read_on_terms",
+    "rationale",
+    "drift_flagged",
+    "scope_limits_observed",
+    "relations_wanted"
+  ],
+  "properties": {
+    "reader_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the reader-model (human handle or LLM identifier). PFS11-DR2."
+    },
+    "read_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the reading was performed. PFS11-DR2."
+    },
+    "read_on_terms": {
+      "type": "string",
+      "enum": ["yes", "partial", "no"],
+      "description": "Closed enum matching core/aristotelian.py READ_ON_TERMS_*. Three-valued ordinal self-report per APA1: yes = engaged on Aristotelian terms; partial = engaged partially, drifted on some axes; no = did not engage on Aristotelian terms. The probe's principal signal. PFS11-DR3."
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Bounded free-form prose. The prompt caps length; the schema does not enforce a bound. PFS11-DR2."
+    },
+    "drift_flagged": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Out-of-dialect phrases or record types the reader noticed itself using or wanting to use (e.g., 'DSP_limit', 'pressure-shape', 'inciting beat'). Empty array = clean in-dialect read. Tokens are free-form; vocabulary close-enum deferred to PFS11 OQ2. PFS11-DR4."
+    },
+    "scope_limits_observed": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Dialect-scope limits perceived (e.g., 'meta-anagnorisis — audience's recognition that no testimony is fully true, which Aristotelian's character-level anagnorisis cannot express'). Empty array = none observed. PFS11-DR4."
+    },
+    "relations_wanted": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Structural extensions the reader thought would help (e.g., 'ArMythosRelation'). Non-empty is NOT drift — canonical extension candidates for future amendment sketches. A non-empty relations_wanted is a probe-surfaced forcing function, not a failure. Empty array = no extension felt necessary for this reading. PFS11-DR4."
+    }
+  },
+  "additionalProperties": false
+}

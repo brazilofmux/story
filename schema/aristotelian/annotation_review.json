@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/annotation_review.json",
+  "title": "ArAnnotationReview",
+  "description": "One reviewer's verdict on one prose field of one Aristotelian record. Per aristotelian-probe-sketch-01 APA1 + production-format-sketch-11 PFS11-AR1..AR6. Shape parallels schema/lowering/annotation_review.json in verdict vocabulary but targets an Aristotelian record's prose field (identified by target_kind + target_id + field triple) rather than a Lowering's annotation. Pair-consistency — field values constrained by target_kind per FIELDS_BY_TARGET_KIND — enforced via allOf/if-then-else per PFS11-X1. Optional id field kept per Python (APA1 pre-date PFS9 annotation_review; convergence across namespaces banked as PFS11 OQ5).",
+  "type": "object",
+  "required": [
+    "reviewer_id",
+    "reviewed_at_τ_a",
+    "target_kind",
+    "target_id",
+    "field",
+    "verdict",
+    "anchor_τ_a"
+  ],
+  "properties": {
+    "reviewer_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the reviewer (human handle or LLM-probe identifier). PFS11-AR2."
+    },
+    "reviewed_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the review was recorded. PFS11-AR2."
+    },
+    "target_kind": {
+      "type": "string",
+      "enum": ["ArMythos", "ArPhase", "ArCharacter"],
+      "description": "Closed enum matching core/aristotelian.py VALID_REVIEW_TARGET_KINDS. Each reviewable Aristotelian record kind appears here. If a future dialect-record kind acquires a reviewable prose field, this enum expands. PFS11-AR3."
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Intra-dialect record id of the reviewed record. Referential-integrity audit banked as PFS11 OQ3. PFS11-AR2."
+    },
+    "field": {
+      "type": "string",
+      "enum": ["action_summary", "annotation", "hamartia_text"],
+      "description": "Closed enum matching VALID_REVIEW_FIELDS. Each token names the one reviewable prose field on its target kind — per APA1's one-field-per-target rule. Pair-consistency with target_kind enforced via allOf per PFS11-X1. PFS11-AR4."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["approved", "needs-work", "rejected", "noted"],
+      "description": "Closed enum matching Python's VERDICT_* constants (duplicated in aristotelian.py to avoid a lowering.py import). Same four-value shape as lowering/annotation_review.json — the two AnnotationReview records share verdict vocabulary. approved = fine as-is; needs-work = revision requested with specific concern; rejected = remove/replace; noted = read but no position taken. PFS11-AR5."
+    },
+    "anchor_τ_a": {
+      "type": "integer",
+      "description": "Snapshot of the encoding-level τ_a (Aristotelian records don't carry record-level τ_a per APA1) at review time. Required per PFS7 convention — Python always carries the default-0 value; schema requires it. If the encoding's τ_a advances past this value, downstream tooling surfaces the review as stale. PFS11-AR1 + PFS11-AR2."
+    },
+    "comment": {
+      "type": "string",
+      "description": "Optional reviewer prose. Python default None → omitted from dump; any set string emits unconditionally. PFS11-AR6."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional stable identifier for external cross-reference. Python default None → omitted when None. Differs from lowering/annotation_review.json (no id field). PFS8 OQ4 closure — kept optional per Python; convergence across namespaces banked as PFS11 OQ5. PFS11-AR6."
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {"target_kind": {"const": "ArMythos"}},
+        "required": ["target_kind"]
+      },
+      "then": {
+        "properties": {"field": {"const": "action_summary"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"target_kind": {"const": "ArPhase"}},
+        "required": ["target_kind"]
+      },
+      "then": {
+        "properties": {"field": {"const": "annotation"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"target_kind": {"const": "ArCharacter"}},
+        "required": ["target_kind"]
+      },
+      "then": {
+        "properties": {"field": {"const": "hamartia_text"}}
+      }
+    }
+  ]
+}

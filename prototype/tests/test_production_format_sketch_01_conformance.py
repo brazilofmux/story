@@ -223,6 +223,38 @@ def _load_verifier_commentary_schema() -> dict:
         return json.load(f)
 
 
+def _load_aristotelian_observation_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "observation.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_aristotelian_annotation_review_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "annotation_review.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_aristotelian_observation_commentary_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "observation_commentary.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_aristotelian_dialect_reading_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian" / "dialect_reading.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
@@ -245,12 +277,27 @@ def _build_schema_registry() -> Registry:
     annotation_review.json (PFS9-X2) — the registry is load-bearing
     here.
 
+    The verification namespace (production-format-sketch-10
+    PFS10-D6) adds four schemas. verifier_commentary.json's
+    target_review uses cross-file $ref to verification_review.json
+    (PFS10-X2) — the registry is load-bearing there.
+
+    The Aristotelian cross-boundary batch (production-format-
+    sketch-11 PFS11-D6) adds four schemas under
+    schema/aristotelian/. observation_commentary.json's
+    target_observation uses cross-file $ref to observation.json
+    (PFS11-X2) — extending PFS6-X1's intra-namespace cross-file
+    pattern to a fourth reference inside schema/aristotelian/.
+
     Pattern introduced by production-format-sketch-03 P3A4; extended
     by production-format-sketch-04 P4A1 for held.json; extended by
     production-format-sketch-06 PFS6-D5 for the aristotelian dialect;
     extended by production-format-sketch-07 PFS7-D6 for the
     save-the-cat dialect; extended by production-format-sketch-09
-    PFS9-D8 for the lowering namespace."""
+    PFS9-D8 for the lowering namespace; extended by production-
+    format-sketch-10 PFS10-D6 for the verification namespace;
+    extended by production-format-sketch-11 PFS11-D6 for the
+    Aristotelian cross-boundary batch."""
     registry = Registry()
     for schema in (
         _load_prop_schema(), _load_held_schema(),
@@ -269,6 +316,10 @@ def _build_schema_registry() -> Registry:
         _load_verification_structural_advisory_schema(),
         _load_verification_answer_proposal_schema(),
         _load_verifier_commentary_schema(),
+        _load_aristotelian_observation_schema(),
+        _load_aristotelian_annotation_review_schema(),
+        _load_aristotelian_observation_commentary_schema(),
+        _load_aristotelian_dialect_reading_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -1233,6 +1284,100 @@ def _dump_verifier_commentary(commentary) -> dict:
     }
     if commentary.suggested_signature is not None:
         out["suggested_signature"] = commentary.suggested_signature
+    return out
+
+
+def _dump_ar_observation(obs) -> dict:
+    """Map a Python ArObservation to
+    schema/aristotelian/observation.json (PFS11-D1). All four fields
+    required and always emit (severity, code, target_id, message);
+    no optional fields."""
+    return {
+        "severity": obs.severity,
+        "code": obs.code,
+        "target_id": obs.target_id,
+        "message": obs.message,
+    }
+
+
+def _dump_ar_annotation_review(review) -> dict:
+    """Map a Python ArAnnotationReview to
+    schema/aristotelian/annotation_review.json (PFS11-D2). Required
+    fields always emit (reviewer_id, reviewed_at_τ_a, target_kind,
+    target_id, field, verdict, anchor_τ_a). comment omitted when
+    None. id omitted when None."""
+    out = {
+        "reviewer_id": review.reviewer_id,
+        "reviewed_at_τ_a": review.reviewed_at_τ_a,
+        "target_kind": review.target_kind,
+        "target_id": review.target_id,
+        "field": review.field,
+        "verdict": review.verdict,
+        "anchor_τ_a": review.anchor_τ_a,
+    }
+    if review.comment is not None:
+        out["comment"] = review.comment
+    if review.id is not None:
+        out["id"] = review.id
+    return out
+
+
+def _dump_ar_observation_commentary(commentary) -> dict:
+    """Map a Python ArObservationCommentary to
+    schema/aristotelian/observation_commentary.json (PFS11-D3).
+    Required fields always emit (commenter_id, commented_at_τ_a,
+    assessment, target_observation). target_observation rendered
+    via _dump_ar_observation (full nested shape, matching the
+    Python's by-value carrying). comment omitted when None.
+    suggested_signature omitted when None."""
+    out = {
+        "commenter_id": commentary.commenter_id,
+        "commented_at_τ_a": commentary.commented_at_τ_a,
+        "assessment": commentary.assessment,
+        "target_observation": _dump_ar_observation(
+            commentary.target_observation
+        ),
+    }
+    if commentary.comment is not None:
+        out["comment"] = commentary.comment
+    if commentary.suggested_signature is not None:
+        out["suggested_signature"] = commentary.suggested_signature
+    return out
+
+
+def _dump_dialect_reading(reading) -> dict:
+    """Map a Python DialectReading to
+    schema/aristotelian/dialect_reading.json (PFS11-D4). All seven
+    fields required and always emit; tuple fields render as arrays
+    (empty tuples → empty arrays)."""
+    return {
+        "reader_id": reading.reader_id,
+        "read_at_τ_a": reading.read_at_τ_a,
+        "read_on_terms": reading.read_on_terms,
+        "rationale": reading.rationale,
+        "drift_flagged": list(reading.drift_flagged),
+        "scope_limits_observed": list(reading.scope_limits_observed),
+        "relations_wanted": list(reading.relations_wanted),
+    }
+
+
+def _discover_encoding_aristotelian_observations(mythoi_by_encoding) -> list:
+    """Run aristotelian.verify on each mythos in each encoding and
+    collect the resulting ArObservations. Returns a list of
+    (encoding_name, observations) tuples (observations list per
+    encoding; empty when the encoding verifies clean). Per
+    production-format-sketch-11 PFS11-D5.
+
+    Takes the already-discovered mythoi list from
+    _discover_encoding_aristotelian_records() (PFS6-D4) rather than
+    re-walking encoding modules."""
+    from story_engine.core.aristotelian import verify
+    out: list = []
+    for encoding_name, mythoi in mythoi_by_encoding:
+        observations: list = []
+        for mythos in mythoi:
+            observations.extend(verify(mythos))
+        out.append((encoding_name, observations))
     return out
 
 
@@ -3733,6 +3878,484 @@ def test_verifier_commentary_corpus_conformance():
 
     assert not new_findings, (
         f"{len(new_findings)} VerifierCommentary conformance "
+        f"finding(s); see output."
+    )
+
+
+# ============================================================================
+# Aristotelian cross-boundary batch conformance — PFS11
+# ============================================================================
+
+
+def test_aristotelian_observation_schema_metaschema_valid():
+    """schema/aristotelian/observation.json is a valid JSON Schema
+    2020-12 document (production-format-sketch-11 PFS11-AO1..AO4)."""
+    schema = _load_aristotelian_observation_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_annotation_review_schema_metaschema_valid():
+    """schema/aristotelian/annotation_review.json is a valid JSON
+    Schema 2020-12 document (production-format-sketch-11
+    PFS11-AR1..AR6 + PFS11-X1)."""
+    schema = _load_aristotelian_annotation_review_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_observation_commentary_schema_metaschema_valid():
+    """schema/aristotelian/observation_commentary.json is a valid
+    JSON Schema 2020-12 document (production-format-sketch-11
+    PFS11-AC1..AC5 + PFS11-X2)."""
+    schema = _load_aristotelian_observation_commentary_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_dialect_reading_schema_metaschema_valid():
+    """schema/aristotelian/dialect_reading.json is a valid JSON
+    Schema 2020-12 document (production-format-sketch-11
+    PFS11-DR1..DR5)."""
+    schema = _load_aristotelian_dialect_reading_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_observation_schema_has_expected_shape():
+    """Spot-check of ArObservation schema structure per
+    aristotelian-sketch-01 A7 + PFS11-AO1..AO4."""
+    schema = _load_aristotelian_observation_schema()
+    assert schema["title"] == "ArObservation"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/observation.json"
+    )
+    assert set(schema["required"]) == {
+        "severity", "code", "target_id", "message",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "severity", "code", "target_id", "message",
+    }
+    # severity closed enum (PFS11-AO2)
+    assert set(schema["properties"]["severity"]["enum"]) == {
+        "noted", "advises-review",
+    }
+    # code open non-empty string (PFS11-AO3)
+    code = schema["properties"]["code"]
+    assert code["type"] == "string"
+    assert code["minLength"] == 1
+    assert "enum" not in code
+
+
+def test_aristotelian_annotation_review_schema_has_expected_shape():
+    """Spot-check of ArAnnotationReview schema structure per APA1 +
+    PFS11-AR1..AR6 + PFS11-X1."""
+    schema = _load_aristotelian_annotation_review_schema()
+    assert schema["title"] == "ArAnnotationReview"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/annotation_review.json"
+    )
+    assert set(schema["required"]) == {
+        "reviewer_id", "reviewed_at_τ_a", "target_kind",
+        "target_id", "field", "verdict", "anchor_τ_a",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "reviewer_id", "reviewed_at_τ_a", "target_kind",
+        "target_id", "field", "verdict", "anchor_τ_a",
+        "comment", "id",
+    }
+    # target_kind closed enum (PFS11-AR3)
+    assert set(schema["properties"]["target_kind"]["enum"]) == {
+        "ArMythos", "ArPhase", "ArCharacter",
+    }
+    # field closed enum (PFS11-AR4)
+    assert set(schema["properties"]["field"]["enum"]) == {
+        "action_summary", "annotation", "hamartia_text",
+    }
+    # verdict closed enum (PFS11-AR5)
+    assert set(schema["properties"]["verdict"]["enum"]) == {
+        "approved", "needs-work", "rejected", "noted",
+    }
+    # Pair-consistency allOf/if-then-else (PFS11-X1)
+    all_of = schema["allOf"]
+    assert len(all_of) == 3
+    pairs = {}
+    for clause in all_of:
+        target = clause["if"]["properties"]["target_kind"]["const"]
+        field = clause["then"]["properties"]["field"]["const"]
+        pairs[target] = field
+    assert pairs == {
+        "ArMythos": "action_summary",
+        "ArPhase": "annotation",
+        "ArCharacter": "hamartia_text",
+    }
+
+
+def test_aristotelian_observation_commentary_schema_has_expected_shape():
+    """Spot-check of ArObservationCommentary schema structure per
+    APA1 + PFS11-AC1..AC5 + PFS11-X2."""
+    schema = _load_aristotelian_observation_commentary_schema()
+    assert schema["title"] == "ArObservationCommentary"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/observation_commentary.json"
+    )
+    assert set(schema["required"]) == {
+        "commenter_id", "commented_at_τ_a", "assessment",
+        "target_observation",
+    }
+    assert schema["additionalProperties"] is False
+    # assessment closed enum (PFS11-AC3)
+    assert set(schema["properties"]["assessment"]["enum"]) == {
+        "endorses", "qualifies", "dissents", "noted",
+    }
+    # target_observation cross-file $ref to observation.json (PFS11-X2)
+    assert schema["properties"]["target_observation"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/observation.json"
+    )
+
+
+def test_aristotelian_dialect_reading_schema_has_expected_shape():
+    """Spot-check of DialectReading schema structure per APA1 +
+    PFS11-DR1..DR5."""
+    schema = _load_aristotelian_dialect_reading_schema()
+    assert schema["title"] == "DialectReading"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/dialect_reading.json"
+    )
+    assert set(schema["required"]) == {
+        "reader_id", "read_at_τ_a", "read_on_terms", "rationale",
+        "drift_flagged", "scope_limits_observed", "relations_wanted",
+    }
+    assert schema["additionalProperties"] is False
+    # read_on_terms closed enum (PFS11-DR3)
+    assert set(schema["properties"]["read_on_terms"]["enum"]) == {
+        "yes", "partial", "no",
+    }
+    # Tuple fields as arrays of non-empty strings (PFS11-DR4)
+    for tuple_field in (
+        "drift_flagged", "scope_limits_observed", "relations_wanted",
+    ):
+        prop = schema["properties"][tuple_field]
+        assert prop["type"] == "array"
+        assert prop["items"]["type"] == "string"
+        assert prop["items"]["minLength"] == 1
+
+
+def test_aristotelian_observation_corpus_conformance():
+    """Every ArObservation produced by running aristotelian.verify
+    over each encoding's mythoi validates against
+    schema/aristotelian/observation.json (PFS11-AO1..AO4 + PFS11-D1).
+    Clean corpus expected — all three Aristotelian encodings verify
+    clean per sketch-11 baseline."""
+    schema = _load_aristotelian_observation_schema()
+    validator = Draft202012Validator(schema)
+
+    mythoi_by_encoding, _, _ = _discover_encoding_aristotelian_records()
+    observations_by_encoding = (
+        _discover_encoding_aristotelian_observations(mythoi_by_encoding)
+    )
+
+    total = 0
+    clean_passes = 0
+    severity_counts: dict = {}
+    code_counts: dict = {}
+    new_findings: list = []
+    emitting_encodings: list = []
+
+    for encoding_name, observations in observations_by_encoding:
+        if observations:
+            emitting_encodings.append(encoding_name)
+        for obs in observations:
+            total += 1
+            dumped = _dump_ar_observation(obs)
+            severity_counts[dumped["severity"]] = (
+                severity_counts.get(dumped["severity"], 0) + 1
+            )
+            code_counts[dumped["code"]] = (
+                code_counts.get(dumped["code"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "target_id": obs.target_id,
+                "code": obs.code,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_observation_corpus_conformance: "
+        f"{total} ArObservation records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if severity_counts:
+        print(
+            f"  by severity:                "
+            f"{dict(sorted(severity_counts.items()))}"
+        )
+        print(
+            f"  by code:                    "
+            f"{dict(sorted(code_counts.items()))}"
+        )
+        print(
+            f"  emitting encodings:         "
+            f"{sorted(emitting_encodings)}"
+        )
+    else:
+        print(
+            f"  note:                       "
+            f"zero observations; expected per PFS11 §Corpus "
+            f"expectations (all encodings verify clean)"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['code']} on {finding['target_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArObservation conformance "
+        f"finding(s); see output."
+    )
+
+
+def test_aristotelian_annotation_review_corpus_conformance():
+    """Every ArAnnotationReview emitted by the encoding corpus
+    validates against schema/aristotelian/annotation_review.json
+    (PFS11-AR1..AR6 + PFS11-D2). Today's corpus emits zero —
+    ArAnnotationReview records live in reader-model probe output
+    JSONs (per PFS11 §Corpus expectations); shape validated via
+    metaschema + shape tests."""
+    schema = _load_aristotelian_annotation_review_schema()
+    validator = Draft202012Validator(schema)
+
+    # No encoding-level discovery — ArAnnotationReview records
+    # live in probe output JSONs (not in the conformance corpus
+    # per PFS11 OQ4). See _discover_encoding_aristotelian_
+    # observations for the ArObservation case.
+    reviews_by_encoding: list = []
+
+    total = 0
+    clean_passes = 0
+    new_findings: list = []
+
+    for encoding_name, reviews in reviews_by_encoding:
+        for review in reviews:
+            total += 1
+            dumped = _dump_ar_annotation_review(review)
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "reviewer_id": review.reviewer_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_annotation_review_corpus_conformance: "
+        f"{total} ArAnnotationReview records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if total == 0:
+        print(
+            f"  note:                       "
+            f"zero records today; expected per PFS11 §Corpus "
+            f"expectations (probe output only; OQ4 banks ingestion)"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['reviewer_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArAnnotationReview conformance "
+        f"finding(s); see output."
+    )
+
+
+def test_aristotelian_observation_commentary_corpus_conformance():
+    """Every ArObservationCommentary emitted by the encoding corpus
+    validates against schema/aristotelian/observation_commentary.json
+    (PFS11-AC1..AC5 + PFS11-D3). Uses the registry-bound validator
+    because observation_commentary.json cross-file-refs
+    observation.json per PFS11-X2. Today's corpus emits zero —
+    commentary records live in probe output JSONs; shape validated
+    via metaschema + shape tests."""
+    registry = _build_schema_registry()
+    schema = _load_aristotelian_observation_commentary_schema()
+    validator = Draft202012Validator(schema, registry=registry)
+
+    commentaries_by_encoding: list = []
+
+    total = 0
+    clean_passes = 0
+    new_findings: list = []
+
+    for encoding_name, commentaries in commentaries_by_encoding:
+        for commentary in commentaries:
+            total += 1
+            dumped = _dump_ar_observation_commentary(commentary)
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "commenter_id": commentary.commenter_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_observation_commentary_corpus_conformance: "
+        f"{total} ArObservationCommentary records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if total == 0:
+        print(
+            f"  note:                       "
+            f"zero records today; expected per PFS11 §Corpus "
+            f"expectations (probe output only)"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['commenter_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArObservationCommentary conformance "
+        f"finding(s); see output."
+    )
+
+
+def test_aristotelian_dialect_reading_corpus_conformance():
+    """Every DialectReading emitted by the encoding corpus validates
+    against schema/aristotelian/dialect_reading.json (PFS11-DR1..DR5
+    + PFS11-D4). Today's corpus emits zero — DialectReading records
+    live in probe output JSONs (one per probe invocation); shape
+    validated via metaschema + shape tests."""
+    schema = _load_aristotelian_dialect_reading_schema()
+    validator = Draft202012Validator(schema)
+
+    readings_by_encoding: list = []
+
+    total = 0
+    clean_passes = 0
+    new_findings: list = []
+
+    for encoding_name, readings in readings_by_encoding:
+        for reading in readings:
+            total += 1
+            dumped = _dump_dialect_reading(reading)
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "reader_id": reading.reader_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_dialect_reading_corpus_conformance: "
+        f"{total} DialectReading records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if total == 0:
+        print(
+            f"  note:                       "
+            f"zero records today; expected per PFS11 §Corpus "
+            f"expectations (probe output only; one per probe run)"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['reader_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} DialectReading conformance "
         f"finding(s); see output."
     )
 

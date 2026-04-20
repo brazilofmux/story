@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/observation_commentary.json",
+  "title": "ArObservationCommentary",
+  "description": "A reviewer's read on an ArObservation, per aristotelian-probe-sketch-01 APA1 + production-format-sketch-11 PFS11-AC1..AC5. Parallels schema/verification/verifier_commentary.json — the target is this dialect's observation shape (ArObservation) rather than a VerificationReview. target_observation uses cross-file $ref to observation.json per PFS11-X2 (intra-namespace, parallel to PFS6-X1 and PFS10-X2). Differs from VerifierCommentary in one field: comment is optional here (Python default None), reflecting that an endorsement-with-no-further-content is structurally valid for an observation commentary.",
+  "type": "object",
+  "required": [
+    "commenter_id",
+    "commented_at_τ_a",
+    "assessment",
+    "target_observation"
+  ],
+  "properties": {
+    "commenter_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for the commenter (human handle or LLM-probe identifier). PFS11-AC2."
+    },
+    "commented_at_τ_a": {
+      "type": "integer",
+      "description": "Author-time τ_a at which the commentary was recorded. PFS11-AC2."
+    },
+    "assessment": {
+      "type": "string",
+      "enum": ["endorses", "qualifies", "dissents", "noted"],
+      "description": "Closed enum matching Python's ASSESSMENT_* constants (duplicated in aristotelian.py to avoid a verification.py import). Same four-value shape as verification/verifier_commentary.json. endorses = finding is well-grounded, nothing to add; qualifies = finding stands with a clarification; dissents = commenter disagrees; must name what the check missed or got wrong; noted = read but no position taken. PFS11-AC3."
+    },
+    "target_observation": {
+      "$ref": "https://brazilofmux.github.io/story/schema/aristotelian/observation.json",
+      "description": "Nested ArObservation by value, via cross-file $ref to observation.json per PFS11-X2. The Python carries the ArObservation as a value (frozen dataclass with no id); the schema expresses it via cross-file $ref for same-namespace resolution (parallel to PFS10-X2's verifier_commentary → verification_review). PFS11-AC4."
+    },
+    "comment": {
+      "type": "string",
+      "description": "Optional commenter prose. Python default None → omitted from dump; any set string emits unconditionally. Contrast with verification/verifier_commentary.json where comment is required — an ArObservationCommentary may endorse without further content, where a VerifierCommentary's entire purpose is to carry content. PFS11-AC5."
+    },
+    "suggested_signature": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional prose the commenter thinks the A7 check might add (e.g., 'also validate peripeteia falls before anagnorisis when binding=separated'). Free-form, intended as inspiration for the maintainer — not actionable code. Python default None → omitted when None. PFS11-AC5."
+    }
+  },
+  "additionalProperties": false
+}
