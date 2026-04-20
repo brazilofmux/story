@@ -1,0 +1,150 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_macbeth"
+    ],
+    "observation_count": 0,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_macbeth",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The summary faithfully traces the substrate events from antecedent standings (τ_s ≤ 0) through regicide, security-seeking killings, and the coincident peripeteia-anagnorisis at E_macduff_reveals_birth (τ_s=17). Timestamp references are accurate; the claim that reversal and recognition coincide matches both the structural fields (peripeteia_event_id = anagnorisis_event_id) and the peripeteia_anagnorisis_binding='coincident'. The causal chain from prophecy through equivocation to catastrophe is well grounded in the substrate."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_macbeth_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The annotation says the Cawdor award 'confirms the prophecy's first clause,' but per the action_summary's own ordering — Glamis (first, already true), Cawdor (second, confirmed at τ_s=1), king hereafter (third) — the Cawdor award confirms the *second* clause. Calling it the 'first clause' misreads the prophecy's internal structure and could mislead a reader about which prediction carries the empirical foothold. Replacing 'first clause' with 'second clause' (or 'the first predictive clause not already known') would resolve the error."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_macbeth_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation traces a tightly causal chain — regicide → crown → Banquo's murder → ghost → second prophecy → Macduff flight → Fife slaughter → sleepwalking — mapping cleanly onto the nine scope events. E_duncan_discovered (τ_s=5) goes unmentioned, which is a minor omission since the discovery is what converts the private killing into public crisis, but the causal logic of the phase is otherwise faithfully rendered. The framing of E_sleepwalking as the last 'binding' event that closes the complication is consistent with its placement as denouement_event_id on the ArMythos."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_macbeth_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The 'unbinding' framing correctly mirrors the middle's complication. Each scope event is accounted for: Lady Macbeth's death answers the sleepwalking, Birnam falsifies the first apparition-reassurance, Macduff's reveal falsifies the second and delivers the coincident peripeteia-anagnorisis, Macbeth's death follows at the same τ_s=17, and Malcolm's coronation restores succession. The closing claim of catharsis through pity (self-knowledge at the last) and fear (the machinery of ambition) is well grounded and consistent with aims_at_catharsis=true."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_macbeth",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The reading of hamartia as epistemic credulity toward equivocation rather than simple moral ambition is well argued and structurally grounded: the catastrophe at τ_s=17 is triggered precisely by the literal-reading failure regarding 'none of woman born.' The text acknowledges the moral dimension ('he knows the regicide is wrong') while correctly locating the Aristotelian 'missing the mark' in the epistemic register — it is the false confidence from the apparitions' equivocal language that keeps Macbeth at Dunsinane, not ambition alone."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_lady_macbeth",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia as misjudgment of will's power over conscience is well grounded: E_sleepwalking (τ_s=13) is the substrate event where the exorcised conscience returns as compulsive speech, and E_lady_macbeth_dies (τ_s=14) closes her arc before E_macduff_reveals_birth (τ_s=17) exposes the equivocation. The claim that her recognition does not precipitate Macbeth's is structurally confirmed by precipitates_main=False in the ArAnagnorisisStep, and the Jocasta contrast stays cleanly within Aristotelian reference."
+    }
+  ],
+  "observation_commentaries": [],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The encoding deploys Aristotelian primitives with precision and consistency. Mythos is structured through beginning/middle/end phases whose causal logic maps to Aristotelian complication and denouement. The complex-plot classification is justified by the coincident peripeteia and anagnorisis at E_macduff_reveals_birth, which the peripeteia_anagnorisis_binding='coincident' field makes explicit. Hamartia is argued for both characters in terms that satisfy Aristotle's 'missing the mark' — epistemic credulity for Macbeth, misjudgment of will for Lady Macbeth. The ArAnagnorisisStep for Lady Macbeth's sleepwalking correctly stagers her character-level recognition from Macbeth's and records the non-causal relation via precipitates_main=False. Unity of action is asserted (defensibly — every event serves the single tragic arc), while time and place are correctly denied. Catharsis through pity and fear is claimed and grounded in the final-phase annotation. At no point did I need to reach for extra-dialectal vocabulary; the Aristotelian frame handles this canonical tragedy naturally.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "Audience-level dramatic irony: the audience recognizes the Witches' equivocation well before Macbeth does (we hear 'none of woman born' and may suspect the loophole), but Aristotelian anagnorisis is character-level only — there is no primitive for the gap between audience recognition and character recognition, nor for the specific dramatic-ironic pleasure that gap generates.",
+      "Supernatural agency and fate: the Witches occupy an ambiguous causal position (do they cause or merely predict?), and Aristotle's discussion of deus ex machina and probability/necessity (Poetics 1454a-b) does not cleanly map to agents whose prophecies are true but equivocal. The encoding handles this through prophecy-type events, but the Witches' structural role as equivocating fate-agents has no dedicated Aristotelian primitive."
+    ],
+    "relations_wanted": [
+      "ArMythosRelation kind='parallel' between Macbeth's and Lady Macbeth's tragic arcs within the single mythos — the anagnorisis_chain stagers their recognitions temporally, but a formal parallel-arc relation would express that both are tragic heroes with independent hamartiai converging on the same catastrophe without one precipitating the other."
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_macbeth",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The summary faithfully traces the substrate events from antecedent standings (τ_s ≤ 0) through regicide, security-seeking killings, and the coincident peripeteia-anagnorisis at E_macduff_reveals_birth (τ_s=17). Timestamp references are accurate; the claim that reversal and recognition coincide matches both the structural fields (peripeteia_event_id = anagnorisis_event_id) and the peripeteia_anagnorisis_binding='coincident'. The causal chain from prophecy through equivocation to catastrophe is well grounded in the substrate."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_macbeth_beginning",
+        "field": "annotation",
+        "verdict": "needs-work",
+        "rationale": "The annotation says the Cawdor award 'confirms the prophecy's first clause,' but per the action_summary's own ordering — Glamis (first, already true), Cawdor (second, confirmed at τ_s=1), king hereafter (third) — the Cawdor award confirms the *second* clause. Calling it the 'first clause' misreads the prophecy's internal structure and could mislead a reader about which prediction carries the empirical foothold. Replacing 'first clause' with 'second clause' (or 'the first predictive clause not already known') would resolve the error."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_macbeth_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation traces a tightly causal chain — regicide → crown → Banquo's murder → ghost → second prophecy → Macduff flight → Fife slaughter → sleepwalking — mapping cleanly onto the nine scope events. E_duncan_discovered (τ_s=5) goes unmentioned, which is a minor omission since the discovery is what converts the private killing into public crisis, but the causal logic of the phase is otherwise faithfully rendered. The framing of E_sleepwalking as the last 'binding' event that closes the complication is consistent with its placement as denouement_event_id on the ArMythos."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_macbeth_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The 'unbinding' framing correctly mirrors the middle's complication. Each scope event is accounted for: Lady Macbeth's death answers the sleepwalking, Birnam falsifies the first apparition-reassurance, Macduff's reveal falsifies the second and delivers the coincident peripeteia-anagnorisis, Macbeth's death follows at the same τ_s=17, and Malcolm's coronation restores succession. The closing claim of catharsis through pity (self-knowledge at the last) and fear (the machinery of ambition) is well grounded and consistent with aims_at_catharsis=true."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_macbeth",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The reading of hamartia as epistemic credulity toward equivocation rather than simple moral ambition is well argued and structurally grounded: the catastrophe at τ_s=17 is triggered precisely by the literal-reading failure regarding 'none of woman born.' The text acknowledges the moral dimension ('he knows the regicide is wrong') while correctly locating the Aristotelian 'missing the mark' in the epistemic register — it is the false confidence from the apparitions' equivocal language that keeps Macbeth at Dunsinane, not ambition alone."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_lady_macbeth",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia as misjudgment of will's power over conscience is well grounded: E_sleepwalking (τ_s=13) is the substrate event where the exorcised conscience returns as compulsive speech, and E_lady_macbeth_dies (τ_s=14) closes her arc before E_macduff_reveals_birth (τ_s=17) exposes the equivocation. The claim that her recognition does not precipitate Macbeth's is structurally confirmed by precipitates_main=False in the ArAnagnorisisStep, and the Jocasta contrast stays cleanly within Aristotelian reference."
+      }
+    ],
+    "observation_commentaries": [],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The encoding deploys Aristotelian primitives with precision and consistency. Mythos is structured through beginning/middle/end phases whose causal logic maps to Aristotelian complication and denouement. The complex-plot classification is justified by the coincident peripeteia and anagnorisis at E_macduff_reveals_birth, which the peripeteia_anagnorisis_binding='coincident' field makes explicit. Hamartia is argued for both characters in terms that satisfy Aristotle's 'missing the mark' — epistemic credulity for Macbeth, misjudgment of will for Lady Macbeth. The ArAnagnorisisStep for Lady Macbeth's sleepwalking correctly stagers her character-level recognition from Macbeth's and records the non-causal relation via precipitates_main=False. Unity of action is asserted (defensibly — every event serves the single tragic arc), while time and place are correctly denied. Catharsis through pity and fear is claimed and grounded in the final-phase annotation. At no point did I need to reach for extra-dialectal vocabulary; the Aristotelian frame handles this canonical tragedy naturally.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "Audience-level dramatic irony: the audience recognizes the Witches' equivocation well before Macbeth does (we hear 'none of woman born' and may suspect the loophole), but Aristotelian anagnorisis is character-level only — there is no primitive for the gap between audience recognition and character recognition, nor for the specific dramatic-ironic pleasure that gap generates.",
+        "Supernatural agency and fate: the Witches occupy an ambiguous causal position (do they cause or merely predict?), and Aristotle's discussion of deus ex machina and probability/necessity (Poetics 1454a-b) does not cleanly map to agents whose prophecies are true but equivocal. The encoding handles this through prophecy-type events, but the Witches' structural role as equivocating fate-agents has no dedicated Aristotelian primitive."
+      ],
+      "relations_wanted": [
+        "ArMythosRelation kind='parallel' between Macbeth's and Lady Macbeth's tragic arcs within the single mythos — the anagnorisis_chain stagers their recognitions temporally, but a formal parallel-arc relation would express that both are tragic heroes with independent hamartiai converging on the same catastrophe without one precipitating the other."
+      ]
+    }
+  }
+}
