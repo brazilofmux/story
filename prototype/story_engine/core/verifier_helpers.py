@@ -135,7 +135,8 @@ def event_participants_flat(event: Event) -> set:
     'targets', 'killers'); this collapses those into a single flat
     set so callers can test entity-id membership directly."""
     out = set()
-    for v in event.participants.values():
+    parts = event.participants or {}
+    for v in parts.values():
         if isinstance(v, str):
             out.add(v)
         elif isinstance(v, (list, tuple)):

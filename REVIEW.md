@@ -370,3 +370,187 @@ The near-term priorities have changed order:
 ### Bottom line, updated
 
 The repository is now better documented at the top and substantially stronger in the template-layer verifier surface than the April 15 review captured. The main risks have narrowed: documentation drift is now mostly inside `prototype/README.md`, the environment story is still easy to misrun, and the base Dramatic → substrate verifier still has a large declared-but-unchecked surface.
+
+---
+
+## Status update — 2026-04-20 (Gemini)
+
+This update captures the state of the repository as of April 20, 2026. The project has continued to mature, particularly in its testing surface and verifier scaffolding.
+
+### Finding 1 — Repository guidance stale: **addressed**
+
+Both the root `README.md` and `prototype/README.md` have been refreshed. The prototype README now correctly reflects the current scale of the project (39 encoding modules, 13 test files, 700+ tests) and provides accurate run instructions for both standard-library core and venv-dependent clients.
+
+### Finding 2 — Verification coverage sparse: **stands**
+
+While the Template-layer (Dramatica/STC) verifiers are highly active and provide detailed signal, the base Dramatic → substrate verifier still carries a significant declared-but-unchecked surface:
+- Oedipus: **54** gaps
+- Macbeth: **73** gaps
+- Ackroyd: **67** gaps
+The "burndown" for these gaps has not yet begun; the project's energy has instead gone into deepening the Dramatica and Save the Cat verifier primitives.
+
+### Finding 3 — Duplicated cross-boundary verifier logic: **addressed for core, stands for Template orchestration**
+
+The common connective machinery (participant flattening, primary actor resolution, event/throughline lookup) has been extracted into `story_engine/core/verifier_helpers.py`. This canonical module now serves all verifiers.
+
+However, the dramatica-complete verifier orchestration (`_wrap_check`, `_end_τ_s`, `_events_lowered_from_throughline`) remains duplicated across the `*_dramatica_complete_verification.py` modules for Oedipus, Macbeth, Ackroyd, and Rocky.
+
+### Finding 4 — Environment ergonomics: **improved**
+
+The instructions in `prototype/README.md` now explicitly separate the standard-library path from the venv path. All 713 tests (514+ core, 193 verification logic, 40 client-side) pass cleanly in the current workspace when run through their respective interpreters.
+
+### Health Check
+
+Verified on April 20, 2026:
+- Core suite: **673 passed** (including the expanded `test_verification.py` with 193 tests).
+- Client suite (venv): **40 passed** (`test_reader_model_client`, `test_dramatic_reader_model_client`).
+- Total test surface: **713 tests**.
+
+### What landed since the last update
+
+- **`story_engine/core/verifier_helpers.py`**: Canonical extraction of shared verifier logic.
+- **Verification Logic Expansion**: `test_verification.py` expanded from 87 to 193 tests, pinning the detailed taxonomy behavior (AG1–AG6, LT1–LT14).
+- **Bug Fix**: `event_participants_flat` hardened against `None` participants (common in synthetic test events).
+
+### Plan delta
+
+1. **Orchestration Refactor**: Extract the shared dramatica-complete verifier scaffolding (`_wrap_check`, etc.) into `verification.py` or a dedicated template-verifier helper to remove the 4-way duplication.
+2. **Coverage Burndown**: Begin adding the missing Dramatic → substrate checks for Scene `result` and Throughline `argument_contributions`, which currently account for the majority of the coverage gaps.
+3. **Universality Pressure**: Add a non-Western or long-form story encoding to test the "universal" claims of the Dramatica and Aristotelian templates.
+
+---
+
+## Status update — 2026-04-20 (Codex)
+
+This pass re-checked the current tree directly, including the current test surface, verifier demo outputs, and the in-progress local edits already present in the workspace. The project is stronger than the older review snapshots suggest, but the repository now has a sharper class of problem: the implementation has outgrown parts of its own front-door documentation.
+
+### Finding 1 — Front-door documentation has drifted into false specifics: **stands**
+
+The high-level README is no longer merely "a bit stale." Several of its concrete inventory claims and command examples are now wrong enough to mislead a fresh reader:
+
+- `README.md` still claims **19 active design sketches** and **603 tests across 12 test files**.
+- The current tree has **62 active sketches** (matching `design/README.md`'s active-sketch reality) and **822 tests across 16 test files**.
+- The root README's quickstart commands no longer match the on-disk layout:
+  - `cd prototype && python3 demo.py` fails because the demo now lives under `demos/`.
+  - `cd prototype && python3 test_substrate.py` fails because tests now live under `tests/`.
+
+This is now an onboarding bug, not just a bookkeeping issue. The repo has a good root narrative, but some of the precise numbers and runnable examples have decayed enough to break first contact.
+
+### Finding 2 — `prototype/README.md` understates both scope and dependencies: **stands**
+
+The prototype README is internally coherent in structure, but its specifics describe an earlier repository:
+
+- It still says the "core path" is **standard library only**.
+- It still lists **10 core modules**, **39 encoding modules**, **12 standalone test scripts**, **11 demo scripts**, and **13 test files / 581 tests**.
+- The current tree has **15 core modules**, **48 encoding modules**, **15 demos**, and **16 test files / 822 tests**.
+
+More importantly, the dependency boundary has moved:
+
+- `tests.test_production_format_sketch_01_conformance` now requires `jsonschema` and `referencing`.
+- `prototype/requirements.txt` includes `jsonschema`, so this is an intentional expansion of the venv-backed path, not an accidental local impurity.
+- Running that conformance test under the system interpreter fails exactly as the import guard says.
+
+The documentation still frames the venv split mostly as "reader-model client dependencies." That is no longer the whole story; schema-conformance work is also outside the pure-stdlib boundary.
+
+### Finding 3 — Verification breadth improved; the declared-coverage backlog has not: **stands**
+
+The verifier surface is materially stronger than the April 15 review captured:
+
+- `test_verification.py` is now **193 tests**.
+- The Aristotelian track is live with **76 tests** plus a **23-test** client suite.
+- The conformance layer is real now: **86 tests** backed by **25 schema files**.
+- The dramatica-complete verifier runs are clean on Oedipus, Macbeth, Ackroyd, and Rocky, all at a 9-check surface.
+
+What has not changed is the base Dramatic → substrate burndown:
+
+- Oedipus: **54** gaps
+- Macbeth: **73** gaps
+- Ackroyd: **67** gaps
+- Save the Cat:
+  - Macbeth: **14** gaps
+  - Ackroyd: **14** gaps
+
+The instrumentation is honest and useful. The backlog is still real authorial work waiting to happen, especially around scene/beat/stakes moment checks.
+
+### Finding 4 — Template-verifier orchestration duplication is now clear editorial debt: **stands**
+
+The extraction to `story_engine/core/verifier_helpers.py` was the right move, and the shared lookup/predicate logic now has a canonical home. But the dramatica-complete verifier wrappers are still manually replicated across the authored encodings:
+
+- `oedipus_dramatica_complete_verification.py`
+- `macbeth_dramatica_complete_verification.py`
+- `ackroyd_dramatica_complete_verification.py`
+- `rocky_dramatica_complete_verification.py`
+
+The repeated pieces are the same ones earlier reviews named:
+
+- `_end_τ_s`
+- `_events_lowered_from_throughline`
+- `_wrap_check`
+- the 9-check `run()` orchestration
+
+With four concrete clients, this is no longer waiting on a trigger. The trigger has fired. Semantic predicates should stay local; orchestration plumbing should probably not.
+
+### Finding 5 — The recent `event_participants_flat` hardening looks right but is not pinned directly: **new**
+
+There is an in-progress local fix in `story_engine/core/verifier_helpers.py` making `event_participants_flat()` tolerate `event.participants is None` by normalizing to `{}`. That is a sensible defensive change and matches several other helpers in the same module.
+
+What I did not find is a direct permanent test covering that exact case at the helper boundary. Current tests exercise synthetic events with `(participants or {})` helpers in some places, but the extracted verifier helper itself is not obviously pinned against `None` participants. If this bug mattered enough to harden in code, it is worth one explicit regression test.
+
+### Updated Health Check
+
+Verified directly on April 20, 2026:
+
+- Standard-library path:
+  - `tests.test_dramatic` → 39 passed
+  - `tests.test_dramatica_template` → 77 passed
+  - `tests.test_identity` → 20 passed
+  - `tests.test_inference` → 28 passed
+  - `tests.test_lowering` → 32 passed
+  - `tests.test_proposal_walker` → 46 passed
+  - `tests.test_rashomon` → 49 passed
+  - `tests.test_save_the_cat` → 60 passed
+  - `tests.test_skeleton` → 8 passed
+  - `tests.test_substrate` → 45 passed
+  - `tests.test_verification` → 193 passed
+  - `tests.test_aristotelian` → 76 passed
+  - subtotal: **673 passed**
+- Venv-backed path:
+  - `tests.test_reader_model_client` → 19 passed
+  - `tests.test_dramatic_reader_model_client` → 21 passed
+  - `tests.test_aristotelian_reader_model_client` → 23 passed
+  - `tests.test_production_format_sketch_01_conformance` → 86 passed
+  - subtotal: **149 passed**
+- Total currently exercised test surface: **822 passed**
+
+I also re-ran the current verifier demos for:
+
+- `oedipus_verification`
+- `macbeth_verification`
+- `ackroyd_verification`
+- `oedipus_dramatica_complete_verification`
+- `macbeth_dramatica_complete_verification`
+- `ackroyd_dramatica_complete_verification`
+- `rocky_dramatica_complete_verification`
+- `macbeth_save_the_cat_verification`
+- `ackroyd_save_the_cat_verification`
+
+All of those runs completed cleanly and emitted the gap counts summarized above.
+
+### Plan delta
+
+The near-term priorities now look like this:
+
+1. Fix the front door again, but narrowly:
+   - replace stale counts in `README.md`
+   - replace dead path examples (`demo.py`, `test_substrate.py`) with the module-form commands that actually run
+2. Refresh `prototype/README.md` around the current implementation inventory and the true dependency split:
+   - stdlib core
+   - venv-backed clients
+   - venv-backed schema conformance
+3. Add one direct regression test for the `event_participants_flat(None)` bug shape if that helper hardening is kept.
+4. Extract the repeated dramatica-complete orchestration once, leaving encoding-specific semantics in the encoding modules.
+5. Keep burning down declared verifier coverage where the reports already tell the truth.
+
+### Bottom line, updated
+
+The repository is in better technical shape than its own older counts and examples imply. The prototype, verifier surface, schema surface, and Aristotelian track are all more substantial than the front-door docs admit. The most immediate risk is no longer "is there enough here?" It is "do the documented commands and numbers still describe this repository accurately enough that a reader can trust them on first contact?"

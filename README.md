@@ -72,11 +72,12 @@ coherent:
 
 Working prototype, closed-corpus encodings, extensive test surface:
 
-- **19 active design sketches** across substrate, dialects,
+- **62 active design sketches** across substrate, dialects,
   identity, focalization, inference, lowering, verification,
-  event-kind and pressure-shape taxonomies, and two cross-dialect
-  comparisons. Status, supersession, and open questions tracked
-  per sketch.
+  production-format and referential-integrity work, event-kind and
+  pressure-shape taxonomies, Aristotelian and Save the Cat tracks,
+  and cross-dialect comparisons. Status, supersession, and open
+  questions tracked per sketch.
 - **Seven encoded stories** exercising the substrate and dialects:
   *Oedipus Rex*, *Macbeth*, *The Murder of Roger Ackroyd*,
   *Rashomon*, *Pride and Prejudice*, *Rocky*, *Chinatown*. Together
@@ -162,10 +163,10 @@ Working prototype, closed-corpus encodings, extensive test surface:
   StcCharacter amendment landed. Sheppard carries
   `role_labels=("protagonist", "antagonist", "narrator")` — the
   novel's structural overlap now expressible at the dialect layer.
-- **603 tests** across 12 test files. Full suite runs in under a
-  second. Standard-library only except for the reader-model probe
-  (which needs `anthropic` and `pydantic` from
-  `prototype/requirements.txt`).
+- **822 tests** across 16 test files. The current split is
+  **673 standard-library tests** plus **149 venv-backed tests** for
+  reader-model clients, schema conformance, and dependency-scoped
+  surfaces declared in `prototype/requirements.txt`.
 - **Survey** of prior narrative theories (3-act, 5-act, Propp,
   Campbell, Dramatica, Story Grid, Truby, McKee, Save the Cat,
   Freytag) and computational systems (TALE-SPIN, MINSTREL, Mexica,
@@ -184,19 +185,19 @@ Minimal test subset to confirm the prototype builds and runs:
 
 ```sh
 cd prototype
-python3 test_substrate.py        # 45 tests — core substrate invariants
-python3 test_inference.py        # 28 tests — Horn-clause rules + proof-carrying derivation
-python3 test_dramatic.py         # 36 tests — Dramatic dialect and M8 verifier
-python3 test_verification.py     # 79 tests — verifier primitives + EK2 classifier
-python3 test_save_the_cat.py     # 60 tests — Save the Cat dialect S1–S13
+python3 -m tests.test_substrate       # 45 tests — core substrate invariants
+python3 -m tests.test_inference       # 28 tests — Horn-clause rules + proof-carrying derivation
+python3 -m tests.test_dramatic        # 39 tests — Dramatic dialect and M8 verifier
+python3 -m tests.test_verification    # 193 tests — verifier primitives + coverage/orchestration
+python3 -m tests.test_save_the_cat    # 60 tests — Save the Cat dialect S1–S13
 ```
 
 The demos are narrative — they print per-turn reports rather than
 assertions:
 
 ```sh
-python3 demo.py           # Oedipus Rex: reader / character / Jocasta states through anagnorisis
-python3 demo_rashomon.py  # Rashomon: four contested branches side-by-side
+python3 -m demos.demo           # Oedipus Rex: reader / character / Jocasta states through anagnorisis
+python3 -m demos.demo_rashomon  # Rashomon: four contested branches side-by-side
 ```
 
 ## Repository layout

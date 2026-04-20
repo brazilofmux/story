@@ -41,6 +41,8 @@ from story_engine.core.verification import (
     reviews_only, advisories_only, group_by_verdict,
 )
 from story_engine.core.lowering import PositionRange
+from story_engine.core.verifier_helpers import event_participants_flat
+from story_engine.core.substrate import Event, EventStatus
 
 
 # ----------------------------------------------------------------------------
@@ -168,6 +170,21 @@ def test_check_receives_union_of_lower_records_across_lowerings():
     )
     assert len(received) == 1
     assert len(received[0]) == 3  # A + B + C
+
+
+def test_event_participants_flat_tolerates_none_participants():
+    """Regression: extracted verifier helpers should be defensive
+    against synthetic Events that leave participants unset."""
+    event = Event(
+        id="E_none_parts",
+        type="synthetic",
+        τ_s=0,
+        τ_a=0,
+        participants=None,
+        effects=(),
+        status=EventStatus.COMMITTED,
+    )
+    assert event_participants_flat(event) == set()
 
 
 def test_pending_lowerings_not_passed_to_check():

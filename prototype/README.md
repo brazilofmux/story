@@ -24,9 +24,10 @@ Active implementation tracks in this directory:
   Oedipus, Rashomon, Macbeth, Ackroyd, Pride and Prejudice, Rocky,
   and Chinatown.
 - **Optional reader-model tooling** — substrate-side client
-  (`reader_model_client.py`) and cross-boundary client
-  (`dramatic_reader_model_client.py`), both outside the standard-
-  library-only core.
+  (`reader_model_client.py`) and cross-boundary clients
+  (`dramatic_reader_model_client.py`,
+  `aristotelian_reader_model_client.py`), all outside the
+  standard-library-only core.
 
 ## Run
 
@@ -68,8 +69,9 @@ for t in \
  done
 ```
 
-Optional reader-model path: requires local venv + `requirements.txt`
-(`anthropic`, `pydantic`) and, for live API calls, `ANTHROPIC_API_KEY`.
+Venv-backed path: requires local venv + `requirements.txt`
+(`anthropic`, `pydantic`, `jsonschema`) and, for live API calls,
+`ANTHROPIC_API_KEY`.
 
 ```sh
 cd prototype
@@ -77,6 +79,8 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python3 -m tests.test_reader_model_client
 .venv/bin/python3 -m tests.test_dramatic_reader_model_client
+.venv/bin/python3 -m tests.test_aristotelian_reader_model_client
+.venv/bin/python3 -m tests.test_production_format_sketch_01_conformance
 .venv/bin/python3 -m demos.demo_reader_model --dry-run
 .venv/bin/python3 -m demos.demo_reader_model_oedipus --dry-run
 .venv/bin/python3 -m demos.demo_reader_model_macbeth --dry-run
@@ -99,14 +103,12 @@ python3 -m story_engine.encodings.ackroyd_save_the_cat_verification
 ```
 prototype/
 ├── story_engine/
-│   ├── core/          # framework — 10 modules (substrate, dialects,
+│   ├── core/          # framework — 15 modules (substrate, dialects,
 │   │                  #   lowering, verification, verifier_helpers,
-│   │                  #   proposal_walker, reader-model clients)
-│   └── encodings/     # 39 modules across 8 works (oedipus, macbeth,
-│                      #   ackroyd, rocky, rashomon, chinatown,
-│                      #   pride_and_prejudice, turn_of_the_screw)
-├── tests/             # 12 standalone test scripts
-├── demos/             # 11 demo scripts
+│   │                  #   conformance, proposal_walker, reader-model clients)
+│   └── encodings/     # 48 modules across 8 works and generated stubs
+├── tests/             # 16 standalone test scripts
+├── demos/             # 15 demo scripts
 ├── reader_model_*.json  # probe output artifacts
 ├── README.md
 └── requirements.txt
@@ -168,6 +170,9 @@ imports, run conventions, package markers, module-membership rule).
 - Save the Cat → substrate verifiers:
   `macbeth_save_the_cat_verification.py`,
   `ackroyd_save_the_cat_verification.py`.
+- Aristotelian → substrate verifier/client surface:
+  `aristotelian_reader_model_client.py` plus authored Aristotelian
+  encodings and tests.
 
 ### Reader-model tooling
 
@@ -193,16 +198,18 @@ imports, run conventions, package markers, module-membership rule).
 
 ### Tests
 
-The prototype currently has **13 test files / 581 tests** (standard-library core).
+The prototype currently has **16 test files / 822 tests**.
 
-- Standard-library core: `test_substrate.py`, `test_identity.py`,
+- Standard-library path: `test_substrate.py`, `test_identity.py`,
   `test_inference.py`, `test_dramatic.py`,
   `test_dramatica_template.py`, `test_lowering.py`,
   `test_verification.py`, `test_rashomon.py`,
   `test_proposal_walker.py`, `test_save_the_cat.py`,
-  `test_skeleton.py`.
-- Venv-only client tests: `test_reader_model_client.py`,
-  `test_dramatic_reader_model_client.py`.
+  `test_skeleton.py`, `test_aristotelian.py`.
+- Venv-backed path: `test_reader_model_client.py`,
+  `test_dramatic_reader_model_client.py`,
+  `test_aristotelian_reader_model_client.py`,
+  `test_production_format_sketch_01_conformance.py`.
 
 ## Non-goals
 
