@@ -17,10 +17,15 @@ import sys
 import traceback
 
 from story_engine.core.aristotelian import (
-    ArCharacter, ArMythos, ArObservation, ArPhase,
+    ArAnagnorisisStep, ArCharacter, ArMythos, ArMythosRelation,
+    ArObservation, ArPhase,
+    BINDING_ADJACENT, BINDING_COINCIDENT, BINDING_SEPARATED,
+    CANONICAL_RELATION_KINDS,
     PHASE_BEGINNING, PHASE_END, PHASE_MIDDLE,
     PLOT_COMPLEX, PLOT_SIMPLE,
+    RELATION_CONTAINS, RELATION_CONTESTS, RELATION_PARALLEL,
     SEVERITY_ADVISES_REVIEW, SEVERITY_NOTED,
+    VALID_PERIPETEIA_ANAGNORISIS_BINDINGS,
     VALID_PHASE_ROLES, VALID_PLOT_KINDS,
     group_by_code, group_by_severity, verify,
 )
@@ -624,6 +629,496 @@ def test_rashomon_aristotelian_each_testimony_has_own_peripeteia():
 
 
 # ============================================================================
+# Sketch-02 record construction (AA6)
+# ============================================================================
+
+
+def test_armythos_relation_defaults():
+    r = ArMythosRelation(id="r1", kind=RELATION_CONTESTS,
+                         mythoi_ids=("m1", "m2"))
+    assert r.over_event_ids == ()
+    assert r.annotation == ""
+
+
+def test_aranagnorisis_step_defaults():
+    s = ArAnagnorisisStep(id="s1", event_id="E_x",
+                          character_ref_id="c1")
+    assert s.precipitates_main is False
+    assert s.annotation == ""
+
+
+def test_armythos_sketch02_field_defaults():
+    m = _three_phase_mythos()
+    assert m.anagnorisis_chain == ()
+    assert m.peripeteia_anagnorisis_binding is None
+    assert m.peripeteia_anagnorisis_adjacency_bound == 3
+
+
+def test_canonical_relation_kinds_contents():
+    assert CANONICAL_RELATION_KINDS == frozenset({
+        RELATION_CONTESTS, RELATION_PARALLEL, RELATION_CONTAINS,
+    })
+
+
+def test_valid_peripeteia_anagnorisis_bindings_contents():
+    assert VALID_PERIPETEIA_ANAGNORISIS_BINDINGS == frozenset({
+        BINDING_COINCIDENT, BINDING_ADJACENT, BINDING_SEPARATED,
+    })
+
+
+# ============================================================================
+# A7.6 — ArMythosRelation structural integrity
+# ============================================================================
+
+
+def test_relation_noncanonical_kind_emits_noted():
+    m = _three_phase_mythos()
+    rel = ArMythosRelation(
+        id="r1", kind="spooky", mythoi_ids=("m_test", "m_test"),
+    )
+    obs = verify(m, mythoi=(m,), relations=(rel,))
+    findings = [o for o in obs
+                if o.code == "mythos_relation_kind_noncanonical"]
+    assert len(findings) == 1
+    assert findings[0].severity == SEVERITY_NOTED
+
+
+def test_relation_too_few_mythoi_flags():
+    m = _three_phase_mythos()
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_CONTESTS, mythoi_ids=("m_test",),
+    )
+    obs = verify(m, mythoi=(m,), relations=(rel,))
+    assert _has_code(obs, "mythos_relation_mythoi_too_few")
+
+
+def test_relation_unresolved_mythos_id_flags():
+    m = _three_phase_mythos()
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_PARALLEL,
+        mythoi_ids=("m_test", "m_ghost"),
+    )
+    obs = verify(m, mythoi=(m,), relations=(rel,))
+    assert _has_code(obs, "mythos_relation_mythoi_unresolved")
+
+
+def test_relation_mythos_resolution_skipped_when_mythoi_empty():
+    """Without the `mythoi` kwarg, A7.6 check 2b skips resolution —
+    authors who do not thread the mythos tuple see no
+    unresolved-id findings."""
+    m = _three_phase_mythos()
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_PARALLEL,
+        mythoi_ids=("m_test", "m_ghost"),
+    )
+    obs = verify(m, relations=(rel,))
+    assert not _has_code(obs, "mythos_relation_mythoi_unresolved")
+
+
+def test_relation_contests_event_absent_flags():
+    """A mythos missing an over_event_id from its central_event_ids
+    flags under A7.6 check 3."""
+    m = _three_phase_mythos()
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_CONTESTS,
+        mythoi_ids=("m_test", "m_test"),
+        over_event_ids=("E_not_in_mythos",),
+    )
+    obs = verify(m, mythoi=(m,), relations=(rel,))
+    assert _has_code(obs, "mythos_relation_contests_event_absent")
+
+
+def test_relation_contests_passes_when_events_shared():
+    m = _three_phase_mythos()
+    # Two copies of m participate in the relation (synthetic); both
+    # carry E1/E2/E3 in central.
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_CONTESTS,
+        mythoi_ids=("m_test", "m_test"),
+        over_event_ids=("E1", "E2"),
+    )
+    obs = verify(m, mythoi=(m,), relations=(rel,))
+    assert not _has_code(obs, "mythos_relation_contests_event_absent")
+
+
+def test_relation_contains_not_superset_flags():
+    outer = _three_phase_mythos()
+    inner = ArMythos(
+        id="m_inner", title="Inner", action_summary="",
+        central_event_ids=("E1", "E_unique_to_inner"),
+        plot_kind=PLOT_SIMPLE,
+        phases=(
+            ArPhase(id="ph_b", role=PHASE_BEGINNING,
+                    scope_event_ids=("E1",)),
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E_unique_to_inner",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=()),
+        ),
+    )
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_CONTAINS,
+        mythoi_ids=("m_test", "m_inner"),
+    )
+    # Verify against outer, threading both mythoi.
+    obs = verify(outer, mythoi=(outer, inner), relations=(rel,))
+    assert _has_code(obs, "mythos_relation_contains_not_superset")
+
+
+def test_relation_contains_strict_superset_passes():
+    outer = _three_phase_mythos()
+    # Inner covers E1 + E2 only — strict subset of outer's E1/E2/E3.
+    inner = ArMythos(
+        id="m_inner", title="Inner", action_summary="",
+        central_event_ids=("E1", "E2"),
+        plot_kind=PLOT_SIMPLE,
+        phases=(
+            ArPhase(id="ph_b", role=PHASE_BEGINNING,
+                    scope_event_ids=("E1",)),
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=()),
+        ),
+    )
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_CONTAINS,
+        mythoi_ids=("m_test", "m_inner"),
+    )
+    obs = verify(outer, mythoi=(outer, inner), relations=(rel,))
+    assert not _has_code(obs, "mythos_relation_contains_not_superset")
+
+
+# ============================================================================
+# A7.9 — ArMythosRelation event-reference integrity
+# ============================================================================
+
+
+def test_relation_event_ref_unresolved_flags():
+    m = _three_phase_mythos()
+    events = (_synthetic_event("E1"), _synthetic_event("E2"),
+              _synthetic_event("E3"))
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_CONTESTS,
+        mythoi_ids=("m_test", "m_test"),
+        over_event_ids=("E_unresolved",),
+    )
+    obs = verify(m, substrate_events=events,
+                 mythoi=(m,), relations=(rel,))
+    assert _has_code(obs, "mythos_relation_event_ref_unresolved")
+
+
+def test_relation_event_ref_skipped_without_substrate():
+    m = _three_phase_mythos()
+    rel = ArMythosRelation(
+        id="r1", kind=RELATION_CONTESTS,
+        mythoi_ids=("m_test", "m_test"),
+        over_event_ids=("E_unresolved",),
+    )
+    obs = verify(m, mythoi=(m,), relations=(rel,))
+    assert not _has_code(obs, "mythos_relation_event_ref_unresolved")
+
+
+# ============================================================================
+# A7.7 — ArAnagnorisisStep integrity
+# ============================================================================
+
+
+def test_anagnorisis_chain_empty_by_default_clean():
+    """A mythos with no chain produces no chain-related findings."""
+    m = _three_phase_mythos()
+    obs = verify(m)
+    for o in obs:
+        assert not o.code.startswith("anagnorisis_step_")
+
+
+def test_anagnorisis_chain_event_not_central_flags():
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E_not_in_mythos",
+        character_ref_id="c_hero",
+    )
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m)
+    assert _has_code(obs, "anagnorisis_step_event_not_central")
+
+
+def test_anagnorisis_chain_step_equals_main_flags():
+    # Main anagnorisis is E3; chain step also points at E3.
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E3", character_ref_id="c_hero",
+    )
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m)
+    assert _has_code(obs, "anagnorisis_step_equals_main")
+
+
+def test_anagnorisis_chain_precipitates_without_main_flags():
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2",
+        character_ref_id="c_hero", precipitates_main=True,
+    )
+    # Complex plot with only peripeteia (no anagnorisis) + chain
+    # claims precipitates_main.
+    m = _three_phase_mythos(
+        anagnorisis=None, anagnorisis_chain=(step,),
+    )
+    obs = verify(m)
+    assert _has_code(obs, "anagnorisis_step_precipitates_without_main")
+
+
+def test_anagnorisis_chain_precipitates_ordering_flags():
+    """Step τ_s must be strictly less than main anagnorisis τ_s."""
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=5),    # step candidate
+        _synthetic_event("E3", τ_s=3),    # main anagnorisis (earlier!)
+    )
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2",
+        character_ref_id="c_hero", precipitates_main=True,
+    )
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m, substrate_events=events)
+    assert _has_code(obs, "anagnorisis_step_precipitates_ordering")
+
+
+def test_anagnorisis_chain_precipitates_ordering_passes_when_earlier():
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=3),    # step
+        _synthetic_event("E3", τ_s=10),   # main
+    )
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2",
+        character_ref_id="c_hero", precipitates_main=True,
+    )
+    m = _three_phase_mythos(
+        anagnorisis_chain=(step,),
+        characters=(ArCharacter(id="c_hero", name="Hero"),),
+    )
+    obs = verify(m, substrate_events=events)
+    assert not _has_code(obs, "anagnorisis_step_precipitates_ordering")
+
+
+def test_anagnorisis_chain_character_unresolved_flags():
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2",
+        character_ref_id="c_missing",
+    )
+    m = _three_phase_mythos(
+        anagnorisis_chain=(step,),
+        characters=(ArCharacter(id="c_hero", name="Hero"),),
+    )
+    obs = verify(m)
+    assert _has_code(obs, "anagnorisis_step_character_unresolved")
+
+
+def test_anagnorisis_chain_character_check_skips_without_characters():
+    """If the mythos authors no characters, character ref resolution
+    is skipped — parallel to A7 check 5 hamartia-participation."""
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2", character_ref_id="c_any",
+    )
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m)
+    assert not _has_code(obs, "anagnorisis_step_character_unresolved")
+
+
+# ============================================================================
+# A7.8 — peripeteia_anagnorisis_binding consistency
+# ============================================================================
+
+
+def test_binding_none_no_check():
+    """Default None means no binding-related findings."""
+    m = _three_phase_mythos()
+    obs = verify(m)
+    for o in obs:
+        assert not o.code.startswith("peripeteia_anagnorisis_binding_")
+
+
+def test_binding_coincident_passes_when_events_match():
+    # Peripeteia and anagnorisis pointing at the same event.
+    m = _three_phase_mythos(
+        peripeteia="E3", anagnorisis="E3",
+        peripeteia_anagnorisis_binding=BINDING_COINCIDENT,
+    )
+    events = (_synthetic_event("E1"), _synthetic_event("E2"),
+              _synthetic_event("E3"))
+    obs = verify(m, substrate_events=events)
+    assert not _has_code(obs,
+                         "peripeteia_anagnorisis_binding_inconsistent")
+
+
+def test_binding_coincident_inconsistent_when_events_differ():
+    m = _three_phase_mythos(
+        peripeteia="E2", anagnorisis="E3",
+        peripeteia_anagnorisis_binding=BINDING_COINCIDENT,
+    )
+    events = (_synthetic_event("E1"), _synthetic_event("E2", τ_s=1),
+              _synthetic_event("E3", τ_s=2))
+    obs = verify(m, substrate_events=events)
+    assert _has_code(obs, "peripeteia_anagnorisis_binding_inconsistent")
+
+
+def test_binding_adjacent_passes_within_bound():
+    m = _three_phase_mythos(
+        peripeteia="E2", anagnorisis="E3",
+        peripeteia_anagnorisis_binding=BINDING_ADJACENT,
+    )
+    # Bound default 3; distance 1.
+    events = (_synthetic_event("E1", τ_s=0),
+              _synthetic_event("E2", τ_s=5),
+              _synthetic_event("E3", τ_s=6))
+    obs = verify(m, substrate_events=events)
+    assert not _has_code(obs,
+                         "peripeteia_anagnorisis_binding_inconsistent")
+
+
+def test_binding_separated_passes_beyond_bound():
+    m = _three_phase_mythos(
+        peripeteia="E2", anagnorisis="E3",
+        peripeteia_anagnorisis_binding=BINDING_SEPARATED,
+    )
+    # Bound default 3; distance 5.
+    events = (_synthetic_event("E1", τ_s=0),
+              _synthetic_event("E2", τ_s=5),
+              _synthetic_event("E3", τ_s=10))
+    obs = verify(m, substrate_events=events)
+    assert not _has_code(obs,
+                         "peripeteia_anagnorisis_binding_inconsistent")
+
+
+def test_binding_invalid_value_flags():
+    m = _three_phase_mythos(
+        peripeteia="E2", anagnorisis="E3",
+        peripeteia_anagnorisis_binding="telepathic",
+    )
+    obs = verify(m)
+    assert _has_code(obs,
+                     "peripeteia_anagnorisis_binding_invalid_value")
+
+
+def test_binding_requires_both_event_ids():
+    m = _three_phase_mythos(
+        peripeteia="E2", anagnorisis=None,
+        peripeteia_anagnorisis_binding=BINDING_SEPARATED,
+    )
+    obs = verify(m)
+    # Note: `anagnorisis=None` with plot_kind=complex also trips the
+    # A3 rule, but A7.8 must independently flag the binding
+    # inconsistency.
+    assert _has_code(obs, "peripeteia_anagnorisis_binding_inconsistent")
+
+
+def test_binding_event_unresolved_flags():
+    m = _three_phase_mythos(
+        peripeteia="E2", anagnorisis="E_ghost",
+        peripeteia_anagnorisis_binding=BINDING_SEPARATED,
+    )
+    # Substrate has E1/E2/E3 only — E_ghost does not resolve.
+    events = (_synthetic_event("E1"), _synthetic_event("E2"),
+              _synthetic_event("E3"))
+    # A7.8 checks binding-event resolution; A7 check 4 will also
+    # flag E_ghost as event_ref_unresolved — that's the existing
+    # behavior, not a sketch-02 regression.
+    obs = verify(m, substrate_events=events)
+    assert _has_code(obs,
+                     "peripeteia_anagnorisis_binding_event_unresolved")
+
+
+# ============================================================================
+# Backward compatibility — verify signature
+# ============================================================================
+
+
+def test_verify_backward_compat_no_kwargs():
+    """A pre-sketch-02 call site — verify(mythos) with no new
+    kwargs — produces exactly the same observations it did before
+    sketch-02 landed on a mythos that authors no A10/A11/A12
+    content."""
+    m = _three_phase_mythos()
+    obs_without = verify(m)
+    obs_with_empty_kwargs = verify(m, mythoi=(), relations=())
+    codes_without = sorted(o.code for o in obs_without)
+    codes_with = sorted(o.code for o in obs_with_empty_kwargs)
+    assert codes_without == codes_with
+
+
+# ============================================================================
+# Encoding migrations — Oedipus (AA9) + Rashomon (AA8)
+# ============================================================================
+
+
+def test_oedipus_aristotelian_chain_authored():
+    """AR_OEDIPUS_MYTHOS now carries AR_STEP_JOCASTA in its chain."""
+    from story_engine.encodings.oedipus_aristotelian import (
+        AR_OEDIPUS_MYTHOS, AR_STEP_JOCASTA,
+    )
+    assert AR_OEDIPUS_MYTHOS.anagnorisis_chain == (AR_STEP_JOCASTA,)
+    assert AR_STEP_JOCASTA.event_id == "E_jocasta_realizes"
+    assert AR_STEP_JOCASTA.character_ref_id == "ar_jocasta"
+    assert AR_STEP_JOCASTA.precipitates_main is True
+
+
+def test_oedipus_aristotelian_binding_is_separated():
+    from story_engine.encodings.oedipus_aristotelian import (
+        AR_OEDIPUS_MYTHOS,
+    )
+    assert (AR_OEDIPUS_MYTHOS.peripeteia_anagnorisis_binding
+            == BINDING_SEPARATED)
+    # Default bound preserved (sketch says default is sufficient).
+    assert AR_OEDIPUS_MYTHOS.peripeteia_anagnorisis_adjacency_bound == 3
+
+
+def test_oedipus_aristotelian_still_verifies_clean_with_sketch02():
+    """The Oedipus encoding under sketch-02 (with chain + binding
+    authored) still verifies with zero observations against the
+    real FABULA."""
+    from story_engine.encodings.oedipus import FABULA
+    from story_engine.encodings.oedipus_aristotelian import (
+        AR_OEDIPUS_MYTHOS,
+    )
+    obs = verify(AR_OEDIPUS_MYTHOS, substrate_events=FABULA)
+    assert obs == [], (
+        f"Expected zero observations; got {len(obs)}:\n"
+        + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
+                    for o in obs)
+    )
+
+
+def test_rashomon_contest_relation_authored():
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_CONTEST, AR_RASHOMON_RELATIONS,
+    )
+    assert AR_RASHOMON_RELATIONS == (AR_RASHOMON_CONTEST,)
+    assert AR_RASHOMON_CONTEST.kind == RELATION_CONTESTS
+    assert len(AR_RASHOMON_CONTEST.mythoi_ids) == 4
+    # The six canonical-floor events.
+    assert len(AR_RASHOMON_CONTEST.over_event_ids) == 6
+
+
+def test_rashomon_aristotelian_verifies_clean_with_relations():
+    """The Rashomon encoding under sketch-02 verifies all four
+    mythoi with zero observations when the relation tuple is
+    threaded through (exercises A7.6 / A7.9)."""
+    from story_engine.encodings.rashomon import EVENTS_ALL
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_MYTHOI, AR_RASHOMON_RELATIONS,
+    )
+    for mythos in AR_RASHOMON_MYTHOI:
+        obs = verify(mythos, substrate_events=EVENTS_ALL,
+                     mythoi=AR_RASHOMON_MYTHOI,
+                     relations=AR_RASHOMON_RELATIONS)
+        assert obs == [], (
+            f"{mythos.id}: expected zero observations; got "
+            f"{len(obs)}:\n"
+            + "\n".join(f"    [{o.severity}] {o.code}: {o.message}"
+                        for o in obs)
+        )
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -664,6 +1159,44 @@ TESTS = [
     test_rashomon_aristotelian_mythoi_count_and_ids,
     test_rashomon_aristotelian_shared_canonical_floor_beginning,
     test_rashomon_aristotelian_each_testimony_has_own_peripeteia,
+    # Sketch-02
+    test_armythos_relation_defaults,
+    test_aranagnorisis_step_defaults,
+    test_armythos_sketch02_field_defaults,
+    test_canonical_relation_kinds_contents,
+    test_valid_peripeteia_anagnorisis_bindings_contents,
+    test_relation_noncanonical_kind_emits_noted,
+    test_relation_too_few_mythoi_flags,
+    test_relation_unresolved_mythos_id_flags,
+    test_relation_mythos_resolution_skipped_when_mythoi_empty,
+    test_relation_contests_event_absent_flags,
+    test_relation_contests_passes_when_events_shared,
+    test_relation_contains_not_superset_flags,
+    test_relation_contains_strict_superset_passes,
+    test_relation_event_ref_unresolved_flags,
+    test_relation_event_ref_skipped_without_substrate,
+    test_anagnorisis_chain_empty_by_default_clean,
+    test_anagnorisis_chain_event_not_central_flags,
+    test_anagnorisis_chain_step_equals_main_flags,
+    test_anagnorisis_chain_precipitates_without_main_flags,
+    test_anagnorisis_chain_precipitates_ordering_flags,
+    test_anagnorisis_chain_precipitates_ordering_passes_when_earlier,
+    test_anagnorisis_chain_character_unresolved_flags,
+    test_anagnorisis_chain_character_check_skips_without_characters,
+    test_binding_none_no_check,
+    test_binding_coincident_passes_when_events_match,
+    test_binding_coincident_inconsistent_when_events_differ,
+    test_binding_adjacent_passes_within_bound,
+    test_binding_separated_passes_beyond_bound,
+    test_binding_invalid_value_flags,
+    test_binding_requires_both_event_ids,
+    test_binding_event_unresolved_flags,
+    test_verify_backward_compat_no_kwargs,
+    test_oedipus_aristotelian_chain_authored,
+    test_oedipus_aristotelian_binding_is_separated,
+    test_oedipus_aristotelian_still_verifies_clean_with_sketch02,
+    test_rashomon_contest_relation_authored,
+    test_rashomon_aristotelian_verifies_clean_with_relations,
 ]
 
 

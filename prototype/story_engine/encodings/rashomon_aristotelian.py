@@ -20,11 +20,18 @@ case) are NOT covered by this file and stay as authorial content:
 
 - Meta-anagnorisis (priest / audience realizing no testimony is
   fully true). Reader-level, not character-level; outside
-  Aristotle's vocabulary.
-- Contested relations between mythoi (the four testimonies contest
-  the same canonical-floor events). Sketch-02 extension
-  (ArMythosRelation) if a forcing function appears; this file
-  omits it.
+  Aristotle's vocabulary. Sketch-02 explicitly rejects widening the
+  dialect with ArAnagnorisisLevel — that is a sketch-01 scope
+  amendment, not a sketch-02 extension.
+
+Contested relations between mythoi (the four testimonies contest the
+same canonical-floor events) ARE covered as of sketch-02: see
+`AR_RASHOMON_CONTEST` below — an ArMythosRelation(kind="contests")
+naming the six canonical-floor events the four testimonies arrange
+toward different pathos. The aristotelian-probe-sketch-01 Rashomon
+run surfaced this as `relations_wanted` (P5), and sketch-02 A10
+lands the record. Pass AR_RASHOMON_RELATIONS to `verify()` alongside
+substrate_events + mythoi to exercise A7.6 / A7.9 checks.
 
 Running:
     cd prototype
@@ -47,11 +54,13 @@ from __future__ import annotations
 from story_engine.core.aristotelian import (
     ArCharacter,
     ArMythos,
+    ArMythosRelation,
     ArPhase,
     PHASE_BEGINNING,
     PHASE_END,
     PHASE_MIDDLE,
     PLOT_COMPLEX,
+    RELATION_CONTESTS,
 )
 
 
@@ -454,3 +463,46 @@ AR_RASHOMON_MYTHOI: tuple = (
     AR_RASHOMON_SAMURAI,
     AR_RASHOMON_WOODCUTTER,
 )
+
+
+# ============================================================================
+# Relations — A10 (sketch-02)
+# ============================================================================
+#
+# The four testimonies contest the same six canonical-floor events.
+# Each testimony's beginning phase covers E_travel → E_intercourse as
+# an undisputed lead-up; the contest is over how these incidents are
+# *arranged* toward pathos (seduction vs. assault; noble combat vs.
+# cowardly scuffle; honorable refusal vs. coerced complicity). The
+# Aristotelian probe's `relations_wanted` output surfaced this as
+# `ArMythosRelation` and sketch-02 A10 lands it.
+
+AR_RASHOMON_CONTEST = ArMythosRelation(
+    id="arel_rashomon_contest",
+    kind=RELATION_CONTESTS,
+    mythoi_ids=(
+        "ar_rashomon_bandit",
+        "ar_rashomon_wife",
+        "ar_rashomon_samurai",
+        "ar_rashomon_woodcutter",
+    ),
+    over_event_ids=_CANONICAL_FLOOR_BEGINNING_SCOPE,
+    annotation=(
+        "The four testimonies of Rashomon render the same six "
+        "canonical-floor events as the beginning of a distinct "
+        "mythos. The contest is not over whether the events "
+        "occurred — all four agree they did — but over how they "
+        "are arranged toward pathos: Tajōmaru frames the "
+        "intercourse as seduction ending in consent; the wife "
+        "frames it as assault; the samurai (via medium) frames "
+        "his wife as betraying him; the woodcutter (witness but "
+        "complicit) frames all parties as diminished. "
+        "Aristotle's framework is mythos-singular; this relation "
+        "records the dialect-level acknowledgment that Rashomon's "
+        "catharsis depends on the friction between competing "
+        "arrangements of shared incidents."
+    ),
+)
+
+
+AR_RASHOMON_RELATIONS: tuple = (AR_RASHOMON_CONTEST,)

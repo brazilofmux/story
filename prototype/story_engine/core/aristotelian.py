@@ -56,6 +56,31 @@ PLOT_COMPLEX = "complex"
 
 VALID_PLOT_KINDS: frozenset = frozenset({PLOT_SIMPLE, PLOT_COMPLEX})
 
+# A10 — ArMythosRelation kind vocabulary (canonical-plus-open).
+# Non-canonical kinds are admitted but flagged at SEVERITY_NOTED per
+# A7.6 check 1; canonical values match the sketch-02 worked cases.
+
+RELATION_CONTESTS = "contests"
+RELATION_PARALLEL = "parallel"
+RELATION_CONTAINS = "contains"
+
+CANONICAL_RELATION_KINDS: frozenset = frozenset({
+    RELATION_CONTESTS, RELATION_PARALLEL, RELATION_CONTAINS,
+})
+
+# A12 — peripeteia_anagnorisis_binding vocabulary. The None value is
+# admitted at the field level (Optional default); the set below lists
+# the non-None values A7.8 recognizes. A non-None value outside this
+# set is flagged `peripeteia_anagnorisis_binding_invalid_value`.
+
+BINDING_COINCIDENT = "coincident"
+BINDING_ADJACENT = "adjacent"
+BINDING_SEPARATED = "separated"
+
+VALID_PERIPETEIA_ANAGNORISIS_BINDINGS: frozenset = frozenset({
+    BINDING_COINCIDENT, BINDING_ADJACENT, BINDING_SEPARATED,
+})
+
 SEVERITY_NOTED = "noted"
 SEVERITY_ADVISES_REVIEW = "advises-review"
 
@@ -104,6 +129,33 @@ class ArCharacter:
     character_ref_id: Optional[str] = None
     hamartia_text: Optional[str] = None
     is_tragic_hero: bool = False
+
+
+@dataclass(frozen=True)
+class ArAnagnorisisStep:
+    """A11 (sketch-02). One staggered character-level recognition
+    within a mythos, supplementary to `ArMythos.anagnorisis_event_id`.
+
+    `event_id` names the substrate event at which the recognition
+    lands. `character_ref_id` identifies who realizes — required per
+    A11, which keeps the step strictly character-level (audience-
+    level recognition is sketch-01 A4 / A8 scope-out).
+
+    `precipitates_main=True` declares that this step causes the
+    mythos's main anagnorisis event. When set, A7.7 invariant 2
+    enforces that the step's τ_s strictly precedes the main
+    anagnorisis event's τ_s (when substrate events are threaded
+    through `verify`).
+
+    A step's `event_id` must be in the enclosing mythos's
+    `central_event_ids` (A7.7 invariant 1) and must not equal
+    `anagnorisis_event_id` (A7.7 invariant 3).
+    """
+    id: str
+    event_id: str
+    character_ref_id: str
+    precipitates_main: bool = False
+    annotation: str = ""
 
 
 @dataclass(frozen=True)
@@ -160,6 +212,50 @@ class ArMythos:
     unity_of_place_max_locations: int = 1
     aims_at_catharsis: bool = True
     characters: Tuple[ArCharacter, ...] = ()
+    # A11 — staggered character-level recognitions supplementing the
+    # singular `anagnorisis_event_id`. Empty by default; pre-sketch-02
+    # encodings carry no chain. A7.7 enforces A11 invariants 1–3 + 5.
+    anagnorisis_chain: Tuple[ArAnagnorisisStep, ...] = ()
+    # A12 — typed structural relation between peripeteia and
+    # anagnorisis events. None default admits pre-sketch-02 encodings
+    # unchanged; non-None values are checked by A7.8 against the
+    # events' actual τ_s distance using `peripeteia_anagnorisis_
+    # adjacency_bound`.
+    peripeteia_anagnorisis_binding: Optional[str] = None
+    peripeteia_anagnorisis_adjacency_bound: int = 3
+
+
+# ============================================================================
+# Mythos relation (A10 — sketch-02)
+# ============================================================================
+
+
+@dataclass(frozen=True)
+class ArMythosRelation:
+    """A10 (sketch-02). Structural relation between two or more
+    ArMythos records. The Rashomon four-testimony contest is the
+    canonical case.
+
+    `kind` is canonical-plus-open. Canonical values:
+      - "contests"  — mythoi differ structurally over shared events.
+      - "parallel"  — mythoi run alongside without contesting.
+      - "contains"  — first mythos envelopes each subsequent one.
+    Non-canonical values are admitted at severity=NOTED (A7.6 check 1).
+
+    `mythoi_ids` lists the participating mythos ids; ≥ 2 required
+    (A7.6 check 2). For `contains`, the first id is the container;
+    order is otherwise unspecified.
+
+    `over_event_ids` names substrate events at stake — typically the
+    canonical-floor events that appear in every participating mythos's
+    `central_event_ids` for `kind="contests"`. Optional for `parallel`.
+    A7.6 check 3 / 4 + A7.9 enforce the consistency rules.
+    """
+    id: str
+    kind: str
+    mythoi_ids: Tuple[str, ...]
+    over_event_ids: Tuple[str, ...] = ()
+    annotation: str = ""
 
 
 # ============================================================================
@@ -487,6 +583,314 @@ def _check_hamartia_participation(
 
 
 # ============================================================================
+# Sketch-02 checks — A7.6 through A7.9
+# ============================================================================
+
+
+def _check_anagnorisis_chain(
+    mythos: ArMythos,
+    events_by_id: dict,
+) -> list:
+    """A7.7. Enforce A11 invariants 1–3 and check 5.
+
+    1. step.event_id ∈ mythos.central_event_ids.
+    2. if step.precipitates_main: main anagnorisis_event_id non-None
+       AND step.τ_s < main.τ_s (substrate-threaded only).
+    3. step.event_id ≠ mythos.anagnorisis_event_id.
+    5. step.character_ref_id resolves to an ArCharacter in the
+       mythos's characters tuple (skip if no characters authored).
+    """
+    out: list = []
+    central_set = set(mythos.central_event_ids)
+    character_ids = {c.id for c in mythos.characters}
+
+    for step in mythos.anagnorisis_chain:
+        # Invariant 1
+        if step.event_id not in central_set:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="anagnorisis_step_event_not_central",
+                target_id=step.id,
+                message=(f"ArAnagnorisisStep {step.id!r} names "
+                         f"event_id={step.event_id!r} which is not in "
+                         f"mythos {mythos.id!r}'s central_event_ids; "
+                         f"A11 invariant 1 requires it."),
+            ))
+        # Invariant 3
+        if (mythos.anagnorisis_event_id is not None
+                and step.event_id == mythos.anagnorisis_event_id):
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="anagnorisis_step_equals_main",
+                target_id=step.id,
+                message=(f"ArAnagnorisisStep {step.id!r} names "
+                         f"event_id={step.event_id!r} which equals "
+                         f"mythos {mythos.id!r}'s anagnorisis_event_id; "
+                         f"A11 invariant 3 reserves the main event "
+                         f"for the singular anagnorisis_event_id."),
+            ))
+        # Invariant 2
+        if step.precipitates_main:
+            if mythos.anagnorisis_event_id is None:
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="anagnorisis_step_precipitates_without_main",
+                    target_id=step.id,
+                    message=(f"ArAnagnorisisStep {step.id!r} declares "
+                             f"precipitates_main=True but mythos "
+                             f"{mythos.id!r} has no "
+                             f"anagnorisis_event_id; A11 invariant 2 "
+                             f"requires a main recognition to "
+                             f"precipitate."),
+                ))
+            elif events_by_id:
+                step_event = events_by_id.get(step.event_id)
+                main_event = events_by_id.get(mythos.anagnorisis_event_id)
+                if (step_event is not None
+                        and main_event is not None
+                        and step_event.τ_s >= main_event.τ_s):
+                    out.append(ArObservation(
+                        severity=SEVERITY_ADVISES_REVIEW,
+                        code="anagnorisis_step_precipitates_ordering",
+                        target_id=step.id,
+                        message=(f"ArAnagnorisisStep {step.id!r} "
+                                 f"declares precipitates_main=True but "
+                                 f"its τ_s ({step_event.τ_s}) is not "
+                                 f"strictly less than main "
+                                 f"anagnorisis τ_s ({main_event.τ_s}); "
+                                 f"A11 invariant 2 requires strict "
+                                 f"precedence."),
+                    ))
+        # Check 5 — character ref resolution (only if characters
+        # authored on the mythos).
+        if character_ids and step.character_ref_id not in character_ids:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="anagnorisis_step_character_unresolved",
+                target_id=step.id,
+                message=(f"ArAnagnorisisStep {step.id!r} names "
+                         f"character_ref_id={step.character_ref_id!r} "
+                         f"which does not match any ArCharacter id in "
+                         f"mythos {mythos.id!r}'s characters tuple."),
+            ))
+    return out
+
+
+def _check_peripeteia_anagnorisis_binding(
+    mythos: ArMythos,
+    events_by_id: dict,
+) -> list:
+    """A7.8. Consistency check for A12's typed binding.
+
+    Runs only when peripeteia_anagnorisis_binding is non-None.
+    Requires both peripeteia_event_id and anagnorisis_event_id
+    non-None, both resolving to substrate events, and the declared
+    binding consistent with their τ_s distance.
+    """
+    binding = mythos.peripeteia_anagnorisis_binding
+    if binding is None:
+        return []
+
+    if binding not in VALID_PERIPETEIA_ANAGNORISIS_BINDINGS:
+        return [ArObservation(
+            severity=SEVERITY_ADVISES_REVIEW,
+            code="peripeteia_anagnorisis_binding_invalid_value",
+            target_id=mythos.id,
+            message=(f"ArMythos {mythos.id!r} declares "
+                     f"peripeteia_anagnorisis_binding={binding!r} "
+                     f"which is not in "
+                     f"{sorted(VALID_PERIPETEIA_ANAGNORISIS_BINDINGS)}."),
+        )]
+
+    if (mythos.peripeteia_event_id is None
+            or mythos.anagnorisis_event_id is None):
+        return [ArObservation(
+            severity=SEVERITY_ADVISES_REVIEW,
+            code="peripeteia_anagnorisis_binding_inconsistent",
+            target_id=mythos.id,
+            message=(f"ArMythos {mythos.id!r} declares "
+                     f"peripeteia_anagnorisis_binding={binding!r} but "
+                     f"one of peripeteia_event_id / "
+                     f"anagnorisis_event_id is None; A12 requires "
+                     f"both when a binding is declared."),
+        )]
+
+    if not events_by_id:
+        return []
+
+    p_event = events_by_id.get(mythos.peripeteia_event_id)
+    a_event = events_by_id.get(mythos.anagnorisis_event_id)
+    if p_event is None or a_event is None:
+        return [ArObservation(
+            severity=SEVERITY_ADVISES_REVIEW,
+            code="peripeteia_anagnorisis_binding_event_unresolved",
+            target_id=mythos.id,
+            message=(f"ArMythos {mythos.id!r} declares "
+                     f"peripeteia_anagnorisis_binding={binding!r} but "
+                     f"one of peripeteia_event_id "
+                     f"({mythos.peripeteia_event_id!r}) or "
+                     f"anagnorisis_event_id "
+                     f"({mythos.anagnorisis_event_id!r}) does not "
+                     f"resolve in substrate events."),
+        )]
+
+    same_event = mythos.peripeteia_event_id == mythos.anagnorisis_event_id
+    distance = abs(p_event.τ_s - a_event.τ_s)
+    bound = mythos.peripeteia_anagnorisis_adjacency_bound
+
+    if binding == BINDING_COINCIDENT:
+        consistent = same_event
+        expected = "peripeteia_event_id == anagnorisis_event_id"
+    elif binding == BINDING_ADJACENT:
+        consistent = (not same_event) and distance <= bound
+        expected = (f"events distinct and |τ_s distance| ≤ "
+                    f"{bound}")
+    else:  # BINDING_SEPARATED
+        consistent = distance > bound
+        expected = f"|τ_s distance| > {bound}"
+
+    if not consistent:
+        return [ArObservation(
+            severity=SEVERITY_ADVISES_REVIEW,
+            code="peripeteia_anagnorisis_binding_inconsistent",
+            target_id=mythos.id,
+            message=(f"ArMythos {mythos.id!r} declares "
+                     f"peripeteia_anagnorisis_binding={binding!r} but "
+                     f"the events' actual τ_s facts "
+                     f"(peripeteia={p_event.τ_s}, "
+                     f"anagnorisis={a_event.τ_s}, "
+                     f"same_event={same_event}) do not satisfy "
+                     f"{expected!r}."),
+        )]
+    return []
+
+
+def _check_mythos_relations(
+    relations: tuple,
+    mythoi: tuple,
+) -> list:
+    """A7.6. Structural integrity for ArMythosRelation records.
+
+    1. kind in CANONICAL_RELATION_KINDS — else severity=NOTED.
+    2. len(mythoi_ids) ≥ 2; each id resolves against `mythoi` (if
+       `mythoi` is threaded through — skip resolution when empty).
+    3. kind="contests": each over_event_ids event appears in every
+       participating mythos's central_event_ids.
+    4. kind="contains": first mythos's central_event_ids is a strict
+       superset of every subsequent participating mythos's.
+    """
+    out: list = []
+    mythoi_by_id = {m.id: m for m in mythoi}
+
+    for rel in relations:
+        # Check 1 — canonical-plus-open
+        if rel.kind not in CANONICAL_RELATION_KINDS:
+            out.append(ArObservation(
+                severity=SEVERITY_NOTED,
+                code="mythos_relation_kind_noncanonical",
+                target_id=rel.id,
+                message=(f"ArMythosRelation {rel.id!r} declares "
+                         f"kind={rel.kind!r} which is not in "
+                         f"{sorted(CANONICAL_RELATION_KINDS)}; admitted "
+                         f"under canonical-plus-open discipline."),
+            ))
+
+        # Check 2a — cardinality
+        if len(rel.mythoi_ids) < 2:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="mythos_relation_mythoi_too_few",
+                target_id=rel.id,
+                message=(f"ArMythosRelation {rel.id!r} lists "
+                         f"{len(rel.mythoi_ids)} mythos id(s); A10 "
+                         f"requires at least 2."),
+            ))
+
+        # Check 2b — resolution (only if caller threaded mythoi)
+        participating: list = []
+        unresolved: list = []
+        for mid in rel.mythoi_ids:
+            if mid in mythoi_by_id:
+                participating.append(mythoi_by_id[mid])
+            else:
+                unresolved.append(mid)
+        if mythoi and unresolved:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="mythos_relation_mythoi_unresolved",
+                target_id=rel.id,
+                message=(f"ArMythosRelation {rel.id!r} references "
+                         f"mythos id(s) {sorted(unresolved)!r} which do "
+                         f"not resolve against the mythoi collection."),
+            ))
+
+        # Check 3 — contests: over_event_ids coverage
+        if (rel.kind == RELATION_CONTESTS
+                and participating
+                and rel.over_event_ids):
+            for eid in rel.over_event_ids:
+                for m in participating:
+                    if eid not in m.central_event_ids:
+                        out.append(ArObservation(
+                            severity=SEVERITY_ADVISES_REVIEW,
+                            code="mythos_relation_contests_event_absent",
+                            target_id=rel.id,
+                            message=(f"ArMythosRelation {rel.id!r} "
+                                     f"(kind='contests') names "
+                                     f"over_event_id {eid!r} which is "
+                                     f"not in mythos {m.id!r}'s "
+                                     f"central_event_ids."),
+                        ))
+
+        # Check 4 — contains: first mythos strict-superset of each rest
+        if rel.kind == RELATION_CONTAINS and len(participating) >= 2:
+            outer = participating[0]
+            outer_set = set(outer.central_event_ids)
+            for inner in participating[1:]:
+                inner_set = set(inner.central_event_ids)
+                if not (inner_set < outer_set):
+                    out.append(ArObservation(
+                        severity=SEVERITY_ADVISES_REVIEW,
+                        code="mythos_relation_contains_not_superset",
+                        target_id=rel.id,
+                        message=(f"ArMythosRelation {rel.id!r} "
+                                 f"(kind='contains') expects outer "
+                                 f"mythos {outer.id!r} to be a strict "
+                                 f"superset of inner {inner.id!r}; "
+                                 f"events in inner but not outer: "
+                                 f"{sorted(inner_set - outer_set)!r}."),
+                    ))
+    return out
+
+
+def _check_relation_event_refs(
+    relations: tuple,
+    events_by_id: dict,
+) -> list:
+    """A7.9. Every event id in a relation's over_event_ids must
+    resolve in substrate events when threaded. Skips when caller
+    does not pass substrate events (consistent with A7 check 4).
+    """
+    if not events_by_id:
+        return []
+    out: list = []
+    for rel in relations:
+        seen_missing = set()
+        for eid in rel.over_event_ids:
+            if eid not in events_by_id and eid not in seen_missing:
+                seen_missing.add(eid)
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="mythos_relation_event_ref_unresolved",
+                    target_id=rel.id,
+                    message=(f"ArMythosRelation {rel.id!r} references "
+                             f"over_event_id {eid!r} which is not in "
+                             f"the substrate events collection."),
+                ))
+    return out
+
+
+# ============================================================================
 # Public verify — A7 orchestrator
 # ============================================================================
 
@@ -495,15 +899,22 @@ def verify(
     mythos: ArMythos,
     *,
     substrate_events: tuple = (),
+    mythoi: tuple = (),
+    relations: tuple = (),
 ) -> list:
-    """Run A7 checks 1-5 on a single mythos.
+    """Run A7 checks 1-5 + A7.6-A7.9 on a single mythos.
 
     `substrate_events` is the encoding's Event records. Empty by
     default — event-ref integrity, unity-of-time, unity-of-place,
-    and hamartia-participation checks skip when no events are
-    threaded through (useful for tests that exercise the dialect
-    alone). Authors running the verifier for real pass their
-    encoding's FABULA or equivalent.
+    hamartia-participation, and A12 binding checks skip when no
+    events are threaded through. Authors running the verifier for
+    real pass their encoding's FABULA or equivalent.
+
+    `mythoi` is the encoding's full ArMythos tuple (used by A7.6
+    for mythos-id resolution on relations). `relations` is the
+    encoding's ArMythosRelation tuple. Both default empty; sketch-01
+    encodings that do not author A10 relations call `verify` with
+    the sketch-01 signature unchanged and see sketch-01 behavior.
 
     Returns a list of ArObservation records. Per A7, none is an
     error — all are advisory. An encoding with no findings is
@@ -511,8 +922,11 @@ def verify(
     encoding with findings is still usable, with the observations
     flowing to higher-layer walker / review machinery.
 
-    Multi-mythos encodings call `verify` per-mythos (see
-    aristotelian-sketch-01 stress case — Rashomon).
+    Multi-mythos encodings call `verify` per-mythos. A10 relations
+    are evaluated once per `verify` call — a relation-check finding
+    surfaces on every call of every mythos in the relation; callers
+    that want dedupe should invoke the `_check_mythos_relations` +
+    `_check_relation_event_refs` helpers directly at encoding scope.
     """
     events_by_id = {e.id: e for e in substrate_events}
 
@@ -524,6 +938,10 @@ def verify(
     out.extend(_check_unity_of_time(mythos, events_by_id))
     out.extend(_check_unity_of_place(mythos, events_by_id))
     out.extend(_check_hamartia_participation(mythos, events_by_id))
+    out.extend(_check_anagnorisis_chain(mythos, events_by_id))
+    out.extend(_check_peripeteia_anagnorisis_binding(mythos, events_by_id))
+    out.extend(_check_mythos_relations(relations, mythoi))
+    out.extend(_check_relation_event_refs(relations, events_by_id))
     return out
 
 

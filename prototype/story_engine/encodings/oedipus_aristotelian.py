@@ -14,6 +14,21 @@ A7 self-verifier with unity-of-time / unity-of-place / event-ref
 / hamartia-participation checks should import `FABULA` from
 `oedipus.py` and pass it to `verify()`.
 
+Sketch-02 extensions authored:
+
+- A11 (ArAnagnorisisStep): `AR_STEP_JOCASTA` records Jocasta's
+  private recognition at `E_jocasta_realizes` (τ_s=9), four
+  substrate steps before Oedipus's own recognition at
+  `E_oedipus_anagnorisis` (τ_s=13). `precipitates_main=True`:
+  Jocasta's realization pressures Oedipus's. The singular
+  `anagnorisis_event_id` remains Oedipus's; the chain names
+  Jocasta's as the staggered earlier.
+- A12 (peripeteia_anagnorisis_binding): `"separated"` — the
+  peripeteia fires at `E_messenger_adoption_reveal` (τ_s=8); the
+  anagnorisis lands five steps later at τ_s=13. The typed
+  declaration replaces the earlier prose claim of coincidence;
+  A7.8 verifies the τ_s distance is consistent with the binding.
+
 Running:
     cd prototype
     python3 -c "
@@ -32,9 +47,11 @@ Running:
 from __future__ import annotations
 
 from story_engine.core.aristotelian import (
+    ArAnagnorisisStep,
     ArCharacter,
     ArMythos,
     ArPhase,
+    BINDING_SEPARATED,
     PHASE_BEGINNING,
     PHASE_END,
     PHASE_MIDDLE,
@@ -141,6 +158,36 @@ AR_JOCASTA = ArCharacter(
 
 
 # ============================================================================
+# Anagnorisis chain — A11 (sketch-02)
+# ============================================================================
+#
+# Jocasta realizes at E_jocasta_realizes (τ_s=9), four substrate
+# steps before Oedipus's own recognition at E_oedipus_anagnorisis
+# (τ_s=13). Pre-sketch-02 the encoding placed her realization in
+# the middle phase as a workaround for the singular
+# anagnorisis_event_id; sketch-02 A11 lets the chain carry the
+# staggered earlier recognition without retouching the main slot.
+
+AR_STEP_JOCASTA = ArAnagnorisisStep(
+    id="arstep_jocasta_realizes",
+    event_id="E_jocasta_realizes",
+    character_ref_id="ar_jocasta",
+    precipitates_main=True,
+    annotation=(
+        "Jocasta realizes before Oedipus does. Her recognition "
+        "precipitates the pressure toward his — she begs him to "
+        "stop the investigation; her suicide follows. In the "
+        "play's fabula she leaves the stage; in the mythos's "
+        "structure she has triggered the recognition Oedipus will "
+        "reach four τ_s-steps later at the shepherd's testimony. "
+        "The dialect's singular anagnorisis_event_id names "
+        "Oedipus's as the mythos's main recognition; this step "
+        "names Jocasta's as the precipitating earlier."
+    ),
+)
+
+
+# ============================================================================
 # Mythos — A1
 # ============================================================================
 
@@ -197,4 +244,12 @@ AR_OEDIPUS_MYTHOS = ArMythos(
     asserts_unity_of_place=False,
     aims_at_catharsis=True,
     characters=(AR_OEDIPUS, AR_JOCASTA),
+    # A11 — staggered recognition (Jocasta precedes + precipitates
+    # Oedipus's). See AR_STEP_JOCASTA above.
+    anagnorisis_chain=(AR_STEP_JOCASTA,),
+    # A12 — peripeteia (E_messenger_adoption_reveal, τ_s=8) and
+    # anagnorisis (E_oedipus_anagnorisis, τ_s=13) are separated by
+    # five substrate steps; default adjacency_bound=3 is sufficient
+    # to classify this as "separated" under A7.8.
+    peripeteia_anagnorisis_binding=BINDING_SEPARATED,
 )
