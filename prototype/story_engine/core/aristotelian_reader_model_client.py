@@ -341,6 +341,19 @@ extension the dialect *could* grow is a forcing function, not \
 drift. "ArMythosRelation" is a fair thing to ask for; "DSP_limit" \
 is drift.
 
+Note on sketch-02: the dialect now ships `ArMythosRelation` \
+(kinds: 'contests' | 'parallel' | 'contains'), \
+`ArAnagnorisisStep` + `ArMythos.anagnorisis_chain` for staggered \
+character-level recognitions, and \
+`ArMythos.peripeteia_anagnorisis_binding` typing the reversal/ \
+recognition structural relation. If an encoding authors these, \
+they appear inline in the records section (or in a dedicated \
+ArMythosRelation records section). If an encoding does NOT \
+author them but they would help, flag them in \
+`relations_wanted`. If the dialect still lacks something you \
+wanted — e.g., a typed frame-mythos surface, or an audience-level \
+recognition modifier — flag that too.
+
 ## Your contract
 
 R1. Typed I/O only. You produce structured output matching the \
@@ -467,6 +480,17 @@ def _ar_character_to_dict(character: ArCharacter) -> dict:
     }
 
 
+def _ar_anagnorisis_step_to_dict(step) -> dict:
+    return {
+        "kind": "ArAnagnorisisStep",
+        "id": step.id,
+        "event_id": step.event_id,
+        "character_ref_id": step.character_ref_id,
+        "precipitates_main": step.precipitates_main,
+        "annotation": step.annotation,
+    }
+
+
 def _ar_mythos_to_dict(mythos: ArMythos) -> dict:
     return {
         "kind": "ArMythos",
@@ -487,6 +511,36 @@ def _ar_mythos_to_dict(mythos: ArMythos) -> dict:
         "aims_at_catharsis": mythos.aims_at_catharsis,
         "phases": [_ar_phase_to_dict(p) for p in mythos.phases],
         "characters": [_ar_character_to_dict(c) for c in mythos.characters],
+        # Sketch-02 A11 — staggered character-level recognitions
+        # (each step names a substrate event + character +
+        # precipitates_main flag + annotation prose).
+        "anagnorisis_chain": [
+            _ar_anagnorisis_step_to_dict(s)
+            for s in mythos.anagnorisis_chain
+        ],
+        # Sketch-02 A12 — typed structural relation between
+        # peripeteia and anagnorisis. None = no declaration;
+        # otherwise "coincident" | "adjacent" | "separated"
+        # (adjacency threshold per-mythos).
+        "peripeteia_anagnorisis_binding":
+            mythos.peripeteia_anagnorisis_binding,
+        "peripeteia_anagnorisis_adjacency_bound":
+            mythos.peripeteia_anagnorisis_adjacency_bound,
+    }
+
+
+def _ar_relation_to_dict(relation) -> dict:
+    """Render an ArMythosRelation (sketch-02 A10). Encoding-scope
+    record — a single relation may reference ≥ 2 ArMythos ids.
+    Kinds: 'contests' | 'parallel' | 'contains' (canonical-plus-
+    open)."""
+    return {
+        "kind": "ArMythosRelation",
+        "id": relation.id,
+        "relation_kind": relation.kind,
+        "mythoi_ids": list(relation.mythoi_ids),
+        "over_event_ids": list(relation.over_event_ids),
+        "annotation": relation.annotation,
     }
 
 
@@ -553,6 +607,16 @@ def _build_observations_section(observations: tuple) -> tuple:
         id_map[sid] = obs
         rendered.append(_ar_observation_to_dict(obs, sid))
     return json.dumps(rendered, indent=2, ensure_ascii=False), id_map
+
+
+def _build_relations_section(relations: tuple) -> Optional[str]:
+    """Render ArMythosRelation records (sketch-02 A10). Returns
+    None when no relations — the caller omits the whole section.
+    Parallel shape to the observations section."""
+    if not relations:
+        return None
+    payload = [_ar_relation_to_dict(r) for r in relations]
+    return json.dumps(payload, indent=2, ensure_ascii=False)
 
 
 def _build_substrate_section(substrate_events: list) -> Optional[str]:
@@ -648,16 +712,22 @@ def build_user_prompt(
     substrate_events: list,
     targets_to_review: list,
     observations_to_comment_on: list,
+    relations: tuple = (),
 ) -> tuple:
     """Public helper: assemble the full user message and the
     synthetic-id map for ArObservations. Returns (prompt, id_map).
 
     The id_map is needed at translation time to resolve the LLM's
     `target_observation_id` values back to ArObservation records.
-    Empty observations produce an empty id_map."""
+    Empty observations produce an empty id_map.
+
+    `relations` is the encoding's ArMythosRelation tuple (sketch-02
+    A10). Default empty; the relations section is omitted when the
+    tuple is empty."""
     records_section = _build_records_section(mythoi)
     observations_section, id_map = _build_observations_section(observations)
     substrate_section = _build_substrate_section(substrate_events)
+    relations_section = _build_relations_section(relations)
     task = _build_task_section(
         targets_to_review, observations_to_comment_on,
         has_observations=bool(observations),
@@ -671,7 +741,14 @@ def build_user_prompt(
         ("(Each ArMythos inlines its phases and characters. "
          "Prose fields under review: `action_summary` on each "
          "ArMythos; `annotation` on each ArPhase; `hamartia_text` "
-         "on each ArCharacter that carries one.)"),
+         "on each ArCharacter that carries one. Sketch-02 adds "
+         "two optional ArMythos fields — `anagnorisis_chain` "
+         "carrying ArAnagnorisisStep records for staggered "
+         "character-level recognitions, and "
+         "`peripeteia_anagnorisis_binding` typing the structural "
+         "relation between reversal and recognition. These are "
+         "rendered inline but are NOT reviewable prose fields in "
+         "this probe.)"),
         "",
         records_section,
         "",
@@ -685,6 +762,22 @@ def build_user_prompt(
         observations_section,
         "",
     ]
+    if relations_section is not None:
+        sections.extend([
+            "## ArMythosRelation records (sketch-02 A10)",
+            "",
+            ("(Encoding-scope records typing structural relations "
+             "between ArMythos records. Canonical kinds: "
+             "'contests' — mythoi differ structurally over shared "
+             "events; 'parallel' — mythoi run alongside without "
+             "contesting; 'contains' — one mythos envelopes "
+             "another. `over_event_ids` names substrate events at "
+             "stake. Rendered for context; not a reviewable prose "
+             "surface in this probe.)"),
+            "",
+            relations_section,
+            "",
+        ])
     if substrate_section is not None:
         sections.extend([
             "## Substrate context (grounding)",
@@ -870,6 +963,7 @@ def invoke_aristotelian_reader_model(
     current_τ_a: int,
     observations: tuple = (),
     substrate_events: Optional[list] = None,
+    relations: tuple = (),
     targets_to_review: Optional[list] = None,
     observations_to_comment_on: Optional[list] = None,
     anchor_τ_a: Optional[int] = None,
@@ -936,6 +1030,7 @@ def invoke_aristotelian_reader_model(
     user_prompt, id_map = build_user_prompt(
         mythoi, observations, substrate_events,
         targets_to_review, observations_to_comment_on,
+        relations=relations,
     )
 
     if dry_run:

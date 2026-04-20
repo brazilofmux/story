@@ -1,0 +1,152 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_oedipus"
+    ],
+    "observation_count": 0,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_oedipus",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The summary conflates two distinct events: it says 'explicit anagnorisis at the shepherd's testimony (τ_s=13),' but E_shepherd_testimony is at τ_s=12 (the denouement_event_id), while E_oedipus_anagnorisis is at τ_s=13 (the anagnorisis_event_id). The parenthetical timestamp correctly tags the recognition, but the phrasing 'at the shepherd's testimony' misattributes the anagnorisis to the wrong event. The shepherd's utterance precipitates the recognition; it is not the recognition itself. The rest of the summary — the two-beat peripeteia/anagnorisis structure, the 'separated' binding, the complex-plot framing — is faithful to the record's structural fields."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_oedipus_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies the beginning-phase events (all at negative τ_s) as antecedent action compressed into exposition. Its distinction between the Sophoclean play's in-medias-res opening and the Aristotelian mythos's inclusion of causally necessary antecedent events is well-grounded in Poetics 1450b–1451a and faithfully reflects the scope_event_ids."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_oedipus_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation uses δέσις ('binding') correctly for the complication phase and accurately describes each testimony as narrowing the identity — Tiresias's accusation, Jocasta's crossroads detail, the messenger's news, the adoption reveal, Jocasta's realization, and the shepherd's testimony all appear in scope. The claim that the middle ends with the shepherd's testimony is consistent with the denouement_event_id pointing to E_shepherd_testimony and the end-phase beginning at E_oedipus_anagnorisis."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_oedipus_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "'Unbinding of the ties' (λύσις) correctly names the denouement. The scope events — recognition, suicide, blinding, exile — follow from the recognition by necessity or probability, as the annotation claims. The Poetics 1452a citation, while approximate (the passage centers on peripeteia and anagnorisis arising from the arrangement of incidents), is within legitimate range of the text's argument about causally connected suffering."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_oedipus",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The text correctly frames hamartia as 'missing the mark' — ignorance of identity rather than moral vice — consistent with the standard post-Bremer reading of Poetics 1453a. The claim that Oedipus 'acts rightly on every piece of information he has' is supported by the substrate: each utterance event delivers information he cannot yet contextualize, and his investigative action drives the complication toward recognition. The distinction from the Bradleyan moral-flaw reading is a legitimate scholarly note, not an extra-dialectal drift."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_jocasta",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The 'parallel hamartia' framing — shared ignorance of identity — is grounded in the substrate: E_jocasta_realizes (τ_s=9) precedes E_oedipus_anagnorisis (τ_s=13), confirming the earlier recognition. The structural claim that her fall follows from rather than contributes to the peripeteia is borne out: E_messenger_adoption_reveal (τ_s=8) precedes E_jocasta_realizes (τ_s=9). The anagnorisis_chain's ArAnagnorisisStep corroborates the precipitating relationship the prose describes."
+    }
+  ],
+  "observation_commentaries": [],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The encoding is Aristotle's own paradigmatic example, and the vocabulary bore the full weight without strain. Mythos, peripeteia, anagnorisis, hamartia, complex plot, δέσις/λύσις (complication/denouement), unity of action, and catharsis were all deployed in their Poetics senses. The sketch-02 extensions — ArAnagnorisisStep for Jocasta's staggered recognition, peripeteia_anagnorisis_binding typed as 'separated' — cleanly captured the two-beat reversal-recognition structure that Aristotle himself singles out (Poetics 1452a). The only imprecision I flagged was a prose conflation of the shepherd's testimony (denouement) with Oedipus's recognition (anagnorisis) in the action_summary, which is a grounding error within the dialect, not a dialect-scope failure. At no point did I need to reach for extra-dialectal vocabulary to express my reading.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "Pathos as a typed structural element: the encoding records Jocasta's suicide and Oedipus's self-blinding as scope events in the end-phase, but the Aristotelian dialect surface has no typed 'pathos' (suffering) record parallel to ArAnagnorisisStep. Aristotle names pathos as the third part of the complex plot alongside peripeteia and anagnorisis (Poetics 1452b); the current dialect encodes it only implicitly via event presence in the end-phase.",
+      "Audience-level catharsis grounding: the mythos asserts aims_at_catharsis=true, but the dialect provides no structural mechanism for grounding pity and fear in the arrangement of incidents — e.g., which events are pity-bearing, which are fear-bearing, and how their sequence produces cathartic effect. The assertion stands as a flag rather than a demonstrable structural property."
+    ],
+    "relations_wanted": [
+      "ArPathos record type: a typed record parallel to ArAnagnorisisStep that identifies which events constitute the suffering (πάθος) and links them to the recognition and reversal, completing Aristotle's triad of complex-plot parts.",
+      "Catharsis grounding mechanism: a way to annotate which events carry pity (ἔλεος) and which carry fear (φόβος), so that aims_at_catharsis could be structurally verified rather than merely asserted."
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_oedipus",
+        "field": "action_summary",
+        "verdict": "needs-work",
+        "rationale": "The summary conflates two distinct events: it says 'explicit anagnorisis at the shepherd's testimony (τ_s=13),' but E_shepherd_testimony is at τ_s=12 (the denouement_event_id), while E_oedipus_anagnorisis is at τ_s=13 (the anagnorisis_event_id). The parenthetical timestamp correctly tags the recognition, but the phrasing 'at the shepherd's testimony' misattributes the anagnorisis to the wrong event. The shepherd's utterance precipitates the recognition; it is not the recognition itself. The rest of the summary — the two-beat peripeteia/anagnorisis structure, the 'separated' binding, the complex-plot framing — is faithful to the record's structural fields."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_oedipus_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the beginning-phase events (all at negative τ_s) as antecedent action compressed into exposition. Its distinction between the Sophoclean play's in-medias-res opening and the Aristotelian mythos's inclusion of causally necessary antecedent events is well-grounded in Poetics 1450b–1451a and faithfully reflects the scope_event_ids."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_oedipus_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation uses δέσις ('binding') correctly for the complication phase and accurately describes each testimony as narrowing the identity — Tiresias's accusation, Jocasta's crossroads detail, the messenger's news, the adoption reveal, Jocasta's realization, and the shepherd's testimony all appear in scope. The claim that the middle ends with the shepherd's testimony is consistent with the denouement_event_id pointing to E_shepherd_testimony and the end-phase beginning at E_oedipus_anagnorisis."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_oedipus_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "'Unbinding of the ties' (λύσις) correctly names the denouement. The scope events — recognition, suicide, blinding, exile — follow from the recognition by necessity or probability, as the annotation claims. The Poetics 1452a citation, while approximate (the passage centers on peripeteia and anagnorisis arising from the arrangement of incidents), is within legitimate range of the text's argument about causally connected suffering."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_oedipus",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The text correctly frames hamartia as 'missing the mark' — ignorance of identity rather than moral vice — consistent with the standard post-Bremer reading of Poetics 1453a. The claim that Oedipus 'acts rightly on every piece of information he has' is supported by the substrate: each utterance event delivers information he cannot yet contextualize, and his investigative action drives the complication toward recognition. The distinction from the Bradleyan moral-flaw reading is a legitimate scholarly note, not an extra-dialectal drift."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_jocasta",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The 'parallel hamartia' framing — shared ignorance of identity — is grounded in the substrate: E_jocasta_realizes (τ_s=9) precedes E_oedipus_anagnorisis (τ_s=13), confirming the earlier recognition. The structural claim that her fall follows from rather than contributes to the peripeteia is borne out: E_messenger_adoption_reveal (τ_s=8) precedes E_jocasta_realizes (τ_s=9). The anagnorisis_chain's ArAnagnorisisStep corroborates the precipitating relationship the prose describes."
+      }
+    ],
+    "observation_commentaries": [],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The encoding is Aristotle's own paradigmatic example, and the vocabulary bore the full weight without strain. Mythos, peripeteia, anagnorisis, hamartia, complex plot, δέσις/λύσις (complication/denouement), unity of action, and catharsis were all deployed in their Poetics senses. The sketch-02 extensions — ArAnagnorisisStep for Jocasta's staggered recognition, peripeteia_anagnorisis_binding typed as 'separated' — cleanly captured the two-beat reversal-recognition structure that Aristotle himself singles out (Poetics 1452a). The only imprecision I flagged was a prose conflation of the shepherd's testimony (denouement) with Oedipus's recognition (anagnorisis) in the action_summary, which is a grounding error within the dialect, not a dialect-scope failure. At no point did I need to reach for extra-dialectal vocabulary to express my reading.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "Pathos as a typed structural element: the encoding records Jocasta's suicide and Oedipus's self-blinding as scope events in the end-phase, but the Aristotelian dialect surface has no typed 'pathos' (suffering) record parallel to ArAnagnorisisStep. Aristotle names pathos as the third part of the complex plot alongside peripeteia and anagnorisis (Poetics 1452b); the current dialect encodes it only implicitly via event presence in the end-phase.",
+        "Audience-level catharsis grounding: the mythos asserts aims_at_catharsis=true, but the dialect provides no structural mechanism for grounding pity and fear in the arrangement of incidents — e.g., which events are pity-bearing, which are fear-bearing, and how their sequence produces cathartic effect. The assertion stands as a flag rather than a demonstrable structural property."
+      ],
+      "relations_wanted": [
+        "ArPathos record type: a typed record parallel to ArAnagnorisisStep that identifies which events constitute the suffering (πάθος) and links them to the recognition and reversal, completing Aristotle's triad of complex-plot parts.",
+        "Catharsis grounding mechanism: a way to annotate which events carry pity (ἔλεος) and which carry fear (φόβος), so that aims_at_catharsis could be structurally verified rather than merely asserted."
+      ]
+    }
+  }
+}

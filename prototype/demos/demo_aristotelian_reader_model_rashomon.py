@@ -57,6 +57,7 @@ from story_engine.core.aristotelian_reader_model_client import (
 from story_engine.encodings.rashomon import EVENTS_ALL
 from story_engine.encodings.rashomon_aristotelian import (
     AR_RASHOMON_MYTHOI,
+    AR_RASHOMON_RELATIONS,
 )
 
 
@@ -207,6 +208,8 @@ def main() -> int:
     print(f"  phases: {phase_count}")
     print(f"  characters: {character_count}")
     print(f"  observations: {len(observations)}")
+    print(f"  relations: {len(AR_RASHOMON_RELATIONS)} "
+          f"(sketch-02 A10)")
     print(f"  substrate events (for grounding): {len(EVENTS_ALL)}")
     print(f"  current_τ_a: {args.current_tau_a}")
     print(f"  anchor_τ_a: {args.anchor_tau_a or args.current_tau_a}")
@@ -219,6 +222,7 @@ def main() -> int:
         mythoi=AR_RASHOMON_MYTHOI,
         observations=observations,
         substrate_events=substrate_events,
+        relations=AR_RASHOMON_RELATIONS,
         current_τ_a=args.current_tau_a,
         anchor_τ_a=args.anchor_tau_a,
         effort=args.effort,
@@ -236,6 +240,7 @@ def main() -> int:
             "anchor_τ_a": args.anchor_tau_a or args.current_tau_a,
             "mythoi_ids": [m.id for m in AR_RASHOMON_MYTHOI],
             "observation_count": len(observations),
+            "relation_count": len(AR_RASHOMON_RELATIONS),
             "substrate_context_included": (
                 not args.no_substrate_context
             ),

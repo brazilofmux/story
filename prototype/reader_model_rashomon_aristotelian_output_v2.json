@@ -1,0 +1,400 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_rashomon_bandit",
+      "ar_rashomon_wife",
+      "ar_rashomon_samurai",
+      "ar_rashomon_woodcutter"
+    ],
+    "observation_count": 0,
+    "relation_count": 1,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_rashomon_bandit",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The summary is well-grounded in the central_event_ids: E_travel through E_husband_dead. The detail 'twenty-three strokes' is not carried in the substrate event E_t_duel (typed only as combat), but it enriches the arrangement without contradicting the substrate. The parenthetical '(which he frames as seduction ending in consent)' is an apt Aristotelian gloss on how the bandit's mythos arranges E_intercourse."
+    },
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_rashomon_wife",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The summary names 'his gaze of contempt' as the proximate cause of the killing, but this causal element has no corresponding substrate event between E_w_tajomaru_leaves (τ_s=7) and E_w_killing (τ_s=10). The phase annotation for ph_w_middle is self-aware about this gap ('authored in this encoding's prose rather than in the typed event model'), but the action_summary states it as grounded fact. Additionally, 'half-consciously, dissociating' interprets E_w_killing beyond what its substrate type (killing) carries."
+    },
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_rashomon_samurai",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The summary faithfully traces E_h_wife_requests_killing through E_h_suicide and E_husband_dead. Contextual embellishments ('speaking through a medium from beyond death,' 'in horror,' 'wife's dagger') are from the source testimony's character rather than structural claims; none contradicts the substrate. The arrangement clearly conveys the samurai's distinctive mythos."
+    },
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_rashomon_woodcutter",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The summary maps cleanly onto E_wc_wife_goads, E_wc_fight, E_wc_wife_flees, E_wc_theft, and E_husband_dead. 'Pearl-handled dagger' is a source-material detail not in the substrate (which types only 'dagger') but does not contradict it. The observation that the theft 'makes his own testimony suspect' is a structural inference grounded in the sequence of events."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_b_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly invokes the Aristotelian definition of beginning (Poetics 1450b: that which does not itself follow anything by causal necessity) and applies it to the six canonical-floor events. The note that the bandit's distinctive action proceeds from these events as 'seduction, not violation' appropriately flags how the arrangement differs from other mythoi sharing the same events."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_b_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation is grounded in E_t_wife_requests_killing and E_t_frees_husband. The framing of the wife's request as 'the woman deciding between her two men' is attributed to Tajōmaru's arrangement, not stated as fact. The description of unbinding as transforming the scene from captive-execution to fair combat accurately captures the causal function of E_t_frees_husband."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_b_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation covers E_t_duel and E_husband_dead concisely. The observation that 'the substrate records the death as a canonical-floor fact across all testimonies' is structurally sound — E_husband_dead appears in all four mythoi's central_event_ids."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_w_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation acknowledges the shared canonical-floor events and correctly notes that the same incidents 'take on a different character' in the wife's mythos — the arrangement aims toward pathos (a well-deployed Aristotelian term). It does not address the structural feature that E_intercourse is also this mythos's peripeteia_event_id, but that is a mythos-level structural matter, not the beginning phase's annotation burden."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_w_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation is admirably self-aware: it names the husband's gaze of contempt as the proximate cause of the wife's pathos while explicitly acknowledging this element is 'authored in this encoding's prose rather than in the typed event model.' This transparency about a substrate gap within the phase annotation itself is the correct Aristotelian-dialect move."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_w_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The observation that 'the wife's account does not contain a moment of recognition; her relationship to her own action is incomplete' is consistent with the mythos's null anagnorisis_event_id and empty anagnorisis_chain. The prose stays in Aristotelian vocabulary (recognition rather than insight or realization)."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_h_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "'The worst of the four' is a moral judgment, but it is defensible as a characterization of how this mythos arranges E_intercourse — the samurai's testimony reads consent into what the other testimonies frame as assault. The use of 'ethos that shapes the mythos he moves toward' is well-grounded Aristotelian usage: character disposition (ethos) determining the arrangement of incidents (mythos)."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_h_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation is well-grounded in its four scope events. The parenthetical '(an event unique to this testimony)' about E_h_tajomaru_refuses is a valuable structural observation supported by the substrate: no other mythos includes Tajōmaru refusing the wife's request. The description of the betrayal-and-abandonment sequence faithfully traces the causal chain."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_h_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly notes that this is the only mythos where the husband kills himself (E_h_suicide). The cross-reference to the woodcutter's dagger theft as creating a disputed cause-of-death across the four mythoi is structurally grounded and relevant to how E_husband_dead functions as a contested canonical-floor outcome."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_wc_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation accurately characterizes the woodcutter as the only testifier with no intimate relationship to E_intercourse, and his reading as 'the most external of the four.' This is consistent with the substrate: E_wc_wife_goads (τ_s=7) places the woodcutter as witness after the canonical-floor events, not as participant within them."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_wc_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation is grounded in E_wc_wife_goads and E_wc_fight. The claim that the woodcutter 'is the only testifier incentivized toward dishonoring all parties' is a structural inference supported by E_wc_theft — his complicity in the theft gives him reason to diminish the other parties' dignity. The dwelling on cowardice is aptly noted as arrangement toward a truth-claim."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_wc_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The annotation's treatment of E_wc_wife_flees, E_wc_theft, and E_husband_dead is well-grounded, and the observation that the theft is the pivot of the woodcutter's self-incrimination is structurally sound. However, the final sentence names 'the film's framing narrative (priest's crisis of faith)' — content entirely outside the substrate events and this mythos's scope_event_ids. Even though the annotation disclaims grounding, introducing ungrounded material into a phase annotation is a scope violation the annotation should not commit."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_b_tajomaru",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia is framed as ignorance — a classically Aristotelian reading (Poetics 1453a). 'Ignorance of how the world reads a rape' applies the concept at the level of the narrator constructing a self-aggrandizing mythos, which stretches hamartia toward a meta-narrative register. The prose is self-aware about this, using 'In Aristotelian terms' to signal the interpretive move."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_w_wife",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation is honest about the concept's strain: 'Aristotle's hamartia fits awkwardly: the wife's self-account is a tragedy of pathos more than error.' The tentative formulation ('if hamartia is present it is…') respects the dialect's limits rather than forcing an ill-fitting concept. 'A refusal that the telling itself is a repetition of' is a meta-narrative observation that strains Aristotelian vocabulary but is flagged as such."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_h_samurai",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "This is the most classically Aristotelian hamartia of the four: ignorance of character leading to catastrophe. 'He bound his honor to her fidelity and cannot recover' maps cleanly onto the Poetics' hamartia-as-error framework. The observation that 'ritual suicide is the only response his code admits' connects ethos to mythos in proper Aristotelian fashion."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_wc_woodcutter",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia — 'small complicity compounded by silence' — is grounded in E_wc_theft. The annotation is productively honest about the dialect strain: 'a self-inclusive tragedy whose hero is the account's own narrator, a frame Aristotelian theory does not natively admit.' Naming the limit is more useful than papering over it."
+    }
+  ],
+  "observation_commentaries": [],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The encoding and this review engaged Aristotelian vocabulary throughout: mythos as the soul of each testimony's tragedy; peripeteia marking the reversal point in each account; anagnorisis conspicuously absent across all four mythoi (a thematically significant null); hamartia applied to each testimony's tragic hero with honest acknowledgment of strain where the concept fits awkwardly; pathos and ethos deployed to distinguish the testimonies' arrangements of shared events; beginning/middle/end used per Poetics Chapter 7; complication and denouement structuring each middle-to-end transition; complex plot correctly asserted (peripeteia present even without anagnorisis). The ArMythosRelation 'contests' kind allowed the encoding to express inter-mythos friction without leaving the dialect. The only sustained strain was in the meta-narrative register — all four hamartia texts operate at the level of narrator constructing a self-serving mythos, which is a frame Aristotle's character-within-mythos vocabulary does not natively license. No other-dialect vocabulary was needed or reached for.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "Narrator-as-tragic-hero: the woodcutter's mythos (and to a lesser extent the other three) is a tragedy whose hero is also its narrator — a structure the Poetics does not address. The encoding acknowledges this in ar_wc_woodcutter's hamartia_text but the dialect has no typed surface for it.",
+      "Audience-level anagnorisis: the audience of all four testimonies achieves a recognition that no single character within any mythos achieves — the recognition that truth is irrecoverable across competing arrangements. Aristotelian anagnorisis is character-level (1452a) and cannot express this meta-recognition.",
+      "Un-typed causal elements between substrate events: the wife's mythos (ar_rashomon_wife) requires the husband's gaze of contempt as a proximate cause, but this element exists only in prose, not in the typed event model. The dialect has no mechanism to mark a prose-only causal element as structurally load-bearing within a phase.",
+      "Peripeteia in the beginning phase: the wife's mythos places its peripeteia_event_id (E_intercourse) within the beginning phase's scope_event_ids. Aristotelian vocabulary expects reversals to occur in the middle or at the transition to denouement; having a reversal in the beginning stretches the structural model, though it is defensible as encoding how the assault is both a canonical-floor event and the wife's distinctive reversal."
+    ],
+    "relations_wanted": [
+      "ArCanonicalFloor or ArSharedEventSet: a typed record collecting the subset of substrate events agreed upon across all contesting mythoi (E_travel through E_intercourse). Currently the canonical-floor status is expressed only in prose annotations; a typed surface would let the dialect formally distinguish contested from uncontested events within an ArMythosRelation.",
+      "ArAudienceAnagnorisis: an audience-level recognition modifier on ArMythosRelation, expressing that the friction between contesting mythoi produces a recognition in the audience that no single mythos's characters achieve. This would address the meta-anagnorisis scope limit.",
+      "ArProseOnlyCause: a typed marker within an ArPhase for causal elements that are structurally load-bearing but exist only in prose (not in the substrate event model). The wife's 'gaze of contempt' is the paradigm case."
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_rashomon_bandit",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The summary is well-grounded in the central_event_ids: E_travel through E_husband_dead. The detail 'twenty-three strokes' is not carried in the substrate event E_t_duel (typed only as combat), but it enriches the arrangement without contradicting the substrate. The parenthetical '(which he frames as seduction ending in consent)' is an apt Aristotelian gloss on how the bandit's mythos arranges E_intercourse."
+      },
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_rashomon_wife",
+        "field": "action_summary",
+        "verdict": "needs-work",
+        "rationale": "The summary names 'his gaze of contempt' as the proximate cause of the killing, but this causal element has no corresponding substrate event between E_w_tajomaru_leaves (τ_s=7) and E_w_killing (τ_s=10). The phase annotation for ph_w_middle is self-aware about this gap ('authored in this encoding's prose rather than in the typed event model'), but the action_summary states it as grounded fact. Additionally, 'half-consciously, dissociating' interprets E_w_killing beyond what its substrate type (killing) carries."
+      },
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_rashomon_samurai",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The summary faithfully traces E_h_wife_requests_killing through E_h_suicide and E_husband_dead. Contextual embellishments ('speaking through a medium from beyond death,' 'in horror,' 'wife's dagger') are from the source testimony's character rather than structural claims; none contradicts the substrate. The arrangement clearly conveys the samurai's distinctive mythos."
+      },
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_rashomon_woodcutter",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The summary maps cleanly onto E_wc_wife_goads, E_wc_fight, E_wc_wife_flees, E_wc_theft, and E_husband_dead. 'Pearl-handled dagger' is a source-material detail not in the substrate (which types only 'dagger') but does not contradict it. The observation that the theft 'makes his own testimony suspect' is a structural inference grounded in the sequence of events."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_b_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly invokes the Aristotelian definition of beginning (Poetics 1450b: that which does not itself follow anything by causal necessity) and applies it to the six canonical-floor events. The note that the bandit's distinctive action proceeds from these events as 'seduction, not violation' appropriately flags how the arrangement differs from other mythoi sharing the same events."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_b_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation is grounded in E_t_wife_requests_killing and E_t_frees_husband. The framing of the wife's request as 'the woman deciding between her two men' is attributed to Tajōmaru's arrangement, not stated as fact. The description of unbinding as transforming the scene from captive-execution to fair combat accurately captures the causal function of E_t_frees_husband."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_b_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation covers E_t_duel and E_husband_dead concisely. The observation that 'the substrate records the death as a canonical-floor fact across all testimonies' is structurally sound — E_husband_dead appears in all four mythoi's central_event_ids."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_w_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation acknowledges the shared canonical-floor events and correctly notes that the same incidents 'take on a different character' in the wife's mythos — the arrangement aims toward pathos (a well-deployed Aristotelian term). It does not address the structural feature that E_intercourse is also this mythos's peripeteia_event_id, but that is a mythos-level structural matter, not the beginning phase's annotation burden."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_w_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation is admirably self-aware: it names the husband's gaze of contempt as the proximate cause of the wife's pathos while explicitly acknowledging this element is 'authored in this encoding's prose rather than in the typed event model.' This transparency about a substrate gap within the phase annotation itself is the correct Aristotelian-dialect move."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_w_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The observation that 'the wife's account does not contain a moment of recognition; her relationship to her own action is incomplete' is consistent with the mythos's null anagnorisis_event_id and empty anagnorisis_chain. The prose stays in Aristotelian vocabulary (recognition rather than insight or realization)."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_h_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "'The worst of the four' is a moral judgment, but it is defensible as a characterization of how this mythos arranges E_intercourse — the samurai's testimony reads consent into what the other testimonies frame as assault. The use of 'ethos that shapes the mythos he moves toward' is well-grounded Aristotelian usage: character disposition (ethos) determining the arrangement of incidents (mythos)."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_h_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation is well-grounded in its four scope events. The parenthetical '(an event unique to this testimony)' about E_h_tajomaru_refuses is a valuable structural observation supported by the substrate: no other mythos includes Tajōmaru refusing the wife's request. The description of the betrayal-and-abandonment sequence faithfully traces the causal chain."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_h_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly notes that this is the only mythos where the husband kills himself (E_h_suicide). The cross-reference to the woodcutter's dagger theft as creating a disputed cause-of-death across the four mythoi is structurally grounded and relevant to how E_husband_dead functions as a contested canonical-floor outcome."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_wc_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation accurately characterizes the woodcutter as the only testifier with no intimate relationship to E_intercourse, and his reading as 'the most external of the four.' This is consistent with the substrate: E_wc_wife_goads (τ_s=7) places the woodcutter as witness after the canonical-floor events, not as participant within them."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_wc_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation is grounded in E_wc_wife_goads and E_wc_fight. The claim that the woodcutter 'is the only testifier incentivized toward dishonoring all parties' is a structural inference supported by E_wc_theft — his complicity in the theft gives him reason to diminish the other parties' dignity. The dwelling on cowardice is aptly noted as arrangement toward a truth-claim."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_wc_end",
+        "field": "annotation",
+        "verdict": "needs-work",
+        "rationale": "The annotation's treatment of E_wc_wife_flees, E_wc_theft, and E_husband_dead is well-grounded, and the observation that the theft is the pivot of the woodcutter's self-incrimination is structurally sound. However, the final sentence names 'the film's framing narrative (priest's crisis of faith)' — content entirely outside the substrate events and this mythos's scope_event_ids. Even though the annotation disclaims grounding, introducing ungrounded material into a phase annotation is a scope violation the annotation should not commit."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_b_tajomaru",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia is framed as ignorance — a classically Aristotelian reading (Poetics 1453a). 'Ignorance of how the world reads a rape' applies the concept at the level of the narrator constructing a self-aggrandizing mythos, which stretches hamartia toward a meta-narrative register. The prose is self-aware about this, using 'In Aristotelian terms' to signal the interpretive move."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_w_wife",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The annotation is honest about the concept's strain: 'Aristotle's hamartia fits awkwardly: the wife's self-account is a tragedy of pathos more than error.' The tentative formulation ('if hamartia is present it is…') respects the dialect's limits rather than forcing an ill-fitting concept. 'A refusal that the telling itself is a repetition of' is a meta-narrative observation that strains Aristotelian vocabulary but is flagged as such."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_h_samurai",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "This is the most classically Aristotelian hamartia of the four: ignorance of character leading to catastrophe. 'He bound his honor to her fidelity and cannot recover' maps cleanly onto the Poetics' hamartia-as-error framework. The observation that 'ritual suicide is the only response his code admits' connects ethos to mythos in proper Aristotelian fashion."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_wc_woodcutter",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia — 'small complicity compounded by silence' — is grounded in E_wc_theft. The annotation is productively honest about the dialect strain: 'a self-inclusive tragedy whose hero is the account's own narrator, a frame Aristotelian theory does not natively admit.' Naming the limit is more useful than papering over it."
+      }
+    ],
+    "observation_commentaries": [],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The encoding and this review engaged Aristotelian vocabulary throughout: mythos as the soul of each testimony's tragedy; peripeteia marking the reversal point in each account; anagnorisis conspicuously absent across all four mythoi (a thematically significant null); hamartia applied to each testimony's tragic hero with honest acknowledgment of strain where the concept fits awkwardly; pathos and ethos deployed to distinguish the testimonies' arrangements of shared events; beginning/middle/end used per Poetics Chapter 7; complication and denouement structuring each middle-to-end transition; complex plot correctly asserted (peripeteia present even without anagnorisis). The ArMythosRelation 'contests' kind allowed the encoding to express inter-mythos friction without leaving the dialect. The only sustained strain was in the meta-narrative register — all four hamartia texts operate at the level of narrator constructing a self-serving mythos, which is a frame Aristotle's character-within-mythos vocabulary does not natively license. No other-dialect vocabulary was needed or reached for.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "Narrator-as-tragic-hero: the woodcutter's mythos (and to a lesser extent the other three) is a tragedy whose hero is also its narrator — a structure the Poetics does not address. The encoding acknowledges this in ar_wc_woodcutter's hamartia_text but the dialect has no typed surface for it.",
+        "Audience-level anagnorisis: the audience of all four testimonies achieves a recognition that no single character within any mythos achieves — the recognition that truth is irrecoverable across competing arrangements. Aristotelian anagnorisis is character-level (1452a) and cannot express this meta-recognition.",
+        "Un-typed causal elements between substrate events: the wife's mythos (ar_rashomon_wife) requires the husband's gaze of contempt as a proximate cause, but this element exists only in prose, not in the typed event model. The dialect has no mechanism to mark a prose-only causal element as structurally load-bearing within a phase.",
+        "Peripeteia in the beginning phase: the wife's mythos places its peripeteia_event_id (E_intercourse) within the beginning phase's scope_event_ids. Aristotelian vocabulary expects reversals to occur in the middle or at the transition to denouement; having a reversal in the beginning stretches the structural model, though it is defensible as encoding how the assault is both a canonical-floor event and the wife's distinctive reversal."
+      ],
+      "relations_wanted": [
+        "ArCanonicalFloor or ArSharedEventSet: a typed record collecting the subset of substrate events agreed upon across all contesting mythoi (E_travel through E_intercourse). Currently the canonical-floor status is expressed only in prose annotations; a typed surface would let the dialect formally distinguish contested from uncontested events within an ArMythosRelation.",
+        "ArAudienceAnagnorisis: an audience-level recognition modifier on ArMythosRelation, expressing that the friction between contesting mythoi produces a recognition in the audience that no single mythos's characters achieve. This would address the meta-anagnorisis scope limit.",
+        "ArProseOnlyCause: a typed marker within an ArPhase for causal elements that are structurally load-bearing but exist only in prose (not in the substrate event model). The wife's 'gaze of contempt' is the paradigm case."
+      ]
+    }
+  }
+}
