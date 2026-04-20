@@ -128,10 +128,14 @@ dialect namespaces."
   beat_ids / strand_ids / character_ids; `archetype_assignments`
   via inline `$defs/archetype_assignment` per PFS7-X2).
 
-`StcObservation` (verifier output) and the dialect-catalog
-records `StcCanonicalBeat` (15 shipped-as-data canonical beats)
-and `StcGenre` (10 shipped-as-data Snyder genres) are deferred
-— the former to Production C, the latter to PFS7 OQ2.
+The dialect-catalog records `StcCanonicalBeat` (15 shipped-as-
+data canonical beats) and `StcGenre` (10 shipped-as-data Snyder
+genres) are deferred per PFS7 OQ2.
+
+`StcObservation` (Save-the-Cat self-verifier output) ships under
+this namespace per PFS8-N2 + PFS12-N1 — see the "Save-the-Cat
+cross-boundary record" subsection below under "Cross-boundary
+records living in dialect namespaces."
 
 ### Cross-boundary layer (Lowering, three records)
 
@@ -246,6 +250,23 @@ observation + three probe-methodology surface records.
   strings, empty-allowable). No analog in PFS9/PFS10 —
   dialect-probe distinctive surface.
 
+#### Save-the-Cat cross-boundary record (under `schema/save_the_cat/`, one record)
+
+Second dialect-internal cross-boundary arc (production-format-
+sketch-12 PFS12-N1). One record ships — the dialect's self-
+verifier observation. The smallest per-record arc under
+Production C; no probe-methodology surface (no Save-the-Cat
+reader-model client today).
+
+- `save_the_cat/observation.json` — the `StcObservation` record
+  (S6 self-verifier finding + sketch-02 S13 character-layer
+  checks; severity closed enum {noted, advises-review}; code
+  open string per PFS12-O3 — twenty-three stable codes today;
+  target_id + message non-empty strings). Third instance of
+  the four-field structural-finding shape; parallels
+  `lowering/lowering_observation.json` (PFS9-LO) and
+  `aristotelian/observation.json` (PFS11-AO).
+
 ### Cross-file references
 
 Substrate-layer cross-file references resolve via canonical
@@ -255,7 +276,10 @@ format-sketch-03 PFS3-E1; extended by sketch-04 P4A1 for held;
 extended by sketch-06 PFS6-D5 for the aristotelian dialect;
 extended by sketch-07 PFS7-D6 for the save-the-cat dialect;
 extended by sketch-09 PFS9-D8 for the lowering namespace;
-extended by sketch-10 PFS10-D6 for the verification namespace).
+extended by sketch-10 PFS10-D6 for the verification namespace;
+extended by sketch-11 PFS11-D6 for the Aristotelian cross-
+boundary batch; extended by sketch-12 PFS12-D3 for
+save_the_cat/observation.json).
 Branch's `schema/branch.json` has no outbound cross-file
 references; the Aristotelian mythos has two (phase.json and
 character.json); the four Save-the-Cat schemas have none —
@@ -293,18 +317,18 @@ reference-consistency audit surfaces.
 ## What's deferred
 
 - Remaining dialect records (Dramatic, Dramatica-complete;
-  `StcObservation` + `StcCanonicalBeat` + `StcGenre` for
-  Save-the-Cat). Each dialect or record group needs its own
-  production-format sketch; Aristotelian-core (three records)
-  shipped under PFS6 as the first dialect-layer example; Save-
-  the-Cat-core (four records) shipped under PFS7 as the
-  second; Aristotelian cross-boundary (four records —
-  ArObservation + three probe-surface records) shipped under
-  PFS11 as the dialect's second arc.
+  `StcCanonicalBeat` + `StcGenre` for Save-the-Cat). Each
+  dialect or record group needs its own production-format
+  sketch; Aristotelian-core (three records) shipped under PFS6
+  as the first dialect-layer example; Save-the-Cat-core (four
+  records) shipped under PFS7 as the second; Aristotelian
+  cross-boundary (four records — ArObservation + three probe-
+  surface records) shipped under PFS11 as the dialect's second
+  arc; Save-the-Cat-observation (one record — StcObservation)
+  shipped under PFS12 as the dialect's second arc.
 - Dialect-internal observation / review / probe records for
-  remaining dialects (`StcObservation` — PFS12 candidate;
-  future `DramaticaObservation` for Dramatic +
-  Dramatica-complete). Ship under existing dialect namespaces
+  remaining dialects (future `DramaticaObservation` for Dramatic
+  + Dramatica-complete). Ship under existing dialect namespaces
   per PFS8-N2.
 - Aristotelian A10–A12 schema landing (ArMythosRelation +
   ArAnagnorisisStep + ArMythos sketch-02 optional fields).

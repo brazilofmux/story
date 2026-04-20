@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/save_the_cat/observation.json",
+  "title": "StcObservation",
+  "description": "A self-verifier finding emitted by core/save_the_cat.py:verify(). Per save-the-cat-sketch-01 S6 + sketch-02 S13 + production-format-sketch-12 PFS12-O1..O4. Third instance of the four-field structural-finding shape — parallels schema/lowering/lowering_observation.json (PFS9-LO) and schema/aristotelian/observation.json (PFS11-AO). severity is a closed two-value enum; code is an open non-empty string (S6 + S13 emit twenty-three stable codes today but the schema is extension-safe for new checks without amendment — code close-enum deferred to PFS12 OQ1). target_id names an intra-dialect record (StcStory / StcBeat / StcStrand / StcCharacter id depending on the emitting check); resolution banked as PFS12 OQ2.",
+  "type": "object",
+  "required": ["severity", "code", "target_id", "message"],
+  "properties": {
+    "severity": {
+      "type": "string",
+      "enum": ["noted", "advises-review"],
+      "description": "Closed enum matching core/save_the_cat.py SEVERITY_NOTED / SEVERITY_ADVISES_REVIEW. noted = observation recorded, no review required; advises-review = check uncovered a structural issue the author should see. PFS12-O2."
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short stable tag identifying the check that emitted this observation. Today's codes (sketch-01 S6 + sketch-02 S13): 'beat_id_unresolved', 'strand_id_unresolved', 'genre_unknown', 'theme_statement_empty', 'beat_slot_unfilled', 'multiple_beats_per_slot', 'page_actual_non_monotonic', 'multiple_a_strands', 'multiple_b_strands', 'advancement_strand_unresolved', 'genre_archetypes_declared', 'character_id_unresolved', 'participant_id_unresolved', 'focal_character_id_unresolved', 'archetype_character_id_unresolved', 'character_unreferenced', 'multiple_protagonists', 'no_protagonist_declared', 'archetype_assignment_both_set', 'archetype_assignment_neither_set', 'archetype_assignments_without_genre', 'archetype_missing', 'archetype_duplicated', 'archetype_extraneous'. Open string per PFS12-O3 — new checks don't require a schema amendment. Code vocabulary closure deferred to PFS12 OQ1."
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Intra-dialect record id (StcStory / StcBeat / StcStrand / StcCharacter) this observation targets. Referential-integrity audit banked as PFS12 OQ2. PFS12-O4."
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable explanation of the finding. No length constraint. PFS12-O4."
+    }
+  },
+  "additionalProperties": false
+}

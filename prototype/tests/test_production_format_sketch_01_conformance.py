@@ -167,6 +167,14 @@ def _load_save_the_cat_story_schema() -> dict:
         return json.load(f)
 
 
+def _load_save_the_cat_observation_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "save_the_cat" / "observation.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _load_lowering_annotation_review_schema() -> dict:
     schema_path = (
         _repo_root() / "schema" / "lowering" / "annotation_review.json"
@@ -289,6 +297,13 @@ def _build_schema_registry() -> Registry:
     (PFS11-X2) — extending PFS6-X1's intra-namespace cross-file
     pattern to a fourth reference inside schema/aristotelian/.
 
+    The Save-the-Cat-observation arc (production-format-sketch-12
+    PFS12-D3) adds one schema under schema/save_the_cat/. The
+    schema is self-contained (no outbound $ref per PFS12-X) but
+    is registered for symmetry across all dialect + cross-boundary
+    namespaces — the same posture PFS7's four self-contained
+    Save-the-Cat core schemas already follow.
+
     Pattern introduced by production-format-sketch-03 P3A4; extended
     by production-format-sketch-04 P4A1 for held.json; extended by
     production-format-sketch-06 PFS6-D5 for the aristotelian dialect;
@@ -297,7 +312,8 @@ def _build_schema_registry() -> Registry:
     PFS9-D8 for the lowering namespace; extended by production-
     format-sketch-10 PFS10-D6 for the verification namespace;
     extended by production-format-sketch-11 PFS11-D6 for the
-    Aristotelian cross-boundary batch."""
+    Aristotelian cross-boundary batch; extended by production-
+    format-sketch-12 PFS12-D3 for save_the_cat/observation.json."""
     registry = Registry()
     for schema in (
         _load_prop_schema(), _load_held_schema(),
@@ -307,6 +323,7 @@ def _build_schema_registry() -> Registry:
         _load_aristotelian_mythos_schema(),
         _load_save_the_cat_beat_schema(),
         _load_save_the_cat_character_schema(),
+        _load_save_the_cat_observation_schema(),
         _load_save_the_cat_story_schema(),
         _load_save_the_cat_strand_schema(),
         _load_lowering_annotation_review_schema(),
@@ -1377,6 +1394,63 @@ def _discover_encoding_aristotelian_observations(mythoi_by_encoding) -> list:
         observations: list = []
         for mythos in mythoi:
             observations.extend(verify(mythos))
+        out.append((encoding_name, observations))
+    return out
+
+
+def _dump_stc_observation(obs) -> dict:
+    """Map a Python StcObservation to schema/save_the_cat/
+    observation.json (PFS12-D1). All four fields required and always
+    emit (severity, code, target_id, message); no optional fields.
+    Body identical to _dump_lowering_observation and
+    _dump_ar_observation by independent convergence (three
+    verifiers, one shape — see PFS12 OQ3 for the convergence
+    discussion)."""
+    return {
+        "severity": obs.severity,
+        "code": obs.code,
+        "target_id": obs.target_id,
+        "message": obs.message,
+    }
+
+
+def _discover_encoding_save_the_cat_observations(
+    stories_by_encoding,
+    beats_by_encoding,
+    strands_by_encoding,
+    characters_by_encoding,
+) -> list:
+    """Run save_the_cat.verify on each Story in each encoding and
+    collect the resulting StcObservations. Returns a list of
+    (encoding_name, observations) tuples (observations list per
+    encoding; empty when the encoding verifies clean). Per
+    production-format-sketch-12 PFS12-D2.
+
+    Takes the four already-discovered record-kind tuples from
+    _discover_encoding_save_the_cat_records() (PFS7-D5) rather
+    than re-walking encoding modules — same discipline as
+    PFS11-D5."""
+    from story_engine.core.save_the_cat import verify
+    beats_by_name = {name: recs for name, recs in beats_by_encoding}
+    strands_by_name = {
+        name: recs for name, recs in strands_by_encoding
+    }
+    chars_by_name = {
+        name: recs for name, recs in characters_by_encoding
+    }
+    out: list = []
+    for encoding_name, stories in stories_by_encoding:
+        observations: list = []
+        beats = tuple(beats_by_name.get(encoding_name, ()))
+        strands = tuple(strands_by_name.get(encoding_name, ()))
+        characters = tuple(chars_by_name.get(encoding_name, ()))
+        for story in stories:
+            observations.extend(verify(
+                story,
+                beats=beats,
+                strands=strands,
+                characters=characters,
+            ))
         out.append((encoding_name, observations))
     return out
 
@@ -2978,6 +3052,161 @@ def test_save_the_cat_story_corpus_conformance():
         f"§Conformance dispositions protocol."
     )
     assert total > 0
+
+
+def test_save_the_cat_observation_schema_metaschema_valid():
+    """schema/save_the_cat/observation.json is a valid JSON Schema
+    2020-12 document (production-format-sketch-12 PFS12-O1..O4)."""
+    schema = _load_save_the_cat_observation_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_save_the_cat_observation_schema_has_expected_shape():
+    """Spot-check of StcObservation schema structure per
+    core/save_the_cat.py:verify emission pattern + PFS12-O1..O4.
+    Third instance of the four-field structural-finding shape;
+    parallels test_lowering_observation_schema_has_expected_shape
+    (PFS9-LO) and test_aristotelian_observation_schema_has_expected_shape
+    (PFS11-AO)."""
+    schema = _load_save_the_cat_observation_schema()
+    assert schema["title"] == "StcObservation"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "save_the_cat/observation.json"
+    )
+    assert set(schema["required"]) == {
+        "severity", "code", "target_id", "message",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "severity", "code", "target_id", "message",
+    }
+    assert set(schema["properties"]["severity"]["enum"]) == {
+        "noted", "advises-review",
+    }
+    assert "enum" not in schema["properties"]["code"]
+    assert schema["properties"]["code"]["minLength"] == 1
+    assert schema["properties"]["target_id"]["minLength"] == 1
+    assert schema["properties"]["message"]["minLength"] == 1
+
+
+def test_save_the_cat_observation_corpus_conformance():
+    """Every StcObservation emitted by save_the_cat.verify on each
+    encoding's (STORY, BEATS, STRANDS, CHARACTERS) bundle validates
+    against schema/save_the_cat/observation.json (PFS12-O1..O4 +
+    PFS12-D2). Today's corpus emits two NOTED
+    'genre_archetypes_declared' observations (one per Save-the-Cat
+    encoding — both declare stc_genre_id, S5 surfaces the
+    informational pointer). PFS12 §Conformance dispositions
+    documents the expected non-zero corpus."""
+    schema = _load_save_the_cat_observation_schema()
+    validator = Draft202012Validator(schema)
+
+    (stories_by_encoding, beats_by_encoding,
+     strands_by_encoding, chars_by_encoding) = (
+        _discover_encoding_save_the_cat_records()
+    )
+    assert stories_by_encoding, (
+        "expected at least one encoding with a Save-the-Cat Story; "
+        "found none"
+    )
+
+    observations_by_encoding_full = (
+        _discover_encoding_save_the_cat_observations(
+            stories_by_encoding,
+            beats_by_encoding,
+            strands_by_encoding,
+            chars_by_encoding,
+        )
+    )
+
+    total = 0
+    clean_passes = 0
+    code_counts: dict = {}
+    severity_counts: dict = {}
+    new_findings: list = []
+    observations_by_encoding: dict = {}
+
+    for encoding_name, observations in observations_by_encoding_full:
+        if observations:
+            observations_by_encoding[encoding_name] = observations
+        for obs in observations:
+            total += 1
+            dumped = _dump_stc_observation(obs)
+            code_counts[dumped["code"]] = (
+                code_counts.get(dumped["code"], 0) + 1
+            )
+            severity_counts[dumped["severity"]] = (
+                severity_counts.get(dumped["severity"], 0) + 1
+            )
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "observation_code": obs.code,
+                "observation_target": obs.target_id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_save_the_cat_observation_corpus_conformance: "
+        f"{total} StcObservation records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    if severity_counts:
+        print(
+            f"  by severity:                "
+            f"{dict(sorted(severity_counts.items()))}"
+        )
+        print(
+            f"  by code:                    "
+            f"{dict(sorted(code_counts.items()))}"
+        )
+        print(
+            f"  emitting encodings:         "
+            f"{sorted(observations_by_encoding.keys())}"
+        )
+    else:
+        print(
+            f"  note:                       "
+            f"zero observations — corpus is self-consistent"
+        )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: "
+                f"{finding['observation_code']} "
+                f"@ {finding['observation_target']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StcObservation conformance "
+        f"finding(s); see output."
+    )
+    assert total >= 2, (
+        f"expected ≥2 StcObservations per PFS12 §Corpus expectations "
+        f"(one genre_archetypes_declared per Save-the-Cat encoding "
+        f"declaring stc_genre_id); got {total}"
+    )
 
 
 # ============================================================================
