@@ -3728,6 +3728,436 @@ def test_verifier_commentary_corpus_conformance():
 
 
 # ============================================================================
+# Referential integrity audit — referential-integrity-sketch-01
+# ============================================================================
+#
+# Second validation layer underneath the shape schemas: resolution
+# audit. Schemas (tier 1) validate record shape; these audits (tier 2)
+# validate that every id-string reference a record carries names an
+# existing record of the expected type in the same encoding. Per
+# referential-integrity-sketch-01 RI1..RI8. First-arc scope (RI7):
+# substrate branch labels (closes PFS5 OQ3), Aristotelian event-ids
+# (closes PFS6 OQ3), Save-the-Cat intra-story references (closes
+# PFS7 OQ4).
+
+
+def test_branch_label_resolution_audit():
+    """Every Event's `branches` tuple contains only labels that
+    resolve in the encoding's ALL_BRANCHES dict. Per referential-
+    integrity-sketch-01 RI7 (1) — closes PFS5 OQ3."""
+    from story_engine.core.substrate import CANONICAL_LABEL
+
+    events_by_encoding = _discover_encoding_events()
+    assert events_by_encoding, (
+        "expected at least one encoding with events; found none"
+    )
+
+    total_refs = 0
+    total_events = 0
+    clean_events = 0
+    findings: list = []
+    encodings_covered: list = []
+
+    for encoding_name, events in events_by_encoding:
+        # Collect target set: ALL_BRANCHES keys for this encoding.
+        # The CANONICAL_LABEL is always implicit even if the encoding
+        # doesn't explicitly list it (corpus convention includes it).
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{encoding_name}"
+            )
+        except Exception:
+            continue
+        all_branches = getattr(module, "ALL_BRANCHES", None)
+        if all_branches is None:
+            continue
+        target_set = set(all_branches.keys())
+        target_set.add(CANONICAL_LABEL)
+        encodings_covered.append(encoding_name)
+
+        for event in events:
+            total_events += 1
+            event_clean = True
+            for label in event.branches:
+                total_refs += 1
+                if label not in target_set:
+                    event_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "event_id": event.id,
+                        "field": "branches",
+                        "unresolved_ref": label,
+                        "target_set_size": len(target_set),
+                    })
+            if event_clean:
+                clean_events += 1
+
+    print()
+    print(
+        f"test_branch_label_resolution_audit: {total_events} Events "
+        f"carrying {total_refs} branch-label references"
+    )
+    print(f"  clean events:               {clean_events}")
+    print(f"  encodings audited:          {len(encodings_covered)}")
+    if findings:
+        print(f"  unresolved references:      {len(findings)}")
+        for f in findings:
+            print(
+                f"    {f['encoding']}: Event {f['event_id']!r} "
+                f".branches → {f['unresolved_ref']!r} "
+                f"(not in ALL_BRANCHES; target-set size "
+                f"{f['target_set_size']})"
+            )
+
+    assert not findings, (
+        f"{len(findings)} unresolved branch label reference(s); see "
+        f"output. Resolve per referential-integrity-sketch-01 RI6 "
+        f"dispositions protocol."
+    )
+
+
+def test_aristotelian_event_ref_resolution_audit():
+    """Every ArMythos and ArPhase event-id reference resolves to an
+    Event id in the paired substrate encoding. Per referential-
+    integrity-sketch-01 RI7 (2) — closes PFS6 OQ3.
+
+    Pairing rule: an Aristotelian encoding named `{work}_aristotelian`
+    pairs with the substrate encoding named `{work}`. Event target
+    set = FABULA or EVENTS_ALL ids in the substrate module."""
+    mythoi_by_encoding, _, _ = (
+        _discover_encoding_aristotelian_records()
+    )
+    assert mythoi_by_encoding, (
+        "expected at least one Aristotelian encoding; found none"
+    )
+
+    total_refs = 0
+    total_records = 0
+    clean_records = 0
+    findings: list = []
+    encodings_covered: list = []
+
+    for encoding_name, mythoi in mythoi_by_encoding:
+        # Derive the paired substrate encoding: strip _aristotelian.
+        if not encoding_name.endswith("_aristotelian"):
+            findings.append({
+                "encoding": encoding_name,
+                "record_id": "<discovery>",
+                "field": "<naming>",
+                "unresolved_ref": (
+                    f"encoding name {encoding_name!r} does not end in "
+                    f"'_aristotelian' — cannot derive substrate pair"
+                ),
+                "target_set_size": 0,
+            })
+            continue
+        substrate_name = encoding_name[: -len("_aristotelian")]
+        try:
+            substrate_module = importlib.import_module(
+                f"story_engine.encodings.{substrate_name}"
+            )
+        except Exception as exc:
+            findings.append({
+                "encoding": encoding_name,
+                "record_id": "<discovery>",
+                "field": "<substrate-import>",
+                "unresolved_ref": (
+                    f"cannot import paired substrate "
+                    f"{substrate_name!r}: {exc}"
+                ),
+                "target_set_size": 0,
+            })
+            continue
+
+        # Collect Event ids from the substrate module.
+        substrate_events: list = []
+        fabula = getattr(substrate_module, "FABULA", None)
+        if fabula is not None:
+            substrate_events = list(fabula)
+        else:
+            events_all = getattr(substrate_module, "EVENTS_ALL", None)
+            if events_all is not None:
+                substrate_events = list(events_all)
+        target_set = {e.id for e in substrate_events}
+        encodings_covered.append(
+            f"{encoding_name} → {substrate_name} "
+            f"({len(target_set)} events)"
+        )
+
+        # Iterate the Aristotelian records, checking each event-id
+        # reference.
+        for mythos in mythoi:
+            total_records += 1
+            mythos_clean = True
+
+            # ArMythos.central_event_ids (array)
+            for ev_id in mythos.central_event_ids:
+                total_refs += 1
+                if ev_id not in target_set:
+                    mythos_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": mythos.id,
+                        "field": "central_event_ids",
+                        "unresolved_ref": ev_id,
+                        "target_set_size": len(target_set),
+                    })
+            # ArMythos optional pointer fields
+            for field_name in (
+                "complication_event_id",
+                "denouement_event_id",
+                "peripeteia_event_id",
+                "anagnorisis_event_id",
+            ):
+                ev_id = getattr(mythos, field_name)
+                if ev_id is None:
+                    continue
+                total_refs += 1
+                if ev_id not in target_set:
+                    mythos_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": mythos.id,
+                        "field": field_name,
+                        "unresolved_ref": ev_id,
+                        "target_set_size": len(target_set),
+                    })
+
+            if mythos_clean:
+                clean_records += 1
+
+            # ArPhase records reached through mythos.phases
+            for phase in mythos.phases:
+                total_records += 1
+                phase_clean = True
+                for ev_id in phase.scope_event_ids:
+                    total_refs += 1
+                    if ev_id not in target_set:
+                        phase_clean = False
+                        findings.append({
+                            "encoding": encoding_name,
+                            "record_id": (
+                                f"{mythos.id}.phases[{phase.id}]"
+                            ),
+                            "field": "scope_event_ids",
+                            "unresolved_ref": ev_id,
+                            "target_set_size": len(target_set),
+                        })
+                if phase_clean:
+                    clean_records += 1
+
+    print()
+    print(
+        f"test_aristotelian_event_ref_resolution_audit: "
+        f"{total_records} Aristotelian records carrying "
+        f"{total_refs} event-id references"
+    )
+    print(f"  clean records:              {clean_records}")
+    print(f"  encodings audited:")
+    for line in encodings_covered:
+        print(f"    {line}")
+    if findings:
+        print(f"  unresolved references:      {len(findings)}")
+        for f in findings:
+            print(
+                f"    {f['encoding']}: {f['record_id']} "
+                f".{f['field']} → {f['unresolved_ref']!r} "
+                f"(not in substrate target-set of size "
+                f"{f['target_set_size']})"
+            )
+
+    assert not findings, (
+        f"{len(findings)} unresolved Aristotelian event-id "
+        f"reference(s); see output. Resolve per referential-"
+        f"integrity-sketch-01 RI6 dispositions protocol."
+    )
+
+
+def test_save_the_cat_intra_story_resolution_audit():
+    """Every Save-the-Cat id reference resolves to a sibling record
+    in the same encoding module. Per referential-integrity-sketch-
+    01 RI7 (3) — closes PFS7 OQ4.
+
+    Audited references: StcStory.beat_ids / strand_ids /
+    character_ids; StcStory.archetype_assignments[].character_id
+    (when set); StcBeat.participant_ids; StcBeat.advances[].strand_id;
+    StcStrand.focal_character_id (when set)."""
+    stories_by_encoding, beats_by_encoding, strands_by_encoding, \
+        characters_by_encoding = (
+            _discover_encoding_save_the_cat_records()
+        )
+    assert stories_by_encoding, (
+        "expected at least one Save-the-Cat encoding; found none"
+    )
+
+    # Index sibling records by encoding.
+    beats_index = {name: {b.id for b in beats} for name, beats in beats_by_encoding}
+    strands_index = {name: {s.id for s in strands} for name, strands in strands_by_encoding}
+    characters_index = {name: {c.id for c in chars} for name, chars in characters_by_encoding}
+
+    total_refs = 0
+    total_records = 0
+    clean_records = 0
+    findings: list = []
+    encodings_covered: list = []
+
+    for encoding_name, stories in stories_by_encoding:
+        beat_ids = beats_index.get(encoding_name, set())
+        strand_ids = strands_index.get(encoding_name, set())
+        character_ids = characters_index.get(encoding_name, set())
+        encodings_covered.append(
+            f"{encoding_name} "
+            f"({len(beat_ids)} beats / {len(strand_ids)} strands / "
+            f"{len(character_ids)} characters)"
+        )
+
+        for story in stories:
+            total_records += 1
+            story_clean = True
+
+            # Story.beat_ids → beat_ids set
+            for bid in story.beat_ids:
+                total_refs += 1
+                if bid not in beat_ids:
+                    story_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": story.id,
+                        "field": "beat_ids",
+                        "unresolved_ref": bid,
+                        "target_set_size": len(beat_ids),
+                    })
+            # Story.strand_ids → strand_ids set
+            for sid in story.strand_ids:
+                total_refs += 1
+                if sid not in strand_ids:
+                    story_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": story.id,
+                        "field": "strand_ids",
+                        "unresolved_ref": sid,
+                        "target_set_size": len(strand_ids),
+                    })
+            # Story.character_ids → character_ids set
+            for cid in story.character_ids:
+                total_refs += 1
+                if cid not in character_ids:
+                    story_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": story.id,
+                        "field": "character_ids",
+                        "unresolved_ref": cid,
+                        "target_set_size": len(character_ids),
+                    })
+            # Story.archetype_assignments[].character_id (when set)
+            for aa in story.archetype_assignments:
+                if aa.character_id is None:
+                    continue
+                total_refs += 1
+                if aa.character_id not in character_ids:
+                    story_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": story.id,
+                        "field": (
+                            f"archetype_assignments[{aa.archetype}]"
+                            f".character_id"
+                        ),
+                        "unresolved_ref": aa.character_id,
+                        "target_set_size": len(character_ids),
+                    })
+
+            if story_clean:
+                clean_records += 1
+
+        # Iterate beats for this encoding (each beat is a separate
+        # audited record).
+        beats_for_encoding = dict(beats_by_encoding).get(
+            encoding_name, []
+        )
+        for beat in beats_for_encoding:
+            total_records += 1
+            beat_clean = True
+            # StcBeat.participant_ids → character_ids set
+            for cid in beat.participant_ids:
+                total_refs += 1
+                if cid not in character_ids:
+                    beat_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": beat.id,
+                        "field": "participant_ids",
+                        "unresolved_ref": cid,
+                        "target_set_size": len(character_ids),
+                    })
+            # StcBeat.advances[].strand_id → strand_ids set
+            for adv in beat.advances:
+                total_refs += 1
+                if adv.strand_id not in strand_ids:
+                    beat_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": beat.id,
+                        "field": (
+                            f"advances[{adv.strand_id}].strand_id"
+                        ),
+                        "unresolved_ref": adv.strand_id,
+                        "target_set_size": len(strand_ids),
+                    })
+            if beat_clean:
+                clean_records += 1
+
+        # Iterate strands for this encoding.
+        strands_for_encoding = dict(strands_by_encoding).get(
+            encoding_name, []
+        )
+        for strand in strands_for_encoding:
+            total_records += 1
+            strand_clean = True
+            if strand.focal_character_id is not None:
+                total_refs += 1
+                if strand.focal_character_id not in character_ids:
+                    strand_clean = False
+                    findings.append({
+                        "encoding": encoding_name,
+                        "record_id": strand.id,
+                        "field": "focal_character_id",
+                        "unresolved_ref": strand.focal_character_id,
+                        "target_set_size": len(character_ids),
+                    })
+            if strand_clean:
+                clean_records += 1
+
+    print()
+    print(
+        f"test_save_the_cat_intra_story_resolution_audit: "
+        f"{total_records} Save-the-Cat records carrying "
+        f"{total_refs} id references"
+    )
+    print(f"  clean records:              {clean_records}")
+    print(f"  encodings audited:")
+    for line in encodings_covered:
+        print(f"    {line}")
+    if findings:
+        print(f"  unresolved references:      {len(findings)}")
+        for f in findings:
+            print(
+                f"    {f['encoding']}: {f['record_id']!r} "
+                f".{f['field']} → {f['unresolved_ref']!r} "
+                f"(not in target-set of size "
+                f"{f['target_set_size']})"
+            )
+
+    assert not findings, (
+        f"{len(findings)} unresolved Save-the-Cat reference(s); "
+        f"see output. Resolve per referential-integrity-sketch-01 "
+        f"RI6 dispositions protocol."
+    )
+
+
+# ============================================================================
 # Test runner
 # ============================================================================
 
