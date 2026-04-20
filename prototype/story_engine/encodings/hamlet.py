@@ -1,14 +1,25 @@
 """
-Hamlet — the encoded fabula (substrate skeleton).
+Hamlet — the encoded fabula (substrate completion).
 
-**Session 1 scope:** entities, canonical branches, prop constructors,
-event helpers, FABULA (28 events covering pre-play regicide through
-the duel finale), and three derivation rules. Knowledge effects are
-authored only on the load-bearing beats — the Ghost's revelation,
-the Mousetrap, the closet scene, Laertes's deathbed reveal. Deferred
-to Session 2+: full knowledge projections across every event,
-PREPLAY_DISCLOSURES, SJUZHET, DESCRIPTIONS, and the Aristotelian
-overlay (`hamlet_aristotelian.py`).
+**Session 1 scope (edb25cb):** entities, canonical branches, prop
+constructors, event helpers, FABULA (32 events covering pre-play
+regicide through the duel finale), and three derivation rules.
+Knowledge effects authored only on the load-bearing beats.
+
+**Session 2 scope (9423f59):** Aristotelian overlay
+(`hamlet_aristotelian.py`) pressuring OQ-AP5 (Ghost-as-fate-agent)
+and OQ-AP6 (three tragic heroes in one mythos).
+
+**Session 3 scope (this file):** PREPLAY_DISCLOSURES,
+SJUZHET (26 in-play entries with focalization), DESCRIPTIONS
+(~9 interpretive records covering Ghost ontology, Hamlet's
+sanity, Gertrude's foreknowledge, Ophelia's death, the Mousetrap
+as epistemic instrument, and the OQ-AP5/AP6 forcing-function
+postures), and additional per-event knowledge projections —
+especially the asymmetric-information beats that OQ-AP5/AP6 read
+on (Claudius's sole pre-Mousetrap knowledge, the
+Claudius-knows-Hamlet-knows hinge, Laertes's misled state
+pre-deathbed, the public-vs-private Mousetrap reaction).
 
 Story content only. No substrate logic. This file parallels
 `macbeth.py` in shape and is the third Shakespeare-tragedy
@@ -50,13 +61,20 @@ Encoding choices (explicit, so future readers understand the slice):
   Oedipus there is no myth-level front-loaded irony. The substrate
   takes for granted that King Hamlet is dead and Claudius is king
   as of Act 1 Scene 1 — these are the opening facts the play
-  takes for granted rather than builds up to. Deferred to Session
-  2+ for explicit PREPLAY_DISCLOSURES encoding.
+  takes for granted rather than builds up to. See
+  `PREPLAY_DISCLOSURES` below: seven facts (king_hamlet dead,
+  Claudius king, Claudius-Gertrude marriage, Gertrude queen,
+  Hamlet prince, Claudius-Hamlet brotherhood, Polonius serving
+  crown). The murder *method*, the Ghost, and the revenge
+  commission are NOT pre-known.
 
-- **Focalization: largely Hamlet,** with excursions through Ophelia
-  (her mad scene) and the broader court (Polonius and Claudius's
-  plotting scenes). Detailed focalization authoring deferred to
-  Session 2+.
+- **Focalization: largely Hamlet,** with excursions. See `SJUZHET`
+  below. Most entries focalize Hamlet (14 of 26); court/plotting
+  scenes omniscient (None); Ophelia's mad scene focalizes her;
+  Claudius's prayer focalizes him (his soliloquy — the A11 chain
+  step authored at `hamlet_aristotelian.py`); the final death
+  focalizes Horatio (the sole survivor, charged to tell the
+  story). Laertes focalizes his return scene.
 
 - **Authored compound predicates:** fratricide(X, Y), regicide(X, Y),
   usurper(X). Candidate derivations per inference-model-sketch-01
@@ -95,8 +113,10 @@ from __future__ import annotations
 from story_engine.core.substrate import (
     Entity, Prop, Event,
     CANONICAL, CANONICAL_LABEL,
-    Slot, Confidence, Diegetic,
+    Slot, Confidence, Diegetic, Narrative,
     Held, KnowledgeEffect, WorldEffect,
+    SjuzhetEntry, Disclosure,
+    Description, Attention, DescStatus, anchor_event,
     Rule,
 )
 
@@ -369,6 +389,21 @@ FABULA = [
             world(parent_of("king_hamlet", "hamlet")),
             world(parent_of("gertrude", "hamlet")),
             world(prince_of("hamlet", "denmark")),
+            # Court knowledge of the prior reign. Load-bearing for the
+            # reader projection: every in-play character remembers who
+            # the king was, what the family was, and who stood where —
+            # the play's emotional economy runs on remembered state.
+            observe("hamlet", king("king_hamlet", "denmark"), -30),
+            observe("hamlet", married("king_hamlet", "gertrude"), -30),
+            observe("hamlet", parent_of("king_hamlet", "hamlet"), -30),
+            observe("hamlet", parent_of("gertrude", "hamlet"), -30),
+            observe("hamlet", prince_of("hamlet", "denmark"), -30),
+            observe("gertrude", married("king_hamlet", "gertrude"), -30),
+            observe("gertrude", queen("gertrude", "denmark"), -30),
+            observe("horatio", king("king_hamlet", "denmark"), -30,
+                    note="Horatio the scholar knew the king"),
+            observe("claudius", king("king_hamlet", "denmark"), -30,
+                    note="Claudius knew who he would supplant"),
         ),
     ),
 
@@ -409,6 +444,20 @@ FABULA = [
             # crown. Captured as served_by between king_hamlet (the
             # reigning king at τ_s=-20) and polonius.
             world(served_by("king_hamlet", "polonius")),
+            # Family observations — Polonius's children know who their
+            # father is; load-bearing for Laertes's tragic-hero arc
+            # (OQ-AP6). Laertes returns to avenge a father he knew.
+            observe("polonius", parent_of("polonius", "ophelia"), -20),
+            observe("polonius", parent_of("polonius", "laertes"), -20),
+            observe("ophelia", parent_of("polonius", "ophelia"), -20),
+            observe("laertes", parent_of("polonius", "laertes"), -20),
+            # Siblings know each other (via their shared father).
+            # Authored as a derived acquaintance observation; the
+            # sibling relation itself is not a substrate predicate
+            # but can be composed by the reader.
+            observe("laertes", parent_of("polonius", "ophelia"), -20,
+                    note="Laertes knows his sister"),
+            observe("ophelia", parent_of("polonius", "laertes"), -20),
         ),
     ),
 
@@ -437,6 +486,21 @@ FABULA = [
                     note="the murder only Claudius knows"),
             observe("claudius", poisoned_in_ear("king_hamlet"), -2,
                     note="the specific method"),
+            # Everyone else observes only the *death*, not the murder.
+            # This is the asymmetric-information fulcrum of the play:
+            # the world is uniform about `dead(king_hamlet)` and split
+            # about `killed(claudius, king_hamlet)`. Load-bearing for
+            # OQ-AP5 (the Ghost reveals the killed() fact to Hamlet)
+            # and for OQ-AP6 (Claudius's tragic arc is defined by his
+            # sole possession of this fact until the Mousetrap).
+            observe("hamlet", dead("king_hamlet"), -2,
+                    note="Hamlet's bereavement — the death, not yet the cause"),
+            observe("gertrude", dead("king_hamlet"), -2,
+                    note="the widowed queen"),
+            observe("horatio", dead("king_hamlet"), -2),
+            observe("polonius", dead("king_hamlet"), -2),
+            observe("laertes", dead("king_hamlet"), -2),
+            observe("ophelia", dead("king_hamlet"), -2),
         ),
     ),
 
@@ -476,6 +540,14 @@ FABULA = [
             # opening soliloquy.
             observe("hamlet", married("claudius", "gertrude"), -1,
                     note="'O, most wicked speed'"),
+            # Public court ceremony — the rest of the court observes
+            # the marriage too.
+            observe("gertrude", married("claudius", "gertrude"), -1),
+            observe("claudius", married("claudius", "gertrude"), -1),
+            observe("horatio", married("claudius", "gertrude"), -1),
+            observe("polonius", married("claudius", "gertrude"), -1),
+            observe("laertes", married("claudius", "gertrude"), -1),
+            observe("ophelia", married("claudius", "gertrude"), -1),
         ),
     ),
 
@@ -669,9 +741,27 @@ FABULA = [
                     note="the poison-in-ear detail is now certain"),
             # Claudius now knows Hamlet knows. This is the hinge of
             # the tragedy — from here, Claudius is actively plotting
-            # against Hamlet.
+            # against Hamlet. Claudius's epistemic state about
+            # *Hamlet's* knowledge is the load-bearing fact for his
+            # tragic-hero arc (OQ-AP6): before the Mousetrap he was
+            # the sole knower; after, he is the exposed knower, and
+            # every subsequent action (the England plot, the duel
+            # conspiracy) follows from this inference. Authored as
+            # Claudius holding `killed(claudius, king_hamlet)` at
+            # slot KNOWN — the world-fact he always held — AND
+            # observing his own guilty reaction (which, for him, IS
+            # the evidence that Hamlet now holds the same fact).
             observe("claudius", guilty_reaction("claudius"), 6,
                     note="Claudius knows he betrayed himself"),
+            # Horatio now also holds the Ghost's claim as effectively
+            # validated — the corroborating-witness function of his
+            # role. Authored here rather than at E_hamlet_meets_ghost
+            # because the Mousetrap is what promotes Horatio's belief
+            # from "Hamlet says so" to "Hamlet's test confirmed it."
+            told_by("horatio", "hamlet",
+                    killed("claudius", "king_hamlet"), 6,
+                    slot=Slot.BELIEVED, confidence=Confidence.BELIEVED,
+                    note="Horatio now credits Hamlet's Ghost-claim"),
         ),
     ),
 
@@ -740,6 +830,13 @@ FABULA = [
                     note="'a rash and bloody deed'"),
             observe("gertrude", killed("hamlet", "polonius"), 8,
                     note="direct witness"),
+            # Gertrude reports the killing to Claudius offstage at
+            # Act 4.1; compressed as a told_by within this event
+            # (same-beat) since the report motivates Claudius's
+            # England decision at τ_s=9.
+            told_by("claudius", "gertrude", killed("hamlet", "polonius"), 8,
+                    slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+                    note="Gertrude reports the killing to Claudius"),
         ),
     ),
 
@@ -781,6 +878,14 @@ FABULA = [
             world(ordered_killing("claudius", "hamlet")),
             observe("claudius", ordered_killing("claudius", "hamlet"), 9,
                     note="the sealed orders"),
+            # The court observes Hamlet's departure (the stated pretext
+            # was Polonius's killing + Hamlet's own safety; the sealed
+            # orders are secret). Gertrude and Horatio know he has
+            # gone but not that Claudius intends his death.
+            observe("hamlet", at_location("hamlet", "england"), 9),
+            observe("gertrude", at_location("hamlet", "england"), 9,
+                    note="the stated pretext"),
+            observe("horatio", at_location("hamlet", "england"), 9),
         ),
     ),
 
@@ -844,6 +949,16 @@ FABULA = [
             told_by("laertes", "gertrude", drowned("ophelia"), 12,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
                     note="'Drown'd? O, where?'"),
+            observe("laertes", dead("polonius"), 12),
+            observe("laertes", dead("ophelia"), 12),
+            # Laertes does NOT learn at this point that Claudius killed
+            # King Hamlet. The substrate holds that fact on Claudius
+            # alone, and on Hamlet+Horatio post-Mousetrap. Laertes will
+            # die at τ_s=17 having never held it. This asymmetry is
+            # load-bearing for OQ-AP6 — Laertes is a tragic hero whose
+            # arc completes without the full-knowledge anagnorisis
+            # Hamlet earns; his recognition is partial (he sees that
+            # Claudius played him, not that Claudius is a regicide).
         ),
     ),
 
@@ -865,6 +980,10 @@ FABULA = [
                     note="the duel plot"),
             observe("laertes", ordered_killing("claudius", "hamlet"), 13,
                     note="Laertes agrees to the poisoned rapier"),
+            # Gertrude is NOT told. She will drink the poisoned cup at
+            # τ_s=16 without knowing it is poisoned — the substrate
+            # captures her ignorance by the absence of any told_by on
+            # poisoned_with_cup prior to τ_s=16.
         ),
     ),
 
@@ -977,6 +1096,17 @@ FABULA = [
                     ordered_killing("claudius", "hamlet"), 17,
                     slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
                     note="witness to the revelation"),
+            # Claudius hears Laertes expose the plot — his final
+            # epistemic moment. He knows the whole court now knows.
+            observe("claudius", revealed_plot("laertes", "claudius"), 17,
+                    note="the regicide-usurper exposed in his own hall"),
+            # Hamlet's anagnorisis: the point of narrative resolution.
+            # The Ghost's original commission has been honored at the
+            # same beat as Hamlet recognizes he is doomed — the A12
+            # peripeteia-anagnorisis binding at BINDING_SEPARATED
+            # distance 9 (from E_hamlet_kills_polonius at τ_s=8 to
+            # here at τ_s=17) closes here.
+            observe("hamlet", revealed_plot("laertes", "claudius"), 17),
         ),
     ),
 
@@ -1038,6 +1168,584 @@ FABULA = [
             observe("horatio", dead("hamlet"), 18,
                     note="'now cracks a noble heart'"),
         ),
+    ),
+
+]
+
+
+# ----------------------------------------------------------------------------
+# Preplay disclosures — audience-pre-knowledge.
+# ----------------------------------------------------------------------------
+#
+# Hamlet opens with the audience already loaded with several facts
+# that the play takes for granted rather than builds up to. The
+# Elizabethan audience knows the ur-Hamlet outline but not the
+# tragedy's beat-by-beat structure; the substrate preplay set
+# captures only the Act-1-Scene-1 take-for-granted facts.
+#
+# Notably NOT preplay:
+#   - the murder itself (killed(claudius, king_hamlet)) — the Ghost
+#     reveals it
+#   - the murder method (poisoned_in_ear) — the Ghost reveals it
+#   - the revenge commission — the Ghost delivers it
+#   - Hamlet's feigned madness — adopted on-stage
+#   - Claudius's culpability in any form — disclosed only through
+#     Hamlet's verification and Laertes's deathbed reveal
+#
+# These are the play's epistemic payoff. Keeping them off the
+# preplay set is load-bearing for OQ-AP5 (the Ghost's revelation
+# must land as news to the audience as well as to Hamlet).
+
+PREPLAY_DISCLOSURES = (
+    Disclosure(prop=dead("king_hamlet"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=king("claudius", "denmark"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=married("claudius", "gertrude"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=queen("gertrude", "denmark"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=prince_of("hamlet", "denmark"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=brother_of("claudius", "king_hamlet"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=served_by("claudius", "polonius"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+)
+
+
+# ----------------------------------------------------------------------------
+# Sjuzhet — largely linear; τ_d ≈ τ_s for in-play events.
+# ----------------------------------------------------------------------------
+#
+# The pre-play events (E_king_hamlet_reigns, E_claudius_brother_of_king,
+# E_polonius_family_standing, E_king_hamlet_poisoned, E_claudius_crowned,
+# E_claudius_marries_gertrude) are NOT sjuzhet entries — they never appear
+# as staged scenes. Their content enters the reader projection through
+# the PREPLAY_DISCLOSURES set at τ_d=0 (the watch scene) and through
+# later revelatory events (the Ghost's speech promotes killed() from the
+# reader's absent state to BELIEVED, and the Mousetrap promotes it to
+# KNOWN).
+#
+# Focalization distribution (26 entries):
+#   hamlet:   12 entries (his play)
+#   horatio:   2 entries (frame-opener and frame-closer)
+#   claudius:  1 entry  (the prayer scene, A11 chain step)
+#   ophelia:   1 entry  (the mad scene)
+#   laertes:   1 entry  (his return)
+#   polonius:  1 entry  (his theory pitch)
+#   None:      8 entries (public court / plotting / ceremony scenes
+#                         where no single focalizer carries the weight)
+
+SJUZHET = [
+
+    # τ_d=0 — Act 1 Scene 1. The watch on the ramparts; Horatio sees
+    # the Ghost. The audience arrives loaded with the preplay
+    # disclosures (King Hamlet dead, Claudius king, marriage
+    # announced); the opening scene plants the apparition hook.
+    SjuzhetEntry(
+        event_id="E_ghost_seen_by_watch",
+        τ_d=0,
+        focalizer_id="horatio",
+        disclosures=PREPLAY_DISCLOSURES,
+    ),
+
+    # τ_d=1 — Act 1.2 compressed (Horatio brings news to Hamlet).
+    # Pivot to Hamlet's perspective.
+    SjuzhetEntry(
+        event_id="E_horatio_tells_hamlet",
+        τ_d=1,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=2 — Act 1.5. The Ghost's revelation. Load-bearing for OQ-AP5.
+    SjuzhetEntry(
+        event_id="E_hamlet_meets_ghost",
+        τ_d=2,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=3 — end of Act 1. Hamlet confides in Horatio.
+    SjuzhetEntry(
+        event_id="E_hamlet_sworn_to_secrecy",
+        τ_d=3,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=4 — still end of Act 1. Hamlet adopts the antic disposition.
+    SjuzhetEntry(
+        event_id="E_hamlet_adopts_antic_disposition",
+        τ_d=4,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=5 — Act 2.2. Polonius pitches his love-madness theory.
+    # Polonius focalizes; his self-assurance is the scene's register.
+    SjuzhetEntry(
+        event_id="E_polonius_theory",
+        τ_d=5,
+        focalizer_id="polonius",
+        disclosures=(),
+    ),
+
+    # τ_d=6 — Act 2.2 later. The players arrive; Hamlet conceives
+    # the Mousetrap.
+    SjuzhetEntry(
+        event_id="E_players_arrive",
+        τ_d=6,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=7 — Act 3.2. The Mousetrap performance — epistemic hinge.
+    SjuzhetEntry(
+        event_id="E_mousetrap_performance",
+        τ_d=7,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=8 — Act 3.3. Claudius at prayer. A11 non-precipitating
+    # chain step (the antagonist's recognition of his own moral
+    # bankruptcy); Hamlet observes but the scene is Claudius's
+    # soliloquy — Claudius focalizes.
+    SjuzhetEntry(
+        event_id="E_claudius_prays",
+        τ_d=8,
+        focalizer_id="claudius",
+        disclosures=(),
+    ),
+
+    # τ_d=9 — Act 3.4 opening. Polonius positions behind the arras
+    # in Gertrude's closet. Omniscient staging.
+    SjuzhetEntry(
+        event_id="E_polonius_hides_arras",
+        τ_d=9,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=10 — Act 3.4. The closet confrontation.
+    SjuzhetEntry(
+        event_id="E_hamlet_confronts_gertrude",
+        τ_d=10,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=11 — same scene. Hamlet stabs through the arras. Hamlet's
+    # peripeteia fires here (avenger → fugitive-who-killed-the-wrong-
+    # man); see hamlet_aristotelian.py A12.
+    SjuzhetEntry(
+        event_id="E_hamlet_kills_polonius",
+        τ_d=11,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=12 — same scene, continued. The Ghost appears only to
+    # Hamlet (Gertrude sees nothing) — Hamlet focalizes.
+    SjuzhetEntry(
+        event_id="E_ghost_in_closet",
+        τ_d=12,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=13 — Act 4.3/4.4. Court scene packaging Hamlet off to
+    # England. Omniscient — Claudius's sealed orders are named by
+    # the substrate but staged opaquely to the other characters.
+    SjuzhetEntry(
+        event_id="E_hamlet_sent_to_england",
+        τ_d=13,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=14 — Act 4.5. Ophelia's mad scene. She focalizes — it is
+    # her breakdown the scene inhabits.
+    SjuzhetEntry(
+        event_id="E_ophelia_madness",
+        τ_d=14,
+        focalizer_id="ophelia",
+        disclosures=(),
+    ),
+
+    # τ_d=15 — Act 4.7, reported. Gertrude delivers the willow
+    # speech; the drowning itself is offstage. Omniscient framing —
+    # no focalizer since Gertrude *reports* rather than witnesses.
+    SjuzhetEntry(
+        event_id="E_ophelia_drowns",
+        τ_d=15,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=16 — Act 4.5/4.7. Laertes storms back from France.
+    SjuzhetEntry(
+        event_id="E_laertes_returns",
+        τ_d=16,
+        focalizer_id="laertes",
+        disclosures=(),
+    ),
+
+    # τ_d=17 — Act 4.7. Claudius and Laertes plot the duel.
+    # Omniscient — two plotters, no single register.
+    SjuzhetEntry(
+        event_id="E_duel_plotted",
+        τ_d=17,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=18 — Act 5.1. The graveyard and Ophelia's funeral.
+    SjuzhetEntry(
+        event_id="E_graveyard_scene",
+        τ_d=18,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=19 — Act 5.2. The formal duel begins. Omniscient —
+    # public court event.
+    SjuzhetEntry(
+        event_id="E_duel_begins",
+        τ_d=19,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=20 — mid-duel. Gertrude drinks the poisoned cup. Public
+    # ceremony-turned-disaster; omniscient.
+    SjuzhetEntry(
+        event_id="E_gertrude_drinks_poison",
+        τ_d=20,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=21 — rapier exchange; both combatants wounded.
+    SjuzhetEntry(
+        event_id="E_hamlet_laertes_wounded",
+        τ_d=21,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=22 — Laertes's deathbed reveal. Hamlet's anagnorisis lands
+    # here; the A12 peripeteia-anagnorisis binding (distance 9,
+    # SEPARATED) closes. Hamlet focalizes — his recognition is the
+    # scene's weight.
+    SjuzhetEntry(
+        event_id="E_laertes_reveals_plot",
+        τ_d=22,
+        focalizer_id="hamlet",
+        disclosures=(),
+    ),
+
+    # τ_d=23 — Hamlet kills Claudius. Omniscient — public execution
+    # of the revenge commission discharged.
+    SjuzhetEntry(
+        event_id="E_hamlet_kills_claudius",
+        τ_d=23,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=24 — Laertes dies.
+    SjuzhetEntry(
+        event_id="E_laertes_dies",
+        τ_d=24,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=25 — Hamlet dies in Horatio's arms. Horatio focalizes —
+    # the sole survivor charged to "report me and my cause aright."
+    # Structural frame-closer paired with τ_d=0's Horatio opening.
+    SjuzhetEntry(
+        event_id="E_hamlet_dies",
+        τ_d=25,
+        focalizer_id="horatio",
+        disclosures=(),
+    ),
+
+]
+
+
+# ----------------------------------------------------------------------------
+# Descriptions — the interpretive peer surface.
+# ----------------------------------------------------------------------------
+#
+# τ_a values start at 200 (after fabula τ_a values, which top out
+# at 180). Later authoring passes can interleave without renumbering.
+#
+# Parallels the macbeth.py descriptions in two tracks:
+#   1. Ontological reticence questions (Ghost, Hamlet's sanity,
+#      Gertrude, Ophelia). Authored as authorial-uncertainty
+#      descriptions marked is_question=True. These are the same
+#      pattern as macbeth's D_witches_ontology_undecided and
+#      D_banquet_ghost_ontology_undecided — the substrate
+#      deliberately declines to commit, and that decision is
+#      recorded here.
+#   2. Structural reader-frames (trajectory, OQ-AP5/AP6 postures,
+#      cumulative catastrophe). These name reading moves the
+#      substrate supports rather than proposes as commitments.
+#
+# Probe-authored edits and answers (like the llm-authored
+# supersessions in macbeth.py) are not present in Session 3; they
+# would be added by a future probe pass against Hamlet.
+
+DESCRIPTIONS = [
+
+    Description(
+        id="D_ghost_ontology_undecided",
+        attached_to=anchor_event("E_hamlet_meets_ghost"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("The Ghost is encoded as an Entity of kind 'agent' "
+              "distinct from king_hamlet. The substrate records "
+              "apparition_of('ghost', …) as observation-only effects "
+              "on the characters who see it (Horatio, Hamlet); no "
+              "world-fact asserts the Ghost 'is' King Hamlet's spirit, "
+              "nor that it is a devil in borrowed shape, nor that it "
+              "is Hamlet's projection. Hamlet's own 'the spirit that I "
+              "have seen may be the devil' names the question "
+              "explicitly in Act 2.2. The Mousetrap supplies external "
+              "corroboration for the Ghost's factual claim (Claudius "
+              "killed the king) without resolving what the Ghost "
+              "ontologically *is*. This reticence parallels Macbeth's "
+              "Witches and Banquo's ghost — the same substrate "
+              "pattern (agent-only, no world assertion) applied to "
+              "the same interpretive question."),
+        is_question=True,
+        authored_by="author",
+        τ_a=200,
+    ),
+
+    Description(
+        id="D_hamlet_sanity_undecided",
+        attached_to=anchor_event("E_hamlet_adopts_antic_disposition"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Hamlet's madness is encoded as feigning_madness(hamlet) "
+              "— agent-level, observed only by Hamlet himself and, "
+              "later, by Horatio. No world-fact mad(hamlet) is "
+              "asserted (contrast ophelia at E_ophelia_madness, where "
+              "world(mad('ophelia')) IS asserted). The substrate "
+              "commits to the antic disposition being performance, "
+              "but leaves open whether the performance becomes genuine "
+              "over the course of the play — Ophelia's death, "
+              "Hamlet's graveside vault with Laertes, the erratic "
+              "tonal shifts between the closet scene and the duel "
+              "preparation are readings that point toward something "
+              "more than sustained performance. The structural "
+              "choice: the substrate refuses to promote feigning to "
+              "mad. A future encoding may wish to commit, or to "
+              "introduce a partial-madness predicate; until then the "
+              "reticence is the statement."),
+        is_question=True,
+        authored_by="author",
+        τ_a=201,
+    ),
+
+    Description(
+        id="D_gertrude_foreknowledge_undecided",
+        attached_to=anchor_event("E_hamlet_confronts_gertrude"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Gertrude's state regarding Claudius's regicide is "
+              "substrate-silent. She is not authored as holding "
+              "killed('claudius', 'king_hamlet') at any slot — no "
+              "observe, no told_by. She is equally not authored as "
+              "holding its negation. The question — did Gertrude "
+              "know? did she suspect? did she deliberately refuse "
+              "to know? — is sustained by the play and left "
+              "sustained here. The closet scene confrontation "
+              "records Hamlet's accusations against her haste of "
+              "remarriage but deliberately does not have him accuse "
+              "her of complicity in the murder; she responds with "
+              "grief but not with any signal the substrate can read "
+              "as confession or denial. The cup-drinking at τ_s=16 "
+              "is consistent with ignorance (she had no reason to "
+              "distrust the cup) but does not require it. The "
+              "substrate's silence here is the encoding's judgment: "
+              "the text supplies no enough signal to commit."),
+        is_question=True,
+        authored_by="author",
+        τ_a=202,
+    ),
+
+    Description(
+        id="D_ophelia_death_undetermined",
+        attached_to=anchor_event("E_ophelia_drowns"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("world(drowned('ophelia')) is asserted; the cause of "
+              "the drowning is not. The substrate commits to the "
+              "death and to its mechanism (drowning) but declines to "
+              "author either suicide or accident. The play itself "
+              "debates it in Act 5.1 (the gravediggers; the priest's "
+              "'maimed rites'), so substrate-level commitment to "
+              "either reading would flatten what the text "
+              "deliberately keeps open. This is structurally parallel "
+              "to the Ghost-ontology reticence: the substrate records "
+              "observable facts and leaves the interpretive question "
+              "for descriptions. A future branch (e.g., "
+              ":b-ophelia-suicide) could author the suicide reading "
+              "as a :contested branch, paralleling the Rashomon-style "
+              "multi-branch pattern, if a forcing function argues "
+              "for it."),
+        is_question=True,
+        authored_by="author",
+        τ_a=203,
+    ),
+
+    Description(
+        id="D_mousetrap_as_epistemic_instrument",
+        attached_to=anchor_event("E_mousetrap_performance"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("The Mousetrap is the play's epistemic hinge. Before "
+              "τ_s=6, Hamlet holds the Ghost's claim at BELIEVED "
+              "(the explicit 'may be the devil' doubt); Claudius "
+              "holds killed('claudius', 'king_hamlet') at KNOWN but "
+              "believes nobody else does. After τ_s=6, Hamlet's hold "
+              "promotes to KNOWN and Claudius infers Hamlet-knows. "
+              "The mechanism is the specific detail of poison-in-ear "
+              "— a fact not publicly available, shared between (by "
+              "Hamlet's reading) exactly Claudius and the Ghost. "
+              "When the play-within-a-play dramatizes precisely this "
+              "detail and Claudius panics, Hamlet reads the panic as "
+              "evidence Claudius recognized the detail — which means "
+              "the Ghost had the detail — which (by Hamlet's "
+              "reasoning) establishes the Ghost's reliability. The "
+              "substrate captures this as a remove_held + observe "
+              "pair at the Mousetrap event: the BELIEVED prop is "
+              "retracted and the KNOWN prop is observed fresh. The "
+              "structural move — a play-within-a-play as an epistemic "
+              "verifier — is the corpus's first formal example of "
+              "this pattern."),
+        authored_by="author",
+        τ_a=204,
+    ),
+
+    Description(
+        id="D_revenge_delay_as_separated_binding",
+        attached_to=anchor_event("E_hamlet_kills_polonius"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("Hamlet's 'delay' — the traditional interpretive "
+              "problem (why does he wait so long?) — is rendered "
+              "structurally as A12 BINDING_SEPARATED distance 9. "
+              "Peripeteia fires here (τ_s=8): Hamlet stabs through "
+              "the arras thinking it is Claudius, discovers he has "
+              "killed Polonius, and the reversal lands — from the "
+              "avenger-contemplating to the fugitive-who-has-killed-"
+              "the-wrong-man. Anagnorisis lands at τ_s=17 "
+              "(E_laertes_reveals_plot): the recognition that "
+              "Claudius's counter-plot has reached him and he is "
+              "doomed. Distance 9 is the widest-separation binding "
+              "in the corpus (Oedipus=5, Macbeth=COINCIDENT). The "
+              "structural rendering of 'delay' is the long arc "
+              "between these two poles — not the famous soliloquies "
+              "as individual beats but the entire middle phase as a "
+              "stretched reversal-without-recognition. OQ-AP7 banks "
+              "whether 'separated' as a single category is adequate "
+              "over this range."),
+        authored_by="author",
+        τ_a=205,
+    ),
+
+    Description(
+        id="D_parallel_tragic_heroes",
+        attached_to=anchor_event("E_hamlet_dies"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("Three characters are authored with "
+              "is_tragic_hero=True in hamlet_aristotelian.py: "
+              "Hamlet, Claudius, and Laertes. OQ-AP6 pressure: the "
+              "A10 dialect's ArMythosRelation(kind='parallel') types "
+              "*inter*-mythos relations; Hamlet forces the question "
+              "of whether intra-mythos parallel tragic arcs need "
+              "their own structural hook. At the substrate layer, "
+              "the three arcs are readable through their knowledge "
+              "states: Hamlet (uncertain → verified → revenge); "
+              "Claudius (sole knower → exposed → killed); Laertes "
+              "(misled by Claudius's framing → co-conspirator → "
+              "deathbed-partial-reversal). Only Hamlet earns the "
+              "full recognition; Laertes dies without knowing that "
+              "Claudius is a regicide, and Claudius dies without "
+              "having repented in a way the substrate records. The "
+              "three arcs share a mythos but do not share a moral "
+              "structure — which is itself a reading the encoding "
+              "supports and the dialect does not yet name."),
+        authored_by="author",
+        τ_a=206,
+    ),
+
+    Description(
+        id="D_ghost_commission_posture",
+        attached_to=anchor_event("E_hamlet_meets_ghost"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("OQ-AP5 pressure: the Ghost is a second fate-agent in "
+              "the corpus after Macbeth's Witches, with a distinct "
+              "causal posture. The Witches equivocate (literally "
+              "true, catastrophically misleading prophecies); the "
+              "Ghost gives direct factual revelation plus direct "
+              "commission. Substrate: the Witches' prophecies are "
+              "authored as agent-only (told_by Macbeth/Banquo, no "
+              "world-facts); the Ghost's claim is similarly agent-"
+              "only (told_by Hamlet), but bundled with a commission "
+              "(ghost_demands_revenge) that has no Witch-equivalent. "
+              "The commission is restricted to Hamlet alone — "
+              "Horatio learns the Ghost's *claim* about the murder "
+              "(E_hamlet_sworn_to_secrecy told_by) but not the "
+              "revenge demand. This asymmetry is load-bearing: it "
+              "makes Hamlet the sole possessor of the revenge "
+              "commission, which is the substrate-level grounding "
+              "for his unique tragic-hero status among the three "
+              "heroes in this mythos."),
+        authored_by="author",
+        τ_a=207,
+    ),
+
+    Description(
+        id="D_cumulative_catastrophe",
+        attached_to=anchor_event("E_hamlet_dies"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("The catastrophe is scattered across a single beat-"
+              "cluster: Gertrude dies at τ_s=16, Laertes + Claudius "
+              "+ Hamlet at τ_s=17–18. Four deaths within two "
+              "substrate-time units, with four different moral "
+              "weights — innocent (Gertrude, poisoned by her own "
+              "husband's plot), redeemed-antagonist (Laertes, whose "
+              "deathbed reveal restores some moral standing), "
+              "regicide-usurper (Claudius, killed by the rightful "
+              "heir discharging the Ghost's commission), and "
+              "tragic-hero (Hamlet, whose death at the conclusion "
+              "of the revenge action ends the house of Denmark). "
+              "Contrast Macbeth's pattern (catastrophe scattered "
+              "across three phases) and Oedipus's pattern "
+              "(concentrated-at-end, single recognition-driven "
+              "collapse). If OQ-AP1 (ArPathos grounding) opens, "
+              "Hamlet is the forcing case for cluster-pathos — a "
+              "single beat carrying four distinct moral weights."),
+        authored_by="author",
+        τ_a=208,
     ),
 
 ]
