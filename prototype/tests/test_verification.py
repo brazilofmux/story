@@ -42,7 +42,10 @@ from story_engine.core.verification import (
     reviews_only, advisories_only, group_by_verdict,
 )
 from story_engine.core.lowering import PositionRange
-from story_engine.core.verifier_helpers import event_participants_flat
+from story_engine.core.verifier_helpers import (
+    event_participants_flat,
+    fabula_end_τ_s, events_lowered_from_throughline,
+)
 from story_engine.core.substrate import Event, EventStatus
 
 
@@ -186,6 +189,111 @@ def test_event_participants_flat_tolerates_none_participants():
         status=EventStatus.COMMITTED,
     )
     assert event_participants_flat(event) == set()
+
+
+def _synth_event(eid: str, τ_s: int) -> Event:
+    return Event(
+        id=eid,
+        type="synthetic",
+        τ_s=τ_s,
+        τ_a=0,
+        participants={},
+        effects=(),
+        status=EventStatus.COMMITTED,
+    )
+
+
+def test_fabula_end_τ_s_returns_max_τ_s_and_skips_unanchored():
+    """`fabula_end_τ_s` is the canonical arc-endpoint helper for the
+    dramatica-complete verifiers. Must return the max τ_s across
+    the fabula and skip events with τ_s=None rather than raising."""
+    fabula = (
+        _synth_event("E0", 0),
+        _synth_event("E1", 5),
+        Event(
+            id="E_unanchored", type="synthetic", τ_s=None, τ_a=0,
+            participants={}, effects=(), status=EventStatus.COMMITTED,
+        ),
+        _synth_event("E2", 3),
+    )
+    assert fabula_end_τ_s(fabula) == 5
+
+
+def test_events_lowered_from_throughline_filters_active_and_substrate():
+    """ACTIVE-only filter AND substrate-dialect-only filter: a PENDING
+    lowering and a non-substrate lower_record must both be ignored.
+    Matches the per-encoding helpers this replaces."""
+    e_hit = _synth_event("E_hit", 0)
+    e_miss = _synth_event("E_miss", 1)
+    e_pending = _synth_event("E_pending", 2)
+    fabula = (e_hit, e_miss, e_pending)
+
+    upper = cross_ref("dramatic", "T_mc_x")
+    other_upper = cross_ref("dramatic", "T_other")
+    lw_active = Lowering(
+        id="L_active",
+        upper_record=upper,
+        lower_records=(
+            cross_ref("substrate", "E_hit"),
+            cross_ref("dramatic", "Scene_noise"),
+        ),
+        annotation=Annotation(text=""),
+        status=LoweringStatus.ACTIVE,
+    )
+    lw_other = Lowering(
+        id="L_other_upper",
+        upper_record=other_upper,
+        lower_records=(cross_ref("substrate", "E_miss"),),
+        annotation=Annotation(text=""),
+        status=LoweringStatus.ACTIVE,
+    )
+    lw_pending = Lowering(
+        id="L_pending",
+        upper_record=upper,
+        lower_records=(cross_ref("substrate", "E_pending"),),
+        annotation=Annotation(text=""),
+        status=LoweringStatus.PENDING,
+    )
+
+    result = events_lowered_from_throughline(
+        "T_mc_x", (lw_active, lw_other, lw_pending), fabula,
+    )
+    assert result == (e_hit,)
+
+
+def test_events_lowered_from_throughline_preserves_lowering_order():
+    """Events are returned in the order they appear in `lowerings` ×
+    `lower_records`. The per-encoding callers depend on this for
+    domain-assignment iteration; swapping to a dict/set would change
+    verdict comments."""
+    e_a = _synth_event("E_a", 0)
+    e_b = _synth_event("E_b", 1)
+    e_c = _synth_event("E_c", 2)
+    fabula = (e_a, e_b, e_c)
+
+    upper = cross_ref("dramatic", "T_mc_x")
+    lw_first = Lowering(
+        id="L_first",
+        upper_record=upper,
+        lower_records=(
+            cross_ref("substrate", "E_c"),
+            cross_ref("substrate", "E_a"),
+        ),
+        annotation=Annotation(text=""),
+        status=LoweringStatus.ACTIVE,
+    )
+    lw_second = Lowering(
+        id="L_second",
+        upper_record=upper,
+        lower_records=(cross_ref("substrate", "E_b"),),
+        annotation=Annotation(text=""),
+        status=LoweringStatus.ACTIVE,
+    )
+
+    result = events_lowered_from_throughline(
+        "T_mc_x", (lw_first, lw_second), fabula,
+    )
+    assert [e.id for e in result] == ["E_c", "E_a", "E_b"]
 
 
 def test_pending_lowerings_not_passed_to_check():
@@ -4209,6 +4317,13 @@ TESTS = [
     test_ag5_ackroyd_dsp_growth_start_unchanged,
     test_ag5_rocky_dsp_growth_start_unchanged,
     test_oedipus_dsp_growth_approved_under_ag5,
+    # Extracted verifier helpers
+    test_event_participants_flat_tolerates_none_participants,
+    test_run_direct_review_checks_wraps_registration_as_review,
+    test_run_direct_review_checks_preserves_registration_order,
+    test_fabula_end_τ_s_returns_max_τ_s_and_skips_unanchored,
+    test_events_lowered_from_throughline_filters_active_and_substrate,
+    test_events_lowered_from_throughline_preserves_lowering_order,
 ]
 
 

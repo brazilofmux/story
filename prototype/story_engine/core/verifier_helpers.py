@@ -1154,6 +1154,53 @@ def event_to_beat_type(
     return None
 
 
+def fabula_end_τ_s(fabula) -> int:
+    """Highest τ_s across a fabula's events. Skips events with
+    `τ_s is None` (unanchored / pre-fabula records). Raises
+    `ValueError` if no event in the fabula has a τ_s — the dramatica-
+    complete verifiers rely on this as the arc endpoint, so a silent
+    zero would be a semantic lie."""
+    return max(e.τ_s for e in fabula if e.τ_s is not None)
+
+
+def events_lowered_from_throughline(
+    throughline_id: str,
+    lowerings,
+    fabula,
+) -> tuple:
+    """Return substrate Events reached via ACTIVE Lowerings whose
+    `upper_record` is the named Dramatic Throughline. Complementary
+    to `events_advancing_throughline` below: this helper walks direct
+    `T_* → substrate-events` Lowerings; the other walks Scene-level
+    Lowerings whose scene `advances` the throughline. Encodings with
+    direct Throughline Lowerings (Ackroyd, Macbeth, Oedipus, Rocky)
+    use this; others fall back to the Scene.advances path.
+
+    Iterates `lowerings` in input order, collects substrate
+    `lower_records`, then resolves each id to an Event via linear
+    scan over `fabula`. Duplicate ids are kept (matching the prior
+    per-encoding copies — the same substrate Event can appear under
+    two ACTIVE Lowerings, which is a distinct authorial claim the
+    caller may want to see)."""
+    upper = cross_ref("dramatic", throughline_id)
+    event_ids: list = []
+    for lw in lowerings:
+        if lw.upper_record != upper:
+            continue
+        if lw.status != LoweringStatus.ACTIVE:
+            continue
+        for lr in lw.lower_records:
+            if lr.dialect == "substrate":
+                event_ids.append(lr.record_id)
+    events: list = []
+    for eid in event_ids:
+        for e in fabula:
+            if e.id == eid:
+                events.append(e)
+                break
+    return tuple(events)
+
+
 def events_advancing_throughline(
     throughline_id: str,
     lowerings,
@@ -1162,11 +1209,10 @@ def events_advancing_throughline(
 ):
     """Collect substrate events realized by Scenes that advance the
     named throughline, via Scene.advances. Complementary to direct
-    throughline-Lowering lookup (`_events_lowered_from_throughline`
-    in per-encoding verifiers): some encodings have a direct
-    T_ic_* → events Lowering (Ackroyd, Macbeth), others don't
-    (Oedipus, Rocky), and the Scene.advances path recovers IC-
-    throughline events for the latter.
+    throughline-Lowering lookup (`events_lowered_from_throughline`
+    above): some encodings have a direct T_ic_* → events Lowering
+    (Ackroyd, Macbeth), others don't (Oedipus, Rocky), and the
+    Scene.advances path recovers IC-throughline events for the latter.
 
     Walk:
       1. For each Scene-level Lowering, check if the Scene's

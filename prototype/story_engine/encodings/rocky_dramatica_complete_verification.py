@@ -114,6 +114,7 @@ from story_engine.core.verifier_helpers import (
     dsp_limit_characterization_check,
     detect_preceding_ic_event,
     events_advancing_throughline,
+    fabula_end_τ_s, events_lowered_from_throughline,
 )
 
 
@@ -126,33 +127,6 @@ ROCKY_ENTITY_ID = "rocky"
 APOLLO_ENTITY_ID = "apollo"
 ADRIAN_ENTITY_ID = "adrian"
 _AGENT_IDS = agent_ids_from_entities(ENTITIES)
-
-
-def _end_τ_s() -> int:
-    """Highest τ_s in Rocky's fabula."""
-    return max(e.τ_s for e in FABULA if e.τ_s is not None)
-
-
-def _events_lowered_from_throughline(throughline_id: str) -> tuple:
-    """Return substrate Events reached via ACTIVE Lowerings whose
-    upper_record is this Throughline."""
-    upper = cross_ref("dramatic", throughline_id)
-    event_ids: list = []
-    for lw in LOWERINGS:
-        if lw.upper_record != upper:
-            continue
-        if lw.status != LoweringStatus.ACTIVE:
-            continue
-        for lr in lw.lower_records:
-            if lr.dialect == "substrate":
-                event_ids.append(lr.record_id)
-    events = []
-    for eid in event_ids:
-        for e in FABULA:
-            if e.id == eid:
-                events.append(e)
-                break
-    return tuple(events)
 
 
 def _rocky_is_participant(event: Event) -> bool:
@@ -172,7 +146,7 @@ def mc_throughline_activity_domain_check(
     """Characterize DA_mc — T_mc_rocky is in Activity domain. Substrate
     check: of the events reached via L_mc_throughline, count external-
     action-shaped vs. internal-state-shaped per EK2."""
-    events = _events_lowered_from_throughline("T_mc_rocky")
+    events = events_lowered_from_throughline("T_mc_rocky", LOWERINGS, FABULA)
     if not events:
         return (
             VERDICT_NOTED, None,
@@ -317,7 +291,7 @@ def outcome_failure_claim_at_end_check(
     Inverted from the three prior encodings (all Outcome=Success).
     For Failure, a positive load-bearing fact that contradicts the
     goal IS the support for the Failure declaration."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_up_to_end = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -370,7 +344,7 @@ def judgment_good_trajectory_check(
     in one cluster at τ_s=55-57, not as an arc-spanning
     shape-emergence. Trajectory-nature is still present in the sense
     that the facts must accrete across the fight's τ_s range."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -437,7 +411,7 @@ def dsp_resolve_steadfast_trajectory_check(
     events_in_scope_all = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
 
     def _rocky_classes_at(τ: int) -> tuple:
         state = project_knowledge(
@@ -485,7 +459,7 @@ def dsp_resolve_steadfast_trajectory_check(
     # through (Apollo's dismissals, selections, in-ring pressure).
     # Rocky has no direct T_ic_apollo Lowering; fall back to
     # Scene.advances to recover IC events.
-    ic_events = _events_lowered_from_throughline("T_ic_apollo")
+    ic_events = events_lowered_from_throughline("T_ic_apollo", LOWERINGS, FABULA)
     if not ic_events:
         from story_engine.encodings.rocky_dramatic import SCENES
         ic_events = events_advancing_throughline(
@@ -559,7 +533,7 @@ def dsp_growth_start_trajectory_check(
     ]
     articulated = Prop("articulated_goal",
                        (ROCKY_ENTITY_ID, "went_the_distance"))
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
 
     def _rocky_holds_at(τ: int) -> bool:
         state = project_knowledge(
@@ -634,7 +608,7 @@ def story_goal_trajectory_check(
     derive at τ_s=45; DOES derive at τ_s=end). This is the Failure-
     shape trajectory: premises of the un-goal accrete."""
     from story_engine.encodings.rocky import scheduled_fight
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -705,7 +679,7 @@ def story_consequence_moment_check(
     Inverted from the three prior encodings' Story_consequence checks
     (which verify consequence AVOIDED under Success); under Failure,
     consequence REALIZED is the expected substrate shape."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]

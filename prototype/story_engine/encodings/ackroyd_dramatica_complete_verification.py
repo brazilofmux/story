@@ -106,6 +106,7 @@ from story_engine.core.verifier_helpers import (
     dsp_limit_characterization_check,
     classify_event_manipulation_shape,
     detect_preceding_ic_event,
+    fabula_end_τ_s, events_lowered_from_throughline,
 )
 
 
@@ -117,32 +118,6 @@ from story_engine.core.verifier_helpers import (
 SHEPPARD_ENTITY_ID = "sheppard"
 ACKROYD_ENTITY_ID = "ackroyd"
 _AGENT_IDS = agent_ids_from_entities(ENTITIES)
-
-
-def _end_τ_s() -> int:
-    return max(e.τ_s for e in FABULA if e.τ_s is not None)
-
-
-def _events_lowered_from_throughline(throughline_id: str) -> tuple:
-    """Same helper as the Macbeth / Oedipus verifiers; encoding-
-    agnostic logic with Ackroyd's LOWERINGS as source."""
-    upper = cross_ref("dramatic", throughline_id)
-    event_ids: list = []
-    for lw in LOWERINGS:
-        if lw.upper_record != upper:
-            continue
-        if lw.status != LoweringStatus.ACTIVE:
-            continue
-        for lr in lw.lower_records:
-            if lr.dialect == "substrate":
-                event_ids.append(lr.record_id)
-    events = []
-    for eid in event_ids:
-        for e in FABULA:
-            if e.id == eid:
-                events.append(e)
-                break
-    return tuple(events)
 
 
 # Manipulation-kind event taxonomy for Ackroyd. Distinct from the
@@ -209,7 +184,7 @@ def mc_throughline_manipulation_domain_check(
     qualification: investigation events were classified as
     non-manipulation under the type-set alone; under MN4 they're
     correctly counted."""
-    events = _events_lowered_from_throughline("T_mc_sheppard")
+    events = events_lowered_from_throughline("T_mc_sheppard", LOWERINGS, FABULA)
     if not events:
         return (
             VERDICT_NOTED, None,
@@ -350,7 +325,7 @@ def outcome_success_claim_at_end_check(
     murder is on the record and the killer is named. Ackroyd's
     encoding authors this literally (rather than via derivation
     from premises), so the check uses world_holds_literal."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_up_to_end = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -396,7 +371,7 @@ def judgment_bad_trajectory_check(
     persists through end. Like Macbeth's tyrant trajectory, but the
     predicate rests on a relational fact (patient_of) rather than a
     state-collapse (king-and-kinslayer)."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope_all = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -468,7 +443,7 @@ def dsp_resolve_steadfast_trajectory_check(
     Inverted from Oedipus/Macbeth's Change check (which looks for
     a mid-arc transition); Steadfast looks for *absence* of such a
     transition across the arc's investigation span."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope_all = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -528,7 +503,7 @@ def dsp_resolve_steadfast_trajectory_check(
     # For Steadfast, count the IC throughline's pressure events —
     # Sheppard's Steadfast holds across Poirot's investigation.
     # Resistance signal = count of IC events the MC held through.
-    ic_events = _events_lowered_from_throughline("T_ic_poirot")
+    ic_events = events_lowered_from_throughline("T_ic_poirot", LOWERINGS, FABULA)
     ic_τs = sorted(
         e.τ_s for e in ic_events
         if e.τ_s is not None and e.τ_s >= investigation_start
@@ -648,7 +623,7 @@ def story_goal_trajectory_check(
     across agents over the arc — at τ_s=1 only Sheppard knows; by
     τ_s=8 (reveal) at least four key agents hold it at KNOWN.
     Trajectory: expanding-knowledge shape."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -740,7 +715,7 @@ def story_consequence_moment_check(
     killed(sheppard, ackroyd) at KNOWN) AND (b) Ralph Paton is NOT
     accused_of_murder anymore. Both conditions must hold for the
     consequence to be averted."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]

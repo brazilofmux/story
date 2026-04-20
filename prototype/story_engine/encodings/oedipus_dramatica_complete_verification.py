@@ -92,6 +92,7 @@ from story_engine.core.verifier_helpers import (
     detect_preceding_ic_event,
     events_advancing_throughline,
     compute_pre_post_action_ratios,
+    fabula_end_τ_s, events_lowered_from_throughline,
 )
 
 
@@ -102,35 +103,6 @@ from story_engine.core.verifier_helpers import (
 
 OEDIPUS_ENTITY_ID = "oedipus"
 _AGENT_IDS = agent_ids_from_entities(ENTITIES)
-
-
-def _end_τ_s() -> int:
-    """Highest τ_s in Oedipus's fabula."""
-    return max(e.τ_s for e in FABULA if e.τ_s is not None)
-
-
-def _events_lowered_from_throughline(throughline_id: str) -> tuple:
-    """Return substrate Events reached via ACTIVE Lowerings whose
-    upper_record is this Throughline. Parallels the same-named helper
-    in macbeth_dramatica_complete_verification.py; the logic is
-    encoding-agnostic but the LOWERINGS source is Oedipus's."""
-    upper = cross_ref("dramatic", throughline_id)
-    event_ids: list = []
-    for lw in LOWERINGS:
-        if lw.upper_record != upper:
-            continue
-        if lw.status != LoweringStatus.ACTIVE:
-            continue
-        for lr in lw.lower_records:
-            if lr.dialect == "substrate":
-                event_ids.append(lr.record_id)
-    events = []
-    for eid in event_ids:
-        for e in FABULA:
-            if e.id == eid:
-                events.append(e)
-                break
-    return tuple(events)
 
 
 def _oedipus_is_participant(event: Event) -> bool:
@@ -152,7 +124,7 @@ def mc_throughline_activity_domain_check(
     external-action-shaped vs. internal-state-shaped per EK2
     (event-kind-taxonomy-sketch-01) — a structural predicate over
     participants and effects, not a type-string set."""
-    events = _events_lowered_from_throughline("T_mc_oedipus")
+    events = events_lowered_from_throughline("T_mc_oedipus", LOWERINGS, FABULA)
     if not events:
         return (
             VERDICT_NOTED, None,
@@ -266,7 +238,7 @@ def outcome_success_claim_at_end_check(
     (E_crossroads_killing gives killed(oedipus, laius);
     E_shepherd_testimony + E_oedipus_anagnorisis establish
     child_of(oedipus, laius))."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_up_to_end = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -310,7 +282,7 @@ def judgment_bad_trajectory_check(
     (oedipus ↔ the-exposed-baby / son-of-laius); at τ_s=end it DOES.
     Identity-and-realization sketch-01's machinery is the substrate
     surface this claim rests on."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope_all = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -385,7 +357,7 @@ def dsp_resolve_change_trajectory_check(
     Oedipus because epistemic tragedy couples the two — a good
     Change/Good MC would show a transition to flourishing, a
     Change/Bad MC a transition to ruin."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope_all = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -453,7 +425,7 @@ def dsp_resolve_change_trajectory_check(
     # IC influence — check if Jocasta's throughline events temporally
     # precede the anagnorisis. Oedipus has no direct T_impact_jocasta
     # Lowering, so fall back to Scene.advances to recover IC events.
-    ic_events = _events_lowered_from_throughline("T_impact_jocasta")
+    ic_events = events_lowered_from_throughline("T_impact_jocasta", LOWERINGS, FABULA)
     if not ic_events:
         from story_engine.encodings.oedipus_dramatic import SCENES
         ic_events = events_advancing_throughline(
@@ -525,7 +497,7 @@ def dsp_growth_stop_trajectory_check(
     its target. The substrate shape still carries the cessation, just
     at the pursuit-vs-consequential layer rather than the
     participation-count layer."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     anagnorisis_τ = None
     for e in FABULA:
         if (e.type == "realization"
@@ -637,7 +609,7 @@ def story_goal_trajectory_check(
     birth at τ_s=-100), so their fabula-order was irrelevant to
     the dramatic trajectory. The probe's 2026-04-17 qualification
     named the category error; IG2 closes it."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -736,7 +708,7 @@ def story_consequence_moment_check(
     is identified) AND (b) `exiled(oedipus)` is world-asserted
     (the pollution is expelled). Both conditions must hold for
     the consequence to be successfully averted."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]

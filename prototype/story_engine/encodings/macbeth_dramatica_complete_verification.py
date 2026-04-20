@@ -112,6 +112,7 @@ from story_engine.core.verifier_helpers import (
     beat_type_weight, event_to_beat_type,
     detect_preceding_ic_event,
     compute_pre_post_action_ratios,
+    fabula_end_τ_s, events_lowered_from_throughline,
 )
 
 
@@ -122,34 +123,6 @@ from story_engine.core.verifier_helpers import (
 
 MACBETH_ENTITY_ID = "macbeth"
 _AGENT_IDS = agent_ids_from_entities(ENTITIES)
-
-
-def _end_τ_s() -> int:
-    """Highest τ_s in the Macbeth fabula."""
-    return max(e.τ_s for e in FABULA if e.τ_s is not None)
-
-
-def _events_lowered_from_throughline(throughline_id: str) -> tuple:
-    """Return substrate Events reached via ACTIVE Lowerings whose
-    upper_record is this Throughline. Uses macbeth_lowerings LOWERINGS
-    as the source of truth for the MC Throughline's substrate scope."""
-    upper = cross_ref("dramatic", throughline_id)
-    event_ids: list = []
-    for lw in LOWERINGS:
-        if lw.upper_record != upper:
-            continue
-        if lw.status != LoweringStatus.ACTIVE:
-            continue
-        for lr in lw.lower_records:
-            if lr.dialect == "substrate":
-                event_ids.append(lr.record_id)
-    events = []
-    for eid in event_ids:
-        for e in FABULA:
-            if e.id == eid:
-                events.append(e)
-                break
-    return tuple(events)
 
 
 def _macbeth_is_participant(event: Event) -> bool:
@@ -184,7 +157,7 @@ def mc_throughline_activity_domain_check(
 
     Comment reports both the raw count and the weighted ratio so
     the refinement is inspectable."""
-    events = _events_lowered_from_throughline("T_mc_macbeth")
+    events = events_lowered_from_throughline("T_mc_macbeth", LOWERINGS, FABULA)
     if not events:
         return (
             VERDICT_NOTED, None,
@@ -309,7 +282,7 @@ def outcome_success_claim_at_end_check(
     tyranny"; the load-bearing substrate fact is `dead(macbeth)` at
     end. A richer check would also verify a successor-king fact, but
     `dead(macbeth)` is the necessary condition this claim rests on."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_up_to_end = [
         e for e in FABULA
         if in_scope(e, CANONICAL, ALL_BRANCHES)
@@ -354,7 +327,7 @@ def judgment_bad_trajectory_check(
     tyrant rule depends on king(macbeth), which collapses the moment
     Malcolm takes the throne — so checking at τ_end proper would
     under-report the MC's resolution state)."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     τ_judgment = τ_end - 1  # moment-before-death; MC's arc resolution
     events_in_scope_all = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
@@ -424,7 +397,7 @@ def dsp_resolve_change_trajectory_check(
     asking different Dramatica questions): Judgment asks *was the
     resolution bad*; Resolve asks *did a transition occur at all*.
     For a Change/Bad MC both fire on the same substrate fact."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope_all = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -494,7 +467,7 @@ def dsp_resolve_change_trajectory_check(
     # Dramatica's Resolve=Change specifically means MC changes in
     # response to IC influence — check if Lady Macbeth's throughline
     # events temporally precede the tyrant-transition.
-    ic_events = _events_lowered_from_throughline("T_impact_lady_macbeth")
+    ic_events = events_lowered_from_throughline("T_impact_lady_macbeth", LOWERINGS, FABULA)
     ic_τs = [e.τ_s for e in ic_events if e.τ_s is not None]
     ic_rel = detect_preceding_ic_event(transition_τ, ic_τs, window=5)
     if ic_rel["has_correlation"]:
@@ -624,7 +597,7 @@ def story_goal_trajectory_check(
     at τ_s=0; Macbeth (usurper) for the middle; Malcolm (restored)
     at τ_s=end. The three-phase presence of `king(X, scotland)` is
     the trajectory's substrate realization."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
@@ -718,7 +691,7 @@ def story_consequence_moment_check(
     king(macbeth, scotland) nor tyrant(macbeth) should hold, and
     Malcolm should be king. Three conditions must all hold for
     the consequence to be averted."""
-    τ_end = _end_τ_s()
+    τ_end = fabula_end_τ_s(FABULA)
     events_in_scope = [
         e for e in FABULA if in_scope(e, CANONICAL, ALL_BRANCHES)
     ]
