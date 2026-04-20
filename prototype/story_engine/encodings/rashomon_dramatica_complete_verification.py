@@ -94,6 +94,7 @@ from story_engine.encodings.rashomon_dramatic import (
 from story_engine.encodings.rashomon_dramatica_complete import (
     DYNAMIC_STORY_POINTS_BY_STORY,
 )
+from story_engine.encodings.rashomon_lowerings import LOWERINGS_BY_STORY
 
 from story_engine.core.lowering import CrossDialectRef, cross_ref
 from story_engine.core.verification import (
@@ -129,7 +130,15 @@ def _run_testimony_dsp_limit_check(
     contested branch is passed as `canonical_branch` — this is the
     per-Story MS4 scoping: the testimony's own events plus the
     canonical grove floor are in scope; the other testimonies are
-    not."""
+    not.
+
+    Per scheduling-act-utterance-sketch-02 SC9, the Story's
+    scope-relevant Lowerings (`LOWERINGS_BY_STORY[story_id]`) are
+    threaded through to surface the prose-carried driver signal on
+    testimonies whose verdict would otherwise be NOTED with no
+    specialization. Only S_wife_ver exercises the signal in the
+    current corpus (L_wife_violated's annotation names the
+    husband's gaze of contempt as prose-carried)."""
     dsp_limit = next(
         d for d in DYNAMIC_STORY_POINTS_BY_STORY[story_id]
         if d.axis == DSPAxis.LIMIT
@@ -138,6 +147,7 @@ def _run_testimony_dsp_limit_check(
     return dsp_limit_characterization_check(
         EVENTS_ALL, _NO_RULES, canonical_scope_branch, ALL_BRANCHES,
         declared,
+        lowerings=LOWERINGS_BY_STORY[story_id],
     )
 
 

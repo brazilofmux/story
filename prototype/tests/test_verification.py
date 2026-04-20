@@ -2868,6 +2868,250 @@ def test_sc3_multi_prefix_comment_breakdown():
     assert "1 scheduled_" in comment_multi
 
 
+# ----------------------------------------------------------------------------
+# scheduling-act-utterance-sketch-02: SC6-SC9
+# (prose-carried driver signal; comment-layer specialization on
+# Timelock-consistent verdicts)
+# ----------------------------------------------------------------------------
+
+
+def _synthetic_lowering(annotation_text: str, lw_id: str = "L_syn"):
+    """Build a minimal Lowering-shaped object for SC6 helper tests.
+    Constructs via the real Lowering + Annotation dataclasses to
+    exercise the same `getattr(lw, 'annotation', None)` +
+    `getattr(annotation, 'text', None)` surface the helper uses."""
+    from story_engine.core.lowering import (
+        Annotation, Lowering, LoweringStatus, cross_ref,
+    )
+    return Lowering(
+        id=lw_id,
+        upper_record=cross_ref("dramatic", "S_synthetic"),
+        lower_records=(cross_ref("substrate", "E_synthetic"),),
+        annotation=Annotation(text=annotation_text),
+        status=LoweringStatus.ACTIVE,
+        τ_a=1,
+    )
+
+
+def test_sc6_prose_carried_lowerings_helper_empty_input():
+    """SC6 — empty input returns empty output."""
+    from story_engine.core.verifier_helpers import _prose_carried_lowerings
+    assert _prose_carried_lowerings(()) == ()
+
+
+def test_sc6_prose_carried_lowerings_helper_matches_token():
+    """SC6 — lowering whose annotation.text contains the canonical
+    `prose-carried` substring is returned."""
+    from story_engine.core.verifier_helpers import _prose_carried_lowerings
+    lw = _synthetic_lowering(
+        "the driver is prose-carried (not event-modeled).",
+        lw_id="L_syn_prose",
+    )
+    result = _prose_carried_lowerings((lw,))
+    assert result == (lw,)
+
+
+def test_sc6_prose_carried_lowerings_helper_skips_without_token():
+    """SC6 — lowering without the canonical substring is filtered."""
+    from story_engine.core.verifier_helpers import _prose_carried_lowerings
+    lw = _synthetic_lowering(
+        "an ordinary structural annotation with no special marker.",
+        lw_id="L_syn_plain",
+    )
+    assert _prose_carried_lowerings((lw,)) == ()
+
+
+def test_sc6_prose_carried_substring_match_not_whole_word():
+    """SC6 — substring match (not whole-word). A trailing period or
+    comma following the token still matches. A different hyphenation
+    (`authorially-carried`) does NOT match."""
+    from story_engine.core.verifier_helpers import _prose_carried_lowerings
+    lw_punct = _synthetic_lowering(
+        "it is prose-carried. See note.", lw_id="L_syn_punct",
+    )
+    lw_other = _synthetic_lowering(
+        "it is authorially-carried.", lw_id="L_syn_other",
+    )
+    result = _prose_carried_lowerings((lw_punct, lw_other))
+    assert result == (lw_punct,)
+
+
+def test_sc7_dsp_limit_check_default_empty_tuple_backward_compat():
+    """SC7 — when `lowerings` is not threaded (default empty tuple),
+    the comment is identical to sketch-01's comment shape. No SC8
+    suffix is added."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import (
+        dsp_limit_characterization_check,
+    )
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+    # No scheduling predicate, no middle-arc signals → timelock-
+    # consistent classification on an otherwise empty canonical scope.
+    fabula = (
+        Event(
+            id="E1", type="event", τ_s=5, τ_a=1,
+            participants={"a": "x"},
+            effects=(),
+        ),
+    )
+    _, _, comment = dsp_limit_characterization_check(
+        fabula, (), scope, all_branches, "timelock",
+    )
+    assert "prose-carried" not in comment
+    assert "representational gap" not in comment
+
+
+def test_sc8_timelock_consistent_with_prose_carried_surfaces_suffix():
+    """SC8 — threading a prose-carried Lowering through a timelock-
+    consistent classification appends a specializing suffix naming
+    the Lowering id(s) and the representational gap. Verdict stays
+    NOTED with strength None."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import (
+        dsp_limit_characterization_check,
+    )
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+    fabula = (
+        Event(
+            id="E1", type="event", τ_s=5, τ_a=1,
+            participants={"a": "x"},
+            effects=(),
+        ),
+    )
+    lw = _synthetic_lowering(
+        "names a prose-carried driver absent from the event model.",
+        lw_id="L_syn_prose",
+    )
+    verdict, strength, comment = dsp_limit_characterization_check(
+        fabula, (), scope, all_branches, "timelock",
+        lowerings=(lw,),
+    )
+    assert verdict == VERDICT_NOTED
+    assert strength is None
+    assert "L_syn_prose" in comment
+    assert "prose-carried" in comment
+    assert "representational gap" in comment
+
+
+def test_sc8_timelock_strong_does_not_enter_prose_carried_path():
+    """SC8 — when LT9 fires (scheduling predicate present), the
+    classification is timelock-strong and the new SC8 code path is
+    not reached. Threading a prose-carried lowering does not alter
+    the APPROVED-strength comment."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import (
+        dsp_limit_characterization_check,
+    )
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+    fabula = (
+        Event(
+            id="E1", type="utterance", τ_s=5, τ_a=1,
+            participants={"speaker": "a", "listener": "b"},
+            effects=(
+                WorldEffect(
+                    prop=Prop("scheduled_duel", ("a", "b")),
+                    asserts=True,
+                ),
+            ),
+        ),
+    )
+    lw = _synthetic_lowering(
+        "names a prose-carried driver.", lw_id="L_syn_prose",
+    )
+    verdict, _, comment = dsp_limit_characterization_check(
+        fabula, (), scope, all_branches, "timelock",
+        lowerings=(lw,),
+    )
+    assert verdict == VERDICT_APPROVED
+    # SC8 suffix MUST NOT appear on a timelock-strong path.
+    assert "L_syn_prose" not in comment
+    assert "representational gap" not in comment
+
+
+def test_sc8_optionlock_path_ignores_prose_carried_lowerings():
+    """SC8 — the prose-carried specialization is Timelock-only per
+    SC10. An Optionlock-declared call with a prose-carried lowering
+    must not surface the suffix."""
+    from story_engine.core.substrate import (
+        CANONICAL, Event, Prop, WorldEffect,
+    )
+    from story_engine.core.verifier_helpers import (
+        dsp_limit_characterization_check,
+    )
+    scope = CANONICAL
+    all_branches = {scope.label: scope}
+    fabula = (
+        Event(
+            id="E1", type="event", τ_s=5, τ_a=1,
+            participants={"a": "x"},
+            effects=(),
+        ),
+    )
+    lw = _synthetic_lowering(
+        "prose-carried driver.", lw_id="L_syn_prose",
+    )
+    _, _, comment = dsp_limit_characterization_check(
+        fabula, (), scope, all_branches, "optionlock",
+        lowerings=(lw,),
+    )
+    assert "L_syn_prose" not in comment
+    assert "representational gap" not in comment
+
+
+def test_sc9_rashomon_wife_dsp_limit_gains_prose_carried_suffix():
+    """SC9 — Rashomon's S_wife_ver DSP_limit run through the
+    verification module now threads LOWERINGS_BY_STORY and surfaces
+    the L_wife_violated prose-carried driver signal. Verdict stays
+    NOTED None per sketch-02's no-verdict-shift discipline."""
+    from story_engine.encodings.rashomon_dramatica_complete_verification import (
+        wife_dsp_limit_check,
+    )
+    verdict, strength, comment = wife_dsp_limit_check(None)
+    assert verdict == VERDICT_NOTED
+    assert strength is None
+    assert "L_wife_violated" in comment
+    assert "prose-carried" in comment
+    assert "representational gap" in comment
+
+
+def test_sc9_rashomon_bandit_samurai_verdicts_unchanged():
+    """SC9 — SC4's APPROVED 0.5 verdicts on S_bandit_ver /
+    S_samurai_ver are preserved. Threading LOWERINGS_BY_STORY does
+    not touch the timelock-strong path (LT9 fires on
+    requested_killing)."""
+    from story_engine.encodings.rashomon_dramatica_complete_verification import (
+        bandit_dsp_limit_check, samurai_dsp_limit_check,
+    )
+    for check in (bandit_dsp_limit_check, samurai_dsp_limit_check):
+        verdict, strength, comment = check(None)
+        assert verdict == VERDICT_APPROVED
+        assert strength == 0.5
+        # SC8 suffix must not appear on timelock-strong path
+        assert "representational gap" not in comment
+
+
+def test_sc9_rashomon_woodcutter_no_prose_carried_suffix():
+    """SC9 — the woodcutter testimony's scope lowerings contain no
+    prose-carried annotation; sketch-02's signal does not fire.
+    Verdict stays NOTED None with no specializing suffix."""
+    from story_engine.encodings.rashomon_dramatica_complete_verification import (
+        woodcutter_dsp_limit_check,
+    )
+    verdict, strength, comment = woodcutter_dsp_limit_check(None)
+    assert verdict == VERDICT_NOTED
+    assert strength is None
+    assert "representational gap" not in comment
+
+
 def test_lt12_preserves_prior_optionlock_verdicts():
     """LT12 must not shift Macbeth/Oedipus/Ackroyd Optionlock
     verdicts — their middle-arc retractions are restricting (or
@@ -3832,6 +4076,18 @@ TESTS = [
     test_sc3_scheduling_prefixes_output_shape,
     test_sc3_scheduling_prefixes_empty_when_no_match,
     test_sc3_multi_prefix_comment_breakdown,
+    # scheduling-act-utterance-sketch-02 (SC6-SC9)
+    test_sc6_prose_carried_lowerings_helper_empty_input,
+    test_sc6_prose_carried_lowerings_helper_matches_token,
+    test_sc6_prose_carried_lowerings_helper_skips_without_token,
+    test_sc6_prose_carried_substring_match_not_whole_word,
+    test_sc7_dsp_limit_check_default_empty_tuple_backward_compat,
+    test_sc8_timelock_consistent_with_prose_carried_surfaces_suffix,
+    test_sc8_timelock_strong_does_not_enter_prose_carried_path,
+    test_sc8_optionlock_path_ignores_prose_carried_lowerings,
+    test_sc9_rashomon_wife_dsp_limit_gains_prose_carried_suffix,
+    test_sc9_rashomon_bandit_samurai_verdicts_unchanged,
+    test_sc9_rashomon_woodcutter_no_prose_carried_suffix,
     test_lt12_preserves_prior_optionlock_verdicts,
     # resolve-endpoint-sketch-01 (RE1-RE5)
     test_re5_compute_pre_post_ratios_detects_shift,

@@ -76,6 +76,28 @@ SCHEDULING_PREFIXES: frozenset = frozenset({
     "requested_",
 })
 
+# Authorial vocabulary token per scheduling-act-utterance-sketch-02
+# SC6. When a Lowering's annotation text contains this substring,
+# the Lowering names a narratively load-bearing driver not modeled
+# in substrate. Case-sensitive substring match; hyphenated form is
+# the canonical spelling per the probe's flagged text.
+PROSE_CARRIED_MARKER = "prose-carried"
+
+
+def _prose_carried_lowerings(lowerings: tuple) -> tuple:
+    """SC6 helper. Return the subset of `lowerings` whose
+    `annotation.text` contains the `PROSE_CARRIED_MARKER` substring.
+
+    Empty input → empty output. Defensive against missing or
+    non-string annotation.text (skips silently)."""
+    out = []
+    for lw in lowerings:
+        annotation = getattr(lw, "annotation", None)
+        text = getattr(annotation, "text", None)
+        if isinstance(text, str) and PROSE_CARRIED_MARKER in text:
+            out.append(lw)
+    return tuple(out)
+
 
 def find_substrate_event(event_id: str, fabula: tuple) -> Event:
     """Look up a substrate Event by id, or raise KeyError. Linear
@@ -792,6 +814,7 @@ def dsp_limit_characterization_check(
     canonical_branch,
     all_branches: dict,
     declared_choice: str,
+    lowerings: tuple = (),
 ) -> tuple:
     """Shared DSP_limit characterization check for the dramatica-
     complete → substrate verifier surface. Called by each encoding's
@@ -810,6 +833,17 @@ def dsp_limit_characterization_check(
 
     `declared_choice` is the DSP_limit record's `.choice` value
     (e.g., `Limit.OPTIONLOCK.value` or `Limit.TIMELOCK.value`).
+
+    `lowerings` is an optional tuple of Lowering records scoped to
+    the current Story / verification call — typically
+    `LOWERINGS_BY_STORY[story_id]`. When non-empty AND the verdict
+    would be NOTED at `classification == "timelock-consistent"`,
+    the comment is specialized per scheduling-act-utterance-sketch-
+    02 SC8: any Lowering whose `annotation.text` contains the
+    `PROSE_CARRIED_MARKER` substring (SC6) surfaces a trailing
+    sentence naming the Lowering id(s) and the representational
+    gap. Verdict + strength are unchanged. The default empty tuple
+    preserves pre-sketch-02 behavior exactly.
 
     Consumes `classify_arc_limit_shape_strong` for the LT7–LT9
     refinement (arc-position banding + scheduling-predicate
@@ -943,6 +977,21 @@ def dsp_limit_characterization_check(
                 + scheduling_breakdown_suffix,
             )
         if classification == "timelock-consistent":
+            # SC8 — scan threaded lowerings for prose-carried drivers;
+            # append a specializing suffix when any match. Verdict and
+            # strength remain unchanged per sketch-02's discipline.
+            prose_carried = _prose_carried_lowerings(lowerings)
+            if prose_carried:
+                ids = ", ".join(lw.id for lw in prose_carried)
+                prose_carried_suffix = (
+                    f" Lowering annotation(s) {ids} identify prose-"
+                    f"carried temporal driver(s) not modeled in "
+                    f"substrate — a specific representational gap "
+                    f"per scheduling-act-utterance-sketch-02 "
+                    f"OQ2-reshaped closure."
+                )
+            else:
+                prose_carried_suffix = ""
             return (
                 VERDICT_NOTED, None,
                 f"DSP_limit=Timelock declared; substrate shows no "
@@ -951,7 +1000,8 @@ def dsp_limit_characterization_check(
                 f"Timelock but not affirmatively detected — LT3's "
                 f"honest weak-fallback asymmetry (sketch-01). Consider "
                 f"naming the scheduled endpoint with a `scheduled_*` "
-                f"predicate to fire LT9." + enabling_suffix,
+                f"predicate to fire LT9."
+                + enabling_suffix + prose_carried_suffix,
             )
         if classification == "optionlock-peripheral":
             # Restricting signals fire but only peripheral/terminal,
