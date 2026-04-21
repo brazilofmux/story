@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/audience_knowledge_constraint.json",
+  "title": "ArAudienceKnowledgeConstraint",
+  "description": "A15-SE3 (aristotelian-sketch-04 / dialect-compilation-surface-sketch-01 DCS1 side 1). Hard constraint: the audience must possess the named knowledge `subject` by tau_s <= latest_tau_s. When `source_event_id` is set, asserts the knowledge is delivered at that specific event. The `subject` is a free-text canonical knowledge claim; the dialect does not constrain its vocabulary (DOQ-AR4-2 banks the cross-encoding consistency question). Distinct from sketch-03 OQ-AP9 (audience-level recognition as a dialect record): A15-SE3 is an authorial constraint on knowledge timing, not a dialect-level recognition record. The two are architecturally orthogonal. A7.14 verifies structural integrity (subject non-empty after strip; latest_tau_s >= 0; source event resolves with tau_s <= latest_tau_s when substrate threaded). Whether the substrate's audience-projection state actually carries the knowledge is out of scope for Tier-2 (DOQ-AR4-1; pressures compilation-sketch-01 OQ1). Records live on ArMythos.audience_knowledge_constraints. PFS-N5..N8.",
+  "type": "object",
+  "required": ["id", "subject", "latest_τ_s"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this constraint (e.g., 'ak_polonius_behind_arras'). PFS-N5."
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-text canonical knowledge claim (e.g., 'claudius_killed_king_hamlet'). The dialect imposes no controlled vocabulary today; conventions are encoding-local. DOQ-AR4-2 banks the cross-encoding vocabulary discipline question. A7.14 check 1 separately enforces non-empty after strip (catches whitespace-only authoring that the schema's minLength=1 admits). PFS-N6."
+    },
+    "latest_τ_s": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Substrate τ_s by which the audience must possess the knowledge. minimum 0 (A7.14 check 2 is the second line of defense for negative Python values that bypass the schema). The compiler at stage 1 extracts to audience-state invariants; stage 3 plans substrate ensuring the knowledge is conveyed by this τ_s. PFS-N7."
+    },
+    "source_event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional substrate event id at which the knowledge is delivered. When set, A7.14 check 3 enforces the event resolves in substrate (when threaded) and check 4 enforces the event's τ_s <= latest_τ_s. When absent, the constraint is purely a deadline — the compiler is free to deliver the knowledge at any qualifying substrate event up to and including latest_τ_s. Plain-string reference per PFS6-X2. PFS-N8."
+    }
+  },
+  "additionalProperties": false
+}

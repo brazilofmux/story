@@ -271,6 +271,24 @@ def _load_aristotelian_mythos_relation_schema() -> dict:
         return json.load(f)
 
 
+def _load_aristotelian_co_presence_requirement_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian"
+        / "co_presence_requirement.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_aristotelian_audience_knowledge_constraint_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian"
+        / "audience_knowledge_constraint.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _load_aristotelian_anagnorisis_step_schema() -> dict:
     schema_path = (
         _repo_root() / "schema" / "aristotelian" / "anagnorisis_step.json"
@@ -355,6 +373,8 @@ def _build_schema_registry() -> Registry:
         _load_aristotelian_dialect_reading_schema(),
         _load_aristotelian_mythos_relation_schema(),
         _load_aristotelian_anagnorisis_step_schema(),
+        _load_aristotelian_co_presence_requirement_schema(),
+        _load_aristotelian_audience_knowledge_constraint_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -1027,16 +1047,26 @@ def _dump_branch(branch) -> dict:
 def _dump_arphase(phase) -> dict:
     """Map a Python ArPhase to a JSON-compatible dict conforming to
     schema/aristotelian/phase.json (production-format-sketch-06
-    PFS6-D2). Field-for-field isomorphic: id / role /
-    scope_event_ids pass-through; annotation passes through even
-    when empty (no omit-on-default; the Python record's default
-    is "" not None — presence is invariant)."""
-    return {
+    PFS6-D2; sketch-04 fields per PFS-N9..N11). Field-for-field
+    isomorphic: id / role / scope_event_ids pass-through;
+    annotation passes through even when empty (no omit-on-default;
+    the Python record's default is "" not None — presence is
+    invariant); sketch-04 numerical bounds emit unconditionally
+    (mirrors PFS6's unity-bound posture); sketch-04 pacing_preference
+    omits when empty (mirrors annotation-when-empty would be present
+    but the soft-preference vocabulary follows the omit-when-empty
+    PFS13-MR4 annotation precedent)."""
+    out = {
         "id": phase.id,
         "role": phase.role,
         "scope_event_ids": list(phase.scope_event_ids),
         "annotation": phase.annotation,
+        "min_event_count": phase.min_event_count,
+        "max_event_count": phase.max_event_count,
     }
+    if phase.pacing_preference:
+        out["pacing_preference"] = phase.pacing_preference
+    return out
 
 
 def _dump_archaracter(character) -> dict:
@@ -1092,6 +1122,17 @@ def _dump_armythos(mythos) -> dict:
         "peripeteia_anagnorisis_adjacency_bound": (
             mythos.peripeteia_anagnorisis_adjacency_bound
         ),
+        # Sketch-04 array fields emit unconditionally (mirrors
+        # characters / phases / anagnorisis_chain). Empty array is
+        # the Python default and is admissible at the schema layer.
+        "co_presence_requirements": [
+            _dump_ar_co_presence_requirement(r)
+            for r in mythos.co_presence_requirements
+        ],
+        "audience_knowledge_constraints": [
+            _dump_ar_audience_knowledge_constraint(c)
+            for c in mythos.audience_knowledge_constraints
+        ],
     }
     if mythos.complication_event_id is not None:
         out["complication_event_id"] = mythos.complication_event_id
@@ -1104,6 +1145,14 @@ def _dump_armythos(mythos) -> dict:
     if mythos.peripeteia_anagnorisis_binding is not None:
         out["peripeteia_anagnorisis_binding"] = (
             mythos.peripeteia_anagnorisis_binding
+        )
+    # Sketch-04 soft preference strings omit when empty (matches the
+    # annotation-when-empty precedent; mirrors PFS13-MR4).
+    if mythos.tonal_register:
+        out["tonal_register"] = mythos.tonal_register
+    if mythos.binding_distance_preference:
+        out["binding_distance_preference"] = (
+            mythos.binding_distance_preference
         )
     return out
 
@@ -1143,6 +1192,38 @@ def _dump_ar_mythos_relation(rel) -> dict:
     }
     if rel.annotation:
         out["annotation"] = rel.annotation
+    return out
+
+
+def _dump_ar_co_presence_requirement(req) -> dict:
+    """Map a Python ArCoPresenceRequirement to a JSON-compatible dict
+    conforming to schema/aristotelian/co_presence_requirement.json
+    (PFS-N1..N4). Required fields always emit (id, character_ref_ids,
+    phase_id); min_count always emits (Python default 1; matches the
+    precipitates_main always-emit posture in _dump_ar_anagnorisis_step
+    — bool/int defaults always carried)."""
+    return {
+        "id": req.id,
+        "character_ref_ids": list(req.character_ref_ids),
+        "phase_id": req.phase_id,
+        "min_count": req.min_count,
+    }
+
+
+def _dump_ar_audience_knowledge_constraint(con) -> dict:
+    """Map a Python ArAudienceKnowledgeConstraint to a JSON-compatible
+    dict conforming to schema/aristotelian/audience_knowledge_
+    constraint.json (PFS-N5..N8). Required fields always emit (id,
+    subject, latest_τ_s); source_event_id omits when None (matching
+    the omit-on-None convention for optional event-id pointers in
+    _dump_armythos)."""
+    out = {
+        "id": con.id,
+        "subject": con.subject,
+        "latest_τ_s": con.latest_τ_s,
+    }
+    if con.source_event_id is not None:
+        out["source_event_id"] = con.source_event_id
     return out
 
 
@@ -2351,7 +2432,8 @@ def test_entity_sketches_exist():
 
 def test_aristotelian_phase_schema_has_expected_shape():
     """Spot-check of ArPhase schema structure per aristotelian-
-    sketch-01 A2 + production-format-sketch-06 PFS6-P1..P5."""
+    sketch-01 A2 + production-format-sketch-06 PFS6-P1..P5 +
+    aristotelian-sketch-04 A15-SE1 / A16-SP3 (PFS-N9..N11)."""
     schema = _load_aristotelian_phase_schema()
     assert schema["title"] == "ArPhase"
     assert schema["$id"] == (
@@ -2364,6 +2446,8 @@ def test_aristotelian_phase_schema_has_expected_shape():
     assert schema["additionalProperties"] is False
     assert set(schema["properties"].keys()) == {
         "id", "role", "scope_event_ids", "annotation",
+        # PFS-N9..N11 — sketch-04 A15-SE1 + A16-SP3 amendments
+        "min_event_count", "max_event_count", "pacing_preference",
     }
     # role closed enum at the three Aristotelian phases
     assert set(schema["properties"]["role"]["enum"]) == {
@@ -2374,6 +2458,18 @@ def test_aristotelian_phase_schema_has_expected_shape():
     assert scope["type"] == "array"
     assert scope["items"]["type"] == "string"
     assert scope["items"]["minLength"] == 1
+    # PFS-N9 — min_event_count integer, minimum 0
+    min_count = schema["properties"]["min_event_count"]
+    assert min_count["type"] == "integer"
+    assert min_count["minimum"] == 0
+    # PFS-N10 — max_event_count integer, minimum 0
+    max_count = schema["properties"]["max_event_count"]
+    assert max_count["type"] == "integer"
+    assert max_count["minimum"] == 0
+    # PFS-N11 — pacing_preference open string (no enum, no minLength)
+    pacing = schema["properties"]["pacing_preference"]
+    assert pacing["type"] == "string"
+    assert "enum" not in pacing
 
 
 def test_aristotelian_character_schema_has_expected_shape():
@@ -2417,7 +2513,8 @@ def test_aristotelian_mythos_schema_has_expected_shape():
         "central_event_ids", "plot_kind", "phases",
     }
     assert schema["additionalProperties"] is False
-    # All declared properties per PFS6-M1..M11 + PFS13-M12..M14
+    # All declared properties per PFS6-M1..M11 + PFS13-M12..M14 +
+    # PFS-N13..N16 (sketch-04 A15-SE2/SE3 + A16-SP1/SP2)
     assert set(schema["properties"].keys()) == {
         "id", "title", "action_summary",
         "central_event_ids", "plot_kind", "phases",
@@ -2431,6 +2528,11 @@ def test_aristotelian_mythos_schema_has_expected_shape():
         "anagnorisis_chain",
         "peripeteia_anagnorisis_binding",
         "peripeteia_anagnorisis_adjacency_bound",
+        # PFS-N13..N16 amendments (sketch-04 A15-SE2/SE3 + A16-SP1/SP2)
+        "co_presence_requirements",
+        "audience_knowledge_constraints",
+        "tonal_register",
+        "binding_distance_preference",
     }
     # central_event_ids non-empty array (PFS6-M3)
     central = schema["properties"]["central_event_ids"]
@@ -2483,6 +2585,30 @@ def test_aristotelian_mythos_schema_has_expected_shape():
     bound = schema["properties"]["peripeteia_anagnorisis_adjacency_bound"]
     assert bound["type"] == "integer"
     assert "default" not in bound
+    # PFS-N13 — co_presence_requirements is array of $ref to
+    # co_presence_requirement.json
+    copres = schema["properties"]["co_presence_requirements"]
+    assert copres["type"] == "array"
+    assert copres["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/co_presence_requirement.json"
+    )
+    # PFS-N14 — audience_knowledge_constraints is array of $ref to
+    # audience_knowledge_constraint.json
+    audk = schema["properties"]["audience_knowledge_constraints"]
+    assert audk["type"] == "array"
+    assert audk["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/audience_knowledge_constraint.json"
+    )
+    # PFS-N15 — tonal_register open string (canonical-plus-open vocab)
+    tonal = schema["properties"]["tonal_register"]
+    assert tonal["type"] == "string"
+    assert "enum" not in tonal
+    # PFS-N16 — binding_distance_preference open string
+    binding_pref = schema["properties"]["binding_distance_preference"]
+    assert binding_pref["type"] == "string"
+    assert "enum" not in binding_pref
 
 
 def test_aristotelian_mythos_relation_schema_metaschema_valid():
@@ -2956,6 +3082,237 @@ def test_aristotelian_mythos_relation_corpus_conformance():
     assert total >= 1, (
         f"expected at least 1 ArMythosRelation record per PFS13 "
         f"corpus expectations; found {total}"
+    )
+
+
+# ============================================================================
+# Sketch-04 Aristotelian conformance — PFS-N (A15-SE2 + A15-SE3)
+# ============================================================================
+
+
+def test_aristotelian_co_presence_requirement_schema_metaschema_valid():
+    """schema/aristotelian/co_presence_requirement.json validates
+    against JSON Schema 2020-12 metaschema (PFS-N1..N4)."""
+    schema = _load_aristotelian_co_presence_requirement_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_co_presence_requirement_schema_has_expected_shape():
+    """Spot-check of ArCoPresenceRequirement schema structure per
+    aristotelian-sketch-04 A15-SE2 + PFS-N1..N4."""
+    schema = _load_aristotelian_co_presence_requirement_schema()
+    assert schema["title"] == "ArCoPresenceRequirement"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/co_presence_requirement.json"
+    )
+    assert set(schema["required"]) == {
+        "id", "character_ref_ids", "phase_id",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "character_ref_ids", "phase_id", "min_count",
+    }
+    # PFS-N2 — character_ref_ids minItems=2 (A15-SE2 cardinality)
+    char_refs = schema["properties"]["character_ref_ids"]
+    assert char_refs["type"] == "array"
+    assert char_refs["minItems"] == 2
+    assert char_refs["items"]["type"] == "string"
+    assert char_refs["items"]["minLength"] == 1
+    # PFS-N3 — phase_id non-empty string
+    phase_id = schema["properties"]["phase_id"]
+    assert phase_id["type"] == "string"
+    assert phase_id["minLength"] == 1
+    # PFS-N4 — min_count integer ≥ 1
+    min_count = schema["properties"]["min_count"]
+    assert min_count["type"] == "integer"
+    assert min_count["minimum"] == 1
+
+
+def test_aristotelian_audience_knowledge_constraint_schema_metaschema_valid():
+    """schema/aristotelian/audience_knowledge_constraint.json validates
+    against JSON Schema 2020-12 metaschema (PFS-N5..N8)."""
+    schema = _load_aristotelian_audience_knowledge_constraint_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_aristotelian_audience_knowledge_constraint_schema_has_expected_shape():
+    """Spot-check of ArAudienceKnowledgeConstraint schema structure per
+    aristotelian-sketch-04 A15-SE3 + PFS-N5..N8."""
+    schema = _load_aristotelian_audience_knowledge_constraint_schema()
+    assert schema["title"] == "ArAudienceKnowledgeConstraint"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/audience_knowledge_constraint.json"
+    )
+    assert set(schema["required"]) == {
+        "id", "subject", "latest_τ_s",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "subject", "latest_τ_s", "source_event_id",
+    }
+    # PFS-N6 — subject non-empty string
+    subject = schema["properties"]["subject"]
+    assert subject["type"] == "string"
+    assert subject["minLength"] == 1
+    # PFS-N7 — latest_τ_s integer ≥ 0
+    latest = schema["properties"]["latest_τ_s"]
+    assert latest["type"] == "integer"
+    assert latest["minimum"] == 0
+    # PFS-N8 — source_event_id optional non-empty string
+    source = schema["properties"]["source_event_id"]
+    assert source["type"] == "string"
+    assert source["minLength"] == 1
+
+
+def test_aristotelian_co_presence_requirement_corpus_conformance():
+    """Every ArCoPresenceRequirement on a discovered ArMythos validates
+    against the schema. Hamlet authors three records under sketch-04;
+    pre-sketch-04 encodings carry empty co_presence_requirements."""
+    schema = _load_aristotelian_co_presence_requirement_schema()
+    validator = Draft202012Validator(schema)
+
+    mythoi_by_encoding, _, _, _ = (
+        _discover_encoding_aristotelian_records()
+    )
+    assert mythoi_by_encoding, (
+        "expected at least one encoding with Aristotelian mythoi; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    by_encoding: dict = {}
+    new_findings: list = []
+
+    for encoding_name, mythoi in mythoi_by_encoding:
+        for mythos in mythoi:
+            for req in mythos.co_presence_requirements:
+                total += 1
+                by_encoding[encoding_name] = (
+                    by_encoding.get(encoding_name, 0) + 1
+                )
+                dumped = _dump_ar_co_presence_requirement(req)
+                errors = sorted(
+                    validator.iter_errors(dumped),
+                    key=lambda e: list(e.absolute_path),
+                )
+                if not errors:
+                    clean_passes += 1
+                    continue
+                new_findings.append({
+                    "encoding": encoding_name,
+                    "req_id": req.id,
+                    "errors": [
+                        {
+                            "path": list(e.absolute_path),
+                            "validator": e.validator,
+                            "message": e.message,
+                        }
+                        for e in errors
+                    ],
+                })
+
+    print()
+    print(
+        f"test_aristotelian_co_presence_requirement_corpus_conformance: "
+        f"{total} ArCoPresenceRequirement records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  by encoding:                {dict(sorted(by_encoding.items()))}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(f"    {finding['encoding']}: {finding['req_id']}")
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArCoPresenceRequirement conformance "
+        f"finding(s); see output."
+    )
+    assert total >= 3, (
+        f"expected at least 3 ArCoPresenceRequirement records per "
+        f"sketch-04 Hamlet worked example; found {total}"
+    )
+
+
+def test_aristotelian_audience_knowledge_constraint_corpus_conformance():
+    """Every ArAudienceKnowledgeConstraint on a discovered ArMythos
+    validates against the schema. Hamlet authors three records under
+    sketch-04; pre-sketch-04 encodings carry empty constraints."""
+    schema = _load_aristotelian_audience_knowledge_constraint_schema()
+    validator = Draft202012Validator(schema)
+
+    mythoi_by_encoding, _, _, _ = (
+        _discover_encoding_aristotelian_records()
+    )
+    assert mythoi_by_encoding, (
+        "expected at least one encoding with Aristotelian mythoi; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    by_encoding: dict = {}
+    new_findings: list = []
+
+    for encoding_name, mythoi in mythoi_by_encoding:
+        for mythos in mythoi:
+            for con in mythos.audience_knowledge_constraints:
+                total += 1
+                by_encoding[encoding_name] = (
+                    by_encoding.get(encoding_name, 0) + 1
+                )
+                dumped = _dump_ar_audience_knowledge_constraint(con)
+                errors = sorted(
+                    validator.iter_errors(dumped),
+                    key=lambda e: list(e.absolute_path),
+                )
+                if not errors:
+                    clean_passes += 1
+                    continue
+                new_findings.append({
+                    "encoding": encoding_name,
+                    "con_id": con.id,
+                    "errors": [
+                        {
+                            "path": list(e.absolute_path),
+                            "validator": e.validator,
+                            "message": e.message,
+                        }
+                        for e in errors
+                    ],
+                })
+
+    print()
+    print(
+        f"test_aristotelian_audience_knowledge_constraint_corpus_"
+        f"conformance: {total} ArAudienceKnowledgeConstraint records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  by encoding:                {dict(sorted(by_encoding.items()))}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(f"    {finding['encoding']}: {finding['con_id']}")
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArAudienceKnowledgeConstraint conformance "
+        f"finding(s); see output."
+    )
+    assert total >= 3, (
+        f"expected at least 3 ArAudienceKnowledgeConstraint records "
+        f"per sketch-04 Hamlet worked example; found {total}"
     )
 
 

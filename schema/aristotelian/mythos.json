@@ -109,6 +109,28 @@
     "peripeteia_anagnorisis_adjacency_bound": {
       "type": "integer",
       "description": "Configurable τ_s bound for the peripeteia_anagnorisis_binding='adjacent' check — |τ_s(peripeteia) − τ_s(anagnorisis)| ≤ this value. Python default is 3 (Oedipus-scale pacing); encodings with a different dramatic clock (decades-long fabula; single-dramatic-day compression) override. Carried unconditionally by the dataclass; verifier reads it only when peripeteia_anagnorisis_binding='adjacent' (same unconditional-carry pattern as unity_of_time_bound and unity_of_place_max_locations). Per PFS13-M14 / OQ4, no schema-level default is declared — Python carries it. PFS13-M14."
+    },
+    "co_presence_requirements": {
+      "type": "array",
+      "items": {
+        "$ref": "https://brazilofmux.github.io/story/schema/aristotelian/co_presence_requirement.json"
+      },
+      "description": "A15-SE2 (aristotelian-sketch-04 / DCS1 side 1). Optional hard co-presence constraints flowing through compilation stages 1–3. Empty array is the Python default; pre-sketch-04 encodings carry no requirements. A7.13 enforces structural integrity (>= 2 character refs; characters and phase resolve in this mythos; min_count >= 1). Substrate-level co-presence verification is out of scope for Tier-2 (DOQ-AR4-1; compiler-stage-3 question). Cross-file $ref to co_presence_requirement.json per PFS-NX. PFS-N13."
+    },
+    "audience_knowledge_constraints": {
+      "type": "array",
+      "items": {
+        "$ref": "https://brazilofmux.github.io/story/schema/aristotelian/audience_knowledge_constraint.json"
+      },
+      "description": "A15-SE3 (aristotelian-sketch-04 / DCS1 side 1). Optional hard audience-knowledge timing constraints flowing through compilation stages 1–3. Empty array is the Python default; pre-sketch-04 encodings carry no constraints. A7.14 enforces structural integrity (subject non-empty; latest_τ_s >= 0; source event resolves with τ_s <= latest_τ_s when substrate threaded). Whether the substrate's audience-projection state actually carries the knowledge is out of scope for Tier-2 (DOQ-AR4-1). Cross-file $ref to audience_knowledge_constraint.json per PFS-NX. PFS-N14."
+    },
+    "tonal_register": {
+      "type": "string",
+      "description": "A16-SP1 (aristotelian-sketch-04 / DCS1 side 2). Soft tonal preference for stage-4 ranker scoring. Empty string (default) is neutral. Canonical-plus-open: published canonical vocabulary {tragic-pure, tragic-with-irony, elegiac, claustrophobic, classical, modern}; non-canonical strings are admissible (the ranker handles unrecognized values as default-neutral). Per DCS3 there is NO verifier coverage for A16 fields — schema accepts any string. Open-string posture matches PFS13-MR2 / PFS-N11. PFS-N15."
+    },
+    "binding_distance_preference": {
+      "type": "string",
+      "description": "A16-SP2 (aristotelian-sketch-04 / DCS1 side 2). Soft preference over peripeteia↔anagnorisis distance for stage-4 ranker scoring. Distinct from peripeteia_anagnorisis_binding (A12) which is a typed structural assertion verified against actual τ_s distance — A16-SP2 is a soft preference within whatever A12 binding-class is asserted. Empty string (default) is neutral. Canonical vocabulary: {prefer_near, prefer_separated, prefer_wide, neutral}; non-canonical strings admissible. Per DCS3 no verifier coverage. PFS-N16."
     }
   },
   "additionalProperties": false,

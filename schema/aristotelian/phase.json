@@ -27,6 +27,20 @@
     "annotation": {
       "type": "string",
       "description": "Optional author prose annotation. Python default is an empty string; schema admits the empty string and absence interchangeably. PFS6-P5."
+    },
+    "min_event_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "A15-SE1 (aristotelian-sketch-04). Optional hard cardinality lower bound on scope_event_ids for the compiler. 0 (default) means unbounded floor. A7.12 enforces non-negative (second line of defense for Python-level negative values that bypass the schema), min <= max when both > 0, and current scope_event_ids count >= bound when active. Compiler stage 2 (feasibility) folds non-zero values into the two-level budget calculation. PFS-N9."
+    },
+    "max_event_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "A15-SE1 (aristotelian-sketch-04). Optional hard cardinality upper bound on scope_event_ids for the compiler. 0 (default) means unbounded ceiling. A7.12 enforces non-negative and current count <= bound when active. PFS-N10."
+    },
+    "pacing_preference": {
+      "type": "string",
+      "description": "A16-SP3 (aristotelian-sketch-04 / DCS1 side 2). Soft preference for stage-4 ranker scoring. Empty string (default) is neutral. Canonical-plus-open: published canonical vocabulary {slow_burn, even, accelerating, rapid_escalation, decelerating}; non-canonical strings are admissible (the ranker handles unrecognized values as default-neutral). Per DCS3 there is NO verifier coverage for A16 fields — schema accepts any string and the open-string posture matches PFS7 role_labels / PFS9-LO3 / PFS11-AO3 / PFS12-O3 / PFS13-MR2. PFS-N11."
     }
   },
   "additionalProperties": false

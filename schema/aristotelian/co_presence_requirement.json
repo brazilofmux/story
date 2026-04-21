@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/co_presence_requirement.json",
+  "title": "ArCoPresenceRequirement",
+  "description": "A15-SE2 (aristotelian-sketch-04 / dialect-compilation-surface-sketch-01 DCS1 side 1). Hard constraint: the named characters must co-locate at >= min_count substrate events whose ids fall within the named phase's scope_event_ids. Compiler stage-1 extracts to per-event STRIPS preconditions; stage-3 planner generates intermediate events to satisfy them when authored substrate doesn't already do so. A7.13 verifies structural integrity at this layer (>= 2 character refs; characters resolve in mythos; phase resolves in mythos; min_count >= 1); whether the substrate actually carries the co-presence is a compiler-stage-3 question, not a Tier-2 check (DOQ-AR4-1). Records live on ArMythos.co_presence_requirements; the dialect does not track them at encoding scope. PFS-N1..N4.",
+  "type": "object",
+  "required": ["id", "character_ref_ids", "phase_id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this requirement (e.g., 'copres_hamlet_claudius_end'). PFS-N1."
+    },
+    "character_ref_ids": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Character ids participating in the co-presence requirement. minItems 2 per A15-SE2 — a co-presence requirement names at least two characters. A7.13 check 2 separately enforces that all ids resolve to ArCharacter records in the enclosing mythos's `characters` tuple; the schema enforces cardinality at shape time. Order is author-preserved but not semantically meaningful. Plain-string references per PFS6-X2. PFS-N2."
+    },
+    "phase_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ArPhase id naming the phase whose scope_event_ids window the requirement applies over. A7.13 check 3 separately enforces that the phase resolves in the enclosing mythos's `phases` tuple. Plain-string reference per PFS6-X2. PFS-N3."
+    },
+    "min_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Minimum number of substrate events within the named phase at which all named characters must be co-located. Default at the Python layer is 1. Schema enforces >= 1 (A7.13 check 4 is the second line of defense for Python-level zero values that bypass the schema). The compiler at stage 3 plans events to satisfy this count; a count exceeding what the planner can satisfy is a CS6 (compilation-sketch-01) infeasibility. PFS-N4."
+    }
+  },
+  "additionalProperties": false
+}
