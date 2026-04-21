@@ -2,93 +2,73 @@
 demo_aristotelian_reader_model_hamlet.py — invoke the Aristotelian
 reader-model probe on the Hamlet Aristotelian encoding.
 
-**Fourth Aristotelian probe.** Hamlet is the encoding landed across
-Sessions 1–4 (edb25cb, 9423f59, b9aa560, ff77592). It stresses the
-dialect at axes the earlier three probes did not exercise:
+Session log:
+- Session 1–4 (edb25cb, 9423f59, b9aa560, ff77592): substrate +
+  encoding + encoding-specific tests.
+- Session 5 (6e5e41c, 2026-04-20): first probe run, pre-sketch-03.
+  JSON artifact at reader_model_hamlet_aristotelian_output.json.
+  Forcing signals: OQ-AP6 parallel-heroes (direct hit, two surfaces),
+  OQ-AP10 protagonist-chain extension (new), OQ-AP9 audience-level
+  dramatic-irony (new), OQ-AP1 polis catharsis (third signal).
+  Negative-confirmation: OQ-AP5 fate-agent (Ghost below dialect).
+- aristotelian-sketch-03 (6918a32 + ac926e2, 2026-04-20): closes
+  OQ-AP6 (A13 `ArCharacterArcRelation`) + OQ-AP10 (A14 `step_kind` +
+  3-step chain + `anagnorisis_character_ref_id`); retires OQ-AP5.
+  Hamlet encoding migrated: two pairwise arc relations (mirror
+  Hamlet-Laertes, foil Hamlet-Claudius), chain expanded to three
+  steps (2 staging × Hamlet + 1 parallel × Claudius).
+- aristotelian-probe-sketch-04 (2026-04-21): client extensions catch
+  the prompt up to sketch-03 (step_kind renders on chain steps;
+  anagnorisis_character_ref_id renders on ArMythos; new
+  ArCharacterArcRelation records section; character_arc_relations
+  kwarg; SYSTEM_PROMPT sketch-03 paragraph).
+- Session 6 (this run, 2026-04-21): re-probe the sketch-03-migrated
+  encoding through the sketch-04-extended client. Primary question:
+  **did the closure land?** See `design/aristotelian-probe-sketch-04.md`
+  §Predictions and §Closure ledger for the full framing.
 
-- **Three `is_tragic_hero=True` characters in one mythos** — first
-  in corpus (Oedipus=2, Macbeth=2, Rashomon=0 at mythos scope). The
-  dialect admits the multiplicity but has no structural hook for
-  "these three stand in parallel WITHIN one mythos." OQ-AP6
-  forcing case.
+**Session 6 closure-check framing.** Three outcomes are informative:
+1. Clean probe (no OQ-AP6 / OQ-AP10 surfacing) → closure confirmed,
+   banked forcing functions retire for real.
+2. New forcing functions surface → sketch-03 under-specified
+   something, or revealed adjacent pressure the closure didn't cover.
+3. OQ-AP6 or OQ-AP10 re-surfaces → migration didn't encode the
+   sketch's intent; structural hooks exist but don't read.
 
-- **BINDING_SEPARATED at distance 9** — widest gap in corpus.
-  Oedipus is BINDING_SEPARATED at distance 5; Macbeth is
-  BINDING_COINCIDENT. The "separated" category covers 4..∞; Hamlet
-  is the forcing case for whether distance typing (near vs distant,
-  or a raw numerical field) is warranted. OQ-AP7 forcing case.
+Reviewable prose under sketch-04 APA4-3: 12 fields on Hamlet
+(1 action_summary + 3 phase annotations + 3 hamartia_texts + 3
+chain-step annotations + 2 arc-relation annotations) vs Session 5's
+7 fields.
 
-- **First encoding to author `complication_event_id` AND
-  `denouement_event_id`.** Oedipus and Macbeth leave both None;
-  Hamlet pins complication at `E_mousetrap_performance` (first
-  middle event — Hamlet commits to the revenge path by verifying
-  the Ghost's claim) and denouement at `E_duel_plotted` (last
-  middle event — every element of the catastrophe set in motion).
-  Whether the probe engages these fields or ignores them is a read
-  on whether the dialect currently carries them as live surface.
+Predictions (sketch-04 §Predictions, full prediction stack):
 
-- **Same-beat staggered recognition.** Laertes's deathbed
-  recognition is substrate-compressed into `E_laertes_reveals_plot`
-  (τ_s=17) — the same event as Hamlet's main anagnorisis. A11
-  invariant 3 forbids a chain step at the main event, so Laertes
-  is NOT authored as `AR_STEP_LAERTES_*`. OQ-AP8 forcing case:
-  whether the dialect needs to admit same-event staggered
-  recognition (distinguished by character-subject).
-
-- **Ghost as fate-agent with commission posture (substrate-only).**
-  The Ghost reveals the murder and commands revenge. OQ-AP5
-  forcing case — whether the dialect wants `ArFateAgent /
-  ArProphecyStructure`. Prediction: carried at substrate layer
-  (apparition_of + ghost_claims_killed_by + ghost_demands_revenge),
-  NOT visible at the Aristotelian dialect surface; the probe may
-  therefore not surface OQ-AP5 pressure, which is itself the
-  finding — the fate-agent lives below the dialect.
-
-- **Clustered catharsis (four deaths at τ_s=17–18).** Gertrude,
-  Laertes, Claudius, Hamlet — innocent, redeemed-antagonist,
-  regicide-villain, tragic-hero. Four different moral weights in
-  one beat. If the probe surfaces pressure around pathos-typing or
-  catharsis-grounding (vocabulary like pathos / cluster / weight),
-  OQ-AP1 (banked in aristotelian-probe-sketch-02) gains a third
-  independent forcing signal on top of Macbeth's scattered pathos.
-
-Predictions from aristotelian-probe-sketch-01 APS6 + -02/-03
-banked forcing functions, specific to this invocation:
-
-- P1: ≥ 80 % of prose reviews (7 fields: 1 action_summary + 3
-  phase annotations + 3 hamartia_texts) earn `approved`, 0
-  `rejected`.
-- P3: `observation_commentaries` is empty — Hamlet verifies with
-  zero observations per
-  test_hamlet_aristotelian_verifies_clean.
+- P1: ≥ 80 % approved across 12 prose reviews, 0 rejected.
+- P3: `observation_commentaries` is empty — Hamlet still verifies
+  clean under sketch-03.
 - P4: `dialect_reading.read_on_terms` ∈ {"yes", "partial"};
-  drift_flagged expected near-empty.
-- P5 (forcing — OQ-AP6 parallel-heroes): the probe reaches for
-  some structural way to type three heroes in one mythos
-  (tokens: "parallel", "mirror", "foil", "intra-mythos",
-  "ArParallelHeroes", "three", "tragic-hero"). Non-empty hits in
-  `scope_limits_observed` or `relations_wanted` confirms OQ-AP6
-  forces.
-- P6 (forcing — OQ-AP7 range-of-separated): the probe notes that
-  distance 9 reads differently from distance 4 (tokens: "distance",
-  "near", "distant", "far", "separated", "numerical"). Non-empty
-  confirms OQ-AP7 forces.
-- P7 (forcing — OQ-AP8 same-beat staggered recognition): the
-  probe wants to type Laertes's deathbed self-recognition at the
-  main anagnorisis event (tokens: "Laertes", "same event",
-  "staggered", "character-subject", "chain step at main"). Any
-  non-empty hit confirms OQ-AP8 forces.
-- P8 (exploratory — OQ-AP5 fate-agent): the probe surfaces
-  pressure wanting to type the Ghost's role (tokens:
-  "ArFateAgent", "prophecy", "commission", "Ghost", "revelation").
-  Prediction: NO — the Ghost is substrate-only and stays invisible
-  at the dialect surface; a NO here is a negative finding
-  supporting the OQ_AP5_FINDING claim (fate-agent lives below the
-  dialect).
-- P9 (exploratory — OQ-AP1 pathos-typing): the probe surfaces
-  pressure around the four-death cluster (tokens: "pathos",
-  "catharsis", "cluster", "pity", "fear", "weight"). If hit,
-  OQ-AP1 gains a third independent forcing signal.
+  drift_flagged empty or near-empty.
+- **P5 (closure-check — OQ-AP6 parallel-heroes).** Expected no
+  forcing signal; probe should cite mirror / foil authored relations.
+- **P5b (closure-check — OQ-AP10 protagonist-chain).** Expected no
+  forcing signal; probe should cite the 3-step chain.
+- P6 (still-banked — OQ-AP7 range-of-separated). Session 5
+  non-forcing; expected non-forcing.
+- P7 (still-banked — OQ-AP8 same-beat staggered). Session 5
+  non-forcing; expected non-forcing.
+- **P8 (retirement-check — OQ-AP5 fate-agent).** Expected no signal
+  (third-negative confirmation). Hit would challenge retirement.
+- P9 (still-banked — OQ-AP1 pathos-typing). Session 5's polis
+  catharsis likely re-surfaces; not a *convergent* signal on its
+  own.
+- P10 (still-banked — OQ-AP9 audience-level dramatic irony).
+  Expected fifth-site re-surfacing; strengthens scope-rejection.
+
+The P5-P10 code below still uses substring matchers — they can't
+distinguish *factual citation of an authored record* from *a demand
+for a new record*. Commit message for this session cites the JSON
+directly, not the summary; commit 6e5e41c documented the false-
+positive shape that prompted the 'candidate — verify in JSON'
+relabeling.
 
 Usage:
     cd prototype
@@ -99,9 +79,10 @@ Usage:
     .venv/bin/python3 -m demos.demo_aristotelian_reader_model_hamlet \\
         --dry-run
 
-    # Save the full structured result as JSON:
+    # Save the full structured result as JSON. Session 6+ use the
+    # _v2 suffix to preserve Session 5's v1 artifact alongside:
     .venv/bin/python3 -m demos.demo_aristotelian_reader_model_hamlet \\
-        --save-json reader_model_hamlet_aristotelian_output.json
+        --save-json reader_model_hamlet_aristotelian_output_v2.json
 """
 
 from __future__ import annotations
@@ -324,6 +305,7 @@ def main() -> int:
         mythoi=(AR_HAMLET_MYTHOS,),
         observations=observations,
         substrate_events=substrate_events,
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
         current_τ_a=args.current_tau_a,
         anchor_τ_a=args.anchor_tau_a,
         effort=args.effort,

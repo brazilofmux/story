@@ -36,11 +36,16 @@ import traceback
 from story_engine.core.aristotelian import (
     ArAnnotationReview, ArCharacter, ArMythos, ArObservation,
     ArObservationCommentary, ArPhase, DialectReading,
-    FIELD_ACTION_SUMMARY, FIELD_HAMARTIA_TEXT, FIELD_PHASE_ANNOTATION,
+    FIELD_ACTION_SUMMARY, FIELD_ANNOTATION, FIELD_HAMARTIA_TEXT,
+    FIELD_PHASE_ANNOTATION,
     PHASE_BEGINNING, PHASE_END, PHASE_MIDDLE,
     PLOT_COMPLEX, PLOT_SIMPLE,
     SEVERITY_ADVISES_REVIEW,
-    TARGET_AR_CHARACTER, TARGET_AR_MYTHOS, TARGET_AR_PHASE,
+    TARGET_AR_ANAGNORISIS_STEP,
+    TARGET_AR_CHARACTER,
+    TARGET_AR_CHARACTER_ARC_RELATION,
+    TARGET_AR_MYTHOS,
+    TARGET_AR_PHASE,
 )
 from story_engine.core.aristotelian_reader_model_client import (
     AristotelianAnnotationReview,
@@ -135,17 +140,24 @@ def _synthetic_observations() -> tuple:
 
 def test_eligible_targets_oedipus_count():
     """Oedipus's Aristotelian encoding — 1 ArMythos + 3 phases +
-    2 characters (both with hamartia_text) = 6 eligible prose
-    fields."""
+    2 characters (both with hamartia_text) + 1 ArAnagnorisisStep
+    (AR_STEP_JOCASTA, sketch-02) = 7 eligible prose fields under
+    sketch-04 APA4-3 (staging-step / arc-relation annotations are
+    reviewable)."""
     from story_engine.encodings.oedipus_aristotelian import (
         AR_OEDIPUS_MYTHOS,
     )
     targets = _eligible_targets((AR_OEDIPUS_MYTHOS,))
-    assert len(targets) == 6, (
-        f"expected 6 eligible targets on Oedipus; got {len(targets)}"
+    assert len(targets) == 7, (
+        f"expected 7 eligible targets on Oedipus; got {len(targets)}"
     )
     kinds = sorted(set(t[0] for t in targets))
-    assert kinds == [TARGET_AR_CHARACTER, TARGET_AR_MYTHOS, TARGET_AR_PHASE]
+    assert kinds == [
+        TARGET_AR_ANAGNORISIS_STEP,
+        TARGET_AR_CHARACTER,
+        TARGET_AR_MYTHOS,
+        TARGET_AR_PHASE,
+    ]
 
 
 def test_eligible_targets_rashomon_count():
@@ -652,6 +664,354 @@ def test_translate_raw_output_empty_dialect_reading_stays_none():
     assert result.annotation_reviews == []
     assert result.observation_commentaries == []
     assert result.dropped == []
+
+
+# ============================================================================
+# Sketch-04 APA4: sketch-03 rendering extensions
+# ============================================================================
+
+
+def test_sketch04_step_kind_renders_in_step_dict():
+    """APA4-1: _ar_anagnorisis_step_to_dict includes step_kind so
+    the probe reads the sketch-03 vocabulary ('staging' / 'parallel'
+    / 'precipitating') the encoding authored."""
+    from story_engine.core.aristotelian import (
+        ArAnagnorisisStep, STEP_KIND_STAGING,
+    )
+    from story_engine.core.aristotelian_reader_model_client import (
+        _ar_anagnorisis_step_to_dict,
+    )
+    step = ArAnagnorisisStep(
+        id="arstep_test",
+        event_id="E_reveal",
+        character_ref_id="c_hero",
+        step_kind=STEP_KIND_STAGING,
+        precipitates_main=True,
+        annotation="staged reveal",
+    )
+    rendered = _ar_anagnorisis_step_to_dict(step)
+    assert rendered["step_kind"] == STEP_KIND_STAGING
+    # Pre-sketch-03 fields still render unchanged.
+    assert rendered["precipitates_main"] is True
+    assert rendered["annotation"] == "staged reveal"
+
+
+def test_sketch04_empty_step_kind_renders_as_empty_string():
+    """A pre-sketch-03 step (step_kind="") still renders the field,
+    as an empty string. The probe sees what was authored — if the
+    encoding didn't declare, the probe reads the absence."""
+    from story_engine.core.aristotelian import ArAnagnorisisStep
+    from story_engine.core.aristotelian_reader_model_client import (
+        _ar_anagnorisis_step_to_dict,
+    )
+    step = ArAnagnorisisStep(
+        id="arstep_legacy",
+        event_id="E_reveal",
+        character_ref_id="c_hero",
+        precipitates_main=False,
+        annotation="legacy step",
+    )
+    rendered = _ar_anagnorisis_step_to_dict(step)
+    assert rendered["step_kind"] == ""
+
+
+def test_sketch04_anagnorisis_character_ref_id_renders_in_mythos_dict():
+    """APA4-2: _ar_mythos_to_dict includes anagnorisis_character_ref_id
+    so the probe reads which character the main anagnorisis belongs
+    to. Required for the probe to evaluate staging-step closure."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    from story_engine.core.aristotelian_reader_model_client import (
+        _ar_mythos_to_dict,
+    )
+    rendered = _ar_mythos_to_dict(AR_HAMLET_MYTHOS)
+    assert rendered["anagnorisis_character_ref_id"] == "ar_hamlet"
+
+
+def test_sketch04_anagnorisis_character_ref_id_none_renders_none():
+    """Pre-sketch-03 encodings (Oedipus / Rashomon / Macbeth) leave
+    the field at None; the rendering carries None through."""
+    from story_engine.encodings.oedipus_aristotelian import (
+        AR_OEDIPUS_MYTHOS,
+    )
+    from story_engine.core.aristotelian_reader_model_client import (
+        _ar_mythos_to_dict,
+    )
+    rendered = _ar_mythos_to_dict(AR_OEDIPUS_MYTHOS)
+    assert rendered["anagnorisis_character_ref_id"] is None
+
+
+def test_sketch04_character_arc_relation_renders():
+    """APA4-3: _ar_character_arc_relation_to_dict renders all six
+    fields (id, kind, character_ref_ids, mythos_id, over_event_ids,
+    annotation) for the probe."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_LAERTES_MIRROR,
+    )
+    from story_engine.core.aristotelian_reader_model_client import (
+        _ar_character_arc_relation_to_dict,
+    )
+    rendered = _ar_character_arc_relation_to_dict(AR_HAMLET_LAERTES_MIRROR)
+    assert rendered["kind"] == "ArCharacterArcRelation"
+    assert rendered["id"] == "arc_hamlet_laertes_mirror"
+    assert rendered["relation_kind"] == "mirror"
+    assert rendered["character_ref_ids"] == ["ar_hamlet", "ar_laertes"]
+    assert rendered["mythos_id"] == "ar_hamlet"
+    # over_event_ids is a full list — just verify it's a list with
+    # the expected shape (cardinality > 0, all strings).
+    assert isinstance(rendered["over_event_ids"], list)
+    assert len(rendered["over_event_ids"]) > 0
+    assert all(isinstance(e, str) for e in rendered["over_event_ids"])
+    assert isinstance(rendered["annotation"], str)
+    assert rendered["annotation"]  # non-empty
+
+
+def test_sketch04_character_arc_relations_section_omitted_when_empty():
+    """_build_character_arc_relations_section returns None on empty
+    input; the prompt omits the whole section. Parallels the
+    ArMythosRelation / substrate-section pattern."""
+    from story_engine.core.aristotelian_reader_model_client import (
+        _build_character_arc_relations_section,
+    )
+    assert _build_character_arc_relations_section(()) is None
+    assert _build_character_arc_relations_section([]) is None
+
+
+def test_sketch04_prompt_includes_character_arc_relations_section():
+    """APA4-3 + APA4-4: when character_arc_relations is non-empty,
+    build_user_prompt emits a dedicated section with the sketch-03
+    A13 heading, and the rendered relations appear in the prompt."""
+    from story_engine.encodings.hamlet import FABULA
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+    )
+    prompt, _ = build_user_prompt(
+        mythoi=(AR_HAMLET_MYTHOS,),
+        observations=(),
+        substrate_events=list(FABULA),
+        targets_to_review=_eligible_targets(
+            (AR_HAMLET_MYTHOS,),
+            character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+        ),
+        observations_to_comment_on=[],
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    assert "ArCharacterArcRelation records (sketch-03 A13)" in prompt
+    assert "arc_hamlet_laertes_mirror" in prompt
+    assert "arc_hamlet_claudius_foil" in prompt
+    # The canonical-kind vocabulary appears in the preamble.
+    assert "mirror" in prompt
+    assert "foil" in prompt
+
+
+def test_sketch04_prompt_omits_arc_relations_section_when_empty():
+    """Oedipus authors no ArCharacterArcRelation — the section is
+    absent entirely (heading does not appear). Pre-sketch-04 call
+    sites stay byte-identical through this path."""
+    from story_engine.encodings.oedipus_aristotelian import (
+        AR_OEDIPUS_MYTHOS,
+    )
+    prompt, _ = build_user_prompt(
+        mythoi=(AR_OEDIPUS_MYTHOS,),
+        observations=(),
+        substrate_events=[],
+        targets_to_review=_eligible_targets((AR_OEDIPUS_MYTHOS,)),
+        observations_to_comment_on=[],
+    )
+    assert "ArCharacterArcRelation records" not in prompt
+
+
+def test_sketch04_eligible_targets_includes_staging_step_annotations():
+    """APA4-3: Hamlet's three-step anagnorisis_chain carries three
+    non-empty annotations — all three join the eligible set as
+    ArAnagnorisisStep.annotation triples."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+    )
+    targets = _eligible_targets(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    step_triples = [
+        t for t in targets if t[0] == TARGET_AR_ANAGNORISIS_STEP
+    ]
+    assert len(step_triples) == 3, (
+        f"expected 3 ArAnagnorisisStep triples (Ghost-claim, "
+        f"Mousetrap, Claudius-prays); got {step_triples}"
+    )
+    step_ids = sorted(t[1] for t in step_triples)
+    assert step_ids == [
+        "arstep_claudius_prays",
+        "arstep_hamlet_ghost_claim",
+        "arstep_hamlet_mousetrap",
+    ]
+    assert all(t[2] == FIELD_ANNOTATION for t in step_triples)
+
+
+def test_sketch04_eligible_targets_includes_arc_relation_annotations():
+    """APA4-3: Hamlet's two ArCharacterArcRelation records join the
+    eligible set as ArCharacterArcRelation.annotation triples when
+    character_arc_relations is threaded through."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+    )
+    targets = _eligible_targets(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    arc_triples = [
+        t for t in targets if t[0] == TARGET_AR_CHARACTER_ARC_RELATION
+    ]
+    assert len(arc_triples) == 2
+    arc_ids = sorted(t[1] for t in arc_triples)
+    assert arc_ids == [
+        "arc_hamlet_claudius_foil",
+        "arc_hamlet_laertes_mirror",
+    ]
+    assert all(t[2] == FIELD_ANNOTATION for t in arc_triples)
+
+
+def test_sketch04_hamlet_eligible_targets_full_count():
+    """Hamlet Session 6: 1 mythos action_summary + 3 phase
+    annotations + 3 hamartia_texts + 3 staging/parallel step
+    annotations + 2 arc-relation annotations = 12 reviewable
+    prose fields. (The sketch-04 draft named 11; Hamlet authors
+    3 chain steps rather than 2 staging — the mirror of Claudius's
+    prayer step adds one more reviewable annotation.)"""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+    )
+    targets = _eligible_targets(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    assert len(targets) == 12, (
+        f"expected 12 eligible targets on Hamlet (sketch-04); "
+        f"got {len(targets)}"
+    )
+
+
+def test_sketch04_records_by_kind_id_indexes_steps_and_arc_relations():
+    """APA4-4: _records_by_kind_id indexes staging steps (from
+    mythos.anagnorisis_chain) and arc relations (from the kwarg),
+    so scope validation resolves target_ids to rendered records."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+    )
+    index = _records_by_kind_id(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    assert (
+        TARGET_AR_ANAGNORISIS_STEP,
+        "arstep_hamlet_ghost_claim",
+    ) in index
+    assert (
+        TARGET_AR_CHARACTER_ARC_RELATION,
+        "arc_hamlet_laertes_mirror",
+    ) in index
+
+
+def test_sketch04_annotation_review_on_arc_relation_accepted():
+    """Scope validation accepts a review on an
+    ArCharacterArcRelation:annotation triple when the relation is
+    in the kwarg and in targets_to_review."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+    )
+    records_index = _records_by_kind_id(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    targets = _eligible_targets(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    raw = AristotelianAnnotationReview(
+        target_kind=TARGET_AR_CHARACTER_ARC_RELATION,
+        target_id="arc_hamlet_laertes_mirror",
+        field=FIELD_ANNOTATION,
+        verdict="approved",
+        rationale="mirror-relation prose cites the play's own line",
+    )
+    reason = _classify_annotation_review(raw, records_index, targets)
+    assert reason is None, f"expected accepted; got drop: {reason}"
+
+
+def test_sketch04_annotation_review_on_staging_step_accepted():
+    """Scope validation accepts a review on an
+    ArAnagnorisisStep:annotation triple for a chain step with
+    authored prose."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_CHARACTER_ARC_RELATIONS, AR_HAMLET_MYTHOS,
+    )
+    records_index = _records_by_kind_id(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    targets = _eligible_targets(
+        (AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    raw = AristotelianAnnotationReview(
+        target_kind=TARGET_AR_ANAGNORISIS_STEP,
+        target_id="arstep_hamlet_ghost_claim",
+        field=FIELD_ANNOTATION,
+        verdict="needs-work",
+        rationale="staging-step prose overstates the epistemic claim",
+    )
+    reason = _classify_annotation_review(raw, records_index, targets)
+    assert reason is None, f"expected accepted; got drop: {reason}"
+
+
+def test_sketch04_system_prompt_carries_sketch03_paragraph():
+    """APA4-5: SYSTEM_PROMPT names the sketch-03 extensions so the
+    LLM knows what A13 / A14 mean when it encounters them in the
+    records section."""
+    from story_engine.core.aristotelian_reader_model_client import (
+        SYSTEM_PROMPT,
+    )
+    assert "sketch-03" in SYSTEM_PROMPT
+    assert "ArCharacterArcRelation" in SYSTEM_PROMPT
+    assert "step_kind" in SYSTEM_PROMPT
+    assert "staging" in SYSTEM_PROMPT
+    assert "anagnorisis_character_ref_id" in SYSTEM_PROMPT
+
+
+def test_sketch04_pre_sketch03_encodings_prompt_byte_identical():
+    """Oedipus / Rashomon / Macbeth demos use default-empty
+    character_arc_relations. The prompts for those encodings must
+    stay byte-identical to pre-sketch-04 behavior, modulo the
+    SYSTEM_PROMPT + records-section-preamble updates (which apply
+    universally). This test covers the USER prompt for Rashomon —
+    the heaviest pre-sketch-03 case — with and without the sketch-04
+    kwargs explicitly empty."""
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_MYTHOI, AR_RASHOMON_RELATIONS,
+    )
+    # Default (no sketch-04 kwarg)
+    prompt_default, _ = build_user_prompt(
+        mythoi=AR_RASHOMON_MYTHOI,
+        observations=(),
+        substrate_events=[],
+        targets_to_review=_eligible_targets(AR_RASHOMON_MYTHOI),
+        observations_to_comment_on=[],
+        relations=AR_RASHOMON_RELATIONS,
+    )
+    # Explicit-empty kwarg
+    prompt_explicit, _ = build_user_prompt(
+        mythoi=AR_RASHOMON_MYTHOI,
+        observations=(),
+        substrate_events=[],
+        targets_to_review=_eligible_targets(AR_RASHOMON_MYTHOI),
+        observations_to_comment_on=[],
+        relations=AR_RASHOMON_RELATIONS,
+        character_arc_relations=(),
+    )
+    assert prompt_default == prompt_explicit
+    # And neither emits the sketch-03 A13 section heading.
+    assert "ArCharacterArcRelation records" not in prompt_default
 
 
 # ============================================================================

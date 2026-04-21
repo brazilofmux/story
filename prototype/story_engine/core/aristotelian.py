@@ -1360,22 +1360,35 @@ VALID_COMMENTARY_ASSESSMENTS: frozenset = frozenset({
 
 # Target-kind vocabulary for ArAnnotationReview. Each Aristotelian
 # record kind with a reviewable prose field appears here.
+# Probe-sketch-04 APA4-3: staging-step and arc-relation annotations
+# join the reviewable surface alongside the three sketch-01 kinds.
 
 TARGET_AR_MYTHOS = "ArMythos"
 TARGET_AR_PHASE = "ArPhase"
 TARGET_AR_CHARACTER = "ArCharacter"
+TARGET_AR_ANAGNORISIS_STEP = "ArAnagnorisisStep"
+TARGET_AR_CHARACTER_ARC_RELATION = "ArCharacterArcRelation"
 
 VALID_REVIEW_TARGET_KINDS: frozenset = frozenset({
     TARGET_AR_MYTHOS, TARGET_AR_PHASE, TARGET_AR_CHARACTER,
+    TARGET_AR_ANAGNORISIS_STEP, TARGET_AR_CHARACTER_ARC_RELATION,
 })
 
 # Field-name vocabulary for ArAnnotationReview. Per APS2 each
 # target_kind has exactly one reviewable prose field; the table
 # is fixed and translation-time validators use FIELDS_BY_TARGET_KIND
 # to reject mis-paired reviews.
+#
+# Sketch-03 adds two records whose authored prose also lives under
+# the field name `annotation` (ArAnagnorisisStep.annotation,
+# ArCharacterArcRelation.annotation). FIELD_PHASE_ANNOTATION's value
+# is already the bare string "annotation"; the new target kinds map
+# to the same field name, so the shared FIELD_ANNOTATION alias below
+# lets call sites read intent without duplicating the literal.
 
 FIELD_ACTION_SUMMARY = "action_summary"    # ArMythos only
-FIELD_PHASE_ANNOTATION = "annotation"      # ArPhase only
+FIELD_PHASE_ANNOTATION = "annotation"      # ArPhase (pre-sketch-04)
+FIELD_ANNOTATION = "annotation"            # ArAnagnorisisStep + ArCharacterArcRelation (sketch-04); same string as FIELD_PHASE_ANNOTATION
 FIELD_HAMARTIA_TEXT = "hamartia_text"      # ArCharacter only
 
 VALID_REVIEW_FIELDS: frozenset = frozenset({
@@ -1386,6 +1399,8 @@ FIELDS_BY_TARGET_KIND: dict = {
     TARGET_AR_MYTHOS: frozenset({FIELD_ACTION_SUMMARY}),
     TARGET_AR_PHASE: frozenset({FIELD_PHASE_ANNOTATION}),
     TARGET_AR_CHARACTER: frozenset({FIELD_HAMARTIA_TEXT}),
+    TARGET_AR_ANAGNORISIS_STEP: frozenset({FIELD_ANNOTATION}),
+    TARGET_AR_CHARACTER_ARC_RELATION: frozenset({FIELD_ANNOTATION}),
 }
 
 # DialectReading's read_on_terms vocabulary — the reader's self-

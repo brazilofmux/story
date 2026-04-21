@@ -83,9 +83,12 @@ from story_engine.core.aristotelian import (
     DialectReading,
     FIELDS_BY_TARGET_KIND,
     FIELD_ACTION_SUMMARY,
+    FIELD_ANNOTATION,
     FIELD_HAMARTIA_TEXT,
     FIELD_PHASE_ANNOTATION,
+    TARGET_AR_ANAGNORISIS_STEP,
     TARGET_AR_CHARACTER,
+    TARGET_AR_CHARACTER_ARC_RELATION,
     TARGET_AR_MYTHOS,
     TARGET_AR_PHASE,
     VALID_COMMENTARY_ASSESSMENTS,
@@ -115,11 +118,14 @@ ObservationAssessment = Literal[
 
 ReviewTargetKind = Literal[
     "ArMythos", "ArPhase", "ArCharacter",
+    # Sketch-04 APA4-3: staging-step + arc-relation annotations
+    # join the reviewable surface.
+    "ArAnagnorisisStep", "ArCharacterArcRelation",
 ]
 
 ReviewField = Literal[
     "action_summary",   # ArMythos only
-    "annotation",       # ArPhase only
+    "annotation",       # ArPhase + ArAnagnorisisStep + ArCharacterArcRelation
     "hamartia_text",    # ArCharacter only
 ]
 
@@ -131,22 +137,25 @@ class AristotelianAnnotationReview(BaseModel):
     target_kind: ReviewTargetKind = Field(
         description=(
             "record kind of the review target: 'ArMythos', "
-            "'ArPhase', or 'ArCharacter'"
+            "'ArPhase', 'ArCharacter', 'ArAnagnorisisStep', or "
+            "'ArCharacterArcRelation'"
         )
     )
     target_id: str = Field(
         description=(
             "id of the target record (e.g., 'ar_oedipus', "
-            "'ph_beginning', 'ar_jocasta'); must match a record "
-            "shown in the prompt"
+            "'ph_beginning', 'ar_jocasta', 'arstep_hamlet_ghost_claim', "
+            "'arc_hamlet_laertes_mirror'); must match a record shown "
+            "in the prompt"
         )
     )
     field: ReviewField = Field(
         description=(
             "which prose field on the target is under review. "
             "'action_summary' pairs with ArMythos only; "
-            "'annotation' with ArPhase only; 'hamartia_text' with "
-            "ArCharacter only"
+            "'annotation' with ArPhase, ArAnagnorisisStep, or "
+            "ArCharacterArcRelation; 'hamartia_text' with ArCharacter "
+            "only"
         )
     )
     verdict: AnnotationVerdict = Field(
@@ -351,6 +360,26 @@ author them but they would help, flag them in \
 wanted — e.g., a typed frame-mythos surface, or an audience-level \
 recognition modifier — flag that too.
 
+Note on sketch-03: the dialect now ships `ArCharacterArcRelation` \
+(kinds: 'parallel' | 'mirror' | 'foil') expressing intra-mythos \
+structural relations between two or more ArCharacter records \
+within a single ArMythos — orthogonal to sketch-02's \
+`ArMythosRelation`, which is inter-mythos. It also adds `step_kind` \
+on ArAnagnorisisStep ('parallel' | 'precipitating' | 'staging') — \
+`staging` is new and names same-character epistemic waypoints on \
+the path to the main anagnorisis (e.g., a protagonist's staged \
+coming-to-know across multiple revelations before the main \
+recognition). ArMythos gains `anagnorisis_character_ref_id` naming \
+who the main anagnorisis belongs to; staging steps verify against \
+it. If an encoding authors these, they appear inline (step_kind \
+on steps inside `anagnorisis_chain`; `anagnorisis_character_ref_id` \
+on ArMythos) or in a dedicated `ArCharacterArcRelation records` \
+section. If an encoding does NOT author them but they would help, \
+flag them in `relations_wanted`. If the dialect still lacks \
+something you wanted — e.g., three-way character-arc relations, \
+numerical peripeteia-anagnorisis distance, same-beat staggered \
+recognition — flag that too.
+
 ## Your contract
 
 R1. Typed I/O only. You produce structured output matching the \
@@ -372,11 +401,13 @@ R3. Same record types a human reviewer would produce — just with \
 For each prose field you are asked to review, produce one \
 AristotelianAnnotationReview:
 
-- `target_kind`: 'ArMythos', 'ArPhase', or 'ArCharacter'.
+- `target_kind`: 'ArMythos', 'ArPhase', 'ArCharacter', \
+'ArAnagnorisisStep', or 'ArCharacterArcRelation'.
 - `target_id`: id of the target record (must appear in the \
 prompt).
 - `field`: which prose field — 'action_summary' (ArMythos), \
-'annotation' (ArPhase), or 'hamartia_text' (ArCharacter). Each \
+'annotation' (ArPhase, ArAnagnorisisStep, or \
+ArCharacterArcRelation), or 'hamartia_text' (ArCharacter). Each \
 target_kind has exactly one reviewable field; mis-pairings are \
 dropped.
 - `verdict`: one of:
@@ -483,6 +514,12 @@ def _ar_anagnorisis_step_to_dict(step) -> dict:
         "id": step.id,
         "event_id": step.event_id,
         "character_ref_id": step.character_ref_id,
+        # Sketch-03 A14 step_kind: "parallel" | "precipitating" |
+        # "staging"; empty string means the encoding lets the
+        # verifier derive it from precipitates_main + main-character
+        # identity. Rendered as authored so the probe reads what the
+        # encoding actually declared.
+        "step_kind": step.step_kind,
         "precipitates_main": step.precipitates_main,
         "annotation": step.annotation,
     }
@@ -523,6 +560,12 @@ def _ar_mythos_to_dict(mythos: ArMythos) -> dict:
             mythos.peripeteia_anagnorisis_binding,
         "peripeteia_anagnorisis_adjacency_bound":
             mythos.peripeteia_anagnorisis_adjacency_bound,
+        # Sketch-03 A14 — names which character the main anagnorisis
+        # belongs to; staging chain-steps must share this id. None
+        # when the encoding hasn't declared (all pre-sketch-03
+        # encodings).
+        "anagnorisis_character_ref_id":
+            mythos.anagnorisis_character_ref_id,
     }
 
 
@@ -536,6 +579,23 @@ def _ar_relation_to_dict(relation) -> dict:
         "id": relation.id,
         "relation_kind": relation.kind,
         "mythoi_ids": list(relation.mythoi_ids),
+        "over_event_ids": list(relation.over_event_ids),
+        "annotation": relation.annotation,
+    }
+
+
+def _ar_character_arc_relation_to_dict(relation) -> dict:
+    """Render an ArCharacterArcRelation (sketch-03 A13). Encoding-
+    scope record — a single relation ties ≥ 2 ArCharacter records
+    *within one ArMythos*, orthogonal to A10's inter-mythos
+    ArMythosRelation. Kinds: 'parallel' | 'mirror' | 'foil'
+    (canonical-plus-open)."""
+    return {
+        "kind": "ArCharacterArcRelation",
+        "id": relation.id,
+        "relation_kind": relation.kind,
+        "character_ref_ids": list(relation.character_ref_ids),
+        "mythos_id": relation.mythos_id,
         "over_event_ids": list(relation.over_event_ids),
         "annotation": relation.annotation,
     }
@@ -616,6 +676,21 @@ def _build_relations_section(relations: tuple) -> Optional[str]:
     return json.dumps(payload, indent=2, ensure_ascii=False)
 
 
+def _build_character_arc_relations_section(
+    character_arc_relations: tuple,
+) -> Optional[str]:
+    """Render ArCharacterArcRelation records (sketch-03 A13). Returns
+    None when no relations — the caller omits the whole section.
+    Parallel shape to the ArMythosRelation section."""
+    if not character_arc_relations:
+        return None
+    payload = [
+        _ar_character_arc_relation_to_dict(r)
+        for r in character_arc_relations
+    ]
+    return json.dumps(payload, indent=2, ensure_ascii=False)
+
+
 def _build_substrate_section(substrate_events: list) -> Optional[str]:
     """Render the substrate-event summary. Returns None when empty —
     the caller omits the whole section in that case, matching the
@@ -665,12 +740,23 @@ def _build_task_section(
     return "\n".join(parts)
 
 
-def _eligible_targets(mythoi: tuple) -> list:
+def _eligible_targets(
+    mythoi: tuple,
+    character_arc_relations: tuple = (),
+) -> list:
     """Return every (target_kind, target_id, field) triple the
     invocation could review. Used as the default `targets_to_review`
     when the caller doesn't specify. Order: mythos records first
     (action_summary), then phases (annotation), then characters
-    (hamartia_text), preserving declared order within each."""
+    (hamartia_text), then sketch-03 staging-step and arc-relation
+    annotations — preserving declared order within each.
+
+    Sketch-04 APA4-3 extends the eligible set with
+    ArAnagnorisisStep.annotation (for every chain step the encoding
+    authored with non-empty prose) and ArCharacterArcRelation.annotation
+    (for every arc-relation record). Empty-prose steps/relations are
+    dropped on the same don't-review-empty-prose discipline that drops
+    hamartia-less characters."""
     out: list = []
     for m in mythoi:
         out.append((TARGET_AR_MYTHOS, m.id, FIELD_ACTION_SUMMARY))
@@ -686,13 +772,32 @@ def _eligible_targets(mythoi: tuple) -> list:
                 out.append(
                     (TARGET_AR_CHARACTER, c.id, FIELD_HAMARTIA_TEXT)
                 )
+    for m in mythoi:
+        for s in m.anagnorisis_chain:
+            if s.annotation:
+                out.append(
+                    (TARGET_AR_ANAGNORISIS_STEP, s.id, FIELD_ANNOTATION)
+                )
+    for r in character_arc_relations:
+        if r.annotation:
+            out.append(
+                (TARGET_AR_CHARACTER_ARC_RELATION, r.id, FIELD_ANNOTATION)
+            )
     return out
 
 
-def _records_by_kind_id(mythoi: tuple) -> dict:
+def _records_by_kind_id(
+    mythoi: tuple,
+    character_arc_relations: tuple = (),
+) -> dict:
     """Build an index (target_kind, target_id) -> record. Used by
     scope validators to confirm a review targets an actually-
-    rendered record."""
+    rendered record.
+
+    Sketch-04: indexes staging steps (from each mythos's
+    anagnorisis_chain) and arc-relation records (from the
+    character_arc_relations tuple) so scope validation accepts
+    reviews on those kinds."""
     index: dict = {}
     for m in mythoi:
         index[(TARGET_AR_MYTHOS, m.id)] = m
@@ -700,6 +805,10 @@ def _records_by_kind_id(mythoi: tuple) -> dict:
             index[(TARGET_AR_PHASE, p.id)] = p
         for c in m.characters:
             index[(TARGET_AR_CHARACTER, c.id)] = c
+        for s in m.anagnorisis_chain:
+            index[(TARGET_AR_ANAGNORISIS_STEP, s.id)] = s
+    for r in character_arc_relations:
+        index[(TARGET_AR_CHARACTER_ARC_RELATION, r.id)] = r
     return index
 
 
@@ -710,6 +819,7 @@ def build_user_prompt(
     targets_to_review: list,
     observations_to_comment_on: list,
     relations: tuple = (),
+    character_arc_relations: tuple = (),
 ) -> tuple:
     """Public helper: assemble the full user message and the
     synthetic-id map for ArObservations. Returns (prompt, id_map).
@@ -719,12 +829,16 @@ def build_user_prompt(
     Empty observations produce an empty id_map.
 
     `relations` is the encoding's ArMythosRelation tuple (sketch-02
-    A10). Default empty; the relations section is omitted when the
-    tuple is empty."""
+    A10). `character_arc_relations` is the encoding's
+    ArCharacterArcRelation tuple (sketch-03 A13). Defaults empty;
+    the corresponding section is omitted when the tuple is empty."""
     records_section = _build_records_section(mythoi)
     observations_section, id_map = _build_observations_section(observations)
     substrate_section = _build_substrate_section(substrate_events)
     relations_section = _build_relations_section(relations)
+    character_arc_relations_section = (
+        _build_character_arc_relations_section(character_arc_relations)
+    )
     task = _build_task_section(
         targets_to_review, observations_to_comment_on,
         has_observations=bool(observations),
@@ -738,14 +852,17 @@ def build_user_prompt(
         ("(Each ArMythos inlines its phases and characters. "
          "Prose fields under review: `action_summary` on each "
          "ArMythos; `annotation` on each ArPhase; `hamartia_text` "
-         "on each ArCharacter that carries one. Sketch-02 adds "
-         "two optional ArMythos fields — `anagnorisis_chain` "
-         "carrying ArAnagnorisisStep records for staggered "
-         "character-level recognitions, and "
-         "`peripeteia_anagnorisis_binding` typing the structural "
-         "relation between reversal and recognition. These are "
-         "rendered inline but are NOT reviewable prose fields in "
-         "this probe.)"),
+         "on each ArCharacter that carries one; `annotation` on "
+         "each ArAnagnorisisStep inside `anagnorisis_chain` "
+         "(sketch-03 reviewable); `annotation` on each "
+         "ArCharacterArcRelation in its own section below "
+         "(sketch-03 reviewable). Sketch-02 adds two optional "
+         "ArMythos fields — `anagnorisis_chain` carrying "
+         "ArAnagnorisisStep records for staggered character-level "
+         "recognitions, and `peripeteia_anagnorisis_binding` typing "
+         "the structural relation between reversal and recognition. "
+         "Sketch-03 adds `step_kind` on ArAnagnorisisStep and "
+         "`anagnorisis_character_ref_id` on ArMythos.)"),
         "",
         records_section,
         "",
@@ -773,6 +890,30 @@ def build_user_prompt(
              "surface in this probe.)"),
             "",
             relations_section,
+            "",
+        ])
+    if character_arc_relations_section is not None:
+        sections.extend([
+            "## ArCharacterArcRelation records (sketch-03 A13)",
+            "",
+            ("(Encoding-scope records typing intra-mythos structural "
+             "relations between ≥ 2 ArCharacter records within a "
+             "single ArMythos. Canonical kinds: 'parallel' — arcs "
+             "run alongside without precipitating one another; "
+             "'mirror' — arcs structurally inverted over shared "
+             "pressure (e.g., two sons avenging murdered fathers "
+             "via opposite temperaments); 'foil' — arcs structurally "
+             "opposed over shared pressure (e.g., will-to-act vs "
+             "will-to-retain). `mythos_id` names the containing "
+             "ArMythos; `character_ref_ids` names the participants; "
+             "`over_event_ids` names substrate events where the "
+             "arcs track or mirror. The `annotation` field IS "
+             "reviewable prose — emit an annotation review with "
+             "target_kind='ArCharacterArcRelation' and "
+             "field='annotation' if you find tension between the "
+             "prose and the substrate events it names.)"),
+            "",
+            character_arc_relations_section,
             "",
         ])
     if substrate_section is not None:
@@ -961,6 +1102,7 @@ def invoke_aristotelian_reader_model(
     observations: tuple = (),
     substrate_events: Optional[list] = None,
     relations: tuple = (),
+    character_arc_relations: tuple = (),
     targets_to_review: Optional[list] = None,
     observations_to_comment_on: Optional[list] = None,
     anchor_τ_a: Optional[int] = None,
@@ -987,6 +1129,15 @@ def invoke_aristotelian_reader_model(
             section rendered). Passing a full fabula is fine; the
             renderer summarizes each event to `(id, type, τ_s,
             participants)` only.
+        relations: tuple of ArMythosRelation records (sketch-02
+            A10). Default: empty — rendered in a dedicated section
+            when non-empty.
+        character_arc_relations: tuple of ArCharacterArcRelation
+            records (sketch-03 A13). Default: empty — rendered in
+            a dedicated section when non-empty. Pass the encoding's
+            AR_*_CHARACTER_ARC_RELATIONS tuple (e.g. Hamlet's
+            AR_HAMLET_CHARACTER_ARC_RELATIONS) so the probe sees
+            the intra-mythos parallel / mirror / foil structure.
         targets_to_review: list of (target_kind, target_id, field)
             triples to review. Default: every eligible prose field
             across the mythoi. Pass `[]` to skip annotation
@@ -1018,7 +1169,9 @@ def invoke_aristotelian_reader_model(
         anchor_τ_a = current_τ_a
 
     if targets_to_review is None:
-        targets_to_review = _eligible_targets(mythoi)
+        targets_to_review = _eligible_targets(
+            mythoi, character_arc_relations=character_arc_relations,
+        )
     if observations_to_comment_on is None:
         observations_to_comment_on = [
             f"ao_{i}" for i in range(len(observations))
@@ -1028,6 +1181,7 @@ def invoke_aristotelian_reader_model(
         mythoi, observations, substrate_events,
         targets_to_review, observations_to_comment_on,
         relations=relations,
+        character_arc_relations=character_arc_relations,
     )
 
     raw = invoke_parse_helper(
@@ -1058,6 +1212,7 @@ def invoke_aristotelian_reader_model(
         reviewer_id=reviewer_id,
         current_τ_a=current_τ_a,
         anchor_τ_a=anchor_τ_a,
+        character_arc_relations=character_arc_relations,
     )
 
 
@@ -1071,12 +1226,20 @@ def translate_raw_output(
     reviewer_id: str,
     current_τ_a: int,
     anchor_τ_a: int,
+    character_arc_relations: tuple = (),
 ) -> AristotelianReaderModelResult:
     """Translate a raw Pydantic output into a result. Public so
     tests can exercise translation without constructing an
     API-client mock; demos that cache raw JSON can also re-run
-    translation without a second API call."""
-    records_index = _records_by_kind_id(mythoi)
+    translation without a second API call.
+
+    Sketch-04: `character_arc_relations` lets reviews on
+    `ArCharacterArcRelation` records resolve against the index
+    during scope validation. Default empty preserves pre-sketch-04
+    call sites; Oedipus / Rashomon / Macbeth translate identically."""
+    records_index = _records_by_kind_id(
+        mythoi, character_arc_relations=character_arc_relations,
+    )
 
     annotation_reviews: list = []
     observation_commentaries: list = []
