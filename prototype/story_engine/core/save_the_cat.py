@@ -1127,9 +1127,17 @@ def _check_co_presence_requirements(
     story: structural integrity (≥2 refs, characters resolve, slot
     in range, min_count ≥ 1) plus participation (≥min_count authored
     beats at matching slot whose participant_ids cover all named
-    characters)."""
+    characters).
+
+    Resolution scope: the "known" character set is the intersection of
+    `story.character_ids` and the passed `characters` collection.
+    Characters that exist in the collection but are not declared on
+    the story do NOT count as resolved for S14-SE2 purposes — the
+    compiler-facing surface respects the story boundary more tightly
+    than the sketch-02 character-resolution checks, which scope to
+    the global collection."""
     out = []
-    known_chars = set(characters_by_id.keys())
+    known_chars = set(story.character_ids) & set(characters_by_id.keys())
     for req in story.co_presence_requirements:
         # Structural integrity.
         if len(req.character_ref_ids) < 2:
@@ -1148,8 +1156,10 @@ def _check_co_presence_requirements(
                     code="co_presence_character_unresolved",
                     target_id=req.id,
                     message=(f"CoPresenceRequirement {req.id!r} names "
-                             f"character_ref_id {cid!r} which is not in "
-                             f"the characters collection"),
+                             f"character_ref_id {cid!r} which is not "
+                             f"reachable from the story (must be both "
+                             f"declared on story.character_ids AND "
+                             f"present in the characters collection)"),
                 ))
         if not (1 <= req.slot <= NUM_CANONICAL_BEATS):
             out.append(StcObservation(
@@ -1208,9 +1218,15 @@ def _check_strand_convergence_requirements(
     in range) plus advancement (each named strand appears in at
     least one beat at the matching slot's `advances`). Emits one
     missing-advancement observation per strand that fails
-    independently."""
+    independently.
+
+    Resolution scope: the "known" strand set is the intersection of
+    `story.strand_ids` and the passed `strands` collection. Same
+    story-boundary discipline as S16.2 — compiler-facing fields
+    resolve against the story's declared cast, not the global
+    collection."""
     out = []
-    known_strands = set(strands_by_id.keys())
+    known_strands = set(story.strand_ids) & set(strands_by_id.keys())
     for req in story.strand_convergence_requirements:
         if len(req.strand_ref_ids) < 2:
             out.append(StcObservation(
@@ -1229,7 +1245,9 @@ def _check_strand_convergence_requirements(
                     target_id=req.id,
                     message=(f"StrandConvergenceRequirement {req.id!r} "
                              f"names strand_ref_id {sid!r} which is not "
-                             f"in the strands collection"),
+                             f"reachable from the story (must be both "
+                             f"declared on story.strand_ids AND present "
+                             f"in the strands collection)"),
                 ))
         if not (1 <= req.slot <= NUM_CANONICAL_BEATS):
             out.append(StcObservation(

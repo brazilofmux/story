@@ -1093,6 +1093,41 @@ def test_s16_2_flags_character_unresolved():
     assert len(unresolved) == 1
 
 
+def test_s16_2_flags_character_in_global_but_not_declared_on_story():
+    """Story-boundary discipline: S14-SE2 resolves against
+    story.character_ids ∩ characters collection. A character passed in
+    the global `characters` tuple but NOT named in story.character_ids
+    does not count as resolved — the compiler-facing surface respects
+    the story boundary. Pins the fix for the sketch-03 review
+    finding."""
+    beats = _full_beat_set()
+    # Two characters passed globally; only one declared on the story.
+    chars = (
+        StcCharacter(id="C1", name="A", role_labels=("protagonist",)),
+        StcCharacter(id="C2", name="B"),
+    )
+    story = _full_story(
+        character_ids=("C1",),  # deliberately excludes C2
+        co_presence_requirements=(
+            StcCoPresenceRequirement(
+                id="r1", character_ref_ids=("C1", "C2"), slot=1,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, characters=chars)
+    unresolved = [
+        o for o in obs
+        if o.code == "co_presence_character_unresolved"
+        and "'C2'" in o.message
+    ]
+    assert len(unresolved) == 1, (
+        "Requirement referencing a character present globally but "
+        "not declared on story.character_ids should produce a "
+        "co_presence_character_unresolved observation; got "
+        f"{[o.code for o in obs]}"
+    )
+
+
 def test_s16_2_flags_slot_out_of_range():
     beats = _full_beat_set()
     chars = (
@@ -1223,6 +1258,32 @@ def test_s16_3_flags_strand_unresolved():
     obs = verify(story, beats=beats, strands=strands)
     unresolved = [
         o for o in obs if o.code == "strand_convergence_strand_unresolved"
+    ]
+    assert len(unresolved) == 1
+
+
+def test_s16_3_flags_strand_in_global_but_not_declared_on_story():
+    """Story-boundary discipline for S14-SE3 (parallel to S16.2's
+    analog). A strand passed in the global `strands` tuple but NOT
+    named in story.strand_ids does not count as resolved."""
+    beats = _full_beat_set()
+    strands = (
+        StcStrand(id="A", kind=StrandKind.A_STORY),
+        StcStrand(id="B", kind=StrandKind.B_STORY),
+    )
+    story = _full_story(
+        strand_ids=("A",),  # deliberately excludes B
+        strand_convergence_requirements=(
+            StcStrandConvergenceRequirement(
+                id="r1", strand_ref_ids=("A", "B"), slot=9,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, strands=strands)
+    unresolved = [
+        o for o in obs
+        if o.code == "strand_convergence_strand_unresolved"
+        and "'B'" in o.message
     ]
     assert len(unresolved) == 1
 
@@ -1465,6 +1526,7 @@ TESTS = [
     test_s16_2_clean_when_no_requirements,
     test_s16_2_flags_refs_too_few,
     test_s16_2_flags_character_unresolved,
+    test_s16_2_flags_character_in_global_but_not_declared_on_story,
     test_s16_2_flags_slot_out_of_range,
     test_s16_2_flags_min_count_zero,
     test_s16_2_flags_insufficient_participation,
@@ -1473,6 +1535,7 @@ TESTS = [
     test_s16_3_clean_when_no_requirements,
     test_s16_3_flags_refs_too_few,
     test_s16_3_flags_strand_unresolved,
+    test_s16_3_flags_strand_in_global_but_not_declared_on_story,
     test_s16_3_flags_slot_out_of_range,
     test_s16_3_flags_missing_advancement_per_strand,
     test_s16_3_clean_when_both_strands_advance,
