@@ -150,16 +150,29 @@ The planner's `_enumerate_variable_bindings` function consults the type registry
 
 **Fallback for untyped legacy variables:** removed. Every schema variable must have a type declared. Existing code (sketch-01's TRAVEL/KILLS) migrates in the implementation commit.
 
-### S3P8 — Visited-set guard demoted
+### S3P8 — Visited-set guard demoted (partially)
 
-The visited-set guard in `_achieve` remains in the code, but its role changes:
+The visited-set guard in `_achieve` remains in the code. Its role shifts:
 
-- **Before sketch-02:** load-bearing; without it, enumeration cascades (LOC=oedipus → at(oedipus, oedipus) → try to plan it → same recursion) loop until max_depth.
-- **After sketch-02:** defensive belt-and-suspenders. With typed enumeration, LOC is never bound to `oedipus` (wrong type). The guard catches any type-hole that slips through but shouldn't fire under sketch-02's type discipline.
+- **Before sketch-02:** load-bearing for two overlapping reasons:
+  - (a) Preventing infinite recursion from nonsensical-typed bindings (e.g., LOC=oedipus → goal `at(oedipus, oedipus)` → recurse forever).
+  - (b) Pruning sub-problem repetition during legitimate dead-end exploration (e.g., the planner tries LOC=corinth before finding LOC=crossroads; the corinth branch attempts to move Laius to corinth, which recurses through `at(laius, corinth)` via a TRAVEL chain that eventually re-encounters the same subgoal).
 
-A test pin verifies this: under sketch-02's typed form, scene-1's plan is generated *without* the visited set ever blocking a recursion. If the test begins failing in a future sketch, a type-hole exists.
+- **After sketch-02:** typed enumeration eliminates (a) entirely — LOC is never bound to `oedipus` because their types don't match. But (b) remains — typed dead-end exploration still needs cycle-pruning, because the same legitimate subgoal can be re-requested through different operator/binding chains while backtracking.
 
-Removing the guard entirely is deferred to sketch-03 or later, once sketch-02's types have been stressed across more operators.
+**Observed behavior post-implementation.** On scene 1 success, the guard fires ~6 times — all from (b), none from (a). On scene 2 success with the extended operator library, it fires ~9 times. These are bounded, productive firings: they prune repeated subgoals within a single planning call, making search efficient.
+
+**The 0-firings claim in a preliminary version of this sketch was incorrect.** Implementation surfaced (b) as a legitimate second role for the guard. The sketch now claims bounded (not zero) firings as the success invariant.
+
+Test pins:
+- Scene 1 success: guard fires < 50 times (observed ~6).
+- Scene 2 success: guard fires < 100 times (observed ~9).
+
+A future regression where firings explode to thousands would signal either a new failure mode (type-hole; something (a)-adjacent) or that typed enumeration has silently broken.
+
+Removing the guard entirely is no longer defensible for sketch-03 without an alternative cycle-pruning mechanism (e.g., proper POCL causal links). The guard has a real job; "belt-and-suspenders" was the wrong framing.
+
+S3P-OQ9 (below) is refined accordingly.
 
 ### S3P9 — Third operator: `acquire`
 
@@ -256,15 +269,16 @@ If a future operator needs "must be a weapon" specifically (beyond "is an object
 
 **Forcing function:** first operator that needs a narrower type than the existing flat types admit. Banked.
 
-### S3P-OQ9 — Visited-set removal criterion
+### S3P-OQ9 — Visited-set replacement (not removal)
 
-When is it safe to remove the visited-set guard?
+Sketch-02 implementation refined the original question. The guard is NOT removable without replacement — it does real work pruning sub-problem repetition during dead-end search exploration. Two replacement paths:
 
-Proposal: after sketch-N implements M operators × K scenes × some threshold test cases, with every case running without the visited set ever firing (add an instrumentation counter; assert 0 firings in test suites), the guard can be removed.
+- **Proper POCL with causal links.** Track which actions provide which preconditions as first-class data; re-entering a subgoal is legitimate if the requesting causal slot differs. This is classical POCL semantics (Weld 1994) and would be the "right" replacement — the current visited-set is essentially a degenerate form of causal-link tracking.
+- **Memoization by (subgoal, state_hash).** Cache successful subplans so they're reused rather than re-derived. Orthogonal to the guard; complementary.
 
-Concrete threshold: N_ops ≥ 5, scenes ≥ 4, test suite ≥ 40 cases.
+**Forcing function:** operator library growth sufficient to make the current per-call-chain visited set inefficient (firings grow faster than plan size warrants). Concrete threshold: ~6 operators or longer plans (~8+ steps) where re-deriving subplans across branches becomes noticeable.
 
-**Forcing function:** accumulated confidence through per-sketch instrumentation. Banked.
+Spike stance: keep the visited-set; accept bounded firings as the invariant; replace when the replacement pays its own freight. Removing it prematurely regresses to sketch-01's fragility plus loses (b)'s pruning benefit.
 
 ## Worked example verification — scene 1 under sketch-02
 

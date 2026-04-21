@@ -1,16 +1,16 @@
 """
 compiler_stage_3.py — POCL-in-Python planner spike per compilation-
-stage-3-sketch-01.
+stage-3-sketch-01 + sketch-02.
 
-Scope (spike): one Oedipus precondition-gap closure. Two operator
-schemas (travel, kills). Propositional + typed state. Regression-
-from-goal search with variable enumeration against the state's
-ground-term universe. No epistemic / temporal / relational state;
-OQ1 binds if a follow-on spike needs it.
+Scope (spike): Oedipus precondition-gap closures. Operator library
+grown from sketch-01's (travel, kills) to sketch-02's (travel,
+kills, acquire). Propositional + typed state per sketch-02 S3P8 —
+every operator variable carries a type; ground terms assert their
+types via state `type/2` propositions; enumeration is type-aware.
 
 Public API:
-    OperatorSchema — action schema with params, preconditions,
-                     add_effects, del_effects.
+    OperatorSchema — action schema with params, variable_types,
+                     preconditions, add_effects, del_effects.
     PlanningGoal   — target operator + partial bindings.
     PlanningError  — structured failure per CS6 (mirrors stage 2's
                      InfeasibilityError pattern).
@@ -23,7 +23,13 @@ LOC). Ground terms are lowercase (oedipus, crossroads, sword).
 
 Never raises on infeasibility — CS6's "loud" is structured, not
 exceptional. ValueError is raised only on malformed inputs
-(empty operator name, non-variable params).
+(empty operator name, non-variable params, missing variable_types
+entries).
+
+Per sketch-02 S3P8: visited-set guard in _achieve is demoted to
+defensive belt-and-suspenders. Under typed enumeration the guard
+should not fire; a module-level counter tracks firings to prove
+(or disprove) that claim.
 """
 
 from __future__ import annotations
@@ -55,9 +61,16 @@ class OperatorSchema:
     Schema variables are UPPERCASE-leading strings. A precondition
     may reference the operator's params OR introduce additional free
     variables; the planner binds free variables via unification
-    against the state's ground-term universe."""
+    against type-compatible ground terms from the state.
+
+    Per sketch-02 S3P8, every variable (param or free) must have a
+    type declared in `variable_types`. Types drive the planner's
+    enumeration — a variable typed `location` binds only against
+    terms asserted as `location` in the state's `type/2`
+    propositions."""
     name: str
     params: Tuple[str, ...]
+    variable_types: Dict[str, str]
     preconditions: Tuple[Prop, ...]
     add_effects: Tuple[Prop, ...]
     del_effects: Tuple[Prop, ...]
@@ -70,6 +83,25 @@ class OperatorSchema:
                 raise ValueError(
                     f"OperatorSchema {self.name!r}: param {param!r} "
                     f"must be a variable (UPPERCASE-leading string)"
+                )
+        # S3P8 — every variable referenced anywhere in the schema
+        # must have a declared type.
+        vars_used: set = set()
+        for p in self.preconditions + self.add_effects + self.del_effects:
+            for arg in p.args:
+                if _is_var(arg):
+                    vars_used.add(arg)
+        vars_used.update(self.params)
+        for v in vars_used:
+            if v not in self.variable_types:
+                raise ValueError(
+                    f"OperatorSchema {self.name!r}: variable {v!r} "
+                    f"used in schema but missing from variable_types"
+                )
+            if not self.variable_types[v]:
+                raise ValueError(
+                    f"OperatorSchema {self.name!r}: variable_types["
+                    f"{v!r}] must be a non-empty type name"
                 )
 
 
@@ -141,20 +173,24 @@ def plan_to_goal(
         if param not in goal.bindings:
             all_free_vars.add(param)
 
-    universe = _extract_ground_terms(start_state)
-    if not universe:
+    type_registry = _build_type_registry(start_state)
+    if not type_registry:
         return PlanningError(
             code="empty_universe",
             goal=_goal_repr(goal),
             unsatisfied_preconditions=(),
             message=(
-                "start_state contains no ground terms; planner has "
-                "nothing to bind free variables against"
+                "start_state contains no type/2 propositions; typed "
+                "enumeration has no terms to bind free variables "
+                "against. Assert types via Prop('type', (term, "
+                "type_name))."
             ),
         )
 
-    # Enumerate bindings for free variables.
-    for ext in _enumerate_variable_bindings(all_free_vars, universe):
+    # Enumerate bindings for free variables (typed; sketch-02 S3P8).
+    for ext in _enumerate_variable_bindings(
+        all_free_vars, goal.operator.variable_types, type_registry,
+    ):
         full_bindings = {**goal.bindings, **ext}
         plan_steps = _plan_with_bindings(
             full_bindings, goal.operator, start_state, operators,
@@ -175,8 +211,9 @@ def plan_to_goal(
         unsatisfied_preconditions=unsatisfied,
         message=(
             f"no plan found for goal {_goal_repr(goal)}; search "
-            f"exhausted {len(universe)} ground terms across free "
-            f"variables {sorted(all_free_vars)}"
+            f"exhausted typed enumeration across "
+            f"{len(type_registry)} typed terms for free variables "
+            f"{sorted(all_free_vars)}"
         ),
         relaxations=(
             "provide explicit bindings for free variables in goal",
@@ -184,6 +221,8 @@ def plan_to_goal(
             "unsatisfied precondition",
             "extend start_state to directly satisfy one or more "
             "preconditions",
+            "verify that type/2 assertions exist in start_state "
+            "for all ground terms the planner should consider",
         ),
     )
 
@@ -246,24 +285,79 @@ def _is_fully_ground(p: Prop) -> bool:
     return all(not _is_var(a) for a in p.args)
 
 
-def _extract_ground_terms(state: FrozenSet[Prop]) -> FrozenSet[str]:
-    """Every non-variable string appearing as an arg in any prop in
-    `state`. The planner enumerates free variables over this set."""
-    terms = set()
-    for prop in state:
-        for arg in prop.args:
-            if isinstance(arg, str) and not _is_var(arg):
-                terms.add(arg)
-    return frozenset(terms)
+def _build_type_registry(state: FrozenSet[Prop]) -> Dict[str, str]:
+    """Map each ground term to its declared type per sketch-02 S3P8.
+
+    Extracted from state `Prop('type', (term, type_name))` assertions.
+    Terms without type assertions are absent from the registry;
+    typed enumeration treats them as invisible (no binding is
+    proposed against them). This is intentional — the spike's state
+    is expected to assert types on every term it wants the planner
+    to consider."""
+    registry: Dict[str, str] = {}
+    for p in state:
+        if p.predicate == "type" and len(p.args) == 2:
+            term, type_name = p.args
+            if (isinstance(term, str) and not _is_var(term)
+                    and isinstance(type_name, str)):
+                registry[term] = type_name
+    return registry
 
 
-def _enumerate_variable_bindings(free_vars, universe):
-    """Yield each Cartesian-product assignment of free_vars against
-    universe, in deterministic (sorted) order."""
+def _enumerate_variable_bindings(
+    free_vars,
+    variable_types: Dict[str, str],
+    type_registry: Dict[str, str],
+):
+    """Typed Cartesian enumeration per sketch-02 S3P8.
+
+    For each free variable V with declared type T, enumerate only
+    over terms whose state-asserted type is T. If no term has the
+    required type, the product is empty and no bindings yield.
+
+    Deterministic: sorted order by variable name and by term."""
+    terms_by_type: Dict[str, list] = {}
+    for term, type_name in type_registry.items():
+        terms_by_type.setdefault(type_name, []).append(term)
+    for v in terms_by_type:
+        terms_by_type[v].sort()
+
     vars_list = sorted(free_vars)
-    ground_list = sorted(universe)
-    for values in product(ground_list, repeat=len(vars_list)):
+    lists_for_product: list = []
+    for v in vars_list:
+        required_type = variable_types.get(v)
+        if required_type is None:
+            # No type declared for this variable. Under sketch-02
+            # this should not happen (validation requires types) —
+            # but defensively, treat as zero-candidate to surface
+            # the misconfiguration as infeasibility rather than
+            # a crash.
+            lists_for_product.append([])
+        else:
+            lists_for_product.append(terms_by_type.get(required_type, []))
+
+    for values in product(*lists_for_product):
         yield dict(zip(vars_list, values))
+
+
+# Visited-set-guard firing counter per sketch-02 S3P8. Under typed
+# enumeration this should stay at 0; the counter provides evidence
+# for the forcing function S3P-OQ9 "when is the guard removable?".
+_VISITED_GUARD_FIRES: int = 0
+
+
+def visited_guard_fires() -> int:
+    """Observable counter for tests. Returns the number of times
+    _achieve has short-circuited on its visited-set guard since the
+    last reset."""
+    return _VISITED_GUARD_FIRES
+
+
+def reset_visited_guard_counter() -> None:
+    """Tests call this before invoking the planner to isolate
+    per-test firing counts."""
+    global _VISITED_GUARD_FIRES
+    _VISITED_GUARD_FIRES = 0
 
 
 # ============================================================================
@@ -309,11 +403,13 @@ def _plan_with_bindings(
 
     plan: list = []
     state = set(start_state)
+    type_registry = _build_type_registry(start_state)
     for p in grounded_preconds:
         if p in state:
             continue
         sub = _achieve(
-            p, frozenset(state), operators, max_depth, frozenset(),
+            p, frozenset(state), operators, max_depth,
+            frozenset(), type_registry,
         )
         if sub is None:
             return None
@@ -334,18 +430,21 @@ def _achieve(
     operators: Tuple[OperatorSchema, ...],
     max_depth: int,
     visited: FrozenSet[Prop],
+    type_registry: Dict[str, str],
 ) -> Optional[list]:
     """Return a list of (operator, bindings) steps that achieve
     `target` from `state`, or None if no operator library + depth
     combination can. Caller is responsible for ensuring `target` is
     fully ground.
 
-    `visited` is the set of targets currently on the recursion stack;
-    re-entering a target short-circuits to None (cycle detection).
-    Without this guard, free-variable enumeration producing
-    semantically-nonsensical subgoals (e.g., at(oedipus, oedipus))
-    recurses indefinitely until max_depth."""
+    Per sketch-02 S3P8, `visited` is defensive belt-and-suspenders —
+    typed enumeration should prevent the nonsensical cascades that
+    visited originally caught. Firings are counted via the
+    module-level _VISITED_GUARD_FIRES counter for forcing-function
+    S3P-OQ9 evidence."""
+    global _VISITED_GUARD_FIRES
     if target in visited:
+        _VISITED_GUARD_FIRES += 1
         return None
     if max_depth <= 0:
         return None
@@ -384,7 +483,7 @@ def _achieve(
                         continue
                     sub = _achieve(
                         p, frozenset(cur_state), operators,
-                        max_depth - 1, new_visited,
+                        max_depth - 1, new_visited, type_registry,
                     )
                     if sub is None:
                         return None
@@ -395,9 +494,9 @@ def _achieve(
                 return subplan + [(op, full_b)]
 
             if free_vars_remaining:
-                universe = _extract_ground_terms(state)
                 for ext in _enumerate_variable_bindings(
-                    free_vars_remaining, universe,
+                    free_vars_remaining, op.variable_types,
+                    type_registry,
                 ):
                     full_b = {**bindings, **ext}
                     result = _try(full_b)

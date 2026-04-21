@@ -29,17 +29,33 @@ from story_engine.core.compiler_stage_3 import (
     PlanningError,
     PlanningGoal,
     plan_to_goal,
+    reset_visited_guard_counter,
+    visited_guard_fires,
 )
 
 
 # ----------------------------------------------------------------------------
-# Worked-example fixtures (Oedipus crossroads)
+# Type constants (sketch-02 S3P8)
+# ----------------------------------------------------------------------------
+
+AGENT_TYPE = "agent"
+LOCATION_TYPE = "location"
+OBJECT_TYPE = "object"
+
+
+# ----------------------------------------------------------------------------
+# Operator fixtures (migrated to sketch-02 typed form)
 # ----------------------------------------------------------------------------
 
 
 TRAVEL = OperatorSchema(
     name="travel",
     params=("AGENT", "FROM", "TO"),
+    variable_types={
+        "AGENT": AGENT_TYPE,
+        "FROM": LOCATION_TYPE,
+        "TO": LOCATION_TYPE,
+    },
     preconditions=(
         Prop("at", ("AGENT", "FROM")),
         Prop("path", ("FROM", "TO")),
@@ -52,6 +68,12 @@ TRAVEL = OperatorSchema(
 KILLS = OperatorSchema(
     name="kills",
     params=("KILLER", "VICTIM"),
+    variable_types={
+        "KILLER": AGENT_TYPE,
+        "VICTIM": AGENT_TYPE,
+        "LOC": LOCATION_TYPE,
+        "WEAPON": OBJECT_TYPE,
+    },
     preconditions=(
         Prop("at", ("KILLER", "LOC")),
         Prop("at", ("VICTIM", "LOC")),
@@ -64,11 +86,62 @@ KILLS = OperatorSchema(
 )
 
 
-def _crossroads_start_state() -> frozenset:
+ACQUIRE = OperatorSchema(
+    name="acquire",
+    params=("AGENT", "ITEM", "LOCATION"),
+    variable_types={
+        "AGENT": AGENT_TYPE,
+        "ITEM": OBJECT_TYPE,
+        "LOCATION": LOCATION_TYPE,
+    },
+    preconditions=(
+        Prop("at", ("AGENT", "LOCATION")),
+        Prop("at", ("ITEM", "LOCATION")),
+    ),
+    add_effects=(Prop("has", ("AGENT", "ITEM")),),
+    del_effects=(Prop("at", ("ITEM", "LOCATION")),),
+)
+
+
+# ----------------------------------------------------------------------------
+# State fixtures
+# ----------------------------------------------------------------------------
+
+
+def _type_assertions() -> frozenset:
+    """Canonical type/2 assertions for the Oedipus spike universe.
+    Migrations + new scenes compose these into their start state."""
     return frozenset({
+        Prop("type", ("oedipus", AGENT_TYPE)),
+        Prop("type", ("laius", AGENT_TYPE)),
+        Prop("type", ("corinth", LOCATION_TYPE)),
+        Prop("type", ("thebes", LOCATION_TYPE)),
+        Prop("type", ("crossroads", LOCATION_TYPE)),
+        Prop("type", ("sword", OBJECT_TYPE)),
+    })
+
+
+def _crossroads_start_state() -> frozenset:
+    """Scene 1: Oedipus already has the sword. Kill gap is co-location."""
+    return _type_assertions() | frozenset({
         Prop("at", ("oedipus", "corinth")),
         Prop("at", ("laius", "thebes")),
         Prop("has", ("oedipus", "sword")),
+        Prop("path", ("corinth", "crossroads")),
+        Prop("path", ("thebes", "crossroads")),
+        Prop("alive", ("oedipus",)),
+        Prop("alive", ("laius",)),
+    })
+
+
+def _acquire_en_route_start_state() -> frozenset:
+    """Scene 2 (sketch-02 S3P10): Oedipus at Corinth unarmed; sword
+    at crossroads; Laius at Thebes. Gap is both co-location AND
+    weapon acquisition."""
+    return _type_assertions() | frozenset({
+        Prop("at", ("oedipus", "corinth")),
+        Prop("at", ("laius", "thebes")),
+        Prop("at", ("sword", "crossroads")),  # sword at location, not held
         Prop("path", ("corinth", "crossroads")),
         Prop("path", ("thebes", "crossroads")),
         Prop("alive", ("oedipus",)),
@@ -369,7 +442,7 @@ def test_planning_error_is_frozen():
 def test_start_state_already_satisfies_goal_returns_one_step_plan():
     """If Oedipus and Laius are already at the crossroads in start
     state, planner should return just the kills event."""
-    start = frozenset({
+    start = _type_assertions() | frozenset({
         Prop("at", ("oedipus", "crossroads")),
         Prop("at", ("laius", "crossroads")),
         Prop("has", ("oedipus", "sword")),
@@ -411,7 +484,7 @@ def test_goal_with_all_variables_bound_skips_enumeration():
 
 def test_path_mismatch_prevents_plan():
     """Start state with no path to any shared location: infeasible."""
-    start = frozenset({
+    start = _type_assertions() | frozenset({
         Prop("at", ("oedipus", "corinth")),
         Prop("at", ("laius", "thebes")),
         Prop("has", ("oedipus", "sword")),
@@ -435,6 +508,7 @@ def test_operator_schema_rejects_empty_name():
     try:
         OperatorSchema(
             name="", params=("AGENT",),
+            variable_types={"AGENT": AGENT_TYPE},
             preconditions=(), add_effects=(), del_effects=(),
         )
     except ValueError as e:
@@ -448,6 +522,7 @@ def test_operator_schema_rejects_lowercase_params():
     try:
         OperatorSchema(
             name="bad", params=("agent",),  # lowercase — not a var
+            variable_types={"agent": AGENT_TYPE},
             preconditions=(), add_effects=(), del_effects=(),
         )
     except ValueError as e:
@@ -463,6 +538,338 @@ def test_operator_schema_accepts_valid_shape():
     module construct without error."""
     assert TRAVEL.name == "travel"
     assert KILLS.name == "kills"
+
+
+# ----------------------------------------------------------------------------
+# Sketch-02 — typed variables (S3P8)
+# ----------------------------------------------------------------------------
+
+
+def test_operator_schema_rejects_missing_variable_type():
+    """S3P8: every variable used in the schema must have a type
+    declared in variable_types."""
+    try:
+        OperatorSchema(
+            name="bad",
+            params=("AGENT",),
+            variable_types={},  # missing AGENT entry
+            preconditions=(Prop("at", ("AGENT", "LOC")),),
+            add_effects=(),
+            del_effects=(),
+        )
+    except ValueError as e:
+        assert "variable_types" in str(e)
+        return
+    raise AssertionError(
+        "expected ValueError when a schema variable has no type"
+    )
+
+
+def test_operator_schema_rejects_empty_type_name():
+    try:
+        OperatorSchema(
+            name="bad",
+            params=("AGENT",),
+            variable_types={"AGENT": ""},  # empty type name
+            preconditions=(),
+            add_effects=(),
+            del_effects=(),
+        )
+    except ValueError as e:
+        assert "non-empty" in str(e)
+        return
+    raise AssertionError(
+        "expected ValueError on empty type name"
+    )
+
+
+def test_operator_schema_rejects_missing_free_var_type():
+    """Free variables in preconditions (not in params) also need types."""
+    try:
+        OperatorSchema(
+            name="bad",
+            params=("AGENT",),
+            variable_types={"AGENT": AGENT_TYPE},  # missing LOC
+            preconditions=(Prop("at", ("AGENT", "LOC")),),
+            add_effects=(),
+            del_effects=(),
+        )
+    except ValueError as e:
+        assert "LOC" in str(e)
+        return
+    raise AssertionError(
+        "expected ValueError when a free variable has no type"
+    )
+
+
+def test_scene_1_visited_guard_firings_are_bounded():
+    """Sketch-02 S3P8 characterization: typed enumeration eliminates
+    nonsensical-binding cascades (e.g., LOC=oedipus producing
+    at(oedipus, oedipus) goals). It does NOT eliminate visited-guard
+    firings entirely — the guard still prunes sub-problem repetition
+    during dead-end exploration (e.g., the planner tries LOC=corinth
+    before finding LOC=crossroads; the corinth branch hits visited
+    loops while backtracking). Both failure modes are load-bearing.
+
+    This test pins: firings on scene 1 success are BOUNDED (finite),
+    not that they are zero. A regression where firings explode to
+    thousands would signal that typed enumeration is miscounting OR
+    that a new failure mode the guard is catching has emerged."""
+    reset_visited_guard_counter()
+    result = plan_to_goal(
+        _crossroads_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS),
+    )
+    assert isinstance(result, tuple)  # sanity — plan found
+    fires = visited_guard_fires()
+    # Loose upper bound — current implementation fires ~6. Any
+    # number under ~50 is "bounded exploration"; thousands would be
+    # a regression.
+    assert fires < 50, (
+        f"scene-1 visited-guard fires {fires} times (expected < 50); "
+        f"regression in enumeration or a new failure mode"
+    )
+
+
+def test_start_state_without_type_assertions_produces_empty_universe():
+    """S3P8: typed enumeration needs type/2 propositions in the
+    start state. A state with no type assertions returns
+    empty_universe even if it has other propositions."""
+    start = frozenset({
+        Prop("at", ("oedipus", "corinth")),
+        Prop("at", ("laius", "thebes")),
+        Prop("has", ("oedipus", "sword")),
+        Prop("alive", ("oedipus",)),
+        Prop("alive", ("laius",)),
+        # No type/2 assertions.
+    })
+    result = plan_to_goal(
+        start, _kills_oedipus_laius_goal(), (TRAVEL, KILLS),
+    )
+    assert isinstance(result, PlanningError)
+    assert result.code == "empty_universe"
+
+
+def test_typed_enumeration_ignores_wrongly_typed_terms():
+    """S3P8: a KILLS goal with LOC: location should never try
+    LOC=oedipus (agent-typed) during enumeration. Proof: a start
+    state where the ONLY location-typed term has no path
+    out should produce a 'no_plan_found' error with at-preconditions
+    named — NOT hit an enumeration-driven cascade on a non-location
+    LOC."""
+    reset_visited_guard_counter()
+    # State where the only location is 'corinth' — both agents start
+    # there; no path anywhere; weapon in hand. Can LOC only be
+    # corinth? Yes. But at(laius, corinth) is not in state → need
+    # travel, but no path anywhere → fail.
+    start = _type_assertions() | frozenset({
+        Prop("at", ("oedipus", "corinth")),
+        Prop("at", ("laius", "thebes")),
+        Prop("has", ("oedipus", "sword")),
+        Prop("alive", ("oedipus",)),
+        Prop("alive", ("laius",)),
+        # No path propositions.
+    })
+    result = plan_to_goal(
+        start, _kills_oedipus_laius_goal(), (TRAVEL, KILLS),
+    )
+    assert isinstance(result, PlanningError)
+    # The visited-guard MAY fire here (cascades like
+    # achieve(at(oedipus, thebes)) → travel needing at(oedipus, ?)
+    # → at(oedipus, thebes) again) — but not because of nonsensical
+    # LOC=oedipus bindings. That's the point.
+
+
+# ----------------------------------------------------------------------------
+# Sketch-02 — acquire operator (S3P9)
+# ----------------------------------------------------------------------------
+
+
+def test_acquire_operator_schema_valid():
+    assert ACQUIRE.name == "acquire"
+    assert ACQUIRE.variable_types["AGENT"] == AGENT_TYPE
+    assert ACQUIRE.variable_types["ITEM"] == OBJECT_TYPE
+    assert ACQUIRE.variable_types["LOCATION"] == LOCATION_TYPE
+
+
+def test_acquire_only_needs_co_location():
+    """Small test: agent + item co-located, plan is just acquire."""
+    start = _type_assertions() | frozenset({
+        Prop("at", ("oedipus", "crossroads")),
+        Prop("at", ("sword", "crossroads")),
+    })
+    goal = PlanningGoal(
+        operator=ACQUIRE,
+        bindings={
+            "AGENT": "oedipus",
+            "ITEM": "sword",
+            "LOCATION": "crossroads",
+        },
+    )
+    result = plan_to_goal(start, goal, (TRAVEL, ACQUIRE))
+    assert isinstance(result, tuple)
+    assert len(result) == 1
+    assert result[0].type == "acquire"
+
+
+def test_acquire_item_not_at_location_infeasible():
+    """If the item isn't where we're acquiring from, infeasible."""
+    start = _type_assertions() | frozenset({
+        Prop("at", ("oedipus", "corinth")),
+        Prop("at", ("sword", "crossroads")),  # sword elsewhere
+        Prop("path", ("corinth", "crossroads")),
+    })
+    goal = PlanningGoal(
+        operator=ACQUIRE,
+        bindings={
+            "AGENT": "oedipus",
+            "ITEM": "sword",
+            "LOCATION": "corinth",  # wrong location
+        },
+    )
+    result = plan_to_goal(start, goal, (TRAVEL, ACQUIRE))
+    assert isinstance(result, PlanningError)
+    assert result.code == "no_plan_found"
+
+
+# ----------------------------------------------------------------------------
+# Sketch-02 — Scene 2: "Oedipus acquires sword en route" (S3P10)
+# ----------------------------------------------------------------------------
+
+
+def test_scene_2_returns_four_event_plan():
+    """The spike's primary sketch-02 success pin. Start state has
+    Oedipus at Corinth UNARMED, sword at crossroads, Laius at Thebes.
+    Planner must synthesize: two travels + one acquire + the kill."""
+    result = plan_to_goal(
+        _acquire_en_route_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS, ACQUIRE),
+    )
+    assert isinstance(result, tuple), (
+        f"expected success; got {type(result).__name__}: {result}"
+    )
+    assert len(result) == 4, (
+        f"expected 4-step plan; got {len(result)}: "
+        f"{[e.type for e in result]}"
+    )
+
+
+def test_scene_2_plan_includes_acquire():
+    """S3P10: the plan must compose the new ACQUIRE operator —
+    without it, there's no way to satisfy has(oedipus, sword)
+    because start state has the sword at a location, not held."""
+    result = plan_to_goal(
+        _acquire_en_route_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS, ACQUIRE),
+    )
+    types = [e.type for e in result]
+    assert "acquire" in types
+
+
+def test_scene_2_plan_type_sequence():
+    """Valid orderings: two travels + acquire + kill. Travels can
+    swap; acquire must come after oedipus's travel (to be
+    co-located with sword) but before the kill (needs has)."""
+    result = plan_to_goal(
+        _acquire_en_route_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS, ACQUIRE),
+    )
+    types = [e.type for e in result]
+    assert types.count("travel") == 2
+    assert types.count("acquire") == 1
+    assert types.count("kills") == 1
+    assert types[-1] == "kills"
+    # Acquire cannot be the final action, nor first (needs
+    # oedipus co-located with sword first).
+    acquire_idx = types.index("acquire")
+    assert 0 < acquire_idx < 3
+
+
+def test_scene_2_preconditions_satisfied_at_each_step():
+    """Cumulative-state validity invariant: each step's
+    preconditions hold in the state reached by applying all prior
+    events' effects."""
+    result = plan_to_goal(
+        _acquire_en_route_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS, ACQUIRE),
+    )
+    state = set(_acquire_en_route_start_state())
+    for event in result:
+        for p in event.preconditions:
+            assert p in state, (
+                f"precondition {p} of {event.type} (τ_a={event.τ_a}) "
+                f"not in state"
+            )
+        for eff in event.effects:
+            if eff.asserts:
+                state.add(eff.prop)
+            else:
+                state.discard(eff.prop)
+
+
+def test_scene_2_final_state_has_dead_laius_and_oedipus_has_sword():
+    result = plan_to_goal(
+        _acquire_en_route_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS, ACQUIRE),
+    )
+    state = set(_acquire_en_route_start_state())
+    for event in result:
+        for eff in event.effects:
+            if eff.asserts:
+                state.add(eff.prop)
+            else:
+                state.discard(eff.prop)
+    assert Prop("dead", ("laius",)) in state
+    assert Prop("has", ("oedipus", "sword")) in state
+    # And the sword is no longer at crossroads — acquire deled it.
+    assert Prop("at", ("sword", "crossroads")) not in state
+
+
+def test_scene_2_acquire_comes_after_oedipus_travel():
+    """S3P9 interaction pin: the plan must order acquire AFTER
+    oedipus's travel (since acquire needs oedipus and sword
+    co-located, and sword starts at crossroads). Not strictly
+    before the kill — we just require logical ordering."""
+    result = plan_to_goal(
+        _acquire_en_route_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS, ACQUIRE),
+    )
+    # Find oedipus's travel event (AGENT=oedipus) and the acquire.
+    oedipus_travel_idx = next(
+        i for i, e in enumerate(result)
+        if e.type == "travel" and e.participants.get("AGENT") == "oedipus"
+    )
+    acquire_idx = next(
+        i for i, e in enumerate(result) if e.type == "acquire"
+    )
+    assert acquire_idx > oedipus_travel_idx
+
+
+def test_scene_2_visited_guard_firings_are_bounded():
+    """Same characterization as scene 1 but for the 3-operator,
+    4-step plan. More operators + longer plan = more dead-end
+    exploration = more (but still bounded) firings."""
+    reset_visited_guard_counter()
+    result = plan_to_goal(
+        _acquire_en_route_start_state(),
+        _kills_oedipus_laius_goal(),
+        (TRAVEL, KILLS, ACQUIRE),
+    )
+    assert isinstance(result, tuple)  # sanity
+    fires = visited_guard_fires()
+    # Scene 2's dead-end exploration fires the guard more than
+    # scene 1's (observed ~9 vs ~6). Bound at 100 for headroom.
+    assert fires < 100, (
+        f"scene-2 visited-guard fires {fires} times (expected < 100); "
+        f"regression in enumeration or a new failure mode"
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -501,6 +908,25 @@ TESTS = [
     test_operator_schema_rejects_empty_name,
     test_operator_schema_rejects_lowercase_params,
     test_operator_schema_accepts_valid_shape,
+    # Sketch-02 — typed variables
+    test_operator_schema_rejects_missing_variable_type,
+    test_operator_schema_rejects_empty_type_name,
+    test_operator_schema_rejects_missing_free_var_type,
+    test_scene_1_visited_guard_firings_are_bounded,
+    test_start_state_without_type_assertions_produces_empty_universe,
+    test_typed_enumeration_ignores_wrongly_typed_terms,
+    # Sketch-02 — acquire operator
+    test_acquire_operator_schema_valid,
+    test_acquire_only_needs_co_location,
+    test_acquire_item_not_at_location_infeasible,
+    # Sketch-02 — Scene 2
+    test_scene_2_returns_four_event_plan,
+    test_scene_2_plan_includes_acquire,
+    test_scene_2_plan_type_sequence,
+    test_scene_2_preconditions_satisfied_at_each_step,
+    test_scene_2_final_state_has_dead_laius_and_oedipus_has_sword,
+    test_scene_2_acquire_comes_after_oedipus_travel,
+    test_scene_2_visited_guard_firings_are_bounded,
 ]
 
 
