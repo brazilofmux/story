@@ -41,6 +41,7 @@ from story_engine.core.compiler_stage_3 import (
 AGENT_TYPE = "agent"
 LOCATION_TYPE = "location"
 OBJECT_TYPE = "object"
+FACT_TYPE = "fact"          # sketch-03 S3P11
 
 
 # ----------------------------------------------------------------------------
@@ -103,6 +104,57 @@ ACQUIRE = OperatorSchema(
 )
 
 
+# sketch-03 S3P12: knowledge-acquisition operator.
+# S3P14 ordering: knows-of-teacher BEFORE at-preconds so the planner
+# picks FACT + LOCATION that align with an existing teacher-knows
+# relation, rather than spatial exploration followed by
+# backtracking on FACT.
+LEARN_FROM = OperatorSchema(
+    name="learn_from",
+    params=("STUDENT", "TEACHER", "FACT", "LOCATION"),
+    variable_types={
+        "STUDENT": AGENT_TYPE,
+        "TEACHER": AGENT_TYPE,
+        "FACT": FACT_TYPE,
+        "LOCATION": LOCATION_TYPE,
+    },
+    preconditions=(
+        Prop("knows", ("TEACHER", "FACT")),
+        Prop("at", ("STUDENT", "LOCATION")),
+        Prop("at", ("TEACHER", "LOCATION")),
+    ),
+    add_effects=(Prop("knows", ("STUDENT", "FACT")),),
+    del_effects=(),
+)
+
+
+# sketch-03 S3P12 + S3P14: the Oedipus-vs-Sphinx event.
+# `knows` precondition listed FIRST per S3P14 ordering discipline —
+# otherwise the planner satisfies `at(agent, LOC)` first, then
+# can't satisfy `knows(agent, fact)` without undoing location
+# setup (the student must be with the teacher at DIFFERENT
+# location).
+DEFEAT_BY_RIDDLE = OperatorSchema(
+    name="defeat_by_riddle",
+    params=("AGENT", "OPPONENT"),
+    variable_types={
+        "AGENT": AGENT_TYPE,
+        "OPPONENT": AGENT_TYPE,
+        "FACT": FACT_TYPE,
+        "LOC": LOCATION_TYPE,
+    },
+    preconditions=(
+        Prop("knows", ("AGENT", "FACT")),
+        Prop("at", ("AGENT", "LOC")),
+        Prop("at", ("OPPONENT", "LOC")),
+        Prop("alive", ("AGENT",)),
+        Prop("alive", ("OPPONENT",)),
+    ),
+    add_effects=(Prop("dead", ("OPPONENT",)),),
+    del_effects=(Prop("alive", ("OPPONENT",)),),
+)
+
+
 # ----------------------------------------------------------------------------
 # State fixtures
 # ----------------------------------------------------------------------------
@@ -147,6 +199,47 @@ def _acquire_en_route_start_state() -> frozenset:
         Prop("alive", ("oedipus",)),
         Prop("alive", ("laius",)),
     })
+
+
+def _type_assertions_scene_3() -> frozenset:
+    """Scene 3's universe: Oedipus + Sphinx + Oracle (3 agents);
+    Corinth + Delphi + thebes_gates (3 locations); riddle_answer
+    (1 fact). No objects needed."""
+    return frozenset({
+        Prop("type", ("oedipus", AGENT_TYPE)),
+        Prop("type", ("sphinx",  AGENT_TYPE)),
+        Prop("type", ("oracle",  AGENT_TYPE)),
+        Prop("type", ("corinth",      LOCATION_TYPE)),
+        Prop("type", ("delphi",       LOCATION_TYPE)),
+        Prop("type", ("thebes_gates", LOCATION_TYPE)),
+        Prop("type", ("riddle_answer", FACT_TYPE)),
+    })
+
+
+def _sphinx_riddle_start_state() -> frozenset:
+    """Scene 3 (sketch-03 S3P13): Oedipus at Corinth; Sphinx at
+    thebes_gates; Oracle at Delphi knowing the riddle's answer.
+    Paths route via Delphi (no direct Corinth → thebes_gates)."""
+    return _type_assertions_scene_3() | frozenset({
+        Prop("at", ("oedipus", "corinth")),
+        Prop("alive", ("oedipus",)),
+        Prop("at", ("sphinx", "thebes_gates")),
+        Prop("alive", ("sphinx",)),
+        Prop("at", ("oracle", "delphi")),
+        Prop("alive", ("oracle",)),
+        Prop("knows", ("oracle", "riddle_answer")),
+        Prop("path", ("corinth", "delphi")),
+        Prop("path", ("delphi", "thebes_gates")),
+    })
+
+
+def _sphinx_riddle_goal() -> PlanningGoal:
+    """Goal for scene 3: defeat_by_riddle with AGENT/OPPONENT bound;
+    FACT and LOC enumerated."""
+    return PlanningGoal(
+        operator=DEFEAT_BY_RIDDLE,
+        bindings={"AGENT": "oedipus", "OPPONENT": "sphinx"},
+    )
 
 
 def _kills_oedipus_laius_goal() -> PlanningGoal:
@@ -897,6 +990,194 @@ def test_scene_2_visited_guard_firings_are_bounded():
 
 
 # ----------------------------------------------------------------------------
+# Sketch-03 — Scene 3: Oedipus defeats the Sphinx (S3P11-S3P14)
+# ----------------------------------------------------------------------------
+
+
+def test_scene_3_returns_four_event_plan():
+    """Primary pin: the planner synthesizes a 4-step plan for the
+    Sphinx encounter — travel to Delphi, learn from Oracle, travel
+    to thebes_gates, defeat Sphinx. Tests epistemic preconds via
+    flat propositional knows/2 (OQ1 epistemic sub-question)."""
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    assert isinstance(result, tuple), (
+        f"expected tuple on success; got {type(result).__name__}: "
+        f"{result}"
+    )
+    assert len(result) == 4, (
+        f"expected 4-step plan; got {len(result)}: "
+        f"{[e.type for e in result]}"
+    )
+
+
+def test_scene_3_plan_type_sequence():
+    """Valid sequence: travel, learn_from, travel, defeat_by_riddle.
+    Ordering is forced by state graph — no direct Corinth →
+    thebes_gates path and no alternative knowledge source."""
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    types = [e.type for e in result]
+    assert types[0] == "travel"
+    assert types[1] == "learn_from"
+    assert types[2] == "travel"
+    assert types[3] == "defeat_by_riddle"
+
+
+def test_scene_3_learn_from_happens_at_delphi():
+    """The Oracle is at Delphi; knowledge acquisition must happen
+    there, not at any other location."""
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    learn_event = next(e for e in result if e.type == "learn_from")
+    assert learn_event.participants["LOCATION"] == "delphi"
+    assert learn_event.participants["TEACHER"] == "oracle"
+
+
+def test_scene_3_defeat_happens_at_thebes_gates():
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    defeat_event = next(e for e in result if e.type == "defeat_by_riddle")
+    assert defeat_event.participants["AGENT"] == "oedipus"
+    assert defeat_event.participants["OPPONENT"] == "sphinx"
+
+
+def test_scene_3_preconditions_satisfied_at_each_step():
+    """Cumulative-state validity across the full 4-step plan,
+    including the epistemic-precondition satisfaction at the
+    defeat step."""
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    state = set(_sphinx_riddle_start_state())
+    for event in result:
+        for p in event.preconditions:
+            assert p in state, (
+                f"precondition {p} of {event.type} "
+                f"(τ_a={event.τ_a}) not in state"
+            )
+        for eff in event.effects:
+            if eff.asserts:
+                state.add(eff.prop)
+            else:
+                state.discard(eff.prop)
+
+
+def test_scene_3_final_state_has_dead_sphinx_and_oedipus_knows():
+    """Terminal invariant: Sphinx dead; Oedipus knows the riddle
+    answer; Oedipus at thebes_gates."""
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    state = set(_sphinx_riddle_start_state())
+    for event in result:
+        for eff in event.effects:
+            if eff.asserts:
+                state.add(eff.prop)
+            else:
+                state.discard(eff.prop)
+    assert Prop("dead", ("sphinx",)) in state
+    assert Prop("alive", ("sphinx",)) not in state
+    assert Prop("knows", ("oedipus", "riddle_answer")) in state
+    assert Prop("at", ("oedipus", "thebes_gates")) in state
+
+
+def test_scene_3_defeat_by_riddle_schema_has_knows_first():
+    """S3P14 pragmatic ordering pin: knows/2 precondition is the
+    first entry in DEFEAT_BY_RIDDLE.preconditions. If this gets
+    reordered, the planner loses the ability to plan this scene
+    (until threat-resolution replaces sequential regression per
+    S3P-OQ10)."""
+    assert DEFEAT_BY_RIDDLE.preconditions[0].predicate == "knows"
+
+
+def test_scene_3_infeasible_without_teacher_knowledge():
+    """Remove the Oracle's knowledge; no other fact-typed term
+    exists. Goal becomes infeasible because learn_from can't
+    satisfy its knows(TEACHER, FACT) precondition anywhere."""
+    start = frozenset(
+        p for p in _sphinx_riddle_start_state()
+        if not (p.predicate == "knows")
+    )
+    result = plan_to_goal(
+        start,
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    assert isinstance(result, PlanningError)
+    assert result.code == "no_plan_found"
+
+
+def test_scene_3_visited_guard_firings_are_bounded():
+    """S3P8 invariant carries into scene 3 — typed enumeration
+    prevents unbounded cascades on the larger 5-operator state
+    space. A regression where firings explode to thousands would
+    signal enumeration blowup."""
+    reset_visited_guard_counter()
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    assert isinstance(result, tuple)  # sanity
+    fires = visited_guard_fires()
+    assert fires < 200, (
+        f"scene-3 visited-guard fires {fires} times (expected < 200); "
+        f"regression in enumeration or state-graph size"
+    )
+
+
+def test_scene_3_learn_from_alone_on_co_located_agents():
+    """Minimal sanity for LEARN_FROM: student + teacher already
+    co-located; teacher knows; one-step plan."""
+    start = _type_assertions_scene_3() | frozenset({
+        Prop("at", ("oedipus", "delphi")),
+        Prop("at", ("oracle", "delphi")),
+        Prop("knows", ("oracle", "riddle_answer")),
+        Prop("alive", ("oedipus",)),
+        Prop("alive", ("oracle",)),
+    })
+    goal = PlanningGoal(
+        operator=LEARN_FROM,
+        bindings={
+            "STUDENT": "oedipus",
+            "TEACHER": "oracle",
+            "FACT": "riddle_answer",
+            "LOCATION": "delphi",
+        },
+    )
+    result = plan_to_goal(start, goal, (TRAVEL, LEARN_FROM))
+    assert isinstance(result, tuple)
+    assert len(result) == 1
+    assert result[0].type == "learn_from"
+
+
+def test_scene_3_defeat_by_riddle_schema_valid():
+    """Smoke — both new schemas construct without validation errors
+    (sketch-02 S3P8 type-discipline check)."""
+    assert LEARN_FROM.name == "learn_from"
+    assert DEFEAT_BY_RIDDLE.name == "defeat_by_riddle"
+    assert LEARN_FROM.variable_types["FACT"] == FACT_TYPE
+    assert DEFEAT_BY_RIDDLE.variable_types["FACT"] == FACT_TYPE
+
+
+# ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
 
@@ -952,6 +1233,18 @@ TESTS = [
     test_scene_2_final_state_has_dead_laius_and_oedipus_has_sword,
     test_scene_2_acquire_comes_after_oedipus_travel,
     test_scene_2_visited_guard_firings_are_bounded,
+    # Sketch-03 — Scene 3: Oedipus defeats the Sphinx
+    test_scene_3_returns_four_event_plan,
+    test_scene_3_plan_type_sequence,
+    test_scene_3_learn_from_happens_at_delphi,
+    test_scene_3_defeat_happens_at_thebes_gates,
+    test_scene_3_preconditions_satisfied_at_each_step,
+    test_scene_3_final_state_has_dead_sphinx_and_oedipus_knows,
+    test_scene_3_defeat_by_riddle_schema_has_knows_first,
+    test_scene_3_infeasible_without_teacher_knowledge,
+    test_scene_3_visited_guard_firings_are_bounded,
+    test_scene_3_learn_from_alone_on_co_located_agents,
+    test_scene_3_defeat_by_riddle_schema_valid,
 ]
 
 

@@ -195,17 +195,29 @@ Cumulative-state invariant check:
 
 Final state: `dead(sphinx)`, `knows(oedipus, riddle_answer)`, `at(oedipus, thebes_gates)`. The `alive(sphinx)` proposition is retracted by step 4's del-effect.
 
-### S3P14 — Precondition ordering discipline (pragmatic)
+### S3P14 — Precondition ordering discipline (optimization, not correctness)
 
-Because the current sequential-regression planner (`_plan_with_bindings`) iterates preconditions in schema-declared order and threads cumulative state forward without threat resolution, **schema authors must order preconditions so that earlier subgoals don't invalidate later ones**.
+**Initial hypothesis (pre-implementation):** the current sequential-regression planner iterates preconditions in schema-declared order and threads cumulative state forward, so schema authors MUST order preconditions knows-before-at to avoid invalidation-cascades.
 
-Concrete rule for scene 3's operators:
-- **`knows` preconds before `at` preconds** when the `at` is about the agent who'll do the knowing.
-- Rationale: `learn_from` needs the student at the teacher's location. If `at(student, goal_location)` is satisfied first, the student may be elsewhere from where the teacher is; `learn_from`'s `at(student, LOCATION)` precond then can't be met without undoing the first travel.
+**What implementation surfaced:** the planner is more flexible than the hypothesis credited. With AT-first ordering on `defeat_by_riddle`, the planner still finds a plan — 5 steps instead of 4, because it **travels the Oracle to thebes_gates** rather than requiring Oedipus to come to Delphi:
 
-This is a pragmatic spike-level discipline. The proper fix is threat-safe POCL with promotion/demotion of actions. Banked as **S3P-OQ10**.
+```
+1. travel(oedipus, corinth, delphi)
+2. travel(oedipus, delphi, thebes_gates)
+3. travel(oracle, delphi, thebes_gates)     # the Oracle follows
+4. learn_from(oedipus, oracle, riddle_answer, thebes_gates)
+5. defeat_by_riddle(oedipus, sphinx, riddle_answer, thebes_gates)
+```
 
-**When S3P14 breaks:** if an operator has BOTH a `knows(X, F)` precond and an `at(X, L)` precond, and the plan to satisfy `knows` puts X at a location other than L, then ordering doesn't save us — we need the threat resolution to travel X to L after learning. Scene 3 is engineered to NOT hit this case (defeat_by_riddle's AT is about thebes_gates, which the Oracle is NOT at, so the learn_from step naturally lands Oedipus at delphi, from which a final travel to thebes_gates is valid).
+The 5-step plan is valid. Precondition ordering determined *which* plan the planner found (shorter vs longer), not *whether* it found one.
+
+**Why the hypothesis was wrong:** the planner can satisfy `knows(oedipus, riddle_answer)` by moving either the student to the teacher OR the teacher to the student, because both are AGENT-typed and TRAVEL accepts any AGENT. The "student must travel to teacher's location" constraint only holds if the teacher is structurally immobile (different type that TRAVEL rejects, e.g., a shrine or inscription).
+
+**Refined S3P14 (post-implementation):** knows-first ordering is an **optimization discipline** — it yields the shorter, more mythologically-faithful plan (Oedipus consults the Delphic Oracle, then continues to Thebes). AT-first ordering still yields a valid plan, just a longer one where the teacher follows the student. Either is correct.
+
+**When S3P14 would become correctness-critical:** if TRAVEL's AGENT type were narrower than the teacher's type — e.g., if the Oracle were typed `"shrine"` and TRAVEL required `"mobile_agent"`. In that case, the Oracle couldn't travel and the AT-first ordering would be unable to satisfy `knows`. Scene 3 doesn't engineer this case (Oracle is mobile), so S3P14 stays an optimization discipline in the spike.
+
+**S3P-OQ10 refined consequently:** the real issue isn't precondition ordering per se — it's that the current planner finds valid-but-non-optimal plans whose optimality depends on author-chosen schema ordering. A proper POCL with threat resolution + a plan-length heuristic would find the optimal plan regardless of schema order. Banked.
 
 ## Open questions — banked
 
