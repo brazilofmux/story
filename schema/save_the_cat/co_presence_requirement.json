@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/save_the_cat/co_presence_requirement.json",
+  "title": "StcCoPresenceRequirement",
+  "description": "S14-SE2 (save-the-cat-sketch-03 / dialect-compilation-surface-sketch-01 DCS1 side 1). Hard constraint: the named characters must all appear in `participant_ids` of >= min_count authored beats whose slot equals the named slot. Save-the-Cat's analog to Aristotelian ArCoPresenceRequirement (field name `co_presence_requirements` is deliberately shared across dialects per sketch-03's DOQ2 judgment — the strongest cross-dialect symmetry signal observed during the DCS1 two-dialect spike). Compiler stage-1 extracts to per-beat participant preconditions; stage-3 planner emits beats with matching participants when authored participation doesn't already satisfy. S16.2 verifies structural integrity at this layer (>= 2 character refs; characters reachable from story.character_ids ∩ characters collection; slot in 1..15; min_count >= 1); S16.2 also verifies participation against current authoring (distinct from Aristotelian A7.13's structural-only posture because StcBeat.participant_ids is authored at the dialect level, not deferred to substrate). Records live on StcStory.co_presence_requirements. PFS-15-1..15-4.",
+  "type": "object",
+  "required": ["id", "character_ref_ids", "slot"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this requirement (e.g., 'copres_macbeth_macduff_finale'). PFS-15-1."
+    },
+    "character_ref_ids": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Character ids participating in the co-presence requirement. minItems 2 per S14-SE2 — a co-presence requirement names at least two characters. S16.2 separately enforces that all ids resolve to StcCharacter records reachable from story.character_ids ∩ characters collection; the schema enforces cardinality at shape time. Order is author-preserved but not semantically meaningful. Plain-string references per PFS7-X1. PFS-15-2."
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 15,
+      "description": "Which of Save-the-Cat's 15 canonical beat slots the requirement applies at. Bounded range matches NUM_CANONICAL_BEATS in save_the_cat.py; S16.2 check 3 separately enforces the same range (second line of defense for Python-level out-of-range values that bypass the schema). PFS-15-3."
+    },
+    "min_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Minimum number of authored beats at the named slot whose participant_ids cover all named characters. Default at the Python layer is 1. Schema enforces >= 1 (S16.2 check 4 is the second line of defense for Python-level zero values that bypass the schema). PFS-15-4."
+    }
+  },
+  "additionalProperties": false
+}

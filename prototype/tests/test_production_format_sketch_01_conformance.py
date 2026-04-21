@@ -175,6 +175,24 @@ def _load_save_the_cat_observation_schema() -> dict:
         return json.load(f)
 
 
+def _load_save_the_cat_co_presence_requirement_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "save_the_cat"
+        / "co_presence_requirement.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
+def _load_save_the_cat_strand_convergence_requirement_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "save_the_cat"
+        / "strand_convergence_requirement.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _load_lowering_annotation_review_schema() -> dict:
     schema_path = (
         _repo_root() / "schema" / "lowering" / "annotation_review.json"
@@ -375,6 +393,8 @@ def _build_schema_registry() -> Registry:
         _load_aristotelian_anagnorisis_step_schema(),
         _load_aristotelian_co_presence_requirement_schema(),
         _load_aristotelian_audience_knowledge_constraint_schema(),
+        _load_save_the_cat_co_presence_requirement_schema(),
+        _load_save_the_cat_strand_convergence_requirement_schema(),
     ):
         resource = Resource.from_contents(schema, default_specification=DRAFT202012)
         registry = registry.with_resource(uri=schema["$id"], resource=resource)
@@ -1277,19 +1297,29 @@ def _dump_strand_advancement(advance) -> dict:
 
 def _dump_stcbeat(beat) -> dict:
     """Map a Python StcBeat to schema/save_the_cat/beat.json
-    (production-format-sketch-07 PFS7-D2). Field-for-field
-    isomorphic: id / slot / page_actual always; description_of_change
-    / authored_by pass through; advances tuple walked via
-    _dump_strand_advancement; participant_ids tuple → list."""
-    return {
+    (production-format-sketch-07 PFS7-D2; sketch-03 fields per
+    PFS-15-8..15-10). Field-for-field isomorphic: id / slot /
+    page_actual always; description_of_change / authored_by pass
+    through; advances tuple walked via _dump_strand_advancement;
+    participant_ids tuple → list. Sketch-03 int-default tolerances
+    emit unconditionally (mirrors Aristotelian's
+    min_event_count/max_event_count posture in _dump_arphase);
+    sketch-03 emphasis_preference omits when empty (mirrors
+    Aristotelian's pacing_preference omit-when-empty convention)."""
+    out = {
         "id": beat.id,
         "slot": beat.slot,
         "page_actual": beat.page_actual,
         "description_of_change": beat.description_of_change,
         "advances": [_dump_strand_advancement(a) for a in beat.advances],
         "participant_ids": list(beat.participant_ids),
+        "page_tolerance_before": beat.page_tolerance_before,
+        "page_tolerance_after": beat.page_tolerance_after,
         "authored_by": beat.authored_by,
     }
+    if beat.emphasis_preference:
+        out["emphasis_preference"] = beat.emphasis_preference
+    return out
 
 
 def _dump_archetype_assignment(assignment) -> dict:
@@ -1307,14 +1337,46 @@ def _dump_archetype_assignment(assignment) -> dict:
     return out
 
 
+def _dump_stc_co_presence_requirement(req) -> dict:
+    """Map a Python StcCoPresenceRequirement to a JSON-compatible dict
+    conforming to schema/save_the_cat/co_presence_requirement.json
+    (PFS-15-1..15-4). Required fields always emit (id,
+    character_ref_ids, slot); min_count always emits (Python default 1;
+    matches the Aristotelian _dump_ar_co_presence_requirement posture —
+    int defaults always carried)."""
+    return {
+        "id": req.id,
+        "character_ref_ids": list(req.character_ref_ids),
+        "slot": req.slot,
+        "min_count": req.min_count,
+    }
+
+
+def _dump_stc_strand_convergence_requirement(req) -> dict:
+    """Map a Python StcStrandConvergenceRequirement to a JSON-compatible
+    dict conforming to schema/save_the_cat/strand_convergence_
+    requirement.json (PFS-15-5..15-7). All three fields required and
+    always emitted."""
+    return {
+        "id": req.id,
+        "strand_ref_ids": list(req.strand_ref_ids),
+        "slot": req.slot,
+    }
+
+
 def _dump_stcstory(story) -> dict:
     """Map a Python StcStory to schema/save_the_cat/story.json
-    (production-format-sketch-07 PFS7-D1). Field-for-field
-    isomorphic: id / title always; theme_statement / authored_by
-    pass through; stc_genre_id omitted when None; beat_ids /
-    strand_ids / character_ids tuples → lists;
-    archetype_assignments tuple walked via
-    _dump_archetype_assignment."""
+    (production-format-sketch-07 PFS7-D1; sketch-03 fields per
+    PFS-15-11..15-14). Field-for-field isomorphic: id / title always;
+    theme_statement / authored_by pass through; stc_genre_id omitted
+    when None; beat_ids / strand_ids / character_ids tuples → lists;
+    archetype_assignments tuple walked via _dump_archetype_assignment.
+    Sketch-03 array fields (co_presence_requirements,
+    strand_convergence_requirements) emit unconditionally (mirrors
+    Aristotelian's characters / phases / anagnorisis_chain convention
+    and parallels the Aristotelian sketch-04 mythos dump). Sketch-03
+    soft-preference strings (tonal_register,
+    genre_adherence_preference) omit when empty."""
     out = {
         "id": story.id,
         "title": story.title,
@@ -1326,10 +1388,22 @@ def _dump_stcstory(story) -> dict:
             _dump_archetype_assignment(a)
             for a in story.archetype_assignments
         ],
+        "co_presence_requirements": [
+            _dump_stc_co_presence_requirement(r)
+            for r in story.co_presence_requirements
+        ],
+        "strand_convergence_requirements": [
+            _dump_stc_strand_convergence_requirement(r)
+            for r in story.strand_convergence_requirements
+        ],
         "authored_by": story.authored_by,
     }
     if story.stc_genre_id is not None:
         out["stc_genre_id"] = story.stc_genre_id
+    if story.tonal_register:
+        out["tonal_register"] = story.tonal_register
+    if story.genre_adherence_preference:
+        out["genre_adherence_preference"] = story.genre_adherence_preference
     return out
 
 
@@ -3402,7 +3476,7 @@ def test_save_the_cat_strand_schema_has_expected_shape():
 def test_save_the_cat_beat_schema_has_expected_shape():
     """Spot-check of StcBeat schema structure per save-the-cat-
     sketch-01 S1/S2/S3 + sketch-02 S11 + production-format-sketch-
-    07 PFS7-BT1..BT5 + PFS7-X2."""
+    07 PFS7-BT1..BT5 + PFS7-X2 + sketch-03 PFS-15-8..15-10."""
     schema = _load_save_the_cat_beat_schema()
     assert schema["title"] == "StcBeat"
     assert schema["$id"] == (
@@ -3413,7 +3487,10 @@ def test_save_the_cat_beat_schema_has_expected_shape():
     assert schema["additionalProperties"] is False
     assert set(schema["properties"].keys()) == {
         "id", "slot", "page_actual", "description_of_change",
-        "advances", "participant_ids", "authored_by",
+        "advances", "participant_ids",
+        "page_tolerance_before", "page_tolerance_after",
+        "emphasis_preference",
+        "authored_by",
     }
     # slot integer 1..15 (PFS7-BT2; matches NUM_CANONICAL_BEATS)
     slot = schema["properties"]["slot"]
@@ -3436,12 +3513,25 @@ def test_save_the_cat_beat_schema_has_expected_shape():
     assert pids["type"] == "array"
     assert pids["items"]["type"] == "string"
     assert pids["items"]["minLength"] == 1
+    # S14-SE1 — page tolerances (PFS-15-8, PFS-15-9) — integer ≥ 0
+    for field in ("page_tolerance_before", "page_tolerance_after"):
+        tol = schema["properties"][field]
+        assert tol["type"] == "integer"
+        assert tol["minimum"] == 0
+    # S15-SP3 — emphasis_preference (PFS-15-10) — open string
+    emph = schema["properties"]["emphasis_preference"]
+    assert emph["type"] == "string"
+    assert "enum" not in emph, (
+        "emphasis_preference must be open-string per DCS3 / PFS-15-10; "
+        "canonical vocabulary is enforced at the ranker, not the schema"
+    )
 
 
 def test_save_the_cat_story_schema_has_expected_shape():
     """Spot-check of StcStory schema structure per save-the-cat-
     sketch-01 S4/S5 + sketch-02 S11/S12 + production-format-
-    sketch-07 PFS7-ST1..ST6 + PFS7-X1 + PFS7-X2."""
+    sketch-07 PFS7-ST1..ST6 + PFS7-X1 + PFS7-X2 + sketch-03
+    PFS-15-11..15-14."""
     schema = _load_save_the_cat_story_schema()
     assert schema["title"] == "StcStory"
     assert schema["$id"] == (
@@ -3453,7 +3543,11 @@ def test_save_the_cat_story_schema_has_expected_shape():
     assert set(schema["properties"].keys()) == {
         "id", "title", "theme_statement", "stc_genre_id",
         "beat_ids", "strand_ids", "character_ids",
-        "archetype_assignments", "authored_by",
+        "archetype_assignments",
+        "co_presence_requirements",
+        "strand_convergence_requirements",
+        "tonal_register", "genre_adherence_preference",
+        "authored_by",
     }
     # beat_ids / strand_ids / character_ids: plain-string arrays
     # per PFS7-X1 (flat-with-id-refs). Guard against accidental
@@ -3477,6 +3571,101 @@ def test_save_the_cat_story_schema_has_expected_shape():
     assert set(aa_def["properties"].keys()) == {
         "archetype", "character_id", "note",
     }
+    # S14-SE2 / S14-SE3 (PFS-15-11, PFS-15-12) — cross-file $ref to
+    # their own schemas. Departs from PFS7-X1 for sub-records with a
+    # dedicated schema; mirrors Aristotelian mythos.json PFS-N13/N14.
+    copres_arr = schema["properties"]["co_presence_requirements"]
+    assert copres_arr["type"] == "array"
+    assert copres_arr["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/save_the_cat/"
+        "co_presence_requirement.json"
+    )
+    converge_arr = schema["properties"]["strand_convergence_requirements"]
+    assert converge_arr["type"] == "array"
+    assert converge_arr["items"]["$ref"] == (
+        "https://brazilofmux.github.io/story/schema/save_the_cat/"
+        "strand_convergence_requirement.json"
+    )
+    # S15-SP1 / S15-SP2 (PFS-15-13, PFS-15-14) — open strings
+    for field in ("tonal_register", "genre_adherence_preference"):
+        fld = schema["properties"][field]
+        assert fld["type"] == "string"
+        assert "enum" not in fld, (
+            f"{field} must be open-string per DCS3; canonical "
+            f"vocabulary is a ranker concern"
+        )
+
+
+def test_save_the_cat_co_presence_requirement_schema_metaschema_valid():
+    """schema/save_the_cat/co_presence_requirement.json is a valid
+    JSON Schema 2020-12 document (sketch-03 PFS-15-1..15-4)."""
+    schema = _load_save_the_cat_co_presence_requirement_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_save_the_cat_co_presence_requirement_schema_has_expected_shape():
+    """Spot-check of StcCoPresenceRequirement schema structure per
+    save-the-cat-sketch-03 S14-SE2 + PFS-15-1..15-4."""
+    schema = _load_save_the_cat_co_presence_requirement_schema()
+    assert schema["title"] == "StcCoPresenceRequirement"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "save_the_cat/co_presence_requirement.json"
+    )
+    assert set(schema["required"]) == {"id", "character_ref_ids", "slot"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "character_ref_ids", "slot", "min_count",
+    }
+    # PFS-15-2 — character_ref_ids: ≥ 2 non-empty strings
+    refs = schema["properties"]["character_ref_ids"]
+    assert refs["type"] == "array"
+    assert refs["minItems"] == 2
+    assert refs["items"]["type"] == "string"
+    assert refs["items"]["minLength"] == 1
+    # PFS-15-3 — slot integer 1..15 (mirrors StcBeat.slot)
+    slot = schema["properties"]["slot"]
+    assert slot["type"] == "integer"
+    assert slot["minimum"] == 1
+    assert slot["maximum"] == 15
+    # PFS-15-4 — min_count integer ≥ 1
+    mc = schema["properties"]["min_count"]
+    assert mc["type"] == "integer"
+    assert mc["minimum"] == 1
+
+
+def test_save_the_cat_strand_convergence_requirement_schema_metaschema_valid():
+    """schema/save_the_cat/strand_convergence_requirement.json is a
+    valid JSON Schema 2020-12 document (sketch-03 PFS-15-5..15-7)."""
+    schema = _load_save_the_cat_strand_convergence_requirement_schema()
+    Draft202012Validator.check_schema(schema)
+
+
+def test_save_the_cat_strand_convergence_requirement_schema_has_expected_shape():
+    """Spot-check of StcStrandConvergenceRequirement schema structure
+    per save-the-cat-sketch-03 S14-SE3 + PFS-15-5..15-7."""
+    schema = _load_save_the_cat_strand_convergence_requirement_schema()
+    assert schema["title"] == "StcStrandConvergenceRequirement"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "save_the_cat/strand_convergence_requirement.json"
+    )
+    assert set(schema["required"]) == {"id", "strand_ref_ids", "slot"}
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "strand_ref_ids", "slot",
+    }
+    # PFS-15-6 — strand_ref_ids: ≥ 2 non-empty strings
+    refs = schema["properties"]["strand_ref_ids"]
+    assert refs["type"] == "array"
+    assert refs["minItems"] == 2
+    assert refs["items"]["type"] == "string"
+    assert refs["items"]["minLength"] == 1
+    # PFS-15-7 — slot integer 1..15
+    slot = schema["properties"]["slot"]
+    assert slot["type"] == "integer"
+    assert slot["minimum"] == 1
+    assert slot["maximum"] == 15
 
 
 def test_save_the_cat_character_corpus_conformance():
@@ -3712,10 +3901,13 @@ def test_save_the_cat_beat_corpus_conformance():
 def test_save_the_cat_story_corpus_conformance():
     """Every StcStory in every encoding's STORY singleton validates
     against schema/save_the_cat/story.json (production-format-
-    sketch-07 PFS7-ST1..ST6 + PFS7-D1). Uses a plain validator —
-    story.json has no outbound cross-file $ref per PFS7-X1."""
+    sketch-07 PFS7-ST1..ST6 + PFS7-D1; sketch-03 PFS-15-11..15-14).
+    Uses the registry-bound validator because story.json now $refs
+    its siblings co_presence_requirement.json and
+    strand_convergence_requirement.json (PFS-15-11, PFS-15-12)."""
+    registry = _build_schema_registry()
     schema = _load_save_the_cat_story_schema()
-    validator = Draft202012Validator(schema)
+    validator = Draft202012Validator(schema, registry=registry)
 
     stories_by_encoding, _, _, _ = (
         _discover_encoding_save_the_cat_records()
@@ -3791,6 +3983,158 @@ def test_save_the_cat_story_corpus_conformance():
         f"§Conformance dispositions protocol."
     )
     assert total > 0
+
+
+def test_save_the_cat_co_presence_requirement_corpus_conformance():
+    """Every StcCoPresenceRequirement on a discovered StcStory
+    validates against the schema. Macbeth authors three records under
+    sketch-03; pre-sketch-03 encodings (Ackroyd STC) carry empty
+    co_presence_requirements."""
+    schema = _load_save_the_cat_co_presence_requirement_schema()
+    validator = Draft202012Validator(schema)
+
+    stories_by_encoding, _, _, _ = (
+        _discover_encoding_save_the_cat_records()
+    )
+    assert stories_by_encoding, (
+        "expected at least one encoding with a Save-the-Cat Story; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    by_encoding: dict = {}
+    new_findings: list = []
+
+    for encoding_name, stories in stories_by_encoding:
+        for story in stories:
+            for req in story.co_presence_requirements:
+                total += 1
+                by_encoding[encoding_name] = (
+                    by_encoding.get(encoding_name, 0) + 1
+                )
+                dumped = _dump_stc_co_presence_requirement(req)
+                errors = sorted(
+                    validator.iter_errors(dumped),
+                    key=lambda e: list(e.absolute_path),
+                )
+                if not errors:
+                    clean_passes += 1
+                    continue
+                new_findings.append({
+                    "encoding": encoding_name,
+                    "req_id": req.id,
+                    "errors": [
+                        {
+                            "path": list(e.absolute_path),
+                            "validator": e.validator,
+                            "message": e.message,
+                        }
+                        for e in errors
+                    ],
+                })
+
+    print()
+    print(
+        f"test_save_the_cat_co_presence_requirement_corpus_conformance: "
+        f"{total} StcCoPresenceRequirement records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  by encoding:                {dict(sorted(by_encoding.items()))}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(f"    {finding['encoding']}: {finding['req_id']}")
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StcCoPresenceRequirement conformance "
+        f"finding(s); see output."
+    )
+    assert total >= 3, (
+        f"expected at least 3 StcCoPresenceRequirement records per "
+        f"sketch-03 Macbeth worked example; found {total}"
+    )
+
+
+def test_save_the_cat_strand_convergence_requirement_corpus_conformance():
+    """Every StcStrandConvergenceRequirement on a discovered StcStory
+    validates against the schema. Macbeth authors two records under
+    sketch-03; pre-sketch-03 encodings (Ackroyd STC) carry empty
+    strand_convergence_requirements."""
+    schema = _load_save_the_cat_strand_convergence_requirement_schema()
+    validator = Draft202012Validator(schema)
+
+    stories_by_encoding, _, _, _ = (
+        _discover_encoding_save_the_cat_records()
+    )
+    assert stories_by_encoding, (
+        "expected at least one encoding with a Save-the-Cat Story; "
+        "found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    by_encoding: dict = {}
+    new_findings: list = []
+
+    for encoding_name, stories in stories_by_encoding:
+        for story in stories:
+            for req in story.strand_convergence_requirements:
+                total += 1
+                by_encoding[encoding_name] = (
+                    by_encoding.get(encoding_name, 0) + 1
+                )
+                dumped = _dump_stc_strand_convergence_requirement(req)
+                errors = sorted(
+                    validator.iter_errors(dumped),
+                    key=lambda e: list(e.absolute_path),
+                )
+                if not errors:
+                    clean_passes += 1
+                    continue
+                new_findings.append({
+                    "encoding": encoding_name,
+                    "req_id": req.id,
+                    "errors": [
+                        {
+                            "path": list(e.absolute_path),
+                            "validator": e.validator,
+                            "message": e.message,
+                        }
+                        for e in errors
+                    ],
+                })
+
+    print()
+    print(
+        f"test_save_the_cat_strand_convergence_requirement_corpus_"
+        f"conformance: {total} StcStrandConvergenceRequirement records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  by encoding:                {dict(sorted(by_encoding.items()))}")
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(f"    {finding['encoding']}: {finding['req_id']}")
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} StcStrandConvergenceRequirement "
+        f"conformance finding(s); see output."
+    )
+    assert total >= 2, (
+        f"expected at least 2 StcStrandConvergenceRequirement records "
+        f"per sketch-03 Macbeth worked example; found {total}"
+    )
 
 
 def test_save_the_cat_observation_schema_metaschema_valid():

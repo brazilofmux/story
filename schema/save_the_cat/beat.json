@@ -59,6 +59,20 @@
       },
       "description": "Optional array of plain-string references to StcCharacter ids (PFS7-X1). Characters present in this beat per save-the-cat-sketch-02 S11. Empty array legal (some beats describe environmental or collective moments without a named roster). PFS7-BT5."
     },
+    "page_tolerance_before": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "S14-SE1 (save-the-cat-sketch-03). Optional hard positional lower-tolerance for page_actual relative to the canonical page_target for this slot. 0 (default) means no before-tolerance active. S16.1 enforces non-negative (second line of defense for Python-level negative values that bypass the schema) and, when active together with page_tolerance_after, checks that page_actual falls within [canonical_page_target - page_tolerance_before, canonical_page_target + page_tolerance_after]. Compiler stage-1 extracts to per-beat positional preconditions. PFS-15-8."
+    },
+    "page_tolerance_after": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "S14-SE1 (save-the-cat-sketch-03). Optional hard positional upper-tolerance for page_actual relative to the canonical page_target for this slot. 0 (default) means no after-tolerance active. Companion field to page_tolerance_before; S16.1 enforces non-negative and positional-window inclusion when active. PFS-15-9."
+    },
+    "emphasis_preference": {
+      "type": "string",
+      "description": "S15-SP3 (save-the-cat-sketch-03 / DCS1 side 2). Soft per-beat emphasis preference for stage-4 ranker scoring (beats tagged `expanded` or `centerpiece` receive disproportionate prose real-estate; `minimal` is compressed). Empty string (default) is neutral. Canonical-plus-open: published canonical vocabulary {minimal, standard, expanded, centerpiece}; non-canonical strings are admissible (the ranker handles unrecognized values as default-neutral). Per DCS3 there is NO verifier coverage for S15 fields — schema accepts any string. Open-string posture matches Aristotelian pacing_preference (PFS-N11) and STC role_labels (PFS7-CH4). PFS-15-10."
+    },
     "authored_by": {
       "type": "string",
       "description": "Optional provenance string. Python default 'author'. PFS7-BT."

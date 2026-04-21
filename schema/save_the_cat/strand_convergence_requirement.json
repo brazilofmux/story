@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/save_the_cat/strand_convergence_requirement.json",
+  "title": "StcStrandConvergenceRequirement",
+  "description": "S14-SE3 (save-the-cat-sketch-03 / dialect-compilation-surface-sketch-01 DCS1 side 1). Hard constraint: at the named slot, each strand named in `strand_ref_ids` must be advanced (appear in at least one authored beat's `advances`) by at least one beat in that slot. Captures Snyder's canonical conventions: 'A and B stories collide' at the Midpoint (slot 9); 'A and B stories resolve together' at the Finale (slot 14). Compiler stage-1 extracts to per-slot strand preconditions; stage-3 planner emits beats whose `advances` collectively cover the requirement. Dialect-specific — strands are an STC primitive with no Aristotelian analog per sketch-03's DOQ2 judgment. Record lives on StcStory.strand_convergence_requirements. S16.3 verifies structural integrity (>= 2 strand refs; strands reachable from story.strand_ids ∩ strands collection; slot in 1..15) plus advancement against current authoring. PFS-15-5..15-7.",
+  "type": "object",
+  "required": ["id", "strand_ref_ids", "slot"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this requirement (e.g., 'converge_macbeth_midpoint'). PFS-15-5."
+    },
+    "strand_ref_ids": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Strand ids that must all be advanced at the named slot. minItems 2 per S14-SE3 — a single-strand 'convergence' is degenerate. S16.3 separately enforces that all ids resolve to StcStrand records reachable from story.strand_ids ∩ strands collection; the schema enforces cardinality at shape time. Order is author-preserved but not semantically meaningful. Plain-string references per PFS7-X1. PFS-15-6."
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 15,
+      "description": "Which of Save-the-Cat's 15 canonical beat slots the convergence requirement applies at. Bounded range matches NUM_CANONICAL_BEATS; S16.3 check 3 is the second line of defense for Python-level out-of-range values that bypass the schema. PFS-15-7."
+    }
+  },
+  "additionalProperties": false
+}
