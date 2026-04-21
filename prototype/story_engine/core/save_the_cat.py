@@ -34,6 +34,25 @@ save-the-cat-sketch-02 amendment (StcCharacter) commitments:
        or prose notes.
 - S13: Three new verifier checks — character-id resolution,
        one-protagonist advisory, archetype coverage.
+
+save-the-cat-sketch-03 amendment (compilation-surface instantiation)
+commitments:
+- S14: Side-1 hard structural extensions surface; three first-member
+       flavors (page_target_tolerance on StcBeat,
+       co_presence_required_at_slot on StcStory,
+       strand_convergence_required_at_slot on StcStory).
+- S15: Side-2 soft preference annotations surface; three first-member
+       flavors (tonal_register and genre_adherence_preference on
+       StcStory, emphasis_preference on StcBeat).
+- S16: Three new verifier checks covering S14's flavors (S16.1 page
+       tolerance, S16.2 co-presence structural integrity +
+       participation, S16.3 strand-convergence structural integrity
+       + advancement).
+
+Per `dialect-compilation-surface-sketch-01` DCS3, S15 fields receive
+no verifier coverage by construction. Per DCS4, all new fields are
+optional with empty / 0 / "" defaults; pre-sketch-03 encodings
+verify identically.
 """
 
 from __future__ import annotations
@@ -204,13 +223,27 @@ class StcBeat:
     Per S11, `participant_ids` is an optional tuple of StcCharacter
     ids present in the beat. Empty by default — existing encodings
     that pre-date sketch-02 continue to verify cleanly without
-    wiring. When set, the verifier checks that every id resolves."""
+    wiring. When set, the verifier checks that every id resolves.
+
+    Per S14-SE1 (sketch-03), `page_tolerance_before` and
+    `page_tolerance_after` express the hard constraint that
+    `page_actual` may drift up to that many pages below or above the
+    canonical `page_target` for this slot. Both default 0, meaning
+    the field carries no constraint. Verified by S16.1.
+
+    Per S15-SP3 (sketch-03), `emphasis_preference` is a soft per-beat
+    ranker input from a canonical-plus-open vocabulary
+    `{minimal, standard, expanded, centerpiece, ""}`. Empty string
+    is neutral. Not verifier-covered (DCS3)."""
     id: str
     slot: int
     page_actual: int
     description_of_change: str = ""
     advances: tuple = ()              # tuple[StrandAdvancement, ...]
     participant_ids: tuple = ()       # tuple[str, ...] — StcCharacter ids
+    page_tolerance_before: int = 0    # S14-SE1 (sketch-03)
+    page_tolerance_after: int = 0     # S14-SE1 (sketch-03)
+    emphasis_preference: str = ""     # S15-SP3 (sketch-03)
     authored_by: str = "author"
 
     def __post_init__(self):
@@ -297,6 +330,41 @@ class StcArchetypeAssignment:
     archetype: str
     character_id: Optional[str] = None
     note: str = ""
+
+
+# ============================================================================
+# Compilation-surface sub-records (S14-SE2, S14-SE3) — sketch-03
+# ============================================================================
+
+
+@dataclass(frozen=True)
+class StcCoPresenceRequirement:
+    """S14-SE2 (sketch-03). Hard constraint: the named characters must
+    all appear in `participant_ids` of at least `min_count` authored
+    beats whose slot matches. The requirement is on slot-scoped
+    beat-level co-presence — Save the Cat's analog to Aristotelian's
+    A15-SE2 co-presence-over-phase. Field-shape parity with the
+    Aristotelian form is the strongest cross-dialect symmetry signal
+    observed during the DCS1 DOQ2 spike."""
+    id: str
+    character_ref_ids: Tuple[str, ...]  # ≥ 2 characters
+    slot: int                            # 1..15
+    min_count: int = 1
+
+
+@dataclass(frozen=True)
+class StcStrandConvergenceRequirement:
+    """S14-SE3 (sketch-03). Hard constraint: at the named slot, each
+    strand named in `strand_ref_ids` must be advanced (appear in at
+    least one authored beat's `advances`) by at least one beat in
+    that slot. Captures Snyder's 'A and B collide' convention at
+    Midpoint and the 'A and B resolve together' convention at Finale.
+
+    Dialect-specific — strands are an STC primitive with no
+    Aristotelian analog."""
+    id: str
+    strand_ref_ids: Tuple[str, ...]  # ≥ 2 strands
+    slot: int                         # 1..15
 
 
 # ============================================================================
@@ -450,6 +518,16 @@ class StcStory:
     archetype-coverage checks. Per S12, `archetype_assignments`
     binds each of the declared genre's archetypes to either a
     character or a prose note.
+
+    Per S14-SE2 + S14-SE3 (sketch-03), `co_presence_requirements`
+    and `strand_convergence_requirements` carry hard structural
+    constraints the compiler reads from stages 1–3. Both default
+    empty; S16.2 and S16.3 verify structural integrity and
+    participation/advancement.
+
+    Per S15-SP1 + S15-SP2 (sketch-03), `tonal_register` and
+    `genre_adherence_preference` are soft ranker inputs consumed at
+    compiler stage 4. Both default "". No verifier coverage per DCS3.
     """
     id: str
     title: str
@@ -459,6 +537,10 @@ class StcStory:
     strand_ids: tuple = ()     # tuple[str, ...]
     character_ids: tuple = ()  # tuple[str, ...] — S11
     archetype_assignments: tuple = ()  # tuple[StcArchetypeAssignment, ...] — S12
+    co_presence_requirements: tuple = ()        # S14-SE2 (sketch-03)
+    strand_convergence_requirements: tuple = () # S14-SE3 (sketch-03)
+    tonal_register: str = ""                    # S15-SP1 (sketch-03)
+    genre_adherence_preference: str = ""        # S15-SP2 (sketch-03)
     authored_by: str = "author"
 
 
@@ -968,6 +1050,226 @@ def _check_archetype_coverage(
     return out
 
 
+# ============================================================================
+# S16 — compilation-surface verifier checks (sketch-03)
+# ============================================================================
+
+
+def _check_page_target_tolerance(
+    story: StcStory, beats_by_id: dict,
+) -> list:
+    """S16.1 (S14-SE1). For each authored beat on the story:
+    tolerances non-negative; if either is set, `page_actual` falls
+    within the tolerance window around the canonical `page_target`
+    for the beat's slot. Skips cleanly when both tolerances at
+    default 0."""
+    out = []
+    for bid in story.beat_ids:
+        if bid not in beats_by_id:
+            continue
+        b = beats_by_id[bid]
+        if b.page_tolerance_before < 0:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="page_tolerance_before_negative",
+                target_id=b.id,
+                message=(f"Beat {b.id!r} has page_tolerance_before="
+                         f"{b.page_tolerance_before}; must be ≥ 0"),
+            ))
+        if b.page_tolerance_after < 0:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="page_tolerance_after_negative",
+                target_id=b.id,
+                message=(f"Beat {b.id!r} has page_tolerance_after="
+                         f"{b.page_tolerance_after}; must be ≥ 0"),
+            ))
+        if b.page_tolerance_before == 0 and b.page_tolerance_after == 0:
+            continue  # neither bound active; default-empty tolerance window
+        if b.page_tolerance_before < 0 or b.page_tolerance_after < 0:
+            continue  # negative bound already surfaced; skip positional check
+        canonical = CANONICAL_BEAT_BY_SLOT.get(b.slot)
+        if canonical is None:
+            continue  # should not happen; slot already range-checked on construction
+        earliest = canonical.page_target - b.page_tolerance_before
+        latest = canonical.page_target + b.page_tolerance_after
+        if b.page_actual < earliest:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="page_actual_before_tolerance",
+                target_id=b.id,
+                message=(f"Beat {b.id!r} has page_actual={b.page_actual} "
+                         f"which is earlier than tolerance window "
+                         f"[{earliest}, {latest}] around canonical "
+                         f"page_target={canonical.page_target} for slot "
+                         f"{b.slot} ({canonical.name!r})"),
+            ))
+        if b.page_actual > latest:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="page_actual_after_tolerance",
+                target_id=b.id,
+                message=(f"Beat {b.id!r} has page_actual={b.page_actual} "
+                         f"which is later than tolerance window "
+                         f"[{earliest}, {latest}] around canonical "
+                         f"page_target={canonical.page_target} for slot "
+                         f"{b.slot} ({canonical.name!r})"),
+            ))
+    return out
+
+
+def _check_co_presence_requirements(
+    story: StcStory,
+    beats_by_id: dict,
+    characters_by_id: dict,
+) -> list:
+    """S16.2 (S14-SE2). For each co-presence requirement on the
+    story: structural integrity (≥2 refs, characters resolve, slot
+    in range, min_count ≥ 1) plus participation (≥min_count authored
+    beats at matching slot whose participant_ids cover all named
+    characters)."""
+    out = []
+    known_chars = set(characters_by_id.keys())
+    for req in story.co_presence_requirements:
+        # Structural integrity.
+        if len(req.character_ref_ids) < 2:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="co_presence_refs_too_few",
+                target_id=req.id,
+                message=(f"CoPresenceRequirement {req.id!r} names "
+                         f"{len(req.character_ref_ids)} character(s); "
+                         f"co-presence requires at least 2"),
+            ))
+        for cid in req.character_ref_ids:
+            if cid not in known_chars:
+                out.append(StcObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="co_presence_character_unresolved",
+                    target_id=req.id,
+                    message=(f"CoPresenceRequirement {req.id!r} names "
+                             f"character_ref_id {cid!r} which is not in "
+                             f"the characters collection"),
+                ))
+        if not (1 <= req.slot <= NUM_CANONICAL_BEATS):
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="co_presence_slot_out_of_range",
+                target_id=req.id,
+                message=(f"CoPresenceRequirement {req.id!r} has slot="
+                         f"{req.slot}; must be 1..{NUM_CANONICAL_BEATS}"),
+            ))
+        if req.min_count < 1:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="co_presence_min_count_zero",
+                target_id=req.id,
+                message=(f"CoPresenceRequirement {req.id!r} has min_count="
+                         f"{req.min_count}; must be ≥ 1"),
+            ))
+
+        # Participation: count beats at matching slot whose
+        # participant_ids cover all named characters. Skip if the
+        # requirement is structurally broken (would produce noise).
+        if (len(req.character_ref_ids) < 2
+                or not (1 <= req.slot <= NUM_CANONICAL_BEATS)
+                or req.min_count < 1):
+            continue
+        needed = set(req.character_ref_ids)
+        covering_count = 0
+        for bid in story.beat_ids:
+            if bid not in beats_by_id:
+                continue
+            b = beats_by_id[bid]
+            if b.slot != req.slot:
+                continue
+            if needed.issubset(set(b.participant_ids)):
+                covering_count += 1
+        if covering_count < req.min_count:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="co_presence_insufficient_participation",
+                target_id=req.id,
+                message=(f"CoPresenceRequirement {req.id!r} at slot "
+                         f"{req.slot} requires {req.min_count} beat(s) "
+                         f"with all of {list(req.character_ref_ids)} in "
+                         f"participant_ids; found {covering_count}"),
+            ))
+    return out
+
+
+def _check_strand_convergence_requirements(
+    story: StcStory,
+    beats_by_id: dict,
+    strands_by_id: dict,
+) -> list:
+    """S16.3 (S14-SE3). For each strand convergence requirement on
+    the story: structural integrity (≥2 refs, strands resolve, slot
+    in range) plus advancement (each named strand appears in at
+    least one beat at the matching slot's `advances`). Emits one
+    missing-advancement observation per strand that fails
+    independently."""
+    out = []
+    known_strands = set(strands_by_id.keys())
+    for req in story.strand_convergence_requirements:
+        if len(req.strand_ref_ids) < 2:
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="strand_convergence_refs_too_few",
+                target_id=req.id,
+                message=(f"StrandConvergenceRequirement {req.id!r} names "
+                         f"{len(req.strand_ref_ids)} strand(s); "
+                         f"convergence requires at least 2"),
+            ))
+        for sid in req.strand_ref_ids:
+            if sid not in known_strands:
+                out.append(StcObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="strand_convergence_strand_unresolved",
+                    target_id=req.id,
+                    message=(f"StrandConvergenceRequirement {req.id!r} "
+                             f"names strand_ref_id {sid!r} which is not "
+                             f"in the strands collection"),
+                ))
+        if not (1 <= req.slot <= NUM_CANONICAL_BEATS):
+            out.append(StcObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="strand_convergence_slot_out_of_range",
+                target_id=req.id,
+                message=(f"StrandConvergenceRequirement {req.id!r} has "
+                         f"slot={req.slot}; must be 1..{NUM_CANONICAL_BEATS}"),
+            ))
+
+        # Advancement: for each strand, at least one beat at the
+        # matching slot must advance it. Skip if structurally broken.
+        if (len(req.strand_ref_ids) < 2
+                or not (1 <= req.slot <= NUM_CANONICAL_BEATS)):
+            continue
+        for sid in req.strand_ref_ids:
+            if sid not in known_strands:
+                continue  # unresolved already surfaced
+            advanced = False
+            for bid in story.beat_ids:
+                if bid not in beats_by_id:
+                    continue
+                b = beats_by_id[bid]
+                if b.slot != req.slot:
+                    continue
+                if any(adv.strand_id == sid for adv in b.advances):
+                    advanced = True
+                    break
+            if not advanced:
+                out.append(StcObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="strand_convergence_missing_advancement",
+                    target_id=req.id,
+                    message=(f"StrandConvergenceRequirement {req.id!r} "
+                             f"at slot {req.slot}: no authored beat in "
+                             f"that slot advances strand {sid!r}"),
+                ))
+    return out
+
+
 def verify(
     story: StcStory,
     *,
@@ -1015,6 +1317,14 @@ def verify(
     out.extend(_check_one_protagonist(story, characters_by_id))
     out.extend(_check_archetype_coverage(
         story, genres_by_id, characters_by_id,
+    ))
+    # S16 — compilation-surface checks (sketch-03)
+    out.extend(_check_page_target_tolerance(story, beats_by_id))
+    out.extend(_check_co_presence_requirements(
+        story, beats_by_id, characters_by_id,
+    ))
+    out.extend(_check_strand_convergence_requirements(
+        story, beats_by_id, strands_by_id,
     ))
     return out
 

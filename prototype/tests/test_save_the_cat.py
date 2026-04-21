@@ -24,6 +24,7 @@ from story_engine.core.save_the_cat import (
     GENRE_MONSTER_IN_THE_HOUSE, GENRE_WHYDUNIT,
     StcStory, StcBeat, StcStrand, StcGenre,
     StcCharacter, StcArchetypeAssignment,
+    StcCoPresenceRequirement, StcStrandConvergenceRequirement,
     CANONICAL_ROLE_LABELS, CANONICAL_ROLE_LABEL_SET,
     StrandAdvancement, StrandKind, StcObservation,
     SEVERITY_NOTED, SEVERITY_ADVISES_REVIEW,
@@ -826,17 +827,28 @@ def test_ackroyd_save_the_cat_verifies_with_one_noted_observation():
     assert noteds[0].code == "genre_archetypes_declared"
 
 
-def test_macbeth_save_the_cat_verifies_with_one_noted_observation():
-    """Post-sketch-02 Macbeth STC: same shape as pre-sketch-02."""
+def test_macbeth_save_the_cat_verifies_with_one_noted_and_one_advise_review():
+    """Post-sketch-03 Macbeth STC contract:
+    - 1 NOTED  `genre_archetypes_declared` (unchanged from sketch-02).
+    - 1 ADVISES-REVIEW `strand_convergence_missing_advancement`
+      (NEW, sketch-03) — `converge_macbeth_midpoint` flags that
+      B_09_midpoint advances only the A strand, not the B strand.
+      This is the sketch-03 signal: the new surface surfaces a
+      structural claim the sketch-02 surface could not. Treated as a
+      pinned feature-observation, not a bug: re-authoring is optional."""
     from story_engine.encodings.macbeth_save_the_cat import STORY, BEATS, STRANDS, CHARACTERS
     obs = verify(
         STORY, beats=BEATS, strands=STRANDS, characters=CHARACTERS,
     )
     advises = [o for o in obs if o.severity == SEVERITY_ADVISES_REVIEW]
-    assert advises == [], (
-        f"Macbeth STC should have no advise-review observations; "
-        f"got {[o.code for o in advises]}"
+    assert len(advises) == 1, (
+        f"Macbeth STC should have exactly one advise-review "
+        f"observation (the sketch-03 midpoint strand-convergence "
+        f"surface); got {[o.code for o in advises]}"
     )
+    assert advises[0].code == "strand_convergence_missing_advancement"
+    assert advises[0].target_id == "converge_macbeth_midpoint"
+
     noteds = [o for o in obs if o.severity == SEVERITY_NOTED]
     assert len(noteds) == 1
     assert noteds[0].code == "genre_archetypes_declared"
@@ -878,6 +890,486 @@ def test_ackroyd_archetype_assignments_mix_character_and_prose():
     assert by_arch["the secret"].note
     assert by_arch["the dark turn"].character_id is None
     assert by_arch["the dark turn"].note
+
+
+# ----------------------------------------------------------------------------
+# save-the-cat-sketch-03 (S14-S16 — compilation-surface instantiation)
+# ----------------------------------------------------------------------------
+
+
+# S14 / S15 — field defaults and sub-record construction
+
+
+def test_stc_beat_page_tolerance_fields_default_zero():
+    """S14-SE1: the two new tolerance fields default 0 so
+    pre-sketch-03 encodings verify cleanly without migration."""
+    b = StcBeat(id="B1", slot=1, page_actual=1)
+    assert b.page_tolerance_before == 0
+    assert b.page_tolerance_after == 0
+
+
+def test_stc_beat_emphasis_preference_defaults_empty():
+    """S15-SP3: emphasis_preference defaults to empty string
+    (neutral; no ranker signal)."""
+    b = StcBeat(id="B1", slot=1, page_actual=1)
+    assert b.emphasis_preference == ""
+
+
+def test_stc_story_compilation_surface_fields_default_empty():
+    """S14-SE2, S14-SE3, S15-SP1, S15-SP2 all default empty so
+    pre-sketch-03 encodings verify cleanly."""
+    s = StcStory(id="S", title="T")
+    assert s.co_presence_requirements == ()
+    assert s.strand_convergence_requirements == ()
+    assert s.tonal_register == ""
+    assert s.genre_adherence_preference == ""
+
+
+def test_stc_co_presence_requirement_constructs():
+    """S14-SE2: the new sub-record carries its four fields with
+    tuple-of-strings for character_ref_ids."""
+    r = StcCoPresenceRequirement(
+        id="r1",
+        character_ref_ids=("C1", "C2"),
+        slot=9,
+        min_count=2,
+    )
+    assert r.character_ref_ids == ("C1", "C2")
+    assert r.slot == 9
+    assert r.min_count == 2
+
+
+def test_stc_strand_convergence_requirement_constructs():
+    """S14-SE3: two-strand convergence at a named slot."""
+    r = StcStrandConvergenceRequirement(
+        id="r1",
+        strand_ref_ids=("A", "B"),
+        slot=14,
+    )
+    assert r.strand_ref_ids == ("A", "B")
+    assert r.slot == 14
+
+
+# S16.1 — page tolerance consistency
+
+
+def test_s16_1_clean_when_all_tolerances_default():
+    """Baseline: beats with default-0 tolerances produce no S16.1
+    observations, even when page_actual is far from canonical."""
+    beats = _full_beat_set()  # pages at i*7, not canonical page_targets
+    story = _full_story()
+    obs = verify(story, beats=beats)
+    codes = _codes(obs)
+    assert "page_tolerance_before_negative" not in codes
+    assert "page_tolerance_after_negative" not in codes
+    assert "page_actual_before_tolerance" not in codes
+    assert "page_actual_after_tolerance" not in codes
+
+
+def test_s16_1_flags_page_tolerance_before_negative():
+    full = list(_full_beat_set())
+    full[0] = StcBeat(
+        id="B_1", slot=1, page_actual=1,
+        page_tolerance_before=-1,
+    )
+    beats = tuple(full)
+    story = _full_story(beat_ids=tuple(b.id for b in beats))
+    obs = verify(story, beats=beats)
+    assert "page_tolerance_before_negative" in _codes(obs)
+
+
+def test_s16_1_flags_page_tolerance_after_negative():
+    full = list(_full_beat_set())
+    full[0] = StcBeat(
+        id="B_1", slot=1, page_actual=1,
+        page_tolerance_after=-3,
+    )
+    beats = tuple(full)
+    story = _full_story(beat_ids=tuple(b.id for b in beats))
+    obs = verify(story, beats=beats)
+    assert "page_tolerance_after_negative" in _codes(obs)
+
+
+def test_s16_1_flags_page_actual_before_tolerance():
+    """Slot 9 (Midpoint) canonical page_target=55. page_actual=40 with
+    tolerance_before=5, tolerance_after=5 produces window [50, 60];
+    40 falls below."""
+    full = list(_full_beat_set())
+    full[8] = StcBeat(
+        id="B_9", slot=9, page_actual=40,
+        page_tolerance_before=5,
+        page_tolerance_after=5,
+    )
+    beats = tuple(full)
+    story = _full_story(beat_ids=tuple(b.id for b in beats))
+    obs = verify(story, beats=beats)
+    matching = [
+        o for o in obs
+        if o.code == "page_actual_before_tolerance" and o.target_id == "B_9"
+    ]
+    assert len(matching) == 1
+
+
+def test_s16_1_flags_page_actual_after_tolerance():
+    """Slot 14 (Finale) canonical page_target=85. page_actual=100 with
+    tolerance_after=5 produces window [85, 90]; 100 overshoots."""
+    full = list(_full_beat_set())
+    full[13] = StcBeat(
+        id="B_14", slot=14, page_actual=100,
+        page_tolerance_before=0,
+        page_tolerance_after=5,
+    )
+    beats = tuple(full)
+    story = _full_story(beat_ids=tuple(b.id for b in beats))
+    obs = verify(story, beats=beats)
+    matching = [
+        o for o in obs
+        if o.code == "page_actual_after_tolerance" and o.target_id == "B_14"
+    ]
+    assert len(matching) == 1
+
+
+def test_s16_1_clean_when_page_actual_within_window():
+    """Slot 9 canonical=55. page_actual=55 with tolerance (±8) is
+    within the [47, 63] window — no observation."""
+    full = list(_full_beat_set())
+    full[8] = StcBeat(
+        id="B_9", slot=9, page_actual=55,
+        page_tolerance_before=8,
+        page_tolerance_after=8,
+    )
+    beats = tuple(full)
+    story = _full_story(beat_ids=tuple(b.id for b in beats))
+    obs = verify(story, beats=beats)
+    for code in ("page_actual_before_tolerance", "page_actual_after_tolerance"):
+        bad = [o for o in obs if o.code == code and o.target_id == "B_9"]
+        assert bad == [], f"unexpected {code} for B_9: {bad}"
+
+
+# S16.2 — co-presence requirements
+
+
+def test_s16_2_clean_when_no_requirements():
+    beats = _full_beat_set()
+    story = _full_story()
+    obs = verify(story, beats=beats)
+    assert "co_presence_refs_too_few" not in _codes(obs)
+    assert "co_presence_character_unresolved" not in _codes(obs)
+    assert "co_presence_slot_out_of_range" not in _codes(obs)
+    assert "co_presence_min_count_zero" not in _codes(obs)
+    assert "co_presence_insufficient_participation" not in _codes(obs)
+
+
+def test_s16_2_flags_refs_too_few():
+    beats = _full_beat_set()
+    chars = (StcCharacter(id="C1", name="A", role_labels=("protagonist",)),)
+    story = _full_story(
+        character_ids=tuple(c.id for c in chars),
+        co_presence_requirements=(
+            StcCoPresenceRequirement(
+                id="r1", character_ref_ids=("C1",), slot=1,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, characters=chars)
+    assert "co_presence_refs_too_few" in _codes(obs)
+
+
+def test_s16_2_flags_character_unresolved():
+    beats = _full_beat_set()
+    chars = (StcCharacter(id="C1", name="A", role_labels=("protagonist",)),)
+    story = _full_story(
+        character_ids=tuple(c.id for c in chars),
+        co_presence_requirements=(
+            StcCoPresenceRequirement(
+                id="r1", character_ref_ids=("C1", "C_ghost"), slot=1,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, characters=chars)
+    unresolved = [
+        o for o in obs if o.code == "co_presence_character_unresolved"
+    ]
+    assert len(unresolved) == 1
+
+
+def test_s16_2_flags_slot_out_of_range():
+    beats = _full_beat_set()
+    chars = (
+        StcCharacter(id="C1", name="A", role_labels=("protagonist",)),
+        StcCharacter(id="C2", name="B"),
+    )
+    story = _full_story(
+        character_ids=tuple(c.id for c in chars),
+        co_presence_requirements=(
+            StcCoPresenceRequirement(
+                id="r1", character_ref_ids=("C1", "C2"), slot=99,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, characters=chars)
+    assert "co_presence_slot_out_of_range" in _codes(obs)
+
+
+def test_s16_2_flags_min_count_zero():
+    beats = _full_beat_set()
+    chars = (
+        StcCharacter(id="C1", name="A", role_labels=("protagonist",)),
+        StcCharacter(id="C2", name="B"),
+    )
+    story = _full_story(
+        character_ids=tuple(c.id for c in chars),
+        co_presence_requirements=(
+            StcCoPresenceRequirement(
+                id="r1", character_ref_ids=("C1", "C2"), slot=1,
+                min_count=0,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, characters=chars)
+    assert "co_presence_min_count_zero" in _codes(obs)
+
+
+def test_s16_2_flags_insufficient_participation():
+    """Requirement at slot 5 needs C1+C2 both present; slot-5 beat
+    participates only C1. Participation count (0) < min_count (1)."""
+    full = list(_full_beat_set())
+    full[4] = StcBeat(
+        id="B_5", slot=5, page_actual=35, participant_ids=("C1",),
+    )
+    beats = tuple(full)
+    chars = (
+        StcCharacter(id="C1", name="A", role_labels=("protagonist",)),
+        StcCharacter(id="C2", name="B"),
+    )
+    story = _full_story(
+        beat_ids=tuple(b.id for b in beats),
+        character_ids=tuple(c.id for c in chars),
+        co_presence_requirements=(
+            StcCoPresenceRequirement(
+                id="r1", character_ref_ids=("C1", "C2"), slot=5,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, characters=chars)
+    assert "co_presence_insufficient_participation" in _codes(obs)
+
+
+def test_s16_2_clean_when_participation_sufficient():
+    """Requirement at slot 5 needs C1+C2; slot-5 beat has both."""
+    full = list(_full_beat_set())
+    full[4] = StcBeat(
+        id="B_5", slot=5, page_actual=35,
+        participant_ids=("C1", "C2"),
+    )
+    beats = tuple(full)
+    chars = (
+        StcCharacter(id="C1", name="A", role_labels=("protagonist",)),
+        StcCharacter(id="C2", name="B"),
+    )
+    story = _full_story(
+        beat_ids=tuple(b.id for b in beats),
+        character_ids=tuple(c.id for c in chars),
+        co_presence_requirements=(
+            StcCoPresenceRequirement(
+                id="r1", character_ref_ids=("C1", "C2"), slot=5,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, characters=chars)
+    assert "co_presence_insufficient_participation" not in _codes(obs)
+
+
+# S16.3 — strand convergence requirements
+
+
+def test_s16_3_clean_when_no_requirements():
+    beats = _full_beat_set()
+    story = _full_story()
+    obs = verify(story, beats=beats)
+    codes = _codes(obs)
+    assert "strand_convergence_refs_too_few" not in codes
+    assert "strand_convergence_strand_unresolved" not in codes
+    assert "strand_convergence_slot_out_of_range" not in codes
+    assert "strand_convergence_missing_advancement" not in codes
+
+
+def test_s16_3_flags_refs_too_few():
+    beats = _full_beat_set()
+    strands = (StcStrand(id="A", kind=StrandKind.A_STORY),)
+    story = _full_story(
+        strand_ids=tuple(s.id for s in strands),
+        strand_convergence_requirements=(
+            StcStrandConvergenceRequirement(
+                id="r1", strand_ref_ids=("A",), slot=9,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, strands=strands)
+    assert "strand_convergence_refs_too_few" in _codes(obs)
+
+
+def test_s16_3_flags_strand_unresolved():
+    beats = _full_beat_set()
+    strands = (StcStrand(id="A", kind=StrandKind.A_STORY),)
+    story = _full_story(
+        strand_ids=tuple(s.id for s in strands),
+        strand_convergence_requirements=(
+            StcStrandConvergenceRequirement(
+                id="r1", strand_ref_ids=("A", "S_ghost"), slot=9,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, strands=strands)
+    unresolved = [
+        o for o in obs if o.code == "strand_convergence_strand_unresolved"
+    ]
+    assert len(unresolved) == 1
+
+
+def test_s16_3_flags_slot_out_of_range():
+    beats = _full_beat_set()
+    strands = (
+        StcStrand(id="A", kind=StrandKind.A_STORY),
+        StcStrand(id="B", kind=StrandKind.B_STORY),
+    )
+    story = _full_story(
+        strand_ids=tuple(s.id for s in strands),
+        strand_convergence_requirements=(
+            StcStrandConvergenceRequirement(
+                id="r1", strand_ref_ids=("A", "B"), slot=99,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, strands=strands)
+    assert "strand_convergence_slot_out_of_range" in _codes(obs)
+
+
+def test_s16_3_flags_missing_advancement_per_strand():
+    """Requirement needs both A and B advanced at slot 9; slot-9
+    beat advances only A. Emits one observation for the B strand."""
+    full = list(_full_beat_set())
+    full[8] = StcBeat(
+        id="B_9", slot=9, page_actual=55,
+        advances=(StrandAdvancement(strand_id="A"),),
+    )
+    beats = tuple(full)
+    strands = (
+        StcStrand(id="A", kind=StrandKind.A_STORY),
+        StcStrand(id="B", kind=StrandKind.B_STORY),
+    )
+    story = _full_story(
+        beat_ids=tuple(b.id for b in beats),
+        strand_ids=tuple(s.id for s in strands),
+        strand_convergence_requirements=(
+            StcStrandConvergenceRequirement(
+                id="r1", strand_ref_ids=("A", "B"), slot=9,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, strands=strands)
+    missing = [
+        o for o in obs
+        if o.code == "strand_convergence_missing_advancement"
+    ]
+    assert len(missing) == 1
+    # The missing-strand identity should appear in the message.
+    assert "'B'" in missing[0].message
+
+
+def test_s16_3_clean_when_both_strands_advance():
+    """Requirement at slot 14 is satisfied if any beat(s) in slot
+    14 collectively advance both strands. Here a single beat
+    advances both."""
+    full = list(_full_beat_set())
+    full[13] = StcBeat(
+        id="B_14", slot=14, page_actual=90,
+        advances=(
+            StrandAdvancement(strand_id="A"),
+            StrandAdvancement(strand_id="B"),
+        ),
+    )
+    beats = tuple(full)
+    strands = (
+        StcStrand(id="A", kind=StrandKind.A_STORY),
+        StcStrand(id="B", kind=StrandKind.B_STORY),
+    )
+    story = _full_story(
+        beat_ids=tuple(b.id for b in beats),
+        strand_ids=tuple(s.id for s in strands),
+        strand_convergence_requirements=(
+            StcStrandConvergenceRequirement(
+                id="r1", strand_ref_ids=("A", "B"), slot=14,
+            ),
+        ),
+    )
+    obs = verify(story, beats=beats, strands=strands)
+    assert "strand_convergence_missing_advancement" not in _codes(obs)
+
+
+# DOQ2 evidence — cross-dialect symmetry on the co-presence axis
+
+
+def test_co_presence_field_name_matches_aristotelian_for_doq2_evidence():
+    """Per sketch-03's DOQ2 judgment, the `co_presence_requirements`
+    field name was deliberately chosen to mirror Aristotelian's
+    A15-SE2 field name. This test pins that choice so future
+    renames of either dialect's field surface the symmetry-claim
+    break at test time, not at design time."""
+    # StcStory field
+    s = StcStory(id="S", title="T")
+    assert hasattr(s, "co_presence_requirements")
+    # Aristotelian mythos field — if it exists
+    from story_engine.core.aristotelian import ArMythos
+    assert hasattr(ArMythos, "__dataclass_fields__")
+    assert "co_presence_requirements" in ArMythos.__dataclass_fields__, (
+        "Aristotelian ArMythos is missing co_presence_requirements; "
+        "this breaks the DOQ2 cross-dialect symmetry signal"
+    )
+
+
+# Macbeth sketch-03 worked-example pins
+
+
+def test_macbeth_stc_sketch_03_co_presence_requirements_authored():
+    from story_engine.encodings.macbeth_save_the_cat import (
+        STORY, MACBETH_STC_CO_PRESENCE,
+    )
+    assert STORY.co_presence_requirements is MACBETH_STC_CO_PRESENCE
+    assert len(MACBETH_STC_CO_PRESENCE) == 3
+    ids = {r.id for r in MACBETH_STC_CO_PRESENCE}
+    assert "copres_macbeth_witches_catalyst" in ids
+    assert "copres_macbeth_lady_debate" in ids
+    assert "copres_macbeth_macduff_finale" in ids
+
+
+def test_macbeth_stc_sketch_03_strand_convergence_requirements_authored():
+    from story_engine.encodings.macbeth_save_the_cat import (
+        STORY, MACBETH_STC_STRAND_CONVERGENCE,
+    )
+    assert STORY.strand_convergence_requirements is MACBETH_STC_STRAND_CONVERGENCE
+    assert len(MACBETH_STC_STRAND_CONVERGENCE) == 2
+    slots = {r.slot for r in MACBETH_STC_STRAND_CONVERGENCE}
+    assert slots == {9, 14}, (
+        f"expected convergence requirements at slots 9 and 14; got "
+        f"{slots}"
+    )
+
+
+def test_macbeth_stc_sketch_03_tonal_and_genre_preferences_authored():
+    from story_engine.encodings.macbeth_save_the_cat import STORY
+    assert STORY.tonal_register == "tragic"
+    assert STORY.genre_adherence_preference == "loose"
+
+
+def test_macbeth_stc_sketch_03_emphasis_preference_on_centerpiece_beats():
+    """Macbeth's two structural-pivot beats (midpoint +
+    dark-night-of-the-soul) carry emphasis_preference='centerpiece'
+    per sketch-03's worked example."""
+    from story_engine.encodings.macbeth_save_the_cat import BEATS
+    by_slot = {b.slot: b for b in BEATS}
+    assert by_slot[9].emphasis_preference == "centerpiece"   # Midpoint
+    assert by_slot[12].emphasis_preference == "centerpiece"  # Dark Night
 
 
 # ----------------------------------------------------------------------------
@@ -952,10 +1444,45 @@ TESTS = [
     test_verify_flags_archetype_assignment_neither_set,
     test_verify_flags_archetype_assignments_without_genre,
     test_ackroyd_save_the_cat_verifies_with_one_noted_observation,
-    test_macbeth_save_the_cat_verifies_with_one_noted_observation,
+    test_macbeth_save_the_cat_verifies_with_one_noted_and_one_advise_review,
     test_sheppard_carries_three_canonical_role_labels,
     test_macbeth_archetype_assignments_use_prose_notes_only,
     test_ackroyd_archetype_assignments_mix_character_and_prose,
+    # save-the-cat-sketch-03 S14-S16 (compilation-surface instantiation)
+    test_stc_beat_page_tolerance_fields_default_zero,
+    test_stc_beat_emphasis_preference_defaults_empty,
+    test_stc_story_compilation_surface_fields_default_empty,
+    test_stc_co_presence_requirement_constructs,
+    test_stc_strand_convergence_requirement_constructs,
+    # S16.1 — page tolerance
+    test_s16_1_clean_when_all_tolerances_default,
+    test_s16_1_flags_page_tolerance_before_negative,
+    test_s16_1_flags_page_tolerance_after_negative,
+    test_s16_1_flags_page_actual_before_tolerance,
+    test_s16_1_flags_page_actual_after_tolerance,
+    test_s16_1_clean_when_page_actual_within_window,
+    # S16.2 — co-presence
+    test_s16_2_clean_when_no_requirements,
+    test_s16_2_flags_refs_too_few,
+    test_s16_2_flags_character_unresolved,
+    test_s16_2_flags_slot_out_of_range,
+    test_s16_2_flags_min_count_zero,
+    test_s16_2_flags_insufficient_participation,
+    test_s16_2_clean_when_participation_sufficient,
+    # S16.3 — strand convergence
+    test_s16_3_clean_when_no_requirements,
+    test_s16_3_flags_refs_too_few,
+    test_s16_3_flags_strand_unresolved,
+    test_s16_3_flags_slot_out_of_range,
+    test_s16_3_flags_missing_advancement_per_strand,
+    test_s16_3_clean_when_both_strands_advance,
+    # DOQ2 evidence — cross-dialect symmetry on co-presence field name
+    test_co_presence_field_name_matches_aristotelian_for_doq2_evidence,
+    # Macbeth sketch-03 worked-example pins
+    test_macbeth_stc_sketch_03_co_presence_requirements_authored,
+    test_macbeth_stc_sketch_03_strand_convergence_requirements_authored,
+    test_macbeth_stc_sketch_03_tonal_and_genre_preferences_authored,
+    test_macbeth_stc_sketch_03_emphasis_preference_on_centerpiece_beats,
 ]
 
 

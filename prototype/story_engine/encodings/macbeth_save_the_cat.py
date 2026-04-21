@@ -87,8 +87,22 @@ Expected verifier output (the encoding's contract):
 - 1 genre_archetypes_declared  (NOTED, informational — lists the
                                  three archetypes Rites of Passage
                                  asks the encoding to exhibit)
+- 0 S16.1 page-tolerance observations (five beats carry tolerance
+                                 bounds; all page_actual values lie
+                                 within their windows)
+- 0 S16.2 co-presence observations (three requirements, all cover
+                                 existing participant_ids authoring)
+- 1 strand_convergence_missing_advancement (ADVISES-REVIEW —
+                                 `converge_macbeth_midpoint` flags
+                                 that B_09_midpoint advances only
+                                 the A strand; the B strand is
+                                 present at midpoint but not
+                                 authored as a StrandAdvancement.
+                                 See sketch-03 for discussion)
 
-One noted observation. Everything else clean.
+One noted observation + one advise-review observation.
+The advise-review is the new-surface-doing-real-work signal
+(see sketch-03's "Worked example — Macbeth under sketch-03").
 
 Run the self-verifier:
 
@@ -104,6 +118,7 @@ from __future__ import annotations
 
 from story_engine.core.save_the_cat import (
     StcStory, StcBeat, StcStrand, StcCharacter, StcArchetypeAssignment,
+    StcCoPresenceRequirement, StcStrandConvergenceRequirement,
     StrandAdvancement, StrandKind,
     GENRE_RITES_OF_PASSAGE,
 )
@@ -296,6 +311,9 @@ B_01_opening = StcBeat(
         ),
     ),
     participant_ids=("C_witches",),
+    # S14-SE1 (sketch-03) — opening image can't fall before page 1.
+    page_tolerance_before=0,
+    page_tolerance_after=5,
 )
 
 B_02_theme = StcBeat(
@@ -367,6 +385,9 @@ B_04_catalyst = StcBeat(
         ),
     ),
     participant_ids=("C_witches", "C_macbeth", "C_banquo"),
+    # S14-SE1 (sketch-03) — catalyst positioning has ±5 page slack.
+    page_tolerance_before=5,
+    page_tolerance_after=5,
 )
 
 B_05_debate = StcBeat(
@@ -468,6 +489,9 @@ B_08_fun_and_games = StcBeat(
         ),
     ),
     participant_ids=("C_macbeth", "C_duncan", "C_lady_macbeth"),
+    # S15-SP3 (sketch-03) — the regicide sequence is load-bearing;
+    # the ranker should allocate prose accordingly.
+    emphasis_preference="expanded",
 )
 
 B_09_midpoint = StcBeat(
@@ -490,6 +514,12 @@ B_09_midpoint = StcBeat(
                  "tenure is foretold to end",
         ),
     ),
+    # S14-SE1 (sketch-03) — midpoint's structural load; ±8 page
+    # slack preserves structural centrality while admitting drift.
+    page_tolerance_before=8,
+    page_tolerance_after=8,
+    # S15-SP3 (sketch-03) — midpoint is the structural pivot.
+    emphasis_preference="centerpiece",
 )
 
 B_10_bad_guys_close_in = StcBeat(
@@ -545,6 +575,9 @@ B_11_all_is_lost = StcBeat(
         ),
     ),
     participant_ids=("C_lady_macbeth", "C_macbeth"),
+    # S15-SP3 (sketch-03) — Lady Macbeth's death is offstage; the
+    # beat is structurally load-bearing but textually compact.
+    emphasis_preference="standard",
 )
 
 B_12_dark_night = StcBeat(
@@ -566,6 +599,9 @@ B_12_dark_night = StcBeat(
                  "external forces arrive at his gate",
         ),
     ),
+    # S15-SP3 (sketch-03) — the 'tomorrow' soliloquy is the play's
+    # interior culmination.
+    emphasis_preference="centerpiece",
 )
 
 B_13_break_into_three = StcBeat(
@@ -619,6 +655,14 @@ B_14_finale = StcBeat(
         ),
     ),
     participant_ids=("C_macbeth", "C_macduff"),
+    # S14-SE1 (sketch-03) — Macbeth's finale lands at page 95 vs
+    # canonical 85; the ±15 after-tolerance lets the encoding
+    # declare the drift intentional rather than silently accept it.
+    page_tolerance_before=5,
+    page_tolerance_after=15,
+    # S15-SP3 (sketch-03) — the finale sequence (duel, reveal,
+    # death) is extended.
+    emphasis_preference="expanded",
 )
 
 B_15_final_image = StcBeat(
@@ -641,6 +685,10 @@ B_15_final_image = StcBeat(
         ),
     ),
     participant_ids=("C_malcolm", "C_macduff", "C_ross"),
+    # S14-SE1 (sketch-03) — final image can't overshoot the page
+    # count; ±2 early-side tolerance for minor compression.
+    page_tolerance_before=2,
+    page_tolerance_after=0,
 )
 
 BEATS = (
@@ -649,6 +697,60 @@ BEATS = (
     B_09_midpoint, B_10_bad_guys_close_in, B_11_all_is_lost,
     B_12_dark_night, B_13_break_into_three, B_14_finale,
     B_15_final_image,
+)
+
+
+# ============================================================================
+# Compilation-surface (save-the-cat-sketch-03) — S14-SE2, S14-SE3
+# ============================================================================
+#
+# Three co-presence requirements (S14-SE2): structurally load-bearing
+# pairs whose simultaneous presence at their named slot is what makes
+# the scene mean what it means. All three satisfiable against the
+# current participant_ids authoring above.
+#
+# Two strand-convergence requirements (S14-SE3): Snyder's canonical
+# A+B convergence beats. The midpoint requirement deliberately
+# surfaces as an S16.3 observation in the current encoding —
+# B_09_midpoint advances only the A strand, not the B strand.
+# See sketch-03's "Worked example — Macbeth under sketch-03" section
+# for discussion: the B strand is *present* at midpoint (the
+# marriage's growing isolation is implicit in the coronation
+# scene) but not authored as a StrandAdvancement. The observation
+# is a prompt for either re-authoring or affirmative acceptance.
+
+MACBETH_STC_CO_PRESENCE = (
+    StcCoPresenceRequirement(
+        id="copres_macbeth_witches_catalyst",
+        character_ref_ids=("C_macbeth", "C_witches"),
+        slot=4,  # Catalyst — prophecy delivery requires both present
+        min_count=1,
+    ),
+    StcCoPresenceRequirement(
+        id="copres_macbeth_lady_debate",
+        character_ref_ids=("C_macbeth", "C_lady_macbeth"),
+        slot=5,  # Debate — the debate is structurally a two-person scene
+        min_count=1,
+    ),
+    StcCoPresenceRequirement(
+        id="copres_macbeth_macduff_finale",
+        character_ref_ids=("C_macbeth", "C_macduff"),
+        slot=14,  # Finale — antagonist confrontation
+        min_count=1,
+    ),
+)
+
+MACBETH_STC_STRAND_CONVERGENCE = (
+    StcStrandConvergenceRequirement(
+        id="converge_macbeth_midpoint",
+        strand_ref_ids=("Strand_A_scotland", "Strand_B_marriage"),
+        slot=9,  # Midpoint — A (political) and B (marriage) collide
+    ),
+    StcStrandConvergenceRequirement(
+        id="converge_macbeth_finale",
+        strand_ref_ids=("Strand_A_scotland", "Strand_B_marriage"),
+        slot=14,  # Finale — both resolve together
+    ),
 )
 
 
@@ -676,6 +778,12 @@ STORY = StcStory(
     beat_ids=tuple(b.id for b in BEATS),
     strand_ids=tuple(s.id for s in STRANDS),
     character_ids=tuple(c.id for c in CHARACTERS),
+    # S14 (sketch-03) — hard structural extensions
+    co_presence_requirements=MACBETH_STC_CO_PRESENCE,
+    strand_convergence_requirements=MACBETH_STC_STRAND_CONVERGENCE,
+    # S15 (sketch-03) — soft preference annotations
+    tonal_register="tragic",
+    genre_adherence_preference="loose",
     archetype_assignments=(
         # S12 — Rites of Passage's three archetypes are internal stages,
         # not persons. Each binds via prose note rather than
