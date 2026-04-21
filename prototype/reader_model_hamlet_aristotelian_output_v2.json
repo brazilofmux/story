@@ -1,0 +1,254 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_hamlet"
+    ],
+    "observation_count": 0,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_hamlet",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The summary faithfully narrates the mythos through its substrate events: Ghost's revelation (E_hamlet_meets_ghost τ_s=1), Mousetrap verification (E_mousetrap_performance τ_s=6), peripeteia at the arras-stabbing (E_hamlet_kills_polonius τ_s=8), anagnorisis via Laertes's deathbed revelation (E_laertes_reveals_plot τ_s=17), and catastrophe through τ_s=18. The identification of recognition and revenge as co-terminal at τ_s=17 is grounded and articulated in clean Aristotelian vocabulary."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_hamlet_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies the antecedent conditions (five pre-play standing facts) and the Ghost's commission at τ_s=1 as converting private crime into actionable revenge. The boundary at τ_s=5 (E_players_arrive) is defensible as the moment the verifying action is about to fire; all scope_event_ids are accounted for."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_hamlet_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The use of 'binding' (desis) is faithful to Aristotle's own term for complication. The annotation correctly tracks the Mousetrap's epistemic promotion at τ_s=6, the peripeteia at τ_s=8, and the tightening causal chain through exile, Ophelia's madness and drowning, Laertes's return, and the duel conspiracy. Closing the middle at E_duel_plotted (τ_s=13) as the moment every element of the catastrophe is set in motion aligns with the denouement_event_id."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_hamlet_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The 'unbinding' (lusis) is correctly identified. All scope_event_ids are tracked with accurate τ_s references. The claim that pity attaches to Hamlet's belated recognition and fear to the machinery that fused recognition with death is a well-grounded catharsis claim. Four deaths across τ_s=16–18 are correctly enumerated at the catastrophe."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_hamlet",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The hamartia characterization as 'error of calibration' — acting on wrong occasions, hesitating on right ones — is excellent Aristotelian framing of hamartia as erroneous judgment (Poetics 1453a). However, the prose cites Rosencrantz and Guildenstern's deaths as evidence of Hamlet's capacity for action, and these events appear in neither the mythos's central_event_ids nor the substrate context, grounding the hamartia argument partly outside the encoding's stated scope of action."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_claudius",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia as self-deception about the stability of crime-gained goods is well-grounded in E_claudius_prays (τ_s=7) and the duel conspiracy (E_duel_plotted τ_s=13). The claim that Claudius recognizes he cannot repent while retaining the offence's gains, yet neither renounces them, correctly frames hamartia as error of judgment rather than moral wickedness. Marking him as a second tragic hero whose fall includes no public anagnorisis is a defensible structural claim."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_laertes",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "Laertes's hamartia as credulity — accepting Claudius's framing without verification, the structural inverse of Hamlet's demand for proof via the Mousetrap — is well-grounded in E_laertes_returns (τ_s=12) and E_duel_plotted (τ_s=13). The deathbed recognition at E_laertes_reveals_plot (τ_s=17) is correctly identified as both Laertes's own anagnorisis and the vehicle for Hamlet's. The Hamlet quotation ('by the image of my cause…') names the mirror from within the text."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_hamlet_ghost_claim",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The annotation states this is the 'First of three staging steps culminating in the main anagnorisis,' but the anagnorisis_chain contains only two staging-kind steps (arstep_hamlet_ghost_claim and arstep_hamlet_mousetrap); the third step (arstep_claudius_prays) is parallel-kind, belonging to a different character (ar_claudius) and not precipitating the main recognition. The count should be 'first of two staging steps' or 'first of three chain steps.' The remaining structural analysis — provisional knowledge, distance of 16 τ_s-units to the main anagnorisis — is sound."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_hamlet_mousetrap",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly characterizes the Mousetrap as the second staging step that promotes the Ghost's claim from provisional belief to verified certainty. Claudius's reaction at E_mousetrap_performance (τ_s=6) is substrate-grounded. The 11-τ_s distance to the main anagnorisis at τ_s=17 is arithmetically correct. The observation that the remaining epistemic gap concerns the shape of Claudius's counter-plot is a well-bounded claim."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_claudius_prays",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly types this as a parallel-kind step: Claudius's character-level anagnorisis (recognizing his moral bankruptcy) is structurally distinct from Hamlet's main recognition at τ_s=17. The claim that it does not causally drive Hamlet's anagnorisis is consistent with precipitates_main=false; Hamlet observes the scene but misreads it, and his final recognition comes through Laertes, not through any channel from the prayer scene. The structural comparison to Lady Macbeth's sleepwalking is illustrative rather than grounding, which is acceptable."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_hamlet_laertes_mirror",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The mirror is well-grounded across the over_event_ids: both sons' paths to revenge tracked from E_hamlet_meets_ghost through E_laertes_returns to the mutual deaths at τ_s=17–18. The structural inversion — Hamlet verifies before acting, Laertes acts on Claudius's framing without verification — is the same contrast encoded in their respective hamartia_text fields. The catharsis claim (the mirror is what the play's catharsis depends on) is a strong Aristotelian reading grounded in the clustered deaths."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_hamlet_claudius_foil",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The foil framing — failure-of-action vs. failure-of-renunciation — is well-grounded and consistent with both characters' hamartia_text. However, the sentence 'Each recognizes the other's failure in the moment of their own catastrophe' overreads the substrate: Claudius's prayer-scene anagnorisis (E_claudius_prays) is self-directed — he recognizes his own inability to repent, not Hamlet's failure of action. Hamlet's final recognition (E_laertes_reveals_plot) concerns the poisoned-duel conspiracy, not Claudius's hamartia of retention. The foil is structural, operating at the level of opposed hamartiai, but the claim of mutual cross-recognition is not carried by the substrate events."
+    }
+  ],
+  "observation_commentaries": [],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The encoding is a thorough Aristotelian surface. Every review engaged the dialect's own primitives: mythos as the arrangement of incidents, peripeteia at E_hamlet_kills_polonius as reversal from avenger to fugitive, anagnorisis at E_laertes_reveals_plot as the protagonist's recognition, hamartia as erroneous judgment (not moral depravity) for all three characters, the complex plot typing, and catharsis grounded in pity and fear at the clustered catastrophe. The phase annotations use desis ('binding') and lusis ('unbinding') directly from Poetics 1455b. The sketch-02 anagnorisis_chain with staging and parallel step-kinds, the peripeteia_anagnorisis_binding='separated' typing, and the sketch-03 ArCharacterArcRelation mirror/foil distinctions all operated cleanly within the Aristotelian frame. The three needs-work findings are narrow: a miscount of staging steps, an ungrounded substrate reference in hamartia_text, and an overstatement of mutual recognition in the foil annotation — all correctable within the dialect without reaching outside it.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "Dramatic irony as audience-level epistemic advantage: the audience knows Claudius is guilty before Hamlet verifies it, but Aristotelian anagnorisis is character-level recognition only — the dialect has no typed primitive for the audience's differential knowledge state across the complication",
+      "Manipulation or puppeteer dynamics: the encoding itself notes that the Claudius-Laertes pawn/puppeteer relation is 'carried at substrate not at dialect scope,' indicating ArCharacterArcRelation's three kinds (parallel/mirror/foil) cannot express asymmetric agency relations where one character instrumentalizes another's arc"
+    ],
+    "relations_wanted": [
+      "ArCharacterArcRelation kind 'instrumental' or 'manipulation' to express asymmetric agency relations (e.g., Claudius redirecting Laertes's grief into the duel plot) — the encoding acknowledges this gap explicitly",
+      "ArCharacter field or ArMythos-level annotation for absent-but-catharsis-relevant characters (Gertrude has no ArCharacter record yet her death at τ_s=16 is structurally load-bearing for the catastrophe; a lightweight 'catharsis-participant' typing might prevent such characters from falling out of the dialect surface)"
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_hamlet",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The summary faithfully narrates the mythos through its substrate events: Ghost's revelation (E_hamlet_meets_ghost τ_s=1), Mousetrap verification (E_mousetrap_performance τ_s=6), peripeteia at the arras-stabbing (E_hamlet_kills_polonius τ_s=8), anagnorisis via Laertes's deathbed revelation (E_laertes_reveals_plot τ_s=17), and catastrophe through τ_s=18. The identification of recognition and revenge as co-terminal at τ_s=17 is grounded and articulated in clean Aristotelian vocabulary."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_hamlet_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the antecedent conditions (five pre-play standing facts) and the Ghost's commission at τ_s=1 as converting private crime into actionable revenge. The boundary at τ_s=5 (E_players_arrive) is defensible as the moment the verifying action is about to fire; all scope_event_ids are accounted for."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_hamlet_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The use of 'binding' (desis) is faithful to Aristotle's own term for complication. The annotation correctly tracks the Mousetrap's epistemic promotion at τ_s=6, the peripeteia at τ_s=8, and the tightening causal chain through exile, Ophelia's madness and drowning, Laertes's return, and the duel conspiracy. Closing the middle at E_duel_plotted (τ_s=13) as the moment every element of the catastrophe is set in motion aligns with the denouement_event_id."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_hamlet_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The 'unbinding' (lusis) is correctly identified. All scope_event_ids are tracked with accurate τ_s references. The claim that pity attaches to Hamlet's belated recognition and fear to the machinery that fused recognition with death is a well-grounded catharsis claim. Four deaths across τ_s=16–18 are correctly enumerated at the catastrophe."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_hamlet",
+        "field": "hamartia_text",
+        "verdict": "needs-work",
+        "rationale": "The hamartia characterization as 'error of calibration' — acting on wrong occasions, hesitating on right ones — is excellent Aristotelian framing of hamartia as erroneous judgment (Poetics 1453a). However, the prose cites Rosencrantz and Guildenstern's deaths as evidence of Hamlet's capacity for action, and these events appear in neither the mythos's central_event_ids nor the substrate context, grounding the hamartia argument partly outside the encoding's stated scope of action."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_claudius",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia as self-deception about the stability of crime-gained goods is well-grounded in E_claudius_prays (τ_s=7) and the duel conspiracy (E_duel_plotted τ_s=13). The claim that Claudius recognizes he cannot repent while retaining the offence's gains, yet neither renounces them, correctly frames hamartia as error of judgment rather than moral wickedness. Marking him as a second tragic hero whose fall includes no public anagnorisis is a defensible structural claim."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_laertes",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "Laertes's hamartia as credulity — accepting Claudius's framing without verification, the structural inverse of Hamlet's demand for proof via the Mousetrap — is well-grounded in E_laertes_returns (τ_s=12) and E_duel_plotted (τ_s=13). The deathbed recognition at E_laertes_reveals_plot (τ_s=17) is correctly identified as both Laertes's own anagnorisis and the vehicle for Hamlet's. The Hamlet quotation ('by the image of my cause…') names the mirror from within the text."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_hamlet_ghost_claim",
+        "field": "annotation",
+        "verdict": "needs-work",
+        "rationale": "The annotation states this is the 'First of three staging steps culminating in the main anagnorisis,' but the anagnorisis_chain contains only two staging-kind steps (arstep_hamlet_ghost_claim and arstep_hamlet_mousetrap); the third step (arstep_claudius_prays) is parallel-kind, belonging to a different character (ar_claudius) and not precipitating the main recognition. The count should be 'first of two staging steps' or 'first of three chain steps.' The remaining structural analysis — provisional knowledge, distance of 16 τ_s-units to the main anagnorisis — is sound."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_hamlet_mousetrap",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly characterizes the Mousetrap as the second staging step that promotes the Ghost's claim from provisional belief to verified certainty. Claudius's reaction at E_mousetrap_performance (τ_s=6) is substrate-grounded. The 11-τ_s distance to the main anagnorisis at τ_s=17 is arithmetically correct. The observation that the remaining epistemic gap concerns the shape of Claudius's counter-plot is a well-bounded claim."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_claudius_prays",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly types this as a parallel-kind step: Claudius's character-level anagnorisis (recognizing his moral bankruptcy) is structurally distinct from Hamlet's main recognition at τ_s=17. The claim that it does not causally drive Hamlet's anagnorisis is consistent with precipitates_main=false; Hamlet observes the scene but misreads it, and his final recognition comes through Laertes, not through any channel from the prayer scene. The structural comparison to Lady Macbeth's sleepwalking is illustrative rather than grounding, which is acceptable."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_hamlet_laertes_mirror",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The mirror is well-grounded across the over_event_ids: both sons' paths to revenge tracked from E_hamlet_meets_ghost through E_laertes_returns to the mutual deaths at τ_s=17–18. The structural inversion — Hamlet verifies before acting, Laertes acts on Claudius's framing without verification — is the same contrast encoded in their respective hamartia_text fields. The catharsis claim (the mirror is what the play's catharsis depends on) is a strong Aristotelian reading grounded in the clustered deaths."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_hamlet_claudius_foil",
+        "field": "annotation",
+        "verdict": "needs-work",
+        "rationale": "The foil framing — failure-of-action vs. failure-of-renunciation — is well-grounded and consistent with both characters' hamartia_text. However, the sentence 'Each recognizes the other's failure in the moment of their own catastrophe' overreads the substrate: Claudius's prayer-scene anagnorisis (E_claudius_prays) is self-directed — he recognizes his own inability to repent, not Hamlet's failure of action. Hamlet's final recognition (E_laertes_reveals_plot) concerns the poisoned-duel conspiracy, not Claudius's hamartia of retention. The foil is structural, operating at the level of opposed hamartiai, but the claim of mutual cross-recognition is not carried by the substrate events."
+      }
+    ],
+    "observation_commentaries": [],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The encoding is a thorough Aristotelian surface. Every review engaged the dialect's own primitives: mythos as the arrangement of incidents, peripeteia at E_hamlet_kills_polonius as reversal from avenger to fugitive, anagnorisis at E_laertes_reveals_plot as the protagonist's recognition, hamartia as erroneous judgment (not moral depravity) for all three characters, the complex plot typing, and catharsis grounded in pity and fear at the clustered catastrophe. The phase annotations use desis ('binding') and lusis ('unbinding') directly from Poetics 1455b. The sketch-02 anagnorisis_chain with staging and parallel step-kinds, the peripeteia_anagnorisis_binding='separated' typing, and the sketch-03 ArCharacterArcRelation mirror/foil distinctions all operated cleanly within the Aristotelian frame. The three needs-work findings are narrow: a miscount of staging steps, an ungrounded substrate reference in hamartia_text, and an overstatement of mutual recognition in the foil annotation — all correctable within the dialect without reaching outside it.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "Dramatic irony as audience-level epistemic advantage: the audience knows Claudius is guilty before Hamlet verifies it, but Aristotelian anagnorisis is character-level recognition only — the dialect has no typed primitive for the audience's differential knowledge state across the complication",
+        "Manipulation or puppeteer dynamics: the encoding itself notes that the Claudius-Laertes pawn/puppeteer relation is 'carried at substrate not at dialect scope,' indicating ArCharacterArcRelation's three kinds (parallel/mirror/foil) cannot express asymmetric agency relations where one character instrumentalizes another's arc"
+      ],
+      "relations_wanted": [
+        "ArCharacterArcRelation kind 'instrumental' or 'manipulation' to express asymmetric agency relations (e.g., Claudius redirecting Laertes's grief into the duel plot) — the encoding acknowledges this gap explicitly",
+        "ArCharacter field or ArMythos-level annotation for absent-but-catharsis-relevant characters (Gertrude has no ArCharacter record yet her death at τ_s=16 is structurally load-bearing for the catastrophe; a lightweight 'catharsis-participant' typing might prevent such characters from falling out of the dialect surface)"
+      ]
+    }
+  }
+}
