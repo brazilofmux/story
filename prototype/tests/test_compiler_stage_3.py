@@ -459,6 +459,30 @@ def test_start_state_already_satisfies_goal_returns_one_step_plan():
     assert result[0].type == "kills"
 
 
+def test_fully_bound_goal_without_type_assertions_still_plans():
+    """Typed enumeration is only needed when free variables remain.
+    A fully bound goal should still succeed without any type/2 facts."""
+    start = frozenset({
+        Prop("at", ("oedipus", "corinth")),
+        Prop("path", ("corinth", "thebes")),
+    })
+    goal = PlanningGoal(
+        operator=TRAVEL,
+        bindings={
+            "AGENT": "oedipus",
+            "FROM": "corinth",
+            "TO": "thebes",
+        },
+    )
+    result = plan_to_goal(start, goal, (TRAVEL,))
+    assert isinstance(result, tuple), (
+        f"expected tuple on fully-bound success; got "
+        f"{type(result).__name__}: {result}"
+    )
+    assert len(result) == 1
+    assert result[0].type == "travel"
+
+
 # ----------------------------------------------------------------------------
 # Unification + variable-binding
 # ----------------------------------------------------------------------------
@@ -901,6 +925,7 @@ TESTS = [
     test_planning_error_is_frozen,
     # Degenerate
     test_start_state_already_satisfies_goal_returns_one_step_plan,
+    test_fully_bound_goal_without_type_assertions_still_plans,
     # Unification + binding
     test_goal_with_all_variables_bound_skips_enumeration,
     test_path_mismatch_prevents_plan,

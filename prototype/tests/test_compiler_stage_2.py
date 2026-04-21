@@ -228,6 +228,46 @@ def test_synthetic_phase_authoring_above_max():
     )
 
 
+def test_synthetic_phase_min_negative_flags():
+    """Negative min_event_count is malformed for stage 2 and should
+    surface as structured infeasibility."""
+    phases = (
+        _phase("ph_bad_min", "beginning", event_count=3,
+               min_event_count=-2),
+    )
+    m = _mythos(phases)
+    result = stage_2_feasibility(m, word_budget=100_000)
+    assert not result.is_feasible
+    assert "phase_min_negative" in _codes(result)
+    err = next(
+        e for e in result.errors if e.code == "phase_min_negative"
+    )
+    assert any(
+        "raise phases['ph_bad_min'].min_event_count to >= 0" in rel
+        for rel in err.relaxations
+    )
+
+
+def test_synthetic_phase_max_negative_flags():
+    """Negative max_event_count must not be interpreted as the
+    unbounded sentinel 0."""
+    phases = (
+        _phase("ph_bad_max", "beginning", event_count=3,
+               max_event_count=-3),
+    )
+    m = _mythos(phases)
+    result = stage_2_feasibility(m, word_budget=100_000)
+    assert not result.is_feasible
+    assert "phase_max_negative" in _codes(result)
+    err = next(
+        e for e in result.errors if e.code == "phase_max_negative"
+    )
+    assert any(
+        "raise phases['ph_bad_max'].max_event_count to >= 0" in rel
+        for rel in err.relaxations
+    )
+
+
 def test_multiple_errors_emitted_together():
     """Budget-floor + phase-inversion both fire on the same mythos.
     Stage 2 reports every independent infeasibility in one pass."""
@@ -523,6 +563,8 @@ TESTS = [
     test_synthetic_phase_bounds_inverted,
     test_synthetic_phase_authoring_below_min,
     test_synthetic_phase_authoring_above_max,
+    test_synthetic_phase_min_negative_flags,
+    test_synthetic_phase_max_negative_flags,
     test_multiple_errors_emitted_together,
     # S2F2 aggregate calculation
     test_aggregate_min_events_uses_bound_when_set,

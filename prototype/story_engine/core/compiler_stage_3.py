@@ -174,7 +174,7 @@ def plan_to_goal(
             all_free_vars.add(param)
 
     type_registry = _build_type_registry(start_state)
-    if not type_registry:
+    if not type_registry and all_free_vars:
         return PlanningError(
             code="empty_universe",
             goal=_goal_repr(goal),

@@ -107,6 +107,38 @@ def stage_2_feasibility(
     # errors so compiler callers receive a compiler-shaped diagnostic.
     for phase in mythos.phases:
         authored = len(phase.scope_event_ids)
+        if phase.min_event_count < 0:
+            errors.append(InfeasibilityError(
+                code="phase_min_negative",
+                conflicting_constraints=(
+                    f"phases[{phase.id!r}].min_event_count="
+                    f"{phase.min_event_count}",
+                ),
+                message=(
+                    f"Phase {phase.id!r}: "
+                    f"min_event_count={phase.min_event_count} "
+                    f"must be non-negative"
+                ),
+                relaxations=(
+                    f"raise phases[{phase.id!r}].min_event_count to >= 0",
+                ),
+            ))
+        if phase.max_event_count < 0:
+            errors.append(InfeasibilityError(
+                code="phase_max_negative",
+                conflicting_constraints=(
+                    f"phases[{phase.id!r}].max_event_count="
+                    f"{phase.max_event_count}",
+                ),
+                message=(
+                    f"Phase {phase.id!r}: "
+                    f"max_event_count={phase.max_event_count} "
+                    f"must be non-negative"
+                ),
+                relaxations=(
+                    f"raise phases[{phase.id!r}].max_event_count to >= 0",
+                ),
+            ))
         if (phase.min_event_count > 0
                 and phase.max_event_count > 0
                 and phase.min_event_count > phase.max_event_count):
