@@ -179,14 +179,16 @@ Current-authoring gate: Hamlet's `len(central_event_ids) = 32` falls within `[24
 
 ## Pre-sketch-04 corpus feasibility (Oedipus / Rashomon / Macbeth / Ackroyd)
 
-Pre-sketch-04 Aristotelian encodings have `phase.min_event_count = 0` (default). The S2F2 fallback (use `len(phase.scope_event_ids)` as floor) still yields a meaningful gate:
+Pre-sketch-04 Aristotelian encodings have `phase.min_event_count = 0` (default). The S2F2 fallback (use `len(phase.scope_event_ids)` as floor) still yields a meaningful gate. Actual corpus numbers:
 
 | Encoding | Authored events | min_word_floor @ W=200 |
 |---|---|---|
-| Oedipus | 23 (8+9+6) | 4,600 |
-| Rashomon | ~25 | ~5,000 |
-| Macbeth (aristotelian) | ~28 | ~5,600 |
-| Hamlet | 32 | 6,400 |
+| Oedipus | 16 (6+6+4) | 3,200 |
+| Rashomon (4 mythoi) | 10 / 9 / 12 / 11 | 2,000 / 1,800 / 2,400 / 2,200 |
+| Macbeth (aristotelian) | 22 (8+9+5) | 4,400 |
+| Hamlet | 32 authored; 24 aggregate_min from A15-SE1 bounds | 4,800 (24 × 200) |
+
+Hamlet is the only encoding whose floor is driven by A15-SE1 bounds (24 events) rather than authoring (32 events); it is the cheapest encoding per-bound because 24 < 32. All other encodings' floors are driven by authoring.
 
 Expected test: each pre-sketch-04 encoding passes stage-2 feasibility at `word_budget = 10,000`. Each fails at `word_budget = 1,000`. Corpus sanity is a bounded sweep.
 

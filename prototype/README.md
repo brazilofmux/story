@@ -47,6 +47,7 @@ python3 -m tests.test_verification
 python3 -m tests.test_rashomon
 python3 -m tests.test_proposal_walker
 python3 -m tests.test_save_the_cat
+python3 -m tests.test_compiler_stage_2
 ```
 
 Minimal bulk run for the standard-library core:
@@ -62,6 +63,7 @@ for t in \
   test_proposal_walker \
   test_rashomon \
   test_save_the_cat \
+  test_compiler_stage_2 \
   test_skeleton \
   test_substrate \
   test_verification
