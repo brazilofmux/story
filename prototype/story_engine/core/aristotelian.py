@@ -108,6 +108,50 @@ VALID_STEP_KINDS: frozenset = frozenset({
     STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
 })
 
+# A16-SP1 (sketch-04) — tonal_register controlled-plus-open vocabulary.
+# Per DCS3 (dialect-compilation-surface-sketch-01) side 2 carries no
+# verifier coverage; the constants below are published for encoding
+# authors. Empty string (default) means neutral.
+
+TONAL_REGISTER_TRAGIC_PURE = "tragic-pure"
+TONAL_REGISTER_TRAGIC_WITH_IRONY = "tragic-with-irony"
+TONAL_REGISTER_ELEGIAC = "elegiac"
+TONAL_REGISTER_CLAUSTROPHOBIC = "claustrophobic"
+TONAL_REGISTER_CLASSICAL = "classical"
+TONAL_REGISTER_MODERN = "modern"
+
+CANONICAL_TONAL_REGISTERS: frozenset = frozenset({
+    TONAL_REGISTER_TRAGIC_PURE, TONAL_REGISTER_TRAGIC_WITH_IRONY,
+    TONAL_REGISTER_ELEGIAC, TONAL_REGISTER_CLAUSTROPHOBIC,
+    TONAL_REGISTER_CLASSICAL, TONAL_REGISTER_MODERN,
+})
+
+# A16-SP2 (sketch-04) — binding_distance_preference. Soft preference
+# over distances admissible under whatever A12 binding-class is asserted.
+
+BINDING_PREF_NEAR = "prefer_near"
+BINDING_PREF_SEPARATED = "prefer_separated"
+BINDING_PREF_WIDE = "prefer_wide"
+BINDING_PREF_NEUTRAL = "neutral"
+
+CANONICAL_BINDING_DISTANCE_PREFERENCES: frozenset = frozenset({
+    BINDING_PREF_NEAR, BINDING_PREF_SEPARATED,
+    BINDING_PREF_WIDE, BINDING_PREF_NEUTRAL,
+})
+
+# A16-SP3 (sketch-04) — phase pacing_preference.
+
+PACING_SLOW_BURN = "slow_burn"
+PACING_EVEN = "even"
+PACING_ACCELERATING = "accelerating"
+PACING_RAPID_ESCALATION = "rapid_escalation"
+PACING_DECELERATING = "decelerating"
+
+CANONICAL_PACING_PREFERENCES: frozenset = frozenset({
+    PACING_SLOW_BURN, PACING_EVEN, PACING_ACCELERATING,
+    PACING_RAPID_ESCALATION, PACING_DECELERATING,
+})
+
 SEVERITY_NOTED = "noted"
 SEVERITY_ADVISES_REVIEW = "advises-review"
 
@@ -125,10 +169,24 @@ class ArPhase:
     (Poetics 1451a). `scope_event_ids` names the substrate events
     authoring this phase; no overlap across phases within a single
     mythos (A6 unity-of-action check enforces disjoint coverage).
+
+    `min_event_count` / `max_event_count` (A15-SE1, sketch-04) are
+    optional hard cardinality bounds on `scope_event_ids` for the
+    compiler. 0 (default) on either side means unbounded. A7.12
+    enforces structural consistency (non-negative, min ≤ max when
+    both set, current count within bounds when bounds active).
+
+    `pacing_preference` (A16-SP3, sketch-04) is a soft annotation
+    consumed by the compiler's stage-4 ranker; empty string default
+    is neutral. Per DCS3 there is no verifier coverage for A16
+    fields.
     """
     id: str
     role: str                                # "beginning" | "middle" | "end"
     scope_event_ids: Tuple[str, ...]
+    min_event_count: int = 0                  # A15-SE1
+    max_event_count: int = 0                  # A15-SE1
+    pacing_preference: str = ""               # A16-SP3
     annotation: str = ""
 
 
@@ -199,6 +257,54 @@ class ArAnagnorisisStep:
     precipitates_main: bool = False
     step_kind: str = ""
     annotation: str = ""
+
+
+@dataclass(frozen=True)
+class ArCoPresenceRequirement:
+    """A15-SE2 (sketch-04). Hard constraint: the named characters
+    must co-locate at ≥ `min_count` substrate events whose ids fall
+    within the named phase's `scope_event_ids`.
+
+    Co-location at substrate level requires the substrate to carry
+    location state per character per event — see DOQ-AR4-1 in
+    aristotelian-sketch-04 for the substrate-coverage gap. A7.13
+    verifies structural integrity only (characters resolve, phase
+    resolves, min_count ≥ 1); whether the substrate ACTUALLY carries
+    the co-presence is a compiler-stage-3 question, not a Tier-2
+    check.
+    """
+    id: str
+    character_ref_ids: Tuple[str, ...]   # ≥ 2 (A7.13 check 1)
+    phase_id: str
+    min_count: int = 1
+
+
+@dataclass(frozen=True)
+class ArAudienceKnowledgeConstraint:
+    """A15-SE3 (sketch-04). Hard constraint: the audience must
+    possess the named knowledge `subject` by τ_s ≤ `latest_τ_s`.
+    When `source_event_id` is set, asserts the knowledge is
+    delivered at that specific event.
+
+    The `subject` is a free-text canonical knowledge claim — the
+    dialect does not constrain its vocabulary (DOQ-AR4-2 banks the
+    cross-encoding consistency question).
+
+    Distinct from sketch-03 OQ-AP9 (audience-level recognition as a
+    dialect record): A15-SE3 is an authorial *constraint on
+    knowledge timing*, not a dialect-level recognition record. The
+    two are architecturally orthogonal.
+
+    A7.14 verifies structural integrity only (subject non-empty,
+    latest_τ_s ≥ 0, source_event_id resolves with τ_s ≤ latest_τ_s).
+    Whether the substrate's audience-projection state actually
+    carries the knowledge is out of scope for Tier-2 — see
+    DOQ-AR4-1.
+    """
+    id: str
+    subject: str
+    latest_τ_s: int
+    source_event_id: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -274,6 +380,26 @@ class ArMythos:
     # step_kind chain step derives to "parallel" (different char)
     # or "precipitating" (from precipitates_main).
     anagnorisis_character_ref_id: Optional[str] = None
+    # A15-SE2 (sketch-04) — co-presence hard constraints. Compiler
+    # stage-1 extracts to per-event STRIPS preconditions; stage-3
+    # planner generates intermediate events to satisfy them. A7.13
+    # checks structural integrity only (character + phase resolution).
+    co_presence_requirements: Tuple[
+        ArCoPresenceRequirement, ...
+    ] = ()
+    # A15-SE3 (sketch-04) — audience-knowledge timing hard constraints.
+    # Compiler stage-1 extracts to audience-state invariants. A7.14
+    # checks structural integrity only.
+    audience_knowledge_constraints: Tuple[
+        ArAudienceKnowledgeConstraint, ...
+    ] = ()
+    # A16-SP1 (sketch-04) — soft tonal preference for stage-4 ranker.
+    # Empty default = neutral. No verifier coverage per DCS3.
+    tonal_register: str = ""
+    # A16-SP2 (sketch-04) — soft preference over peripeteia↔anagnorisis
+    # binding distance. Distinct from A12's typed binding assertion;
+    # this is a stage-4 ranker scoring input. Empty default = neutral.
+    binding_distance_preference: str = ""
 
 
 # ============================================================================
@@ -1229,6 +1355,192 @@ def _check_anagnorisis_step_kind(
 
 
 # ============================================================================
+# Sketch-04 checks — A7.12 + A7.13 + A7.14
+# ============================================================================
+
+
+def _check_phase_event_count_bound(mythos: ArMythos) -> list:
+    """A7.12. Structural consistency for A15-SE1 phase cardinality.
+
+    1. min_event_count ≥ 0.
+    2. max_event_count ≥ 0.
+    3. If both > 0: min_event_count ≤ max_event_count.
+    4. When bounds are active, len(scope_event_ids) within bounds.
+    """
+    out: list = []
+    for ph in mythos.phases:
+        if ph.min_event_count < 0:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="phase_event_count_min_negative",
+                target_id=ph.id,
+                message=(f"ArPhase {ph.id!r} declares min_event_count="
+                         f"{ph.min_event_count}; A15-SE1 requires "
+                         f"non-negative."),
+            ))
+        if ph.max_event_count < 0:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="phase_event_count_max_negative",
+                target_id=ph.id,
+                message=(f"ArPhase {ph.id!r} declares max_event_count="
+                         f"{ph.max_event_count}; A15-SE1 requires "
+                         f"non-negative."),
+            ))
+        if (ph.min_event_count > 0
+                and ph.max_event_count > 0
+                and ph.min_event_count > ph.max_event_count):
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="phase_event_count_bounds_inverted",
+                target_id=ph.id,
+                message=(f"ArPhase {ph.id!r} declares "
+                         f"min_event_count={ph.min_event_count} > "
+                         f"max_event_count={ph.max_event_count}; "
+                         f"A15-SE1 requires min ≤ max when both set."),
+            ))
+        actual = len(ph.scope_event_ids)
+        if ph.min_event_count > 0 and actual < ph.min_event_count:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="phase_event_count_below_min",
+                target_id=ph.id,
+                message=(f"ArPhase {ph.id!r} has "
+                         f"len(scope_event_ids)={actual} below "
+                         f"min_event_count={ph.min_event_count}."),
+            ))
+        if ph.max_event_count > 0 and actual > ph.max_event_count:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="phase_event_count_above_max",
+                target_id=ph.id,
+                message=(f"ArPhase {ph.id!r} has "
+                         f"len(scope_event_ids)={actual} above "
+                         f"max_event_count={ph.max_event_count}."),
+            ))
+    return out
+
+
+def _check_co_presence_requirements(mythos: ArMythos) -> list:
+    """A7.13. Structural integrity for A15-SE2 co-presence requirements.
+
+    1. len(character_ref_ids) ≥ 2.
+    2. All character_ref_ids resolve in mythos.characters.
+    3. phase_id resolves in mythos.phases.
+    4. min_count ≥ 1.
+
+    Substrate-level co-presence verification is out of scope (compiler
+    stage-3 question; DOQ-AR4-1).
+    """
+    out: list = []
+    char_ids = {c.id for c in mythos.characters}
+    phase_ids = {ph.id for ph in mythos.phases}
+
+    for req in mythos.co_presence_requirements:
+        if len(req.character_ref_ids) < 2:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="co_presence_refs_too_few",
+                target_id=req.id,
+                message=(f"ArCoPresenceRequirement {req.id!r} lists "
+                         f"{len(req.character_ref_ids)} character id(s); "
+                         f"A15-SE2 requires at least 2."),
+            ))
+        for cid in req.character_ref_ids:
+            if cid not in char_ids:
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="co_presence_character_unresolved",
+                    target_id=req.id,
+                    message=(f"ArCoPresenceRequirement {req.id!r} names "
+                             f"character_ref_id={cid!r} which does not "
+                             f"resolve against mythos {mythos.id!r}'s "
+                             f"characters tuple."),
+                ))
+        if req.phase_id not in phase_ids:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="co_presence_phase_unresolved",
+                target_id=req.id,
+                message=(f"ArCoPresenceRequirement {req.id!r} names "
+                         f"phase_id={req.phase_id!r} which does not "
+                         f"resolve against mythos {mythos.id!r}'s "
+                         f"phases tuple."),
+            ))
+        if req.min_count < 1:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="co_presence_min_count_zero",
+                target_id=req.id,
+                message=(f"ArCoPresenceRequirement {req.id!r} declares "
+                         f"min_count={req.min_count}; A15-SE2 requires "
+                         f"≥ 1."),
+            ))
+    return out
+
+
+def _check_audience_knowledge_constraints(
+    mythos: ArMythos,
+    events_by_id: dict,
+) -> list:
+    """A7.14. Structural integrity for A15-SE3 audience-knowledge.
+
+    1. subject non-empty after strip.
+    2. latest_τ_s ≥ 0.
+    3. source_event_id (if set) resolves in substrate (when threaded).
+    4. source_event_id (if set) resolves to event with τ_s ≤ latest_τ_s
+       (when substrate threaded).
+
+    Substrate audience-projection coverage is out of scope (DOQ-AR4-1).
+    """
+    out: list = []
+    for con in mythos.audience_knowledge_constraints:
+        if not con.subject.strip():
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="audience_knowledge_subject_empty",
+                target_id=con.id,
+                message=(f"ArAudienceKnowledgeConstraint {con.id!r} has "
+                         f"empty subject; A15-SE3 requires a non-empty "
+                         f"canonical knowledge claim."),
+            ))
+        if con.latest_τ_s < 0:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="audience_knowledge_τ_s_negative",
+                target_id=con.id,
+                message=(f"ArAudienceKnowledgeConstraint {con.id!r} "
+                         f"declares latest_τ_s={con.latest_τ_s}; "
+                         f"A15-SE3 requires non-negative."),
+            ))
+        if con.source_event_id is not None and events_by_id:
+            src = events_by_id.get(con.source_event_id)
+            if src is None:
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="audience_knowledge_source_event_unresolved",
+                    target_id=con.id,
+                    message=(f"ArAudienceKnowledgeConstraint {con.id!r} "
+                             f"names source_event_id="
+                             f"{con.source_event_id!r} which does not "
+                             f"resolve in substrate events."),
+                ))
+            elif src.τ_s > con.latest_τ_s:
+                out.append(ArObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="audience_knowledge_source_event_too_late",
+                    target_id=con.id,
+                    message=(f"ArAudienceKnowledgeConstraint {con.id!r} "
+                             f"source_event_id={con.source_event_id!r} "
+                             f"has τ_s={src.τ_s} > latest_τ_s="
+                             f"{con.latest_τ_s}; A15-SE3 requires the "
+                             f"source event to deliver the knowledge "
+                             f"by latest_τ_s."),
+                ))
+    return out
+
+
+# ============================================================================
 # Public verify — A7 orchestrator
 # ============================================================================
 
@@ -1241,7 +1553,7 @@ def verify(
     relations: tuple = (),
     character_arc_relations: tuple = (),
 ) -> list:
-    """Run A7 checks 1-5 + A7.6-A7.9 + A7.10-A7.11 on a single mythos.
+    """Run A7 checks 1-5 + A7.6-A7.9 + A7.10-A7.11 + A7.12-A7.14 on a single mythos.
 
     `substrate_events` is the encoding's Event records. Empty by
     default — event-ref integrity, unity-of-time, unity-of-place,
@@ -1273,6 +1585,13 @@ def verify(
     regardless of which mythos it targets (the relation's `mythos_id`
     selects which mythos it binds to). Default empty; pre-sketch-03
     encodings change nothing.
+
+    Sketch-04 adds A15 (hard structural extensions) and A16 (soft
+    preferences) as new optional fields on the existing ArPhase /
+    ArMythos records. A7.12 / A7.13 / A7.14 cover A15 only — A16
+    fields carry no verifier coverage by DCS3. No new kwarg; A7.12-
+    A7.14 walk the existing structures and skip cleanly when
+    sketch-04 fields stay at defaults.
     """
     events_by_id = {e.id: e for e in substrate_events}
 
@@ -1292,6 +1611,11 @@ def verify(
         character_arc_relations, mythoi, events_by_id,
     ))
     out.extend(_check_anagnorisis_step_kind(mythos, events_by_id))
+    out.extend(_check_phase_event_count_bound(mythos))
+    out.extend(_check_co_presence_requirements(mythos))
+    out.extend(_check_audience_knowledge_constraints(
+        mythos, events_by_id,
+    ))
     return out
 
 

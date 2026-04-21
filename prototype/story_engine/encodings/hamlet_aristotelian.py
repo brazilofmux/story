@@ -138,19 +138,26 @@ from __future__ import annotations
 
 from story_engine.core.aristotelian import (
     ArAnagnorisisStep,
+    ArAudienceKnowledgeConstraint,
     ArCharacter,
     ArCharacterArcRelation,
+    ArCoPresenceRequirement,
     ArMythos,
     ArPhase,
     ARC_RELATION_FOIL,
     ARC_RELATION_MIRROR,
+    BINDING_PREF_WIDE,
     BINDING_SEPARATED,
+    PACING_EVEN,
+    PACING_RAPID_ESCALATION,
+    PACING_SLOW_BURN,
     PHASE_BEGINNING,
     PHASE_END,
     PHASE_MIDDLE,
     PLOT_COMPLEX,
     STEP_KIND_PARALLEL,
     STEP_KIND_STAGING,
+    TONAL_REGISTER_TRAGIC_WITH_IRONY,
 )
 
 
@@ -176,6 +183,15 @@ PH_BEGINNING = ArPhase(
         "E_polonius_theory",
         "E_players_arrive",
     ),
+    # A15-SE1 — current count 13; bounds frame the structural mass
+    # without overspecifying. A future compilation could regenerate
+    # within (10..15) without violating the dialect.
+    min_event_count=10,
+    max_event_count=15,
+    # A16-SP3 — beginning establishes terrain at steady tempo; the
+    # ghost-scene at τ_s=1 is dramatic but the surrounding antecedents
+    # and the antic-disposition + players-arrive setup are cumulative.
+    pacing_preference=PACING_EVEN,
     annotation=(
         "Antecedent conditions, the secret crime, and the Ghost's "
         "commission that makes it actionable. The five pre-play world "
@@ -206,6 +222,16 @@ PH_MIDDLE = ArPhase(
         "E_laertes_returns",
         "E_duel_plotted",
     ),
+    # A15-SE1 — current count 11; bounds (8..14) admit a tighter
+    # middle (8) for a more compressed delay or a wider middle (14)
+    # for a more leisurely stage-management of doubt.
+    min_event_count=8,
+    max_event_count=14,
+    # A16-SP3 — the middle is the famous Hamlet delay rendered
+    # structurally. Mousetrap → prayer → closet → exile → Ophelia's
+    # madness → Laertes's return → duel-plot is a slow burn of
+    # tightening pressure rather than steady or escalating.
+    pacing_preference=PACING_SLOW_BURN,
     annotation=(
         "The binding. The Mousetrap (τ_s=6) verifies the Ghost's "
         "claim — Hamlet's held-belief about Claudius's crime "
@@ -236,6 +262,14 @@ PH_END = ArPhase(
         "E_laertes_dies",
         "E_hamlet_dies",
     ),
+    # A15-SE1 — current count 8; tight bounds (6..10) reflect that
+    # the catastrophe is structurally compressed: the graveyard
+    # threshold then four deaths within two τ_s steps.
+    min_event_count=6,
+    max_event_count=10,
+    # A16-SP3 — graveyard threshold then four deaths inside τ_s 16-18
+    # is the corpus's clearest case of rapid escalation.
+    pacing_preference=PACING_RAPID_ESCALATION,
     annotation=(
         "The unbinding. The graveyard scene (τ_s=14) is the "
         "meditative threshold — Hamlet contemplates Yorick's skull "
@@ -529,6 +563,100 @@ AR_HAMLET_CHARACTER_ARC_RELATIONS = (
 
 
 # ============================================================================
+# Co-presence requirements — A15-SE2 (sketch-04)
+# ============================================================================
+#
+# Three structurally load-bearing co-presence requirements expressed
+# as hard constraints. Each names characters whose simultaneous
+# presence at substrate events within a named phase is *required* by
+# the dialect, not merely *related* (the over_event_ids tuple of A13
+# arc-relations is a relation-annotation; A15-SE2 is a hard
+# constraint the compiler must satisfy).
+#
+# Only existing AR_* characters are referenced. Horatio's
+# narratively-load-bearing presence (Ghost-scene witness, dying-
+# Hamlet auditor) is currently substrate-only — no ArCharacter
+# record. Adding AR_HORATIO would be an independent encoding
+# extension; sketch-04 does not require it.
+
+AR_HAMLET_CO_PRESENCE = (
+    ArCoPresenceRequirement(
+        id="copres_hamlet_claudius_end",
+        character_ref_ids=("ar_hamlet", "ar_claudius"),
+        phase_id="ph_hamlet_end",
+        # The duel + the final killing — both Hamlet and Claudius
+        # must be present at ≥ 2 events of the end phase.
+        min_count=2,
+    ),
+    ArCoPresenceRequirement(
+        id="copres_hamlet_laertes_end",
+        character_ref_ids=("ar_hamlet", "ar_laertes"),
+        phase_id="ph_hamlet_end",
+        # The duel + Laertes's deathbed reveal — both must be present
+        # together at ≥ 2 end-phase events for the catastrophe
+        # machinery to land.
+        min_count=2,
+    ),
+    ArCoPresenceRequirement(
+        id="copres_claudius_laertes_middle",
+        character_ref_ids=("ar_claudius", "ar_laertes"),
+        phase_id="ph_hamlet_middle",
+        # Laertes's return (τ_s=12) + duel-plot conspiracy (τ_s=13)
+        # — Claudius redirects Laertes's grief into the duel scheme.
+        # Both must be present together at ≥ 1 middle-phase event for
+        # the conspiracy to be on-stage rather than off-stage.
+        min_count=1,
+    ),
+)
+
+
+# ============================================================================
+# Audience-knowledge constraints — A15-SE3 (sketch-04)
+# ============================================================================
+#
+# Three load-bearing pieces of dramatic-irony knowledge. Each is a
+# setup the play exploits at a later moment: the Ghost's revelation
+# grounds the audience's reading of every Hamlet/Claudius scene;
+# Polonius-behind-the-arras grounds Hamlet's mistaken stabbing; the
+# poisoned-sword setup grounds the entire end-phase reading.
+#
+# The `subject` strings are free-text canonical knowledge claims.
+# DOQ-AR4-2 (sketch-04) banks the cross-encoding vocabulary
+# question; for now, conventions are encoding-local.
+
+AR_HAMLET_AUDIENCE_KNOWLEDGE = (
+    ArAudienceKnowledgeConstraint(
+        id="ak_claudius_killed_king_hamlet",
+        subject="claudius_killed_king_hamlet",
+        # Audience must know by the Ghost-scene at τ_s=1 — the
+        # revelation is the source.
+        latest_τ_s=1,
+        source_event_id="E_hamlet_meets_ghost",
+    ),
+    ArAudienceKnowledgeConstraint(
+        id="ak_polonius_behind_arras",
+        subject="polonius_behind_arras",
+        # Audience knows in the same scene as the stabbing (τ_s=8):
+        # Polonius hides at τ_a=90, Hamlet stabs at τ_a=92. Same
+        # τ_s; the dramatic-irony window is the audience-time gap
+        # between hiding and stabbing inside the scene.
+        latest_τ_s=8,
+        source_event_id="E_polonius_hides_arras",
+    ),
+    ArAudienceKnowledgeConstraint(
+        id="ak_duel_swords_poisoned",
+        subject="laertes_sword_unbated_and_poisoned",
+        # Audience knows by the duel-plot scene (τ_s=13). Grounds
+        # the entire end-phase reading: every blow in the τ_s=16
+        # exchange-wound is read against the audience's knowledge
+        # that one rapier carries death.
+        latest_τ_s=13,
+        source_event_id="E_duel_plotted",
+    ),
+)
+
+
+# ============================================================================
 # Mythos — A1
 # ============================================================================
 
@@ -664,6 +792,28 @@ AR_HAMLET_MYTHOS = ArMythos(
     # verify (A7.11 invariant 2: staging steps' character_ref_id
     # must equal this value).
     anagnorisis_character_ref_id="ar_hamlet",
+    # A15-SE2 (sketch-04) — three hard co-presence requirements
+    # naming Hamlet+Claudius (end), Hamlet+Laertes (end), and
+    # Claudius+Laertes (middle). See the AR_HAMLET_CO_PRESENCE
+    # block above for per-record rationale.
+    co_presence_requirements=AR_HAMLET_CO_PRESENCE,
+    # A15-SE3 (sketch-04) — three hard audience-knowledge timing
+    # constraints naming Claudius's crime (by τ_s=1), Polonius
+    # behind the arras (by τ_s=8), and the poisoned sword (by
+    # τ_s=13). See AR_HAMLET_AUDIENCE_KNOWLEDGE above.
+    audience_knowledge_constraints=AR_HAMLET_AUDIENCE_KNOWLEDGE,
+    # A16-SP1 (sketch-04) — soft tonal preference. "tragic-with-
+    # irony" captures the gravedigger scene, the "to be or not to
+    # be" reflexivity, the play-within-a-play recursion, and
+    # Hamlet's running self-aware commentary on his own delay.
+    # No verifier coverage by DCS3.
+    tonal_register=TONAL_REGISTER_TRAGIC_WITH_IRONY,
+    # A16-SP2 (sketch-04) — soft preference for wide
+    # peripeteia↔anagnorisis distance. The actual A12 binding is
+    # SEPARATED with distance 9 — the corpus's widest. The
+    # preference matches: Hamlet's emotional shape lives in the
+    # gap between τ_s=8 (peripeteia) and τ_s=17 (anagnorisis).
+    binding_distance_preference=BINDING_PREF_WIDE,
 )
 
 

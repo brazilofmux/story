@@ -17,17 +17,24 @@ import sys
 import traceback
 
 from story_engine.core.aristotelian import (
-    ArAnagnorisisStep, ArCharacter, ArCharacterArcRelation,
+    ArAnagnorisisStep, ArAudienceKnowledgeConstraint, ArCharacter,
+    ArCharacterArcRelation, ArCoPresenceRequirement,
     ArMythos, ArMythosRelation, ArObservation, ArPhase,
     ARC_RELATION_FOIL, ARC_RELATION_MIRROR, ARC_RELATION_PARALLEL,
-    BINDING_ADJACENT, BINDING_COINCIDENT, BINDING_SEPARATED,
+    BINDING_ADJACENT, BINDING_COINCIDENT, BINDING_PREF_NEUTRAL,
+    BINDING_PREF_WIDE, BINDING_SEPARATED,
+    CANONICAL_BINDING_DISTANCE_PREFERENCES,
     CANONICAL_CHARACTER_ARC_RELATION_KINDS,
+    CANONICAL_PACING_PREFERENCES,
     CANONICAL_RELATION_KINDS,
+    CANONICAL_TONAL_REGISTERS,
+    PACING_EVEN, PACING_RAPID_ESCALATION, PACING_SLOW_BURN,
     PHASE_BEGINNING, PHASE_END, PHASE_MIDDLE,
     PLOT_COMPLEX, PLOT_SIMPLE,
     RELATION_CONTAINS, RELATION_CONTESTS, RELATION_PARALLEL,
     SEVERITY_ADVISES_REVIEW, SEVERITY_NOTED,
     STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
+    TONAL_REGISTER_TRAGIC_WITH_IRONY,
     VALID_PERIPETEIA_ANAGNORISIS_BINDINGS,
     VALID_PHASE_ROLES, VALID_PLOT_KINDS, VALID_STEP_KINDS,
     group_by_code, group_by_severity, verify,
@@ -1496,6 +1503,446 @@ def test_verify_signature_accepts_character_arc_relations_kwarg():
 
 
 # ============================================================================
+# Sketch-04 — A15-SE1/SE2/SE3 + A16-SP1/SP2/SP3 record / vocabulary tests
+# ============================================================================
+
+
+def test_canonical_tonal_registers_contents():
+    """A16-SP1 published vocabulary — six canonical registers."""
+    assert TONAL_REGISTER_TRAGIC_WITH_IRONY in CANONICAL_TONAL_REGISTERS
+    assert len(CANONICAL_TONAL_REGISTERS) == 6
+
+
+def test_canonical_binding_distance_preferences_contents():
+    """A16-SP2 published vocabulary — four preferences."""
+    assert BINDING_PREF_WIDE in CANONICAL_BINDING_DISTANCE_PREFERENCES
+    assert BINDING_PREF_NEUTRAL in CANONICAL_BINDING_DISTANCE_PREFERENCES
+    assert len(CANONICAL_BINDING_DISTANCE_PREFERENCES) == 4
+
+
+def test_canonical_pacing_preferences_contents():
+    """A16-SP3 published vocabulary — five pacing shapes."""
+    assert PACING_SLOW_BURN in CANONICAL_PACING_PREFERENCES
+    assert PACING_EVEN in CANONICAL_PACING_PREFERENCES
+    assert PACING_RAPID_ESCALATION in CANONICAL_PACING_PREFERENCES
+    assert len(CANONICAL_PACING_PREFERENCES) == 5
+
+
+def test_arphase_sketch04_field_defaults():
+    """ArPhase A15-SE1 + A16-SP3 fields default to inert values."""
+    ph = ArPhase(id="ph_x", role=PHASE_MIDDLE, scope_event_ids=())
+    assert ph.min_event_count == 0
+    assert ph.max_event_count == 0
+    assert ph.pacing_preference == ""
+
+
+def test_armythos_sketch04_field_defaults():
+    """ArMythos A15-SE2/SE3 + A16-SP1/SP2 fields default to inert."""
+    m = _three_phase_mythos()
+    assert m.co_presence_requirements == ()
+    assert m.audience_knowledge_constraints == ()
+    assert m.tonal_register == ""
+    assert m.binding_distance_preference == ""
+
+
+def test_arcopresencerequirement_default_min_count():
+    req = ArCoPresenceRequirement(
+        id="r1", character_ref_ids=("c1", "c2"), phase_id="ph_b",
+    )
+    assert req.min_count == 1
+
+
+def test_araudienceknowledgeconstraint_default_source_event():
+    con = ArAudienceKnowledgeConstraint(
+        id="k1", subject="x", latest_τ_s=0,
+    )
+    assert con.source_event_id is None
+
+
+# ----------------------------------------------------------------------------
+# A7.12 — phase_event_count_bound consistency
+# ----------------------------------------------------------------------------
+
+
+def test_phase_event_count_bounds_default_zero_clean():
+    """A7.12 — both bounds default 0; A7.12 emits no observations."""
+    m = _three_phase_mythos()
+    obs = verify(m)
+    for code in (
+        "phase_event_count_min_negative",
+        "phase_event_count_max_negative",
+        "phase_event_count_bounds_inverted",
+        "phase_event_count_below_min",
+        "phase_event_count_above_max",
+    ):
+        assert not _has_code(obs, code)
+
+
+def test_phase_event_count_min_negative_flags():
+    """A7.12 invariant 1 — min_event_count must be ≥ 0."""
+    bad_phase = ArPhase(
+        id="ph_b", role=PHASE_BEGINNING,
+        scope_event_ids=("E1",), min_event_count=-1,
+    )
+    m = ArMythos(
+        id="m_test", title="t", action_summary="s",
+        central_event_ids=("E1", "E2", "E3"),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            bad_phase,
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=("E3",)),
+        ),
+        peripeteia_event_id="E2", anagnorisis_event_id="E3",
+    )
+    obs = verify(m)
+    assert _has_code(obs, "phase_event_count_min_negative")
+
+
+def test_phase_event_count_max_negative_flags():
+    """A7.12 invariant 2 — max_event_count must be ≥ 0."""
+    bad_phase = ArPhase(
+        id="ph_b", role=PHASE_BEGINNING,
+        scope_event_ids=("E1",), max_event_count=-1,
+    )
+    m = ArMythos(
+        id="m_test", title="t", action_summary="s",
+        central_event_ids=("E1", "E2", "E3"),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            bad_phase,
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=("E3",)),
+        ),
+        peripeteia_event_id="E2", anagnorisis_event_id="E3",
+    )
+    obs = verify(m)
+    assert _has_code(obs, "phase_event_count_max_negative")
+
+
+def test_phase_event_count_bounds_inverted_flags():
+    """A7.12 invariant 3 — when both > 0, min must be ≤ max."""
+    bad_phase = ArPhase(
+        id="ph_b", role=PHASE_BEGINNING,
+        scope_event_ids=("E1",),
+        min_event_count=5, max_event_count=2,
+    )
+    m = ArMythos(
+        id="m_test", title="t", action_summary="s",
+        central_event_ids=("E1", "E2", "E3"),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            bad_phase,
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=("E3",)),
+        ),
+        peripeteia_event_id="E2", anagnorisis_event_id="E3",
+    )
+    obs = verify(m)
+    assert _has_code(obs, "phase_event_count_bounds_inverted")
+
+
+def test_phase_event_count_below_min_flags():
+    """A7.12 invariant 4a — actual count below min flagged."""
+    short_phase = ArPhase(
+        id="ph_b", role=PHASE_BEGINNING,
+        scope_event_ids=("E1",),
+        min_event_count=3,  # but only 1 event present
+    )
+    m = ArMythos(
+        id="m_test", title="t", action_summary="s",
+        central_event_ids=("E1", "E2", "E3"),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            short_phase,
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=("E3",)),
+        ),
+        peripeteia_event_id="E2", anagnorisis_event_id="E3",
+    )
+    obs = verify(m)
+    assert _has_code(obs, "phase_event_count_below_min")
+
+
+def test_phase_event_count_above_max_flags():
+    """A7.12 invariant 4b — actual count above max flagged."""
+    long_phase = ArPhase(
+        id="ph_b", role=PHASE_BEGINNING,
+        scope_event_ids=("E1", "E1b", "E1c"),
+        max_event_count=2,
+    )
+    m = ArMythos(
+        id="m_test", title="t", action_summary="s",
+        central_event_ids=("E1", "E1b", "E1c", "E2", "E3"),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            long_phase,
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=("E3",)),
+        ),
+        peripeteia_event_id="E2", anagnorisis_event_id="E3",
+    )
+    obs = verify(m)
+    assert _has_code(obs, "phase_event_count_above_max")
+
+
+def test_phase_event_count_within_bounds_clean():
+    """A7.12 — actual count within bounds emits nothing."""
+    ok_phase = ArPhase(
+        id="ph_b", role=PHASE_BEGINNING,
+        scope_event_ids=("E1", "E1b"),
+        min_event_count=1, max_event_count=3,
+    )
+    m = ArMythos(
+        id="m_test", title="t", action_summary="s",
+        central_event_ids=("E1", "E1b", "E2", "E3"),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            ok_phase,
+            ArPhase(id="ph_m", role=PHASE_MIDDLE,
+                    scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END,
+                    scope_event_ids=("E3",)),
+        ),
+        peripeteia_event_id="E2", anagnorisis_event_id="E3",
+    )
+    obs = verify(m)
+    for code in (
+        "phase_event_count_below_min",
+        "phase_event_count_above_max",
+        "phase_event_count_bounds_inverted",
+    ):
+        assert not _has_code(obs, code)
+
+
+# ----------------------------------------------------------------------------
+# A7.13 — co_presence_required_over_phase structural integrity
+# ----------------------------------------------------------------------------
+
+
+def _co_presence_mythos(reqs: tuple) -> ArMythos:
+    """Mythos shaped for A7.13 tests: two characters, three phases."""
+    return _three_phase_mythos(
+        characters=(
+            ArCharacter(id="c1", name="Alpha"),
+            ArCharacter(id="c2", name="Beta"),
+        ),
+        co_presence_requirements=reqs,
+    )
+
+
+def test_co_presence_default_empty_clean():
+    """Empty co_presence_requirements emits no A7.13 observations."""
+    m = _three_phase_mythos()
+    obs = verify(m)
+    for code in (
+        "co_presence_refs_too_few",
+        "co_presence_character_unresolved",
+        "co_presence_phase_unresolved",
+        "co_presence_min_count_zero",
+    ):
+        assert not _has_code(obs, code)
+
+
+def test_co_presence_refs_too_few_flags():
+    """A7.13 invariant 1 — ≥2 character_ref_ids required."""
+    m = _co_presence_mythos((
+        ArCoPresenceRequirement(
+            id="r1", character_ref_ids=("c1",), phase_id="ph_b",
+        ),
+    ))
+    obs = verify(m)
+    assert _has_code(obs, "co_presence_refs_too_few")
+
+
+def test_co_presence_character_unresolved_flags():
+    """A7.13 invariant 2 — character ids must resolve in mythos."""
+    m = _co_presence_mythos((
+        ArCoPresenceRequirement(
+            id="r1", character_ref_ids=("c1", "c_ghost"),
+            phase_id="ph_b",
+        ),
+    ))
+    obs = verify(m)
+    assert _has_code(obs, "co_presence_character_unresolved")
+
+
+def test_co_presence_phase_unresolved_flags():
+    """A7.13 invariant 3 — phase_id must resolve in mythos.phases."""
+    m = _co_presence_mythos((
+        ArCoPresenceRequirement(
+            id="r1", character_ref_ids=("c1", "c2"),
+            phase_id="ph_ghost",
+        ),
+    ))
+    obs = verify(m)
+    assert _has_code(obs, "co_presence_phase_unresolved")
+
+
+def test_co_presence_min_count_zero_flags():
+    """A7.13 invariant 4 — min_count must be ≥ 1."""
+    m = _co_presence_mythos((
+        ArCoPresenceRequirement(
+            id="r1", character_ref_ids=("c1", "c2"),
+            phase_id="ph_b", min_count=0,
+        ),
+    ))
+    obs = verify(m)
+    assert _has_code(obs, "co_presence_min_count_zero")
+
+
+def test_co_presence_clean_when_all_resolve():
+    """A7.13 emits nothing when every check passes."""
+    m = _co_presence_mythos((
+        ArCoPresenceRequirement(
+            id="r1", character_ref_ids=("c1", "c2"),
+            phase_id="ph_b", min_count=2,
+        ),
+    ))
+    obs = verify(m)
+    for code in (
+        "co_presence_refs_too_few",
+        "co_presence_character_unresolved",
+        "co_presence_phase_unresolved",
+        "co_presence_min_count_zero",
+    ):
+        assert not _has_code(obs, code)
+
+
+# ----------------------------------------------------------------------------
+# A7.14 — audience_knowledge_constraint structural integrity
+# ----------------------------------------------------------------------------
+
+
+def _audience_knowledge_mythos(cons: tuple) -> ArMythos:
+    return _three_phase_mythos(audience_knowledge_constraints=cons)
+
+
+def test_audience_knowledge_default_empty_clean():
+    """Empty audience_knowledge_constraints emits nothing."""
+    m = _three_phase_mythos()
+    obs = verify(m)
+    for code in (
+        "audience_knowledge_subject_empty",
+        "audience_knowledge_τ_s_negative",
+        "audience_knowledge_source_event_unresolved",
+        "audience_knowledge_source_event_too_late",
+    ):
+        assert not _has_code(obs, code)
+
+
+def test_audience_knowledge_subject_empty_flags():
+    """A7.14 invariant 1 — subject must be non-empty after strip."""
+    m = _audience_knowledge_mythos((
+        ArAudienceKnowledgeConstraint(
+            id="k1", subject="   ", latest_τ_s=5,
+        ),
+    ))
+    obs = verify(m)
+    assert _has_code(obs, "audience_knowledge_subject_empty")
+
+
+def test_audience_knowledge_τ_s_negative_flags():
+    """A7.14 invariant 2 — latest_τ_s must be ≥ 0."""
+    m = _audience_knowledge_mythos((
+        ArAudienceKnowledgeConstraint(
+            id="k1", subject="x", latest_τ_s=-1,
+        ),
+    ))
+    obs = verify(m)
+    assert _has_code(obs, "audience_knowledge_τ_s_negative")
+
+
+def test_audience_knowledge_source_event_unresolved_flags():
+    """A7.14 invariant 3 — source_event_id must resolve in substrate."""
+    m = _audience_knowledge_mythos((
+        ArAudienceKnowledgeConstraint(
+            id="k1", subject="x", latest_τ_s=5,
+            source_event_id="E_ghost",
+        ),
+    ))
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=1),
+        _synthetic_event("E3", τ_s=2),
+    )
+    obs = verify(m, substrate_events=events)
+    assert _has_code(obs, "audience_knowledge_source_event_unresolved")
+
+
+def test_audience_knowledge_source_event_too_late_flags():
+    """A7.14 invariant 4 — source event τ_s must be ≤ latest_τ_s."""
+    m = _audience_knowledge_mythos((
+        ArAudienceKnowledgeConstraint(
+            id="k1", subject="x", latest_τ_s=1,
+            source_event_id="E3",
+        ),
+    ))
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=1),
+        _synthetic_event("E3", τ_s=5),  # too late
+    )
+    obs = verify(m, substrate_events=events)
+    assert _has_code(obs, "audience_knowledge_source_event_too_late")
+
+
+def test_audience_knowledge_source_event_skipped_without_substrate():
+    """A7.14 source-event subchecks skip when substrate not threaded."""
+    m = _audience_knowledge_mythos((
+        ArAudienceKnowledgeConstraint(
+            id="k1", subject="x", latest_τ_s=5,
+            source_event_id="E_ghost",
+        ),
+    ))
+    obs = verify(m)
+    assert not _has_code(obs, "audience_knowledge_source_event_unresolved")
+    assert not _has_code(obs, "audience_knowledge_source_event_too_late")
+
+
+def test_audience_knowledge_clean_when_all_resolve():
+    """A7.14 emits nothing when every check passes."""
+    m = _audience_knowledge_mythos((
+        ArAudienceKnowledgeConstraint(
+            id="k1", subject="x", latest_τ_s=5, source_event_id="E2",
+        ),
+    ))
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=1),
+        _synthetic_event("E3", τ_s=2),
+    )
+    obs = verify(m, substrate_events=events)
+    for code in (
+        "audience_knowledge_subject_empty",
+        "audience_knowledge_τ_s_negative",
+        "audience_knowledge_source_event_unresolved",
+        "audience_knowledge_source_event_too_late",
+    ):
+        assert not _has_code(obs, code)
+
+
+def test_verify_signature_unchanged_for_sketch_04():
+    """Sketch-04 does NOT add a verify kwarg; pre-sketch-04 callers
+    using sketch-03 signature continue to work and produce identical
+    output for encodings without sketch-04 fields populated."""
+    m = _three_phase_mythos()
+    obs_sketch_03_signature = verify(m, character_arc_relations=())
+    obs_sketch_04_signature = verify(m, character_arc_relations=())
+    assert obs_sketch_03_signature == obs_sketch_04_signature
+
+
+# ============================================================================
 # Integration — Macbeth (third Aristotelian encoding)
 # ============================================================================
 
@@ -1751,6 +2198,147 @@ def test_hamlet_aristotelian_probe_findings_authored():
         )
 
 
+def test_hamlet_aristotelian_sketch04_phase_bounds_set():
+    """Hamlet's three phases each carry A15-SE1 bounds; current event
+    counts (13/11/8) fall within (10..15 / 8..14 / 6..10)."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    bounds_by_role = {
+        ph.role: (ph.min_event_count, ph.max_event_count)
+        for ph in AR_HAMLET_MYTHOS.phases
+    }
+    assert bounds_by_role["beginning"] == (10, 15)
+    assert bounds_by_role["middle"] == (8, 14)
+    assert bounds_by_role["end"] == (6, 10)
+
+
+def test_hamlet_aristotelian_sketch04_pacing_preferences_set():
+    """Hamlet's three phases each carry A16-SP3 pacing preferences."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    pacing_by_role = {
+        ph.role: ph.pacing_preference for ph in AR_HAMLET_MYTHOS.phases
+    }
+    assert pacing_by_role["beginning"] == PACING_EVEN
+    assert pacing_by_role["middle"] == PACING_SLOW_BURN
+    assert pacing_by_role["end"] == PACING_RAPID_ESCALATION
+
+
+def test_hamlet_aristotelian_sketch04_co_presence_authored():
+    """Hamlet authors three A15-SE2 co-presence requirements naming
+    only existing AR_* characters and existing PH_* phases."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    reqs = AR_HAMLET_MYTHOS.co_presence_requirements
+    assert len(reqs) == 3
+    ids = {r.id for r in reqs}
+    assert ids == {
+        "copres_hamlet_claudius_end",
+        "copres_hamlet_laertes_end",
+        "copres_claudius_laertes_middle",
+    }
+    char_ids = {c.id for c in AR_HAMLET_MYTHOS.characters}
+    phase_ids = {ph.id for ph in AR_HAMLET_MYTHOS.phases}
+    for r in reqs:
+        for cid in r.character_ref_ids:
+            assert cid in char_ids
+        assert r.phase_id in phase_ids
+        assert r.min_count >= 1
+
+
+def test_hamlet_aristotelian_sketch04_audience_knowledge_authored():
+    """Hamlet authors three A15-SE3 audience-knowledge constraints,
+    each pointing at an existing substrate event with τ_s ≤ latest."""
+    from story_engine.encodings.hamlet import FABULA
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    cons = AR_HAMLET_MYTHOS.audience_knowledge_constraints
+    assert len(cons) == 3
+    by_id = {e.id: e for e in FABULA}
+    for c in cons:
+        assert c.subject.strip()
+        assert c.latest_τ_s >= 0
+        if c.source_event_id is not None:
+            assert c.source_event_id in by_id
+            assert by_id[c.source_event_id].τ_s <= c.latest_τ_s
+
+
+def test_hamlet_aristotelian_sketch04_tonal_register_set():
+    """Hamlet declares tonal_register='tragic-with-irony' (A16-SP1)."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    assert (AR_HAMLET_MYTHOS.tonal_register
+            == TONAL_REGISTER_TRAGIC_WITH_IRONY)
+
+
+def test_hamlet_aristotelian_sketch04_binding_distance_preference_set():
+    """Hamlet declares binding_distance_preference='prefer_wide'
+    (A16-SP2). Matches the actual SEPARATED distance 9 — corpus widest."""
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    assert (AR_HAMLET_MYTHOS.binding_distance_preference
+            == BINDING_PREF_WIDE)
+
+
+def test_pre_sketch_04_encodings_emit_no_sketch_04_codes():
+    """A7.12-A7.14 emit no observations on Oedipus / Rashomon /
+    Macbeth — the three pre-sketch-04 encodings carry default-empty
+    sketch-04 fields."""
+    from story_engine.encodings.oedipus_aristotelian import (
+        AR_OEDIPUS_MYTHOS,
+    )
+    from story_engine.encodings.oedipus import FABULA as OEDIPUS_FABULA
+    from story_engine.encodings.rashomon_aristotelian import (
+        AR_RASHOMON_MYTHOI,
+    )
+    from story_engine.encodings.rashomon import (
+        EVENTS_ALL as RASHOMON_FABULA,
+    )
+    from story_engine.encodings.macbeth_aristotelian import (
+        AR_MACBETH_MYTHOS,
+    )
+    from story_engine.encodings.macbeth import FABULA as MACBETH_FABULA
+
+    sketch_04_codes = {
+        "phase_event_count_min_negative",
+        "phase_event_count_max_negative",
+        "phase_event_count_bounds_inverted",
+        "phase_event_count_below_min",
+        "phase_event_count_above_max",
+        "co_presence_refs_too_few",
+        "co_presence_character_unresolved",
+        "co_presence_phase_unresolved",
+        "co_presence_min_count_zero",
+        "audience_knowledge_subject_empty",
+        "audience_knowledge_τ_s_negative",
+        "audience_knowledge_source_event_unresolved",
+        "audience_knowledge_source_event_too_late",
+    }
+
+    pairs = [
+        (AR_OEDIPUS_MYTHOS, OEDIPUS_FABULA),
+        (AR_MACBETH_MYTHOS, MACBETH_FABULA),
+    ]
+    for myth in AR_RASHOMON_MYTHOI:
+        pairs.append((myth, RASHOMON_FABULA))
+
+    for myth, fabula in pairs:
+        obs = verify(myth, substrate_events=fabula, mythoi=(myth,))
+        emitted = {o.code for o in obs}
+        leak = emitted & sketch_04_codes
+        assert not leak, (
+            f"Pre-sketch-04 mythos {myth.id!r} emitted sketch-04 codes "
+            f"{leak}; sketch-04 fields are not extension-only as "
+            f"committed."
+        )
+
+
 def test_hamlet_aristotelian_no_mythos_relation_authored():
     """Hamlet is single-mythos. Unlike Rashomon, no ArMythosRelation
     is authored. The module exposes no `AR_HAMLET_RELATIONS`
@@ -1867,6 +2455,38 @@ TESTS = [
     test_step_kind_empty_back_compat_verifies_clean,
     test_arcrelation_verifies_clean_when_all_resolve,
     test_verify_signature_accepts_character_arc_relations_kwarg,
+    # Sketch-04 — A15-SE1/SE2/SE3 + A16-SP1/SP2/SP3
+    test_canonical_tonal_registers_contents,
+    test_canonical_binding_distance_preferences_contents,
+    test_canonical_pacing_preferences_contents,
+    test_arphase_sketch04_field_defaults,
+    test_armythos_sketch04_field_defaults,
+    test_arcopresencerequirement_default_min_count,
+    test_araudienceknowledgeconstraint_default_source_event,
+    # A7.12 — phase_event_count_bound consistency
+    test_phase_event_count_bounds_default_zero_clean,
+    test_phase_event_count_min_negative_flags,
+    test_phase_event_count_max_negative_flags,
+    test_phase_event_count_bounds_inverted_flags,
+    test_phase_event_count_below_min_flags,
+    test_phase_event_count_above_max_flags,
+    test_phase_event_count_within_bounds_clean,
+    # A7.13 — co_presence_required_over_phase
+    test_co_presence_default_empty_clean,
+    test_co_presence_refs_too_few_flags,
+    test_co_presence_character_unresolved_flags,
+    test_co_presence_phase_unresolved_flags,
+    test_co_presence_min_count_zero_flags,
+    test_co_presence_clean_when_all_resolve,
+    # A7.14 — audience_knowledge_constraint
+    test_audience_knowledge_default_empty_clean,
+    test_audience_knowledge_subject_empty_flags,
+    test_audience_knowledge_τ_s_negative_flags,
+    test_audience_knowledge_source_event_unresolved_flags,
+    test_audience_knowledge_source_event_too_late_flags,
+    test_audience_knowledge_source_event_skipped_without_substrate,
+    test_audience_knowledge_clean_when_all_resolve,
+    test_verify_signature_unchanged_for_sketch_04,
     # Macbeth — third Aristotelian encoding
     test_macbeth_aristotelian_verifies_clean,
     test_macbeth_aristotelian_records_shape,
@@ -1879,6 +2499,14 @@ TESTS = [
     test_hamlet_aristotelian_binding_is_separated_distance_nine,
     test_hamlet_aristotelian_chain_three_steps_two_kinds,
     test_hamlet_aristotelian_probe_findings_authored,
+    # Hamlet sketch-04 integration
+    test_hamlet_aristotelian_sketch04_phase_bounds_set,
+    test_hamlet_aristotelian_sketch04_pacing_preferences_set,
+    test_hamlet_aristotelian_sketch04_co_presence_authored,
+    test_hamlet_aristotelian_sketch04_audience_knowledge_authored,
+    test_hamlet_aristotelian_sketch04_tonal_register_set,
+    test_hamlet_aristotelian_sketch04_binding_distance_preference_set,
+    test_pre_sketch_04_encodings_emit_no_sketch_04_codes,
     test_hamlet_aristotelian_no_mythos_relation_authored,
 ]
 
