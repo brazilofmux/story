@@ -34,7 +34,7 @@ from story_engine.core.aristotelian import (
     RELATION_CONTAINS, RELATION_CONTESTS, RELATION_PARALLEL,
     SEVERITY_ADVISES_REVIEW, SEVERITY_NOTED,
     STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
-    TONAL_REGISTER_TRAGIC_WITH_IRONY,
+    TONAL_REGISTER_TRAGIC_PURE, TONAL_REGISTER_TRAGIC_WITH_IRONY,
     VALID_PERIPETEIA_ANAGNORISIS_BINDINGS,
     VALID_PHASE_ROLES, VALID_PLOT_KINDS, VALID_STEP_KINDS,
     group_by_code, group_by_severity, verify,
@@ -2354,6 +2354,345 @@ def test_hamlet_aristotelian_no_mythos_relation_authored():
 
 
 # ============================================================================
+# Integration — Lear (fifth Aristotelian encoding)
+# ============================================================================
+
+
+def test_lear_aristotelian_verifies_clean_up_to_instrumental_noted():
+    """Fifth worked case: Lear under A1-A14 + sketch-04 verifies
+    against the real lear.py FABULA with exactly two noted
+    observations, both the expected
+    character_arc_relation_kind_noncanonical codes for the two
+    `kind="instrumental"` records (OQ-AP14 pressure). No
+    advises-review severity observations; no other noted codes."""
+    from story_engine.encodings.lear import FABULA
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS, AR_LEAR_CHARACTER_ARC_RELATIONS,
+    )
+    obs = verify(
+        AR_LEAR_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_LEAR_MYTHOS,),
+        character_arc_relations=AR_LEAR_CHARACTER_ARC_RELATIONS,
+    )
+    # Exactly two observations, both noted.
+    assert len(obs) == 2, (
+        f"Expected exactly 2 observations; got {len(obs)}:\n"
+        + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
+                    for o in obs)
+    )
+    for o in obs:
+        assert o.severity == SEVERITY_NOTED, (
+            f"Expected only noted severity; got {o.severity} on "
+            f"{o.code}"
+        )
+        assert o.code == "character_arc_relation_kind_noncanonical"
+    # The two noted observations reference the two instrumental
+    # relation ids.
+    ids_flagged = sorted(o.message.split("'")[1] for o in obs)
+    assert ids_flagged == [
+        "arc_edgar_gloucester_instrumental",
+        "arc_edmund_gloucester_instrumental",
+    ]
+
+
+def test_lear_aristotelian_records_shape():
+    """Structural pins on AR_LEAR_MYTHOS. Distinct from earlier
+    encodings: asserts_unity_of_action=False (corpus first), five
+    ArCharacter records (not three), both complication and
+    denouement set (Hamlet pattern, not Oedipus/Macbeth), peripeteia
+    and anagnorisis distinct events."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS,
+    )
+    m = AR_LEAR_MYTHOS
+    assert m.plot_kind == PLOT_COMPLEX
+    assert len(m.phases) == 3
+    assert [ph.role for ph in m.phases] == [
+        PHASE_BEGINNING, PHASE_MIDDLE, PHASE_END,
+    ]
+    assert m.peripeteia_event_id == "E_goneril_strips_retinue"
+    assert m.anagnorisis_event_id == "E_lear_cordelia_reconcile"
+    assert m.peripeteia_event_id != m.anagnorisis_event_id
+    assert m.complication_event_id == "E_lear_at_gonerils"
+    assert m.denouement_event_id == "E_lear_meets_blind_gloucester"
+    # Unity of action — FALSE (corpus first).
+    assert m.asserts_unity_of_action is False
+    assert m.asserts_unity_of_time is False
+    assert m.asserts_unity_of_place is False
+    assert m.aims_at_catharsis is True
+    # Five ArCharacter records; three tragic-heroes.
+    assert len(m.characters) == 5
+    ids = sorted(c.id for c in m.characters)
+    assert ids == [
+        "ar_cordelia", "ar_edgar", "ar_edmund",
+        "ar_gloucester", "ar_lear",
+    ]
+    for char in m.characters:
+        assert char.hamartia_text, (
+            f"{char.id} missing hamartia_text"
+        )
+        assert char.character_ref_id is not None
+
+
+def test_lear_aristotelian_three_parallel_tragic_heroes():
+    """OQ-AP6 generalization pin. Lear is the corpus's second
+    ≥3-tragic-hero encoding after Hamlet. Lear / Gloucester /
+    Cordelia are the three tragic heroes; Edmund and Edgar are
+    authored as non-tragic ArCharacters to serve the A13
+    instrumental-kind relations."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS,
+    )
+    tragic = [c for c in AR_LEAR_MYTHOS.characters
+              if c.is_tragic_hero]
+    non_tragic = [c for c in AR_LEAR_MYTHOS.characters
+                  if not c.is_tragic_hero]
+    assert len(tragic) == 3
+    assert len(non_tragic) == 2
+    refs = sorted(c.character_ref_id for c in tragic)
+    assert refs == ["cordelia", "gloucester", "lear"]
+    non_tragic_refs = sorted(c.character_ref_id
+                             for c in non_tragic)
+    assert non_tragic_refs == ["edgar", "edmund"]
+
+
+def test_lear_aristotelian_asserts_unity_of_action_false_corpus_first():
+    """Lear is the corpus's FIRST encoding to set
+    asserts_unity_of_action=False. The double-plot (Lear + three
+    daughters || Gloucester + two sons) is thematically unified
+    via the A13 AR_LEAR_GLOUCESTER_PARALLEL relation but not
+    causally unified; the False assertion carries the classical-
+    unity departure. OQ_LEAR_2 forcing-function pin."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS,
+    )
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_MYTHOS,
+    )
+    assert AR_LEAR_MYTHOS.asserts_unity_of_action is False
+    # Verify no earlier Aristotelian-encoding mythos authored
+    # asserts_unity_of_action=False.
+    assert AR_HAMLET_MYTHOS.asserts_unity_of_action is True
+
+
+def test_lear_aristotelian_binding_is_separated_distance_fourteen():
+    """Lear exercises BINDING_SEPARATED at distance 14 — the widest
+    separation in the corpus (Oedipus 5, Hamlet 9, Macbeth
+    coincident). Raw τ_s distance recovered from substrate.
+    Load-bearing for OQ-AP7 — the second independent encoding to
+    re-surface the near-vs-distant separated distinction."""
+    from story_engine.encodings.lear import FABULA
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS,
+    )
+    assert (AR_LEAR_MYTHOS.peripeteia_anagnorisis_binding
+            == BINDING_SEPARATED)
+    # Default bound 3 preserved.
+    assert AR_LEAR_MYTHOS.peripeteia_anagnorisis_adjacency_bound == 3
+    by_id = {e.id: e for e in FABULA}
+    per = by_id[AR_LEAR_MYTHOS.peripeteia_event_id]
+    ana = by_id[AR_LEAR_MYTHOS.anagnorisis_event_id]
+    assert per.τ_s == 14
+    assert ana.τ_s == 28
+    assert ana.τ_s - per.τ_s == 14
+
+
+def test_lear_aristotelian_chain_two_parallel_no_staging():
+    """OQ-LEAR-1 pin. Lear's anagnorisis chain authors two steps,
+    both step_kind=parallel, ZERO staging steps despite Lear
+    himself being the anagnorisis_character. The absence is the
+    substrate signature of the emotional-vs-epistemic main-
+    anagnorisis distinction: Lear reaches anagnorisis via
+    affective progression (remove_held on a false belief) rather
+    than information acquisition (Hamlet's staging pattern)."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS,
+    )
+    chain = AR_LEAR_MYTHOS.anagnorisis_chain
+    assert len(chain) == 2
+    for step in chain:
+        assert step.step_kind == STEP_KIND_PARALLEL
+        assert step.precipitates_main is False
+    # Neither chain step's character matches the anagnorisis
+    # character (the 'no staging' shape expressed at the
+    # character-ref level).
+    assert AR_LEAR_MYTHOS.anagnorisis_character_ref_id == "ar_lear"
+    for step in chain:
+        assert step.character_ref_id != "ar_lear"
+
+
+def test_lear_aristotelian_chain_includes_post_main_step():
+    """Corpus first: Edmund's deathbed confession at τ_s=35 is a
+    parallel chain step that lands AFTER the main anagnorisis at
+    τ_s=28. A14 invariants do not forbid post-main placement for
+    parallel steps (only staging steps must precede main); this
+    encoding exercises the legal-but-unprecedented shape. The
+    pathos of Edmund's futile reversal depends structurally on
+    its post-main placement."""
+    from story_engine.encodings.lear import FABULA
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS, AR_STEP_EDMUND_CONFESSES,
+    )
+    by_id = {e.id: e for e in FABULA}
+    main_τ = by_id[AR_LEAR_MYTHOS.anagnorisis_event_id].τ_s
+    edmund_step_τ = by_id[AR_STEP_EDMUND_CONFESSES.event_id].τ_s
+    assert edmund_step_τ > main_τ, (
+        f"Expected Edmund step (τ_s={edmund_step_τ}) post-main "
+        f"(τ_s={main_τ})"
+    )
+    assert AR_STEP_EDMUND_CONFESSES.step_kind == STEP_KIND_PARALLEL
+    assert AR_STEP_EDMUND_CONFESSES.character_ref_id == "ar_edmund"
+
+
+def test_lear_aristotelian_four_character_arc_relations_two_instrumental():
+    """Four A13 relations: two canonical (parallel, foil) + two
+    non-canonical (instrumental × 2). Instrumental-kind is the
+    OQ-AP14 forcing surface; sketch-03 admits it under canonical-
+    plus-open discipline at severity=noted."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_CHARACTER_ARC_RELATIONS,
+    )
+    assert len(AR_LEAR_CHARACTER_ARC_RELATIONS) == 4
+    kinds = [r.kind for r in AR_LEAR_CHARACTER_ARC_RELATIONS]
+    assert kinds.count(ARC_RELATION_PARALLEL) == 1
+    assert kinds.count(ARC_RELATION_FOIL) == 1
+    assert kinds.count("instrumental") == 2
+    # Every relation is intra-mythos (mythos_id == "ar_lear").
+    for rel in AR_LEAR_CHARACTER_ARC_RELATIONS:
+        assert rel.mythos_id == "ar_lear"
+        assert len(rel.character_ref_ids) >= 2
+
+
+def test_lear_aristotelian_instrumental_relations_share_target_gloucester():
+    """OQ-AP14 substrate signature pin. The two non-canonical
+    instrumental relations share a TARGET (Gloucester = position 1
+    in the character_ref_ids tuple, reading the tuple as
+    (wielder, target)) and have DIFFERENT wielders (Edmund
+    malicious, Edgar therapeutic). This opposite-polarity-on-
+    shared-target shape is what the canonical vocabulary cannot
+    structurally name."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_EDMUND_GLOUCESTER_INSTRUMENTAL,
+        AR_EDGAR_GLOUCESTER_INSTRUMENTAL,
+    )
+    # Directional tuple convention: (wielder, target).
+    assert AR_EDMUND_GLOUCESTER_INSTRUMENTAL.character_ref_ids == (
+        "ar_edmund", "ar_gloucester",
+    )
+    assert AR_EDGAR_GLOUCESTER_INSTRUMENTAL.character_ref_ids == (
+        "ar_edgar", "ar_gloucester",
+    )
+    # Same target (Gloucester); different wielders.
+    assert (AR_EDMUND_GLOUCESTER_INSTRUMENTAL.character_ref_ids[1]
+            == AR_EDGAR_GLOUCESTER_INSTRUMENTAL.character_ref_ids[1])
+    assert (AR_EDMUND_GLOUCESTER_INSTRUMENTAL.character_ref_ids[0]
+            != AR_EDGAR_GLOUCESTER_INSTRUMENTAL.character_ref_ids[0])
+
+
+def test_lear_aristotelian_probe_findings_authored():
+    """OQ_AP14, OQ_AP15 (both authored as pressure), OQ_AP7
+    (re-surfaced with second-site distance), OQ_LEAR_1 (emotional-
+    vs-epistemic staging gap), and OQ_LEAR_2 (double-plot unity)
+    are authored as non-empty prose constants — the research
+    payload Session 2 committed. Each self-references its own
+    hyphenated id."""
+    from story_engine.encodings import lear_aristotelian as la
+    expected = {
+        "OQ_AP14_FINDING": "OQ-AP14",
+        "OQ_AP15_FINDING": "OQ-AP15",
+        "OQ_AP7_FINDING":  "OQ-AP7",
+        "OQ_LEAR_1":       "OQ-LEAR-1",
+        "OQ_LEAR_2":       "OQ-LEAR-2",
+    }
+    for name, prose_id in expected.items():
+        val = getattr(la, name)
+        assert isinstance(val, str), f"{name} not a string"
+        assert len(val) > 100, f"{name} too short to be meaningful"
+        assert prose_id in val, (
+            f"{name} body does not reference its own forcing-"
+            f"function id ({prose_id!r})"
+        )
+    # OQ_FINDINGS tuple is authored.
+    assert isinstance(la.OQ_FINDINGS, tuple)
+    assert len(la.OQ_FINDINGS) == 5
+
+
+def test_lear_aristotelian_no_mythos_relation_authored():
+    """Lear is single-mythos. Unlike Rashomon (four-testimony
+    contest), no ArMythosRelation is authored. The module exposes
+    no `AR_LEAR_RELATIONS` attribute; intra-mythos parallelism is
+    expressed via A13 ArCharacterArcRelation (the Lear-Gloucester
+    parallel relation), not via the A10 three-mythos workaround."""
+    from story_engine.encodings import lear_aristotelian as la
+    assert not hasattr(la, "AR_LEAR_RELATIONS")
+
+
+def test_lear_cordelia_hanged_empty_observer_set():
+    """OQ-AP15 substrate signature pin. E_cordelia_hanged
+    (τ_s=36) has world effects (hanged + dead propositions on
+    Cordelia) but ZERO KnowledgeEffect projections — no named
+    character observes the event. The catharsis displaces to
+    E_lear_enters_with_cordelia (τ_s=37) where Lear + Albany +
+    Edgar + Kent all observe dead(cordelia). This is the cleanest
+    case in the corpus of an empty-observer defining event."""
+    from story_engine.encodings.lear import FABULA
+    by_id = {e.id: e for e in FABULA}
+    hanged = by_id["E_cordelia_hanged"]
+    # World effects present.
+    world_effects = [eff for eff in hanged.effects
+                     if hasattr(eff, "prop")
+                     and not hasattr(eff, "agent_id")]
+    assert len(world_effects) >= 2  # hanged + dead
+    # Zero knowledge-effect projections.
+    kn_effects = [eff for eff in hanged.effects
+                  if hasattr(eff, "agent_id")]
+    assert len(kn_effects) == 0, (
+        f"E_cordelia_hanged should have zero KnowledgeEffect "
+        f"projections (OQ-AP15 empty-observer signature); "
+        f"got {len(kn_effects)}"
+    )
+    # Catharsis displaces to the entrance event.
+    entrance = by_id["E_lear_enters_with_cordelia"]
+    entrance_observers = sorted(
+        set(eff.agent_id for eff in entrance.effects
+            if hasattr(eff, "agent_id"))
+    )
+    assert "lear" in entrance_observers
+    assert "albany" in entrance_observers
+    assert "edgar" in entrance_observers
+
+
+def test_lear_aristotelian_sketch04_fields_authored():
+    """Sketch-04 integration — the Lear mythos authors phase
+    bounds, pacing preferences, co-presence requirements, audience-
+    knowledge constraints, tonal register, and binding distance
+    preference. Parallels Hamlet's sketch-04 coverage."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS,
+    )
+    # Phase bounds on all three phases.
+    for ph in AR_LEAR_MYTHOS.phases:
+        assert ph.min_event_count > 0
+        assert ph.max_event_count >= ph.min_event_count
+        assert ph.pacing_preference in (
+            PACING_EVEN, PACING_SLOW_BURN, PACING_RAPID_ESCALATION,
+        )
+    # Co-presence: 3 requirements.
+    assert len(AR_LEAR_MYTHOS.co_presence_requirements) == 3
+    # Audience-knowledge: 3 constraints.
+    assert len(AR_LEAR_MYTHOS.audience_knowledge_constraints) == 3
+    # Tonal register: tragic-pure (contrast Hamlet's tragic-with-
+    # irony).
+    assert (AR_LEAR_MYTHOS.tonal_register
+            == TONAL_REGISTER_TRAGIC_PURE)
+    # Binding distance preference: wide (matches corpus-widest
+    # actual distance 14).
+    assert (AR_LEAR_MYTHOS.binding_distance_preference
+            == BINDING_PREF_WIDE)
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -2508,6 +2847,20 @@ TESTS = [
     test_hamlet_aristotelian_sketch04_binding_distance_preference_set,
     test_pre_sketch_04_encodings_emit_no_sketch_04_codes,
     test_hamlet_aristotelian_no_mythos_relation_authored,
+    # Lear — fifth Aristotelian encoding
+    test_lear_aristotelian_verifies_clean_up_to_instrumental_noted,
+    test_lear_aristotelian_records_shape,
+    test_lear_aristotelian_three_parallel_tragic_heroes,
+    test_lear_aristotelian_asserts_unity_of_action_false_corpus_first,
+    test_lear_aristotelian_binding_is_separated_distance_fourteen,
+    test_lear_aristotelian_chain_two_parallel_no_staging,
+    test_lear_aristotelian_chain_includes_post_main_step,
+    test_lear_aristotelian_four_character_arc_relations_two_instrumental,
+    test_lear_aristotelian_instrumental_relations_share_target_gloucester,
+    test_lear_aristotelian_probe_findings_authored,
+    test_lear_aristotelian_no_mythos_relation_authored,
+    test_lear_cordelia_hanged_empty_observer_set,
+    test_lear_aristotelian_sketch04_fields_authored,
 ]
 
 
