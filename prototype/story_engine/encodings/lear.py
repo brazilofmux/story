@@ -1,14 +1,27 @@
 """
 King Lear — the encoded fabula (substrate skeleton).
 
-**Session 1 scope:** entities, canonical branches, prop constructors,
-event helpers, FABULA (45 events covering pre-play standing facts
-through the final deaths), and one derivation rule. Knowledge effects
-authored only on the load-bearing beats — the love-test results, the
-forged-letter instrument chain, the blinding, the reconciliation, and
-the final catastrophe. Deferred to Session 2+: PREPLAY_DISCLOSURES,
-SJUZHET, DESCRIPTIONS, full per-event knowledge projections, and the
-Aristotelian overlay (`lear_aristotelian.py`).
+**Session 1 scope (bfecd73):** entities, canonical branches, prop
+constructors, event helpers, FABULA (45 events covering pre-play
+standing facts through the final deaths), and one derivation rule.
+Knowledge effects authored only on the load-bearing beats.
+
+**Session 2 scope (b75fa11):** Aristotelian overlay
+(`lear_aristotelian.py`) pressuring OQ-AP14 (instrumental-kind A13)
+and OQ-AP15 (absent-character catharsis).
+
+**Session 3 scope (this file):** PREPLAY_DISCLOSURES (4 facts — Lear
+opens with less audience-pre-knowledge than Hamlet; only the kingdom-
+political-structure and Gloucester-family structure are pre-loaded),
+SJUZHET (42 in-play entries with focalization — Lear focalizes 17,
+distributed across Gloucester / Edgar / Edmund / Cordelia / Kent /
+Fool and omniscient public scenes), DESCRIPTIONS (12 interpretive
+records covering Lear's madness, Cordelia's motivation, the Fool's
+disappearance, Edmund's deathbed reversal, the OQ-AP14/OQ-AP15
+reader frames, the OQ-LEAR-1/OQ-LEAR-2 structural questions, the
+double-plot unity reading, the offstage-catharsis reading, the
+parallel-tragic-fathers frame, and the Gloucester-blinding-as-
+symbolic-inversion motif).
 
 Story content only. No substrate logic. This file parallels
 `hamlet.py` in shape and is the fourth Shakespeare-tragedy encoding
@@ -1516,6 +1529,938 @@ FABULA = [
             world(dead("edmund")),
         ),
     ),
+]
+
+
+# ----------------------------------------------------------------------------
+# Preplay disclosures — audience-pre-knowledge.
+# ----------------------------------------------------------------------------
+#
+# Lear's audience comes in with less pre-loading than Hamlet's
+# (seven-fact set) or Oedipus's (myth-level front-loading). The
+# Jacobean audience knows the general political structure of a
+# Britain-with-old-king-and-three-daughters as an opening frame,
+# and the Gloucester-family structure is established in Act 1
+# Scene 1's opening forty lines before Lear enters (Kent and
+# Gloucester chat about the king's favor between Cornwall and
+# Albany; Gloucester introduces Edmund as his bastard son). The
+# substrate preplay set captures only what the curtain-rise takes
+# for granted before the love-test begins.
+#
+# Notably NOT preplay:
+#   - Edmund's intention to displace Edgar — disclosed at τ_s=-5
+#     (the soliloquy) + acted on from τ_s=8 forward
+#   - Edmund's forgery / the letter — disclosed at τ_s=8
+#   - Edgar's eventual disguise — disclosed at τ_s=19
+#   - Kent's eventual disguise — disclosed at τ_s=13 (E_kent_returns_
+#     disguised)
+#   - The hanging order — disclosed at τ_s=31
+#   - Cordelia's love-in-silence stance — disclosed at τ_s=3
+#     through her "Nothing, my lord"
+#
+# These are the play's epistemic payoff. Keeping them off the
+# preplay set is load-bearing for OQ-AP14 (the audience learns
+# Edmund's instruments as they deploy, not before) and OQ-AP15
+# (the audience's grief for Cordelia depends on seeing her love
+# develop across the play, not on pre-knowing it).
+
+PREPLAY_DISCLOSURES = (
+    Disclosure(prop=king("lear", "britain"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=parent_of("lear", "goneril"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=parent_of("lear", "regan"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=parent_of("lear", "cordelia"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=earl_of("gloucester", "britain"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=illegitimate("edmund"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+)
+
+
+# ----------------------------------------------------------------------------
+# Sjuzhet — largely linear; τ_d ≈ τ_s for in-play events.
+# ----------------------------------------------------------------------------
+#
+# The three pre-play events (E_lear_reigns, E_gloucester_family,
+# E_edmund_resolves_to_plot) are NOT sjuzhet entries — the first
+# two are standing facts that never appear as staged scenes, and
+# E_edmund_resolves_to_plot is an internal-resolve event whose
+# content the audience learns through Edmund's opening soliloquy
+# at Act 1 Scene 2, reader-time-bundled with the letter-forging
+# beat. The pre-play events' content enters the reader projection
+# through PREPLAY_DISCLOSURES at τ_d=0 (the love-test's opening)
+# and through later revelatory events.
+#
+# Focalization distribution (42 entries):
+#   lear:        17 entries (his plot — the largest focalizer share)
+#   None:         7 entries (public court / ceremonial / offstage —
+#                            the kingdom-divided decree, the battle,
+#                            the trial-by-combat, Regan's collapse,
+#                            Goneril's suicide report, Cordelia's
+#                            offstage hanging, Edmund's final death)
+#   edmund:       6 entries (soliloquy-derived forgery chain + order
+#                            + deathbed confession — triple-Edmund
+#                            focalization at τ_d=8-11 is structurally
+#                            unusual)
+#   edgar:        4 entries (flight, disguise adoption, guide,
+#                            Gloucester-reports final-death beat)
+#   gloucester:   4 entries (hovel encounter, Dover-tip, blinding
+#                            anagnorisis, Dover acceptance)
+#   cordelia:     2 entries (her French-marriage beat + her return)
+#   kent:         2 entries (banishment + disguise adoption)
+#
+# Unlike Hamlet (hamlet-dominant focalization with 12-entry share),
+# Lear distributes focalization across the double-plot's load-
+# bearing characters. The 17-entry Lear share still dominates but
+# the 6/5/5 shares for Gloucester/Edgar/Edmund reflect the subplot's
+# structural weight. This distribution is itself a reading of
+# OQ_LEAR_2 (double-plot unity): focalization-distribution at
+# sjuzhet scope is the substrate's answer to the question the
+# mythos's asserts_unity_of_action=False opens.
+
+SJUZHET = [
+
+    # τ_d=0 — Act 1 Scene 1 opens. The love-test's announcement.
+    # Lear focalizes; the play's register is his from the start.
+    # PREPLAY_DISCLOSURES attach here.
+    SjuzhetEntry(
+        event_id="E_lear_announces_division",
+        τ_d=0,
+        focalizer_id="lear",
+        disclosures=PREPLAY_DISCLOSURES,
+    ),
+
+    # τ_d=1 — Goneril's flattering declaration. Lear focalizes —
+    # his reading of her speech is the scene's weight.
+    SjuzhetEntry(
+        event_id="E_love_test_goneril",
+        τ_d=1,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=2 — Regan's echo-plus-more. Same focalization.
+    SjuzhetEntry(
+        event_id="E_love_test_regan",
+        τ_d=2,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=3 — Cordelia's 'Nothing, my lord'. The play's first
+    # tragic inflection. Lear focalizes — the recognition-of-refusal
+    # is HIS, and the substrate's BELIEVED plots_against attaches
+    # to his held-set at this beat.
+    SjuzhetEntry(
+        event_id="E_love_test_cordelia",
+        τ_d=3,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=4 — Lear disinherits Cordelia. His act; his focalization.
+    SjuzhetEntry(
+        event_id="E_cordelia_disinherited",
+        τ_d=4,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=5 — Kent's objection and banishment. Kent focalizes — he
+    # IS the objector; the 'See better, Lear' is his reading of the
+    # scene, and the banishment lands on him.
+    SjuzhetEntry(
+        event_id="E_kent_banished",
+        τ_d=5,
+        focalizer_id="kent",
+        disclosures=(),
+    ),
+
+    # τ_d=6 — France takes Cordelia dowerless. Cordelia focalizes —
+    # this is her scene, her choice-against-alternatives moment.
+    # 'Fairest Cordelia, that art most rich being poor' is France's
+    # voice but Cordelia's narrative.
+    SjuzhetEntry(
+        event_id="E_france_marries_cordelia",
+        τ_d=6,
+        focalizer_id="cordelia",
+        disclosures=(),
+    ),
+
+    # τ_d=7 — Kingdom divided. Formal, ceremonial; omniscient —
+    # no single focalizer.
+    SjuzhetEntry(
+        event_id="E_kingdom_divided",
+        τ_d=7,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=8 — Act 1 Scene 2 opens. Edmund's opening soliloquy +
+    # letter-forging. Edmund focalizes — the scene is his
+    # self-introduction to the audience, via the 'Now, gods, stand
+    # up for bastards' soliloquy collapsed into the forgery event.
+    SjuzhetEntry(
+        event_id="E_edmund_forges_letter",
+        τ_d=8,
+        focalizer_id="edmund",
+        disclosures=(),
+    ),
+
+    # τ_d=9 — Gloucester reads the letter. Edmund focalizes — he
+    # stages the reveal with feigned reluctance; the scene's
+    # rhetorical register is his manipulation of Gloucester's
+    # response.
+    SjuzhetEntry(
+        event_id="E_edmund_shows_gloucester",
+        τ_d=9,
+        focalizer_id="edmund",
+        disclosures=(),
+    ),
+
+    # τ_d=10 — Edmund warns Edgar. Edmund continues to focalize
+    # this second-branch deployment of the forgery instrument;
+    # Edgar is present and acquires his own BELIEVED(plots_against)
+    # but the scene is Edmund's con.
+    SjuzhetEntry(
+        event_id="E_edmund_warns_edgar",
+        τ_d=10,
+        focalizer_id="edmund",
+        disclosures=(),
+    ),
+
+    # τ_d=11 — Edmund cuts his own arm. Private to Edmund; a third
+    # Edmund-focalized scene in sequence, which is structurally
+    # unusual — three consecutive Edmund-soliloquy-equivalent
+    # beats. The substrate records this concentration; the reader's
+    # immersion in Edmund's plot here is a central shape of the
+    # subplot's opening.
+    SjuzhetEntry(
+        event_id="E_edmund_stages_wound",
+        τ_d=11,
+        focalizer_id="edmund",
+        disclosures=(),
+    ),
+
+    # τ_d=12 — Edgar flees. Edgar's first focalized beat; the
+    # scene pivots to him.
+    SjuzhetEntry(
+        event_id="E_edgar_flees",
+        τ_d=12,
+        focalizer_id="edgar",
+        disclosures=(),
+    ),
+
+    # τ_d=13 — Act 1 Scenes 3-4 compressed. Lear arrives at
+    # Goneril's castle. Lear focalizes — his expectation of the
+    # reception he arranged.
+    SjuzhetEntry(
+        event_id="E_lear_at_gonerils",
+        τ_d=13,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=14 — Kent-as-Caius enters Lear's service. Kent focalizes
+    # — his own return-under-disguise is a private act of
+    # self-loyalty. The audience knows; Lear does not.
+    SjuzhetEntry(
+        event_id="E_kent_returns_disguised",
+        τ_d=14,
+        focalizer_id="kent",
+        disclosures=(),
+    ),
+
+    # τ_d=15 — Goneril demands Lear reduce his knights. Lear
+    # focalizes — his first recognition of the reversal starts
+    # here ('I did her wrong' at I.v) and culminates in the curse.
+    SjuzhetEntry(
+        event_id="E_goneril_strips_retinue",
+        τ_d=15,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=16 — Lear travels to Regan's.
+    SjuzhetEntry(
+        event_id="E_lear_to_regans",
+        τ_d=16,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=17 — Regan strips Lear further; the two sisters together
+    # reduce him to nothing. Lear focalizes — the double-betrayal
+    # recognition lands here, and the curse-and-flight that follow
+    # are his response.
+    SjuzhetEntry(
+        event_id="E_regan_also_strips",
+        τ_d=17,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=18 — Lear exits into the storm.
+    SjuzhetEntry(
+        event_id="E_lear_flees_to_heath",
+        τ_d=18,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=19 — Act 3 Scene 2. The storm breaks; Lear rages. Lear's
+    # 'Blow, winds, and crack your cheeks' and the 'unaccommodated
+    # man' recognition at Scene 4 are collapsed here. The
+    # 'onset of madness' world-fact attaches at substrate; the
+    # focalization is the mad-scene weight as Lear experiences it.
+    SjuzhetEntry(
+        event_id="E_storm_on_heath",
+        τ_d=19,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=20 — Edgar, elsewhere on the heath, adopts the Poor Tom
+    # disguise. Edgar focalizes — a private self-transformation.
+    SjuzhetEntry(
+        event_id="E_edgar_becomes_poor_tom",
+        τ_d=20,
+        focalizer_id="edgar",
+        disclosures=(),
+    ),
+
+    # τ_d=21 — The hovel encounter. Multi-presence scene; Gloucester
+    # focalizes — his attempt to aid Lear, his non-recognition of
+    # the figure who is his son, and his own danger (running this
+    # errand against Cornwall's orders) is the scene's structural
+    # weight.
+    SjuzhetEntry(
+        event_id="E_gloucester_meets_poor_tom",
+        τ_d=21,
+        focalizer_id="gloucester",
+        disclosures=(),
+    ),
+
+    # τ_d=22 — Act 3 Scene 6. Lear's mock trial. Lear focalizes —
+    # the delirium-scene is his alone; the jurors (Kent-as-Caius,
+    # Edgar-as-Poor-Tom, Fool) are audiences.
+    SjuzhetEntry(
+        event_id="E_lear_mock_trial",
+        τ_d=22,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=23 — Gloucester helps Lear to Dover. Gloucester focalizes
+    # — his loyal-act-against-orders is the scene, and it is
+    # Edmund's hinge to betray him.
+    SjuzhetEntry(
+        event_id="E_gloucester_sends_lear_to_dover",
+        τ_d=23,
+        focalizer_id="gloucester",
+        disclosures=(),
+    ),
+
+    # τ_d=24 — The blinding scene. Gloucester focalizes — his
+    # peripeteia, his anagnorisis, his physical mutilation. The
+    # most extended Gloucester-focalized beat, reflecting A14 chain
+    # step AR_STEP_GLOUCESTER_BLINDING's structural weight.
+    SjuzhetEntry(
+        event_id="E_cornwall_regan_blind_gloucester",
+        τ_d=24,
+        focalizer_id="gloucester",
+        disclosures=(),
+    ),
+
+    # τ_d=25 — Edgar leads his blinded father. Edgar focalizes —
+    # the therapeutic-instrument chain begins here, and the
+    # non-recognition is from Edgar's side anguish rather than
+    # Gloucester's confusion.
+    SjuzhetEntry(
+        event_id="E_edgar_leads_blind_gloucester",
+        τ_d=25,
+        focalizer_id="edgar",
+        disclosures=(),
+    ),
+
+    # τ_d=26 — Dover cliff. Gloucester focalizes — the scene's
+    # weight is his belief-acceptance. Edgar stages the fall, but
+    # the scene's experience is the old man's. 'Thy life's a
+    # miracle' reframes it for him; he adopts the reframing.
+    SjuzhetEntry(
+        event_id="E_gloucester_suicide_attempt",
+        τ_d=26,
+        focalizer_id="gloucester",
+        disclosures=(),
+    ),
+
+    # τ_d=27 — Cordelia lands with the French. Her second focalized
+    # beat; her agency in the play returns here.
+    SjuzhetEntry(
+        event_id="E_cordelia_returns",
+        τ_d=27,
+        focalizer_id="cordelia",
+        disclosures=(),
+    ),
+
+    # τ_d=28 — The two broken fathers meet on the heath. Lear
+    # focalizes — he enters mad and recognizes Gloucester only by
+    # voice; the scene's register is his peculiar delirium-register
+    # more than Gloucester's despair.
+    SjuzhetEntry(
+        event_id="E_lear_meets_blind_gloucester",
+        τ_d=28,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=29 — The reconciliation. Lear's main anagnorisis; Lear
+    # focalizes. 'I am a very foolish fond old man' is his own
+    # voice, and the retraction of the plots_against belief lands
+    # here as a held-fact removal on his own state.
+    SjuzhetEntry(
+        event_id="E_lear_cordelia_reconcile",
+        τ_d=29,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=30 — The battle. Offstage in the play; reported.
+    # Omniscient.
+    SjuzhetEntry(
+        event_id="E_battle",
+        τ_d=30,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=31 — Lear and Cordelia captured. Lear focalizes — 'we
+    # two alone will sing like birds i' the cage' is his serene
+    # register.
+    SjuzhetEntry(
+        event_id="E_lear_cordelia_captured",
+        τ_d=31,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=32 — Edmund orders the hanging. Private order; Edmund
+    # focalizes. The audience knows; the rescue possibility opens
+    # against the ticking clock.
+    SjuzhetEntry(
+        event_id="E_edmund_orders_cordelia_hanged",
+        τ_d=32,
+        focalizer_id="edmund",
+        disclosures=(),
+    ),
+
+    # τ_d=33 — Trial by combat. Formal, public; omniscient.
+    SjuzhetEntry(
+        event_id="E_edgar_defeats_edmund",
+        τ_d=33,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=34 — Regan collapses and dies from Goneril's poisoning.
+    # Public scene; omniscient.
+    SjuzhetEntry(
+        event_id="E_regan_dies",
+        τ_d=34,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=35 — Goneril's suicide. Offstage; reported via Gentleman.
+    # Omniscient.
+    SjuzhetEntry(
+        event_id="E_goneril_suicide",
+        τ_d=35,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=36 — Edmund's deathbed confession. Edmund focalizes — his
+    # 'some good I mean to do' is his own voice, and the reversal
+    # is characterological.
+    SjuzhetEntry(
+        event_id="E_edmund_confesses",
+        τ_d=36,
+        focalizer_id="edmund",
+        disclosures=(),
+    ),
+
+    # τ_d=37 — Cordelia hanged. OFFSTAGE, ZERO OBSERVERS — the
+    # OQ-AP15 site. No focalizer (no character is present whose
+    # experience the scene inhabits). This is the substrate's
+    # cleanest case of an absent-defining-event; the reader learns
+    # of the hanging only through the subsequent entrance.
+    SjuzhetEntry(
+        event_id="E_cordelia_hanged",
+        τ_d=37,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=38 — Gloucester's offstage death. Edgar focalizes — he
+    # reports the death in his final scene entrance. The reveal-
+    # and-death are a single offstage beat (Edgar tells Gloucester
+    # who he is; Gloucester's heart bursts smilingly); focalization
+    # attaches to the reporter because no one else witnesses.
+    SjuzhetEntry(
+        event_id="E_gloucester_dies",
+        τ_d=38,
+        focalizer_id="edgar",
+        disclosures=(),
+    ),
+
+    # τ_d=39 — Lear enters carrying Cordelia. The catharsis site.
+    # Lear focalizes — 'Howl, howl, howl, howl!' is his voice, the
+    # pieta-image is his carrying, the entire catharsis rests on
+    # his stricken consciousness.
+    SjuzhetEntry(
+        event_id="E_lear_enters_with_cordelia",
+        τ_d=39,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=40 — Lear's death. Lear focalizes — his 'Look, her lips'
+    # is the final subjective register, and Kent's epitaph 'Vex not
+    # his ghost' comes after. Lear is the focalizer of his own
+    # death; Hamlet's was Horatio. Distinct final-beat shape.
+    SjuzhetEntry(
+        event_id="E_lear_dies",
+        τ_d=40,
+        focalizer_id="lear",
+        disclosures=(),
+    ),
+
+    # τ_d=41 — Edmund dies of duel wounds. Offstage or peripheral
+    # at this point; omniscient framing.
+    SjuzhetEntry(
+        event_id="E_edmund_dies",
+        τ_d=41,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+]
+
+
+# ----------------------------------------------------------------------------
+# Descriptions — the interpretive peer surface.
+# ----------------------------------------------------------------------------
+#
+# τ_a values start at 200 (after fabula τ_a values, which top out
+# at 51). Later authoring passes can interleave without renumbering.
+#
+# Lear's descriptions track three groups:
+#   1. Authorial-uncertainty questions the substrate deliberately
+#      declines to commit on (Lear's madness register; Cordelia's
+#      motivation; the Fool's fate; Edmund's repentance; Lear's
+#      final belief). Marked is_question=True; these parallel the
+#      Hamlet Ghost-ontology / sanity / Gertrude-foreknowledge /
+#      Ophelia-death pattern.
+#   2. Structural reader-frames for the forcing-function
+#      signatures the dialect layer banks (OQ-AP14 instrumental-
+#      kind double-polarity; OQ-AP15 absent-catharsis displacement;
+#      OQ-LEAR-1 emotional-vs-epistemic staging; OQ-LEAR-2 double-
+#      plot unity). These name reading moves the substrate
+#      supports; the Aristotelian overlay's OQ_*_FINDING prose
+#      constants carry the dialect-layer finding-prose, and these
+#      descriptions carry the substrate-layer reader frames.
+#   3. Parallel-tragic-hero reader frames (Lear-Gloucester parallel
+#      arcs; Gloucester-blinding-as-symbolic-inversion motif).
+#
+# Probe-authored edits and answers (like the llm-authored
+# supersessions in macbeth.py) are not present in Session 3; they
+# would be added by a future probe pass against Lear (Session 5+).
+
+DESCRIPTIONS = [
+
+    Description(
+        id="D_lear_madness_register_undecided",
+        attached_to=anchor_event("E_storm_on_heath"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Lear's madness is encoded as world(mad('lear')) from "
+              "E_storm_on_heath (τ_s=18) onward. Unlike Hamlet's "
+              "feigning_madness (agent-level, never promoted to "
+              "world-fact), Lear's is asserted at world-level — but "
+              "the substrate's commitment is to the onset and to the "
+              "non-clinical register, not to a fine-grained reading "
+              "of the madness. Lear's 'O! let me not be mad, not "
+              "mad, sweet heaven!' names his own partial awareness; "
+              "the storm-register's 'unaccommodated man' recognition "
+              "is performed-by-a-madman AND philosophically lucid; "
+              "the mock-trial's delirium is madness-as-moral-clarity. "
+              "The substrate records world(mad(lear)) without "
+              "committing to whether this is clinical, "
+              "performative-turned-genuine (Hamlet-inflected), grief-"
+              "induced, or strategic. A future branch (e.g., "
+              ":b-lear-performs-madness) could author a competing "
+              "reading; the default canonical substrate commits to "
+              "the world-fact without its interpretation. Contrast "
+              "with Ophelia's mad(ophelia) assertion in Hamlet's "
+              "Act 4.5, which the substrate there left similarly "
+              "register-undetermined."),
+        is_question=True,
+        authored_by="author",
+        τ_a=200,
+    ),
+
+    Description(
+        id="D_cordelia_motivation_undecided",
+        attached_to=anchor_event("E_love_test_cordelia"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Cordelia's 'Nothing, my lord' is substrate-recorded "
+              "as her refusal to perform the love-test's rhetorical "
+              "terms; what drives the refusal is not. Three readings "
+              "the text supports: (a) HONESTY — the test is broken, "
+              "love cannot be rhetorically weighed, silence is the "
+              "only honest response; (b) PRIDE — Cordelia reads "
+              "Goneril and Regan's performance as transgressing a "
+              "standard she holds and refuses to participate in the "
+              "transgression even at cost; (c) FAITH — Cordelia "
+              "trusts her father's underlying knowledge of her love "
+              "enough to risk the inheritance on the assumption the "
+              "test is not what it appears. The substrate commits to "
+              "none of these. Cordelia's later 'I cannot heave my "
+              "heart into my mouth' names the inability but not its "
+              "source. Authorial reticence preserved; descriptions-"
+              "layer question banked for probe-surface resolution."),
+        is_question=True,
+        authored_by="author",
+        τ_a=201,
+    ),
+
+    Description(
+        id="D_fool_disappearance_undecided",
+        attached_to=anchor_event("E_lear_mock_trial"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("The Fool's final authored presence is at "
+              "E_lear_mock_trial (τ_s=21). After that, the substrate "
+              "does not author any Fool-present events — he simply "
+              "vanishes from FABULA. The text's Act 5 Scene 3 line "
+              "'And my poor fool is hang'd' has two candidate "
+              "referents (the Fool as character; Cordelia as "
+              "figure-of-address) and two authorial traditions "
+              "(Elizabethan-boy-actor doubling Cordelia and the Fool "
+              "argues he is off-stage performing Cordelia during the "
+              "French-army scenes; alternative reading has the Fool "
+              "killed by Cornwall's forces somewhere between the "
+              "hovel and Dover). The substrate declines to commit: "
+              "no E_fool_dies event, no world(dead('fool')) "
+              "assertion, no observation of his absence by the "
+              "remaining characters. The authorial reticence is the "
+              "position — the character slips out of the substrate "
+              "as he slips out of the text. A future branch could "
+              "author either reading; the default canonical "
+              "substrate leaves the question open."),
+        is_question=True,
+        authored_by="author",
+        τ_a=202,
+    ),
+
+    Description(
+        id="D_edmund_deathbed_reversal_undecided",
+        attached_to=anchor_event("E_edmund_confesses"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Edmund's 'some good I mean to do, despite of mine "
+              "own nature' is substrate-recorded as revelation of "
+              "the hanging order and attempt to retract it; what "
+              "the reversal MEANS at character-level is not. Three "
+              "readings: (a) GENUINE REPENTANCE — near death, Edmund "
+              "recognizes his acts as acts and tries to mitigate; "
+              "(b) WEAKNESS — mortally wounded, Edmund no longer has "
+              "the will to sustain his 'nature' and lets the order "
+              "surface; (c) VANITY — Edmund, dying, wants the last "
+              "word, and revealing the order accomplishes a final "
+              "act of agency. The substrate's A14 chain step "
+              "AR_STEP_EDMUND_CONFESSES records the reversal as "
+              "structural without committing to its moral content. "
+              "Aristotle's tragic-hero shape requires the reversal "
+              "to be part of the hamartia-anagnorisis arc; Edmund's "
+              "is_tragic_hero=False (per lear_aristotelian.py) "
+              "precisely because the reversal stops short of "
+              "classical anagnorisis — it is characterological and "
+              "partial, not epistemic and complete. Which of (a-c) "
+              "drives it is the descriptions-layer question."),
+        is_question=True,
+        authored_by="author",
+        τ_a=203,
+    ),
+
+    Description(
+        id="D_lear_final_belief_undecided",
+        attached_to=anchor_event("E_lear_dies"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Lear's final 'Look, her lips, look there, look "
+              "there!' names an observation the substrate does not "
+              "commit on: does he see breath on Cordelia's lips (a "
+              "hallucination or wishful interpretation, given "
+              "world(dead('cordelia')) is asserted at τ_s=36) or does "
+              "he see their final stillness and die of the "
+              "recognition? The Folio and Q1 differ on the stage "
+              "direction and the line's delivery. The substrate "
+              "records world(dead('lear')) at τ_s=38 with no "
+              "knowledge-effect updating Lear's held-set in that "
+              "final moment — he dies without the substrate asserting "
+              "either retraction or confirmation of the 'lips-"
+              "breathing' perception. Authorial reticence preserved: "
+              "the character's last subjective state is exactly the "
+              "text's last ambiguity. Contrast Hamlet's death-state "
+              "where 'the rest is silence' commits to completion of "
+              "knowing; Lear's 'look there' leaves it open."),
+        is_question=True,
+        authored_by="author",
+        τ_a=204,
+    ),
+
+    Description(
+        id="D_instrumental_chain_malicious_vs_therapeutic",
+        attached_to=anchor_event("E_gloucester_suicide_attempt"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("OQ-AP14 pressure: Edmund and Edgar both wield "
+              "instrument-chains on the same target (Gloucester) "
+              "with inverted moral polarity. Edmund's chain: forge a "
+              "letter (world(forged_letter)), show it to Gloucester "
+              "(Gloucester acquires BELIEVED(plots_against(edgar))), "
+              "stage a wound (world(staged_wound), Gloucester's "
+              "belief promoted toward KNOWN). Edgar's chain: stage "
+              "a cliff fall (world(staged_cliff_fall)), Gloucester "
+              "acquires BELIEVED(fell_from_cliff) which the world-"
+              "state does not warrant but which the therapeutic "
+              "effect DOES depend on. The substrate's shape is "
+              "identical: world-level artifact + induced belief + "
+              "behavioral-consequence-via-belief. The polarity "
+              "inversion is carried at substrate as outcome-polarity "
+              "(blinding-and-despair vs acceptance) and at dialect "
+              "as the two A13 ArCharacterArcRelation records with "
+              "non-canonical kind='instrumental'. The reader-side "
+              "reading the substrate supports: deception IS the "
+              "instrument-shape regardless of polarity; the kind "
+              "'instrumental' names a structural move, not a moral "
+              "one; Edgar's therapeutic lie and Edmund's malicious "
+              "one use the same machinery. This is the OQ-AP14 "
+              "forcing-function ground."),
+        authored_by="author",
+        τ_a=205,
+    ),
+
+    Description(
+        id="D_cordelia_absent_catharsis",
+        attached_to=anchor_event("E_lear_enters_with_cordelia"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("OQ-AP15 pressure: Cordelia's death is substrate-"
+              "authored at E_cordelia_hanged (τ_s=36) with ONLY "
+              "world effects and ZERO observer projections — the "
+              "first event in the corpus designed with an empty "
+              "observer set at the defining event. The catharsis "
+              "substrate-displaces to E_lear_enters_with_cordelia "
+              "(τ_s=37), where Lear and every named surviving "
+              "character observe dead(cordelia) for the first time. "
+              "Reader-side: the grief-at-the-hanging is NOT the "
+              "grief-at-the-recognition; the pathos builds entirely "
+              "on the reveal event's observer-wave, amplified by the "
+              "preceding rescue-attempt-too-late setup (E_edmund_"
+              "confesses's reveal + the Albany/Edgar dispatches) "
+              "that makes the audience foreknow the hanging they "
+              "never see. The dialect's catharsis-record attaches "
+              "to the mythos as aims_at_catharsis=True and to the "
+              "ArCharacter (is_tragic_hero=True) without naming the "
+              "displacement. Substrate carries the displacement via "
+              "the empty-observer-set at the death event + the "
+              "observer-dense reveal event. Reader frame for "
+              "probe-side rendering: when computing reader's held-"
+              "state at τ_s=37, the substrate's observer projections "
+              "at the entrance event should be read as the "
+              "catharsis-wave the dialect-level record implies but "
+              "does not name."),
+        authored_by="author",
+        τ_a=206,
+    ),
+
+    Description(
+        id="D_lear_emotional_staging_substrate_signature",
+        attached_to=anchor_event("E_lear_cordelia_reconcile"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("OQ-LEAR-1 pressure: Lear's main anagnorisis at "
+              "E_lear_cordelia_reconcile retracts his held "
+              "BELIEVED(plots_against(cordelia, lear)) via a "
+              "substrate-level remove_held effect, without any prior "
+              "informational acquisition. Hamlet's staging steps "
+              "(Ghost's factual revelation + Mousetrap's empirical "
+              "verification) produce the anagnorisis via belief-"
+              "promotion on new information; Lear's reconciliation "
+              "produces it via belief-retraction under affective "
+              "pressure. The substrate's remove_held effect is the "
+              "structural marker — a BELIEVED held-fact is "
+              "extinguished, not promoted to KNOWN — and there is "
+              "no corresponding add-of-new-information event in "
+              "Lear's trajectory toward the reconciliation; Cordelia "
+              "does not TELL Lear anything he didn't already have "
+              "cognitive access to; her presence and her forgiveness "
+              "do the work. The chain steps the dialect admits for "
+              "same-character main-anagnorisis (staging) presuppose "
+              "the Hamlet shape; Lear's substrate trajectory "
+              "(storm's unaccommodated-man realization, mock-trial's "
+              "grievance-working-through, heath-meeting-with-"
+              "Gloucester's mirror-recognition) consists of "
+              "affective waypoints with no new-information content. "
+              "This substrate signature — `remove_held` at anagnorisis "
+              "without antecedent `observe` or `told_by` of the "
+              "retracted proposition's negation — is OQ-LEAR-1's "
+              "forcing ground."),
+        authored_by="author",
+        τ_a=207,
+    ),
+
+    Description(
+        id="D_double_plot_structural_unity",
+        attached_to=anchor_event("E_lear_meets_blind_gloucester"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("OQ-LEAR-2 pressure: the Lear plot and the Gloucester "
+              "subplot run as structurally-parallel arcs with only "
+              "partial causal convergence. Main-plot beats (love-"
+              "test → disinheritance → humiliation → storm → "
+              "reconciliation → battle → death) structurally mirror "
+              "subplot beats (forgery → disinheritance → flight → "
+              "Dover-therapeutic → reunion → duel → death), with "
+              "both fathers undergoing peripeteia-by-own-action + "
+              "anagnorisis + death. Causal convergence happens at "
+              "three loci: (1) Gloucester's Dover-tip gets him "
+              "betrayed by Edmund (τ_s=22-23); (2) Gloucester meets "
+              "blind-Lear on the heath (τ_s=27, this event); (3) "
+              "the battle and its consequences collapse all strands "
+              "together (τ_s=29+). Between those three loci the "
+              "two plots are structurally independent. The substrate "
+              "carries the thematic unity via parallel-event-shape "
+              "(both fathers' peripeteiai at τ_s=14 and τ_s=23; both "
+              "anagnorises via recognition-of-wronged-child at "
+              "τ_s=23 and τ_s=28; both deaths at τ_s=36 and τ_s=38). "
+              "The dialect carries it via A13 ArCharacterArcRelation "
+              "kind='parallel' (AR_LEAR_GLOUCESTER_PARALLEL). Unity "
+              "of action is NOT asserted at mythos scope — the "
+              "first corpus encoding to set asserts_unity_of_action="
+              "False — but the substrate's event-parallelism is the "
+              "evidence the overlay's non-assertion points at."),
+        authored_by="author",
+        τ_a=208,
+    ),
+
+    Description(
+        id="D_gloucester_blinding_symbolic_inversion",
+        attached_to=anchor_event("E_cornwall_regan_blind_gloucester"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("Gloucester's outward blinding at Cornwall's hands is "
+              "the substrate marker for his inward anagnorisis "
+              "(Regan reveals Edmund's betrayal in the same scene, "
+              "authored as a told_by effect promoting Gloucester's "
+              "held-state to KNOWN). The play's famous inversion — "
+              "Gloucester sees more blind than he saw sighted — is "
+              "substrate-supported but not substrate-committed. "
+              "World(blinded('gloucester')) records the physical "
+              "mutilation; Gloucester's subsequent held-states record "
+              "the epistemic promotion. The inversion-as-reading "
+              "(physical blindness as enabling-of-insight) lives in "
+              "the Dover scenes that follow: Gloucester accepts the "
+              "therapeutic Dover fall (Edgar's instrument) and his "
+              "final 'bear free and patient thoughts' marks the "
+              "acceptance. Contrast Lear's madness (world-fact, "
+              "onset at storm) with Gloucester's blindness (world-"
+              "fact, onset at Cornwall): both are physical/mental "
+              "markers of an inward turning. The substrate records "
+              "both as world-level facts; the inversion-reading is "
+              "the descriptions-layer claim."),
+        authored_by="author",
+        τ_a=209,
+    ),
+
+    Description(
+        id="D_parallel_fathers_reader_frame",
+        attached_to=anchor_event("E_lear_enters_with_cordelia"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("Three characters are authored with "
+              "is_tragic_hero=True in lear_aristotelian.py: Lear, "
+              "Gloucester, and Cordelia. This is the corpus's second "
+              "≥3-tragic-heroes encoding (after Hamlet), confirming "
+              "that OQ-AP6's closure (via A13 ArCharacterArcRelation) "
+              "generalizes. Unlike Hamlet's three heroes (Hamlet / "
+              "Claudius / Laertes — protagonist + antagonist + "
+              "ally-becomes-pawn), Lear's three are two parallel "
+              "fathers and their shared wronged child: the "
+              "father-father mirroring (Lear / Gloucester, authored "
+              "as parallel relation) and the father-daughter and "
+              "father-son redemption arcs (Lear / Cordelia "
+              "reconciliation; Gloucester / Edgar reveal-before-"
+              "death). Cordelia's tragic-hero status is the most "
+              "debatable of the three but is structurally grounded "
+              "in the hamartia-anagnorisis shape: her 'Nothing' "
+              "catalyzes the peripeteia (Lear's disinheritance "
+              "decision); her return catalyzes the anagnorisis (the "
+              "reconciliation); her death catalyzes the catharsis "
+              "(Lear's entrance with her body). Three distinct "
+              "catalyst-beats, hamartia-structured; admits the "
+              "tragic-hero status under Aristotle's A4 'a person "
+              "who is neither outstandingly good nor outstandingly "
+              "bad but whose misfortune comes through an error of "
+              "judgment' (Poetics 1453a)."),
+        authored_by="author",
+        τ_a=210,
+    ),
+
+    Description(
+        id="D_cumulative_catastrophe_dispersed",
+        attached_to=anchor_event("E_lear_dies"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("The catastrophe is dispersed across τ_s=32-38 with "
+              "SEVEN deaths of distinct cause-shapes: fratricide-in-"
+              "trial-by-combat (Edgar-Edmund, τ_s=32, the FRATRICIDE "
+              "rule fires), poison-collateral (Goneril-Regan, "
+              "τ_s=33), suicide (Goneril, τ_s=34, offstage), hanging-"
+              "by-order (Cordelia, τ_s=36, offstage, empty observer "
+              "set), joy-shock (Gloucester, τ_s=36, offstage, single "
+              "observer Edgar), grief (Lear, τ_s=38, onstage), and "
+              "duel-wounds-delayed (Edmund, τ_s=38, peripheral). "
+              "Contrast Hamlet's cluster-pattern (four deaths at "
+              "τ_s=17-18, all onstage, four distinct cause-shapes) "
+              "and Oedipus's concentrated-at-end pattern (one death "
+              "— Jocasta's — with Oedipus's blinding-and-exile "
+              "following). Lear's catastrophe is the corpus's most "
+              "DISPERSED: four of seven deaths offstage; six τ_s "
+              "units span the catastrophe cluster (vs Hamlet's 2). "
+              "If OQ-AP1 (ArPathos grounding) opens in a future "
+              "sketch, Lear is the forcing case for 'dispersed "
+              "offstage pathos' distinct from Hamlet's 'clustered "
+              "onstage cluster-pathos' and Oedipus's 'concentrated-"
+              "end single-recognition-collapse'. Three distinct "
+              "pathos-shapes, three forcing encodings, one banked OQ."),
+        authored_by="author",
+        τ_a=211,
+    ),
+
 ]
 
 
