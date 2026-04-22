@@ -5,7 +5,15 @@ reader-model probe on the Lear Aristotelian encoding.
 Session log:
 - Sessions 1-4 (bfecd73, b75fa11, bc89a77, 95e18f9): substrate +
   overlay + substrate completion + encoding-specific tests.
-- Session 5 (this run): first probe run. Pressures five banked
+- Session 5 (525c575): first probe run.
+- Author-fixes (90975b4): Session 5 needs-work prose corrections.
+- aristotelian-sketch-05 (c7198de design + 8503d22 impl+migration):
+  closes OQ-AP14 (A17 directionality + polarity on A13) and
+  OQ-LEAR-3 (A18 anagnorisis_absent on ArCharacter); client
+  extended to render both.
+- Session 6 (this run): re-probe the sketch-05-migrated encoding.
+  Primary question — **did the closure land?** See design/
+  aristotelian-sketch-05.md §Falsifiable predictions F1-F6. Pressures five banked
   forcing functions:
     * OQ-AP14 (instrumental-kind A13, second-site after Hamlet's
       single-candidate surface — Lear offers two instrumental
@@ -94,9 +102,10 @@ Usage:
     .venv/bin/python3 -m demos.demo_aristotelian_reader_model_lear \\
         --dry-run
 
-    # Save the full structured result as JSON:
+    # Save the full structured result as JSON. Session 6+ use the
+    # _v2 suffix to preserve Session 5's v1 artifact alongside:
     .venv/bin/python3 -m demos.demo_aristotelian_reader_model_lear \\
-        --save-json reader_model_lear_aristotelian_output.json
+        --save-json reader_model_lear_aristotelian_output_v2.json
 """
 
 from __future__ import annotations

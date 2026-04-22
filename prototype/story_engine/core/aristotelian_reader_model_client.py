@@ -380,6 +380,26 @@ something you wanted — e.g., three-way character-arc relations, \
 numerical peripeteia-anagnorisis distance, same-beat staggered \
 recognition — flag that too.
 
+Note on sketch-05: the dialect extends `ArCharacterArcRelation` \
+with two orthogonal fields — `directionality` ('symmetric' | \
+'directional' | '' for empty/derived) and `polarity` ('malicious' \
+| 'therapeutic' | 'neutral' | 'sanctioned' | '' for empty). \
+Canonical kinds (parallel, mirror, foil) are symmetric by \
+construction; non-canonical kinds (e.g., 'instrumental') are \
+typically directional and carry polarity as the moral valence of \
+the wielder's action on the target. Directional tuple convention: \
+`character_ref_ids[0]` is the wielder; `[1]` is the target. \
+Sketch-05 also adds `ArCharacter.anagnorisis_absent` — a bool \
+marking a tragic hero whose hamartia produces catastrophe for \
+others but whose own arc contains no recognition moment (Cordelia \
+in Lear is the forcing case). If an encoding authors these fields, \
+they appear inline on the respective records. If an encoding does \
+NOT author them but they would help, flag them in \
+`relations_wanted`. If the dialect still lacks something you \
+wanted — e.g., wielder/target role fields beyond the tuple \
+convention, secondary-peripeteia apparatus for subplots, \
+audience-level parallel-plot catharsis apparatus — flag that too.
+
 ## Your contract
 
 R1. Typed I/O only. You produce structured output matching the \
@@ -505,6 +525,11 @@ def _ar_character_to_dict(character: ArCharacter) -> dict:
         "character_ref_id": character.character_ref_id,
         "hamartia_text": character.hamartia_text,
         "is_tragic_hero": character.is_tragic_hero,
+        # Sketch-05 A18 — anagnorisis_absent marks a tragic hero
+        # whose hamartia produces catastrophe for others but whose
+        # own arc does not contain a recognition moment. False
+        # default preserves pre-sketch-05 silence.
+        "anagnorisis_absent": character.anagnorisis_absent,
     }
 
 
@@ -598,6 +623,13 @@ def _ar_character_arc_relation_to_dict(relation) -> dict:
         "mythos_id": relation.mythos_id,
         "over_event_ids": list(relation.over_event_ids),
         "annotation": relation.annotation,
+        # Sketch-05 A17 — directionality ('symmetric' | 'directional'
+        # | '') and polarity ('malicious' | 'therapeutic' | 'neutral'
+        # | 'sanctioned' | ''). Empty-string default carries no
+        # claim. Directional tuple convention: character_ref_ids[0]
+        # is wielder, [1] is target.
+        "directionality": relation.directionality,
+        "polarity": relation.polarity,
     }
 
 
