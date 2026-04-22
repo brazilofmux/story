@@ -90,6 +90,23 @@ ARC_RELATION_PARALLEL = "parallel"
 ARC_RELATION_MIRROR = "mirror"
 ARC_RELATION_FOIL = "foil"
 
+DIRECTIONALITY_SYMMETRIC = "symmetric"
+DIRECTIONALITY_DIRECTIONAL = "directional"
+
+CANONICAL_DIRECTIONALITIES: frozenset = frozenset({
+    DIRECTIONALITY_SYMMETRIC, DIRECTIONALITY_DIRECTIONAL,
+})
+
+POLARITY_MALICIOUS = "malicious"
+POLARITY_THERAPEUTIC = "therapeutic"
+POLARITY_NEUTRAL = "neutral"
+POLARITY_SANCTIONED = "sanctioned"
+
+CANONICAL_POLARITIES: frozenset = frozenset({
+    POLARITY_MALICIOUS, POLARITY_THERAPEUTIC,
+    POLARITY_NEUTRAL, POLARITY_SANCTIONED,
+})
+
 CANONICAL_CHARACTER_ARC_RELATION_KINDS: frozenset = frozenset({
     ARC_RELATION_PARALLEL, ARC_RELATION_MIRROR, ARC_RELATION_FOIL,
 })
@@ -208,12 +225,23 @@ class ArCharacter:
     `is_tragic_hero` distinguishes the central hero from other
     characters who may also carry a hamartia (e.g., Jocasta in
     Oedipus).
+
+    `anagnorisis_absent` (sketch-05, A18) is an authorial claim
+    that this character is a tragic hero whose hamartia produces
+    catastrophe for others but whose own arc does not contain a
+    recognition moment (e.g., Cordelia in Lear). False default
+    preserves pre-sketch-05 silence: the dialect makes no claim
+    about whether a character has an anagnorisis unless the author
+    sets this field True. A7.16 enforces consistency (only on
+    is_tragic_hero=True characters; never on the mythos's main-
+    anagnorisis character; never on characters with chain steps).
     """
     id: str
     name: str
     character_ref_id: Optional[str] = None
     hamartia_text: Optional[str] = None
     is_tragic_hero: bool = False
+    anagnorisis_absent: bool = False
 
 
 @dataclass(frozen=True)
@@ -434,6 +462,25 @@ class ArCharacterArcRelation:
 
     `over_event_ids` names substrate events where the arcs track /
     mirror — optional, substrate-check skipped when not threaded.
+
+    `directionality` (sketch-05, A17) is canonical-plus-open:
+      - "symmetric" — the relation is symmetric; tuple order not
+        load-bearing. Canonical kinds (parallel, mirror, foil) are
+        symmetric by construction.
+      - "directional" — tuple order IS load-bearing; position 0 is
+        wielder, position 1 is target. Non-canonical kinds
+        (e.g., "instrumental") are typically directional.
+      - "" (empty) — derived from kind (canonical → symmetric;
+        non-canonical → empty / no claim).
+    A7.15 invariants enforce value-canonicity and kind-compatibility.
+
+    `polarity` (sketch-05, A17) is canonical-plus-open:
+      - "malicious" | "therapeutic" | "neutral" | "sanctioned" |
+        "" (empty, default, not-applicable).
+    Strongest on directional relations. A7.15 emits noted on
+    polarity-set-but-directionality-symmetric. Paired-non-canonical-
+    polarity contrast emits noted when two records share target +
+    non-canonical kind + different polarities.
     """
     id: str
     kind: str
@@ -441,6 +488,8 @@ class ArCharacterArcRelation:
     mythos_id: str
     over_event_ids: Tuple[str, ...] = ()
     annotation: str = ""
+    directionality: str = ""
+    polarity: str = ""
 
 
 @dataclass(frozen=True)
@@ -1202,6 +1251,222 @@ def _check_character_arc_relations(
     return out
 
 
+# ============================================================================
+# Sketch-05 checks — A7.15 + A7.16
+# ============================================================================
+
+
+def _check_character_arc_relation_sketch05_fields(
+    character_arc_relations: tuple,
+) -> list:
+    """A7.15. directionality + polarity invariants on
+    ArCharacterArcRelation.
+
+    1. `directionality ∈ {"", "symmetric", "directional"}` — invalid
+       values emit severity=ADVISES_REVIEW with code
+       `character_arc_relation_directionality_invalid`.
+    2. `polarity ∈ {"", "malicious", "therapeutic", "neutral",
+       "sanctioned"}` — invalid values emit ADVISES_REVIEW with code
+       `character_arc_relation_polarity_invalid`.
+    3. If `kind ∈ CANONICAL_CHARACTER_ARC_RELATION_KINDS` AND
+       `directionality == "directional"`: emit ADVISES_REVIEW with
+       code `character_arc_relation_canonical_kind_directional_
+       conflict`. Canonical kinds (parallel/mirror/foil) are
+       symmetric by construction.
+    4. If `polarity != ""` AND `directionality == "symmetric"`:
+       emit NOTED with code
+       `character_arc_relation_polarity_on_symmetric_noted`.
+       Polarity semantics strongest on directional relations.
+    5. **Paired-non-canonical-polarity detection.** Within the
+       `character_arc_relations` tuple, if two records (a) share
+       the same non-canonical `kind`, (b) share target (defined as
+       `character_ref_ids[1]` when `directionality="directional"`),
+       (c) share `mythos_id`, and (d) have different non-empty
+       polarities, emit NOTED with code
+       `character_arc_relation_paired_polarity_contrast` naming
+       both record ids. Structurally-load-bearing authorial pattern
+       highlighted, not flagged as error.
+    """
+    out: list = []
+
+    # Per-record checks (1-4).
+    for rel in character_arc_relations:
+        d = rel.directionality
+        p = rel.polarity
+
+        # Check 1 — directionality canonicity
+        if d not in ("",) and d not in CANONICAL_DIRECTIONALITIES:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="character_arc_relation_directionality_invalid",
+                target_id=rel.id,
+                message=(f"ArCharacterArcRelation {rel.id!r} declares "
+                         f"directionality={d!r} which is not in "
+                         f"{sorted(CANONICAL_DIRECTIONALITIES)} "
+                         f"(or empty)."),
+            ))
+
+        # Check 2 — polarity canonicity
+        if p not in ("",) and p not in CANONICAL_POLARITIES:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="character_arc_relation_polarity_invalid",
+                target_id=rel.id,
+                message=(f"ArCharacterArcRelation {rel.id!r} declares "
+                         f"polarity={p!r} which is not in "
+                         f"{sorted(CANONICAL_POLARITIES)} "
+                         f"(or empty)."),
+            ))
+
+        # Check 3 — canonical-kind + directional conflict
+        if (rel.kind in CANONICAL_CHARACTER_ARC_RELATION_KINDS
+                and d == DIRECTIONALITY_DIRECTIONAL):
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code=("character_arc_relation_canonical_kind_"
+                      "directional_conflict"),
+                target_id=rel.id,
+                message=(f"ArCharacterArcRelation {rel.id!r} declares "
+                         f"kind={rel.kind!r} (canonical) but "
+                         f"directionality={d!r}; canonical kinds "
+                         f"(parallel/mirror/foil) are symmetric by "
+                         f"construction. Use a non-canonical kind "
+                         f"for directional relations, or leave "
+                         f"directionality empty."),
+            ))
+
+        # Check 4 — polarity on symmetric (noted)
+        if p != "" and d == DIRECTIONALITY_SYMMETRIC:
+            out.append(ArObservation(
+                severity=SEVERITY_NOTED,
+                code="character_arc_relation_polarity_on_symmetric_noted",
+                target_id=rel.id,
+                message=(f"ArCharacterArcRelation {rel.id!r} declares "
+                         f"polarity={p!r} on directionality="
+                         f"'symmetric'; polarity semantics are "
+                         f"strongest on directional relations."),
+            ))
+
+    # Check 5 — paired-non-canonical-polarity contrast
+    # Group non-canonical directional relations by (kind, target, mythos).
+    by_key: dict = {}
+    for rel in character_arc_relations:
+        if rel.kind in CANONICAL_CHARACTER_ARC_RELATION_KINDS:
+            continue
+        if rel.directionality != DIRECTIONALITY_DIRECTIONAL:
+            continue
+        if not rel.polarity:
+            continue
+        if len(rel.character_ref_ids) < 2:
+            continue
+        target = rel.character_ref_ids[1]
+        key = (rel.kind, target, rel.mythos_id)
+        by_key.setdefault(key, []).append(rel)
+
+    for key, rels in by_key.items():
+        if len(rels) < 2:
+            continue
+        polarities = {r.polarity for r in rels}
+        if len(polarities) < 2:
+            continue
+        # Distinct polarities on shared-kind, shared-target pair.
+        ids = sorted(r.id for r in rels)
+        kind, target, mythos_id = key
+        out.append(ArObservation(
+            severity=SEVERITY_NOTED,
+            code="character_arc_relation_paired_polarity_contrast",
+            target_id=ids[0],
+            message=(f"ArCharacterArcRelation records {ids!r} share "
+                     f"non-canonical kind={kind!r} and target "
+                     f"character_ref_id={target!r} in mythos "
+                     f"{mythos_id!r} with distinct polarities "
+                     f"{sorted(polarities)!r}; structurally-load-"
+                     f"bearing polarity-inversion on shared target."),
+        ))
+
+    return out
+
+
+def _check_character_anagnorisis_absent(mythos) -> list:
+    """A7.16. anagnorisis_absent consistency on ArCharacter.
+
+    1. `anagnorisis_absent=True` AND `is_tragic_hero=False`:
+       ADVISES_REVIEW `character_anagnorisis_absent_requires_
+       tragic_hero`.
+    2. `anagnorisis_absent=True` AND character is the mythos's
+       main-anagnorisis character (`character.character_ref_id ==
+       mythos.anagnorisis_character_ref_id`): ADVISES_REVIEW
+       `character_anagnorisis_absent_contradicts_main`.
+    3. `anagnorisis_absent=True` AND any step in
+       `mythos.anagnorisis_chain` has `step.character_ref_id ==
+       character.character_ref_id`: ADVISES_REVIEW
+       `character_anagnorisis_absent_contradicts_chain_step`.
+
+    No implicit-gap detection. Silence is valid; the absent claim
+    is author-asserted.
+    """
+    out: list = []
+    chain_character_refs = {
+        step.character_ref_id
+        for step in mythos.anagnorisis_chain
+        if step.character_ref_id
+    }
+
+    for char in mythos.characters:
+        if not char.anagnorisis_absent:
+            continue
+
+        # Check 1 — requires tragic hero
+        if not char.is_tragic_hero:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code=("character_anagnorisis_absent_requires_"
+                      "tragic_hero"),
+                target_id=char.id,
+                message=(f"ArCharacter {char.id!r} declares "
+                         f"anagnorisis_absent=True but "
+                         f"is_tragic_hero=False; the absent-"
+                         f"recognition shape applies only to "
+                         f"tragic heroes."),
+            ))
+
+        # Check 2 — not main
+        if (char.character_ref_id is not None
+                and char.character_ref_id
+                == mythos.anagnorisis_character_ref_id):
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="character_anagnorisis_absent_contradicts_main",
+                target_id=char.id,
+                message=(f"ArCharacter {char.id!r} declares "
+                         f"anagnorisis_absent=True but its "
+                         f"character_ref_id="
+                         f"{char.character_ref_id!r} equals the "
+                         f"mythos's anagnorisis_character_ref_id; "
+                         f"a character cannot be both the main-"
+                         f"anagnorisis subject and absent."),
+            ))
+
+        # Check 3 — no contradicting chain step
+        if (char.character_ref_id is not None
+                and char.character_ref_id in chain_character_refs):
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code=("character_anagnorisis_absent_contradicts"
+                      "_chain_step"),
+                target_id=char.id,
+                message=(f"ArCharacter {char.id!r} declares "
+                         f"anagnorisis_absent=True but an "
+                         f"ArAnagnorisisStep in the mythos names "
+                         f"character_ref_id="
+                         f"{char.character_ref_id!r}; a chain step "
+                         f"naming the character contradicts the "
+                         f"absent claim."),
+            ))
+
+    return out
+
+
 def _derived_step_kind(
     step: ArAnagnorisisStep,
     anagnorisis_character_ref_id: Optional[str],
@@ -1610,12 +1875,16 @@ def verify(
     out.extend(_check_character_arc_relations(
         character_arc_relations, mythoi, events_by_id,
     ))
+    out.extend(_check_character_arc_relation_sketch05_fields(
+        character_arc_relations,
+    ))
     out.extend(_check_anagnorisis_step_kind(mythos, events_by_id))
     out.extend(_check_phase_event_count_bound(mythos))
     out.extend(_check_co_presence_requirements(mythos))
     out.extend(_check_audience_knowledge_constraints(
         mythos, events_by_id,
     ))
+    out.extend(_check_character_anagnorisis_absent(mythos))
     return out
 
 

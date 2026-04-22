@@ -148,6 +148,8 @@ from story_engine.core.aristotelian import (
     ARC_RELATION_PARALLEL,
     BINDING_PREF_WIDE,
     BINDING_SEPARATED,
+    DIRECTIONALITY_DIRECTIONAL,
+    DIRECTIONALITY_SYMMETRIC,
     PACING_EVEN,
     PACING_RAPID_ESCALATION,
     PACING_SLOW_BURN,
@@ -155,6 +157,8 @@ from story_engine.core.aristotelian import (
     PHASE_END,
     PHASE_MIDDLE,
     PLOT_COMPLEX,
+    POLARITY_MALICIOUS,
+    POLARITY_THERAPEUTIC,
     STEP_KIND_PARALLEL,
     TONAL_REGISTER_TRAGIC_PURE,
 )
@@ -457,6 +461,10 @@ AR_CORDELIA = ArCharacter(
         "question, not an Aristotelian one."
     ),
     is_tragic_hero=True,
+    # A18 (sketch-05): close OQ-LEAR-3. Cordelia's hamartia produces
+    # catastrophe for others; her own arc has no recognition moment.
+    # The prose says so; this field carries the claim structurally.
+    anagnorisis_absent=True,
 )
 
 AR_EDMUND = ArCharacter(
@@ -670,6 +678,11 @@ AR_LEAR_GLOUCESTER_PARALLEL = ArCharacterArcRelation(
         "the dialect carries this distinction via the parallel A13 "
         "rather than subordinating one plot to the other."
     ),
+    # A17 (sketch-05): canonical-kind → symmetric by construction.
+    # Polarity left empty per A7.15 check 4 (polarity-on-symmetric
+    # emits noted); canonical-kind relations carry no per-polarity
+    # authorial claim.
+    directionality=DIRECTIONALITY_SYMMETRIC,
 )
 
 AR_EDGAR_EDMUND_FOIL = ArCharacterArcRelation(
@@ -714,6 +727,11 @@ AR_EDGAR_EDMUND_FOIL = ArCharacterArcRelation(
         "at sketch-03; Hamlet-Claudius was the first corpus foil "
         "(will-to-act vs will-to-retain); Edgar-Edmund is the second."
     ),
+    # A17 (sketch-05): canonical-kind → symmetric by construction.
+    # Polarity left empty per A7.15 check 4 (polarity-on-symmetric
+    # emits noted); canonical-kind relations carry no per-polarity
+    # authorial claim.
+    directionality=DIRECTIONALITY_SYMMETRIC,
 )
 
 AR_EDMUND_GLOUCESTER_INSTRUMENTAL = ArCharacterArcRelation(
@@ -759,12 +777,16 @@ AR_EDMUND_GLOUCESTER_INSTRUMENTAL = ArCharacterArcRelation(
         "malicious — Edmund wields Gloucester's belief to ruin him.\n\n"
         "The instrumental relation is DIRECTIONAL: the "
         "`character_ref_ids` tuple is ordered (wielder, target), not "
-        "symmetric like parallel/mirror/foil. Sketch-03's A13 does "
-        "not distinguish directional from symmetric relations at the "
-        "field-shape level; this encoding treats tuple order as "
-        "carrying the wielder→target direction, and the probe may "
-        "propose formalizing that convention."
+        "symmetric like parallel/mirror/foil. Sketch-05 formalizes "
+        "this: directionality='directional' + polarity='malicious' "
+        "carry the structural content the sketch-03 kind vocabulary "
+        "admitted under canonical-plus-open; the probe's proposed "
+        "dialect extension (Session 5, commit 525c575) is now "
+        "structurally in the record."
     ),
+    # A17 (sketch-05): non-canonical kind → directional + polarity.
+    directionality=DIRECTIONALITY_DIRECTIONAL,
+    polarity=POLARITY_MALICIOUS,
 )
 
 AR_EDGAR_GLOUCESTER_INSTRUMENTAL = ArCharacterArcRelation(
@@ -803,8 +825,15 @@ AR_EDGAR_GLOUCESTER_INSTRUMENTAL = ArCharacterArcRelation(
         "kinds on the same target with opposite polarity is the "
         "dialect-layer signature of a structural shape the canonical "
         "vocabulary cannot express. Polarity: therapeutic — Edgar "
-        "wields Gloucester's belief to heal him."
+        "wields Gloucester's belief to heal him. Sketch-05 now "
+        "carries the polarity and directionality as structural "
+        "fields; A7.15 check 5 emits a paired-non-canonical-"
+        "polarity-contrast noted observation highlighting the "
+        "Edmund/Edgar → Gloucester opposite-polarity pair."
     ),
+    # A17 (sketch-05): non-canonical kind → directional + polarity.
+    directionality=DIRECTIONALITY_DIRECTIONAL,
+    polarity=POLARITY_THERAPEUTIC,
 )
 
 AR_LEAR_CHARACTER_ARC_RELATIONS = (

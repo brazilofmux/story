@@ -25,9 +25,17 @@ from story_engine.core.aristotelian import (
     BINDING_PREF_WIDE, BINDING_SEPARATED,
     CANONICAL_BINDING_DISTANCE_PREFERENCES,
     CANONICAL_CHARACTER_ARC_RELATION_KINDS,
+    CANONICAL_DIRECTIONALITIES,
     CANONICAL_PACING_PREFERENCES,
+    CANONICAL_POLARITIES,
     CANONICAL_RELATION_KINDS,
     CANONICAL_TONAL_REGISTERS,
+    DIRECTIONALITY_DIRECTIONAL,
+    DIRECTIONALITY_SYMMETRIC,
+    POLARITY_MALICIOUS,
+    POLARITY_NEUTRAL,
+    POLARITY_SANCTIONED,
+    POLARITY_THERAPEUTIC,
     PACING_EVEN, PACING_RAPID_ESCALATION, PACING_SLOW_BURN,
     PHASE_BEGINNING, PHASE_END, PHASE_MIDDLE,
     PLOT_COMPLEX, PLOT_SIMPLE,
@@ -2358,13 +2366,17 @@ def test_hamlet_aristotelian_no_mythos_relation_authored():
 # ============================================================================
 
 
-def test_lear_aristotelian_verifies_clean_up_to_instrumental_noted():
-    """Fifth worked case: Lear under A1-A14 + sketch-04 verifies
-    against the real lear.py FABULA with exactly two noted
-    observations, both the expected
-    character_arc_relation_kind_noncanonical codes for the two
-    `kind="instrumental"` records (OQ-AP14 pressure). No
-    advises-review severity observations; no other noted codes."""
+def test_lear_aristotelian_verifies_clean_up_to_sketch05_noteds():
+    """Fifth worked case: Lear under A1-A18 + sketch-04 + sketch-05
+    verifies against the real lear.py FABULA with exactly three
+    noted observations:
+    - 2 × character_arc_relation_kind_noncanonical (A7.10 — the
+      two `kind="instrumental"` records; OQ-AP14 pressure, per
+      canonical-plus-open discipline).
+    - 1 × character_arc_relation_paired_polarity_contrast (A7.15
+      check 5, NEW in sketch-05) — the Edmund/Edgar → Gloucester
+      opposite-polarity pair.
+    No advises-review severity observations."""
     from story_engine.encodings.lear import FABULA
     from story_engine.encodings.lear_aristotelian import (
         AR_LEAR_MYTHOS, AR_LEAR_CHARACTER_ARC_RELATIONS,
@@ -2375,9 +2387,9 @@ def test_lear_aristotelian_verifies_clean_up_to_instrumental_noted():
         mythoi=(AR_LEAR_MYTHOS,),
         character_arc_relations=AR_LEAR_CHARACTER_ARC_RELATIONS,
     )
-    # Exactly two observations, both noted.
-    assert len(obs) == 2, (
-        f"Expected exactly 2 observations; got {len(obs)}:\n"
+    # Exactly three observations, all noted.
+    assert len(obs) == 3, (
+        f"Expected exactly 3 observations; got {len(obs)}:\n"
         + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
                     for o in obs)
     )
@@ -2386,13 +2398,11 @@ def test_lear_aristotelian_verifies_clean_up_to_instrumental_noted():
             f"Expected only noted severity; got {o.severity} on "
             f"{o.code}"
         )
-        assert o.code == "character_arc_relation_kind_noncanonical"
-    # The two noted observations reference the two instrumental
-    # relation ids.
-    ids_flagged = sorted(o.message.split("'")[1] for o in obs)
-    assert ids_flagged == [
-        "arc_edgar_gloucester_instrumental",
-        "arc_edmund_gloucester_instrumental",
+    codes = sorted(o.code for o in obs)
+    assert codes == [
+        "character_arc_relation_kind_noncanonical",
+        "character_arc_relation_kind_noncanonical",
+        "character_arc_relation_paired_polarity_contrast",
     ]
 
 
@@ -2693,6 +2703,478 @@ def test_lear_aristotelian_sketch04_fields_authored():
 
 
 # ============================================================================
+# Sketch-05 — A17 (directionality + polarity) + A7.15 synthetic fixtures
+# ============================================================================
+
+
+def test_canonical_directionalities_contents():
+    """Sketch-05 A17 ships 'symmetric' and 'directional' as the
+    canonical directionality vocabulary."""
+    assert DIRECTIONALITY_SYMMETRIC in CANONICAL_DIRECTIONALITIES
+    assert DIRECTIONALITY_DIRECTIONAL in CANONICAL_DIRECTIONALITIES
+    assert len(CANONICAL_DIRECTIONALITIES) == 2
+
+
+def test_canonical_polarities_contents():
+    """Sketch-05 A17 ships 'malicious', 'therapeutic', 'neutral',
+    'sanctioned' as the canonical polarity vocabulary."""
+    assert POLARITY_MALICIOUS in CANONICAL_POLARITIES
+    assert POLARITY_THERAPEUTIC in CANONICAL_POLARITIES
+    assert POLARITY_NEUTRAL in CANONICAL_POLARITIES
+    assert POLARITY_SANCTIONED in CANONICAL_POLARITIES
+    assert len(CANONICAL_POLARITIES) == 4
+
+
+def test_arcrelation_sketch05_field_defaults():
+    """A17 fields default to empty strings; pre-sketch-05 encodings
+    construct relations without setting either."""
+    rel = ArCharacterArcRelation(
+        id="r", kind="parallel",
+        character_ref_ids=("a", "b"),
+        mythos_id="m",
+    )
+    assert rel.directionality == ""
+    assert rel.polarity == ""
+
+
+def test_archaracter_sketch05_field_default():
+    """A18 anagnorisis_absent defaults to False."""
+    c = ArCharacter(id="c", name="c")
+    assert c.anagnorisis_absent is False
+
+
+def _two_character_mythos_with_arc(rel: ArCharacterArcRelation,
+                                   anag_char: str = None,
+                                   chain=()) -> ArMythos:
+    """Minimal two-character mythos for A7.15 synthetic tests."""
+    chars = (
+        ArCharacter(id="c_a", name="A", character_ref_id="c_a",
+                    is_tragic_hero=True,
+                    hamartia_text="h"),
+        ArCharacter(id="c_b", name="B", character_ref_id="c_b",
+                    is_tragic_hero=False),
+    )
+    return ArMythos(
+        id="m", title="M",
+        action_summary="",
+        central_event_ids=(),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            ArPhase(id="p_b", role=PHASE_BEGINNING, scope_event_ids=()),
+            ArPhase(id="p_m", role=PHASE_MIDDLE, scope_event_ids=()),
+            ArPhase(id="p_e", role=PHASE_END, scope_event_ids=()),
+        ),
+        peripeteia_event_id="E_x",
+        anagnorisis_event_id="E_y",
+        characters=chars,
+        anagnorisis_chain=chain,
+        anagnorisis_character_ref_id=anag_char,
+    )
+
+
+def test_arcrelation_directionality_invalid_flags():
+    """A7.15 check 1 — invalid directionality value flags
+    advises-review."""
+    rel = ArCharacterArcRelation(
+        id="r", kind="parallel",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality="sideways",
+    )
+    m = _two_character_mythos_with_arc(rel)
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    codes = [o.code for o in obs]
+    assert "character_arc_relation_directionality_invalid" in codes
+
+
+def test_arcrelation_polarity_invalid_flags():
+    """A7.15 check 2 — invalid polarity value flags advises-review."""
+    rel = ArCharacterArcRelation(
+        id="r", kind="instrumental",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality="directional",
+        polarity="rude",
+    )
+    m = _two_character_mythos_with_arc(rel)
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    codes = [o.code for o in obs]
+    assert "character_arc_relation_polarity_invalid" in codes
+
+
+def test_arcrelation_canonical_kind_directional_conflict_flags():
+    """A7.15 check 3 — canonical kind + directional directionality
+    is a mis-classification; flags advises-review."""
+    rel = ArCharacterArcRelation(
+        id="r", kind="parallel",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_DIRECTIONAL,
+    )
+    m = _two_character_mythos_with_arc(rel)
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    codes = [o.code for o in obs]
+    assert ("character_arc_relation_canonical_kind_directional"
+            "_conflict") in codes
+
+
+def test_arcrelation_polarity_on_symmetric_noted():
+    """A7.15 check 4 — polarity set on symmetric directionality
+    emits noted (soft tension; polarity strongest on directional)."""
+    rel = ArCharacterArcRelation(
+        id="r", kind="parallel",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_SYMMETRIC,
+        polarity=POLARITY_NEUTRAL,
+    )
+    m = _two_character_mythos_with_arc(rel)
+    obs = verify(m, mythoi=(m,), character_arc_relations=(rel,))
+    matches = [
+        o for o in obs
+        if o.code == "character_arc_relation_polarity_on_symmetric_noted"
+    ]
+    assert len(matches) == 1
+    assert matches[0].severity == SEVERITY_NOTED
+
+
+def test_arcrelation_paired_polarity_contrast_noted():
+    """A7.15 check 5 — two non-canonical directional relations
+    sharing target with different polarities emit one noted
+    observation referencing both ids."""
+    rel1 = ArCharacterArcRelation(
+        id="r1", kind="instrumental",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_DIRECTIONAL,
+        polarity=POLARITY_MALICIOUS,
+    )
+    rel2 = ArCharacterArcRelation(
+        id="r2", kind="instrumental",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_DIRECTIONAL,
+        polarity=POLARITY_THERAPEUTIC,
+    )
+    m = _two_character_mythos_with_arc(rel1)
+    obs = verify(m, mythoi=(m,),
+                 character_arc_relations=(rel1, rel2))
+    matches = [
+        o for o in obs
+        if o.code == "character_arc_relation_paired_polarity_contrast"
+    ]
+    assert len(matches) == 1
+    assert matches[0].severity == SEVERITY_NOTED
+    # Both record ids named in the message.
+    assert "r1" in matches[0].message
+    assert "r2" in matches[0].message
+
+
+def test_arcrelation_paired_polarity_skips_canonical_kinds():
+    """A7.15 check 5 is scoped to non-canonical kinds. Two canonical
+    relations sharing target with different polarities do NOT emit
+    the paired-polarity contrast observation (canonical relations
+    are symmetric, so target is ill-defined)."""
+    rel1 = ArCharacterArcRelation(
+        id="r1", kind="parallel",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_SYMMETRIC,
+        polarity=POLARITY_MALICIOUS,
+    )
+    rel2 = ArCharacterArcRelation(
+        id="r2", kind="parallel",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_SYMMETRIC,
+        polarity=POLARITY_THERAPEUTIC,
+    )
+    m = _two_character_mythos_with_arc(rel1)
+    obs = verify(m, mythoi=(m,),
+                 character_arc_relations=(rel1, rel2))
+    codes = [o.code for o in obs]
+    assert ("character_arc_relation_paired_polarity_contrast"
+            not in codes)
+
+
+def test_arcrelation_paired_polarity_skips_same_polarity():
+    """A7.15 check 5 requires DIFFERENT polarities. Two records with
+    the same polarity do not emit the contrast observation."""
+    rel1 = ArCharacterArcRelation(
+        id="r1", kind="instrumental",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_DIRECTIONAL,
+        polarity=POLARITY_MALICIOUS,
+    )
+    rel2 = ArCharacterArcRelation(
+        id="r2", kind="instrumental",
+        character_ref_ids=("c_a", "c_b"),
+        mythos_id="m",
+        directionality=DIRECTIONALITY_DIRECTIONAL,
+        polarity=POLARITY_MALICIOUS,
+    )
+    m = _two_character_mythos_with_arc(rel1)
+    obs = verify(m, mythoi=(m,),
+                 character_arc_relations=(rel1, rel2))
+    codes = [o.code for o in obs]
+    assert ("character_arc_relation_paired_polarity_contrast"
+            not in codes)
+
+
+# ============================================================================
+# Sketch-05 — A18 (anagnorisis_absent) + A7.16 synthetic fixtures
+# ============================================================================
+
+
+def test_archaracter_anagnorisis_absent_requires_tragic_hero_flags():
+    """A7.16 check 1 — anagnorisis_absent=True requires
+    is_tragic_hero=True."""
+    non_tragic = ArCharacter(
+        id="c_a", name="A", character_ref_id="c_a",
+        is_tragic_hero=False, anagnorisis_absent=True,
+    )
+    m = ArMythos(
+        id="m", title="M", action_summary="",
+        central_event_ids=(),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            ArPhase(id="p_b", role=PHASE_BEGINNING, scope_event_ids=()),
+            ArPhase(id="p_m", role=PHASE_MIDDLE, scope_event_ids=()),
+            ArPhase(id="p_e", role=PHASE_END, scope_event_ids=()),
+        ),
+        peripeteia_event_id="E_x",
+        anagnorisis_event_id="E_y",
+        characters=(non_tragic,),
+    )
+    obs = verify(m, mythoi=(m,))
+    codes = [o.code for o in obs]
+    assert ("character_anagnorisis_absent_requires_tragic_hero"
+            in codes)
+
+
+def test_archaracter_anagnorisis_absent_contradicts_main_flags():
+    """A7.16 check 2 — anagnorisis_absent=True on the mythos's
+    main-anagnorisis character flags advises-review."""
+    main_char = ArCharacter(
+        id="c_a", name="A", character_ref_id="c_a",
+        is_tragic_hero=True, hamartia_text="h",
+        anagnorisis_absent=True,
+    )
+    m = ArMythos(
+        id="m", title="M", action_summary="",
+        central_event_ids=(),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            ArPhase(id="p_b", role=PHASE_BEGINNING, scope_event_ids=()),
+            ArPhase(id="p_m", role=PHASE_MIDDLE, scope_event_ids=()),
+            ArPhase(id="p_e", role=PHASE_END, scope_event_ids=()),
+        ),
+        peripeteia_event_id="E_x",
+        anagnorisis_event_id="E_y",
+        characters=(main_char,),
+        anagnorisis_character_ref_id="c_a",  # same as main_char's ref
+    )
+    obs = verify(m, mythoi=(m,))
+    codes = [o.code for o in obs]
+    assert "character_anagnorisis_absent_contradicts_main" in codes
+
+
+def test_archaracter_anagnorisis_absent_contradicts_chain_step_flags():
+    """A7.16 check 3 — anagnorisis_absent=True on a character who
+    ALSO has a chain step naming them flags advises-review."""
+    absent_char = ArCharacter(
+        id="c_a", name="A", character_ref_id="c_a",
+        is_tragic_hero=True, hamartia_text="h",
+        anagnorisis_absent=True,
+    )
+    # Chain step names character_ref_id="c_a" — contradicts absent.
+    step = ArAnagnorisisStep(
+        id="step1", event_id="E_z",
+        character_ref_id="c_a",
+        step_kind=STEP_KIND_PARALLEL,
+    )
+    m = ArMythos(
+        id="m", title="M", action_summary="",
+        central_event_ids=("E_z",),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            ArPhase(id="p_b", role=PHASE_BEGINNING,
+                    scope_event_ids=("E_z",)),
+            ArPhase(id="p_m", role=PHASE_MIDDLE, scope_event_ids=()),
+            ArPhase(id="p_e", role=PHASE_END, scope_event_ids=()),
+        ),
+        peripeteia_event_id="E_x",
+        anagnorisis_event_id="E_y",
+        characters=(absent_char,),
+        anagnorisis_chain=(step,),
+    )
+    obs = verify(m, mythoi=(m,))
+    codes = [o.code for o in obs]
+    assert ("character_anagnorisis_absent_contradicts_chain_step"
+            in codes)
+
+
+def test_archaracter_anagnorisis_absent_default_silent():
+    """A7.16 fires no noted/advises-review on the default state
+    (anagnorisis_absent=False on tragic hero without chain step) —
+    silence is valid, the claim is author-asserted only."""
+    silent_char = ArCharacter(
+        id="c_a", name="A", character_ref_id="c_a",
+        is_tragic_hero=True, hamartia_text="h",
+        anagnorisis_absent=False,  # default-silent
+    )
+    m = ArMythos(
+        id="m", title="M", action_summary="",
+        central_event_ids=(),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            ArPhase(id="p_b", role=PHASE_BEGINNING, scope_event_ids=()),
+            ArPhase(id="p_m", role=PHASE_MIDDLE, scope_event_ids=()),
+            ArPhase(id="p_e", role=PHASE_END, scope_event_ids=()),
+        ),
+        peripeteia_event_id="E_x",
+        anagnorisis_event_id="E_y",
+        characters=(silent_char,),
+    )
+    obs = verify(m, mythoi=(m,))
+    # No A7.16 observations on default state.
+    codes = [o.code for o in obs]
+    assert not any(c.startswith("character_anagnorisis_absent_")
+                   for c in codes)
+
+
+# ============================================================================
+# Sketch-05 integration — Lear + Hamlet post-migration
+# ============================================================================
+
+
+def test_lear_aristotelian_instrumental_relations_directional():
+    """Sketch-05 A17 migration: the two instrumental relations are
+    explicitly directional; the two canonical relations are
+    symmetric. Directional tuple convention: (wielder, target)."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_EDMUND_GLOUCESTER_INSTRUMENTAL,
+        AR_EDGAR_GLOUCESTER_INSTRUMENTAL,
+        AR_LEAR_GLOUCESTER_PARALLEL,
+        AR_EDGAR_EDMUND_FOIL,
+    )
+    # Instrumental → directional.
+    for rel in (AR_EDMUND_GLOUCESTER_INSTRUMENTAL,
+                AR_EDGAR_GLOUCESTER_INSTRUMENTAL):
+        assert rel.directionality == DIRECTIONALITY_DIRECTIONAL
+    # Canonical → symmetric.
+    for rel in (AR_LEAR_GLOUCESTER_PARALLEL, AR_EDGAR_EDMUND_FOIL):
+        assert rel.directionality == DIRECTIONALITY_SYMMETRIC
+
+
+def test_lear_aristotelian_instrumental_relations_typed_polarity():
+    """Sketch-05 A17 migration: Edmund's instrument → malicious;
+    Edgar's instrument → therapeutic. The opposite-polarity pair is
+    what A7.15 check 5 detects structurally."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_EDMUND_GLOUCESTER_INSTRUMENTAL,
+        AR_EDGAR_GLOUCESTER_INSTRUMENTAL,
+    )
+    assert (AR_EDMUND_GLOUCESTER_INSTRUMENTAL.polarity
+            == POLARITY_MALICIOUS)
+    assert (AR_EDGAR_GLOUCESTER_INSTRUMENTAL.polarity
+            == POLARITY_THERAPEUTIC)
+
+
+def test_lear_aristotelian_paired_polarity_contrast_emitted():
+    """The full Lear verify emits the paired-polarity-contrast
+    noted (A7.15 check 5) on the Edmund/Edgar → Gloucester pair.
+    Captures the OQ-AP14 substrate signature structurally."""
+    from story_engine.encodings.lear import FABULA
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS, AR_LEAR_CHARACTER_ARC_RELATIONS,
+    )
+    obs = verify(
+        AR_LEAR_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_LEAR_MYTHOS,),
+        character_arc_relations=AR_LEAR_CHARACTER_ARC_RELATIONS,
+    )
+    paired = [
+        o for o in obs
+        if o.code == "character_arc_relation_paired_polarity_contrast"
+    ]
+    assert len(paired) == 1
+    # References both instrumental relation ids.
+    assert "arc_edmund_gloucester_instrumental" in paired[0].message
+    assert "arc_edgar_gloucester_instrumental" in paired[0].message
+
+
+def test_lear_aristotelian_cordelia_anagnorisis_absent_true():
+    """Sketch-05 A18 migration closes OQ-LEAR-3: AR_CORDELIA
+    declares anagnorisis_absent=True. The dialect carries the
+    claim structurally that Session 5's probe flagged as a gap."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_CORDELIA, AR_LEAR_MYTHOS,
+    )
+    assert AR_CORDELIA.is_tragic_hero is True
+    assert AR_CORDELIA.anagnorisis_absent is True
+    # Cordelia is NOT the mythos's main-anagnorisis character
+    # (that's Lear) — so A7.16 check 2 does NOT fire.
+    assert (AR_CORDELIA.character_ref_id
+            != AR_LEAR_MYTHOS.anagnorisis_character_ref_id)
+    # No chain step names Cordelia — A7.16 check 3 does NOT fire.
+    chain_refs = {s.character_ref_id
+                  for s in AR_LEAR_MYTHOS.anagnorisis_chain}
+    assert AR_CORDELIA.character_ref_id not in chain_refs
+
+
+def test_lear_aristotelian_no_anagnorisis_absent_a716_violations():
+    """Full Lear verify emits ZERO A7.16 observations — the
+    anagnorisis_absent=True on Cordelia is consistent with the
+    three invariants."""
+    from story_engine.encodings.lear import FABULA
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS, AR_LEAR_CHARACTER_ARC_RELATIONS,
+    )
+    obs = verify(
+        AR_LEAR_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_LEAR_MYTHOS,),
+        character_arc_relations=AR_LEAR_CHARACTER_ARC_RELATIONS,
+    )
+    a716_codes = [
+        o.code for o in obs
+        if o.code.startswith("character_anagnorisis_absent_")
+    ]
+    assert a716_codes == []
+
+
+def test_hamlet_aristotelian_canonical_relations_symmetric():
+    """Sketch-05 A17 migration: Hamlet's two canonical A13 relations
+    (mirror Hamlet-Laertes + foil Hamlet-Claudius) are symmetric
+    with empty polarity. Hamlet verifies with zero observations
+    post-migration (unchanged from sketch-04 state)."""
+    from story_engine.encodings.hamlet import FABULA
+    from story_engine.encodings.hamlet_aristotelian import (
+        AR_HAMLET_LAERTES_MIRROR, AR_HAMLET_CLAUDIUS_FOIL,
+        AR_HAMLET_MYTHOS, AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    for rel in (AR_HAMLET_LAERTES_MIRROR, AR_HAMLET_CLAUDIUS_FOIL):
+        assert rel.directionality == DIRECTIONALITY_SYMMETRIC
+        assert rel.polarity == ""
+    # Verify back-compat: zero observations post-migration.
+    obs = verify(
+        AR_HAMLET_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_HAMLET_MYTHOS,),
+        character_arc_relations=AR_HAMLET_CHARACTER_ARC_RELATIONS,
+    )
+    assert obs == [], (
+        f"Expected zero observations on Hamlet post-sketch-05; "
+        f"got {len(obs)}:\n"
+        + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
+                    for o in obs)
+    )
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -2848,7 +3330,7 @@ TESTS = [
     test_pre_sketch_04_encodings_emit_no_sketch_04_codes,
     test_hamlet_aristotelian_no_mythos_relation_authored,
     # Lear — fifth Aristotelian encoding
-    test_lear_aristotelian_verifies_clean_up_to_instrumental_noted,
+    test_lear_aristotelian_verifies_clean_up_to_sketch05_noteds,
     test_lear_aristotelian_records_shape,
     test_lear_aristotelian_three_parallel_tragic_heroes,
     test_lear_aristotelian_asserts_unity_of_action_false_corpus_first,
@@ -2861,6 +3343,30 @@ TESTS = [
     test_lear_aristotelian_no_mythos_relation_authored,
     test_lear_cordelia_hanged_empty_observer_set,
     test_lear_aristotelian_sketch04_fields_authored,
+    # Sketch-05 — A17 synthetic fixtures
+    test_canonical_directionalities_contents,
+    test_canonical_polarities_contents,
+    test_arcrelation_sketch05_field_defaults,
+    test_archaracter_sketch05_field_default,
+    test_arcrelation_directionality_invalid_flags,
+    test_arcrelation_polarity_invalid_flags,
+    test_arcrelation_canonical_kind_directional_conflict_flags,
+    test_arcrelation_polarity_on_symmetric_noted,
+    test_arcrelation_paired_polarity_contrast_noted,
+    test_arcrelation_paired_polarity_skips_canonical_kinds,
+    test_arcrelation_paired_polarity_skips_same_polarity,
+    # Sketch-05 — A18 synthetic fixtures
+    test_archaracter_anagnorisis_absent_requires_tragic_hero_flags,
+    test_archaracter_anagnorisis_absent_contradicts_main_flags,
+    test_archaracter_anagnorisis_absent_contradicts_chain_step_flags,
+    test_archaracter_anagnorisis_absent_default_silent,
+    # Sketch-05 integration — Lear + Hamlet post-migration
+    test_lear_aristotelian_instrumental_relations_directional,
+    test_lear_aristotelian_instrumental_relations_typed_polarity,
+    test_lear_aristotelian_paired_polarity_contrast_emitted,
+    test_lear_aristotelian_cordelia_anagnorisis_absent_true,
+    test_lear_aristotelian_no_anagnorisis_absent_a716_violations,
+    test_hamlet_aristotelian_canonical_relations_symmetric,
 ]
 
 

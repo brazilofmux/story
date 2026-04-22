@@ -148,6 +148,7 @@ from story_engine.core.aristotelian import (
     ARC_RELATION_MIRROR,
     BINDING_PREF_WIDE,
     BINDING_SEPARATED,
+    DIRECTIONALITY_SYMMETRIC,
     PACING_EVEN,
     PACING_RAPID_ESCALATION,
     PACING_SLOW_BURN,
@@ -523,6 +524,11 @@ AR_HAMLET_LAERTES_MIRROR = ArCharacterArcRelation(
         "it to the walker. Laertes's own line names it: 'by the "
         "image of my cause, I see / the portraiture of his.'"
     ),
+    # A17 (sketch-05): canonical-kind → symmetric by construction.
+    # Polarity left empty — canonical-kind symmetric relations carry
+    # no per-polarity authorial claim; A7.15 check 4 emits noted
+    # when polarity is set on symmetric, so leave empty deliberately.
+    directionality=DIRECTIONALITY_SYMMETRIC,
 )
 
 AR_HAMLET_CLAUDIUS_FOIL = ArCharacterArcRelation(
@@ -554,6 +560,11 @@ AR_HAMLET_CLAUDIUS_FOIL = ArCharacterArcRelation(
         "(Claudius, Laertes) is a pawn/puppeteer dynamic carried at "
         "substrate not at dialect scope."
     ),
+    # A17 (sketch-05): canonical-kind → symmetric by construction.
+    # Polarity left empty — canonical-kind symmetric relations carry
+    # no per-polarity authorial claim; A7.15 check 4 emits noted
+    # when polarity is set on symmetric, so leave empty deliberately.
+    directionality=DIRECTIONALITY_SYMMETRIC,
 )
 
 AR_HAMLET_CHARACTER_ARC_RELATIONS = (
