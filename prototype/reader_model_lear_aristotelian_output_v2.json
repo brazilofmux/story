@@ -1,0 +1,366 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_lear"
+    ],
+    "observation_count": 3,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_lear",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The summary faithfully traces the complete mythos through both main-plot and subplot incidents, naming every major substrate event. The peripeteia (stripping of the retinue), anagnorisis (Lear-Cordelia reconciliation), and catastrophe (the four terminal deaths) are all correctly identified and in causal order. The one substrate-exceeding detail — a servant's fatal wounding of Cornwall — is consistent with the substrate's declared non-exhaustiveness."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_lear_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The phase annotation correctly maps antecedent conditions (standing events at negative τ_s) and both plots' catastrophic decisions to the scope_event_ids, with accurate τ_s assignments throughout. The summary that both plots' first reversals are staged in the middle is structurally consistent with peripeteia_event_id falling inside ph_lear_middle."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_lear_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The binding phase correctly identifies the peripeteia at E_goneril_strips_retinue (τ_s=14), the Gloucester-subplot anagnorisis at E_cornwall_regan_blind_gloucester, and the denouement-onset at E_lear_meets_blind_gloucester — all consistent with the ArMythos structural fields. The characterisation of the blinding as a 'peripeteia-analog' is appropriately hedged given the single peripeteia_event_id constraint. Minor imprecision: 'setting the tone for Cordelia's return' reads as if Cordelia has not yet returned, but E_cordelia_returns (τ_s=26) precedes the denouement event (τ_s=27); context makes clear the referent is the reconciliation, not the military return."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_lear_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The unbinding phase accurately traces the post-anagnorisis catastrophe cascade, with correct τ_s values for all named events. The identification of three offstage_death-typed events is substrate-verified. The characterisation of E_edmund_confesses as a post-main parallel chain step (τ_s=35 > main at τ_s=28) is structurally sound and connects correctly to the anagnorisis_chain record."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_lear",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia — demand for the performance of love over its substance — is classical Aristotelian error-of-judgment (hamartia per Poetics 1453a), grounded in the love-test events (E_love_test_goneril through E_cordelia_disinherited). The closing framing as 'an error of judgment about what can be measured, not a moral failing' is well-calibrated to Aristotle's own insistence that the hero's fall proceed from hamartia rather than vice."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_gloucester",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "Credulity as hamartia is well-grounded in E_edmund_forges_letter, E_edmund_shows_gloucester, and E_edmund_stages_wound. The parallel with Lear's hamartia (surface-vs-substance failure under a test) is structurally justified by the arc_lear_gloucester_parallel relation. The blinding-as-outward-sign / anagnorisis-at-same-scene claim is substrate-verified at E_cornwall_regan_blind_gloucester and consistent with arstep_gloucester_blinding."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_cordelia",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The hamartia characterisation itself — truth-telling at a moment that structurally requires flattery — is well-grounded in E_love_test_cordelia and stays in Aristotelian vocabulary. However, the prose asserts 'The dialect lacks a way to mark tragic hero whose hamartia produces catastrophe for others but whose own arc does not contain a recognition moment,' while the record's own structural field anagnorisis_absent=true (shipped by sketch-05) is precisely that marking. The prose references 'OQ-LEAR-3' as an open question but the question appears to be resolved by the field present on this very record. The hamartia_text should acknowledge the structural resolution rather than asserting the gap still exists."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_edmund",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The instrumental-wielding characterisation is well-grounded in the substrate's instrument_creation / instrument_deployment / instrument_reinforcement event chain. The distinction between Edmund's rise-from-low-estate arc and the classical tragic-hero fall-from-high-estate is sound Aristotelian analysis, and is_tragic_hero=False is consistent. The deathbed reversal is correctly linked to arstep_edmund_confesses."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_edgar",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The brief credulity hamartia is correctly grounded in E_edmund_warns_edgar / E_edgar_flees. The restorative (non-tragic) arc characterisation is consistent with is_tragic_hero=False. The prose faithfully names the A13 relations (foil to Edmund, therapeutic-instrumental on Gloucester) that motivate Edgar's ArCharacter authoring."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_gloucester_blinding",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies Gloucester's recognition at E_cornwall_regan_blind_gloucester as a parallel step (step_kind=parallel, character_ref_id=ar_gloucester, precipitates_main=false) structurally independent of Lear's main anagnorisis. The compression of outward blinding and inward recognition into one substrate beat is well-observed and grounded."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_edmund_confesses",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies this as a post-main parallel step (τ_s=35 > τ_s=28), characterises the reversal as characterological rather than epistemic (Edmund knew his acts), and draws the structural consequence — post-main placement converts what would be redemption into futility. The connection to Cordelia's hanging (the rescue arrives too late) is substrate-grounded at E_cordelia_hanged (τ_s=36)."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_lear_gloucester_parallel",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The parallel relation is exhaustively grounded across eight over_event_ids tracing both fathers' misreadings, reversals, recognitions, reconciliations, and deaths. The deliberate non-assertion of unity of action (asserts_unity_of_action=False) is correctly explained as the encoding's response to thematic-but-not-causal unity between the two arcs."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_edgar_edmund_foil",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The foil relation is well-grounded in the brothers' symmetric-and-opposite arcs: legitimate/illegitimate, concealment-for-preservation vs concealment-for-destruction, therapeutic Dover deception vs destructive wound-deception. The over_event_ids span the full substrate chain from E_gloucester_family through E_edmund_confesses. The trial-by-combat as legal restoration of primogeniture is a clean Aristotelian reading."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_edmund_gloucester_instrumental",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation meticulously grounds the four-beat instrumental chain in substrate events with correct τ_s values. The argument for why canonical kinds (parallel, mirror, foil) do not capture the wielder-target asymmetry is well-structured. Directionality and polarity fields match the prose (directional, malicious). Sketch-05 formalisation is correctly cited."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_edgar_gloucester_instrumental",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The inverse-polarity therapeutic instrumental relation is grounded in E_edgar_leads_blind_gloucester and E_gloucester_suicide_attempt. The structural identity of the instrument-shape (fabricated world-state inducing belief) with opposite outcome is the foil-at-the-relation-level the annotation claims. The paired-polarity observation connecting to ao_2 is well-drawn."
+    }
+  ],
+  "observation_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 50000,
+      "assessment": "endorses",
+      "comment": "The observation correctly notes that 'instrumental' is non-canonical under sketch-03's three-kind vocabulary. The annotation on arc_edmund_gloucester_instrumental explicitly argues why parallel, mirror, and foil are structurally inadequate: the wielder-target asymmetry is the relation's content, not a symmetric opposition or tracking. Admission under canonical-plus-open discipline is the right disposition.",
+      "suggested_signature": null,
+      "target_observation": {
+        "severity": "noted",
+        "code": "character_arc_relation_kind_noncanonical",
+        "target_id": "arc_edmund_gloucester_instrumental",
+        "message": "ArCharacterArcRelation 'arc_edmund_gloucester_instrumental' declares kind='instrumental' which is not in ['foil', 'mirror', 'parallel']; admitted under canonical-plus-open discipline."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 50000,
+      "assessment": "endorses",
+      "comment": "Parallel observation to ao_0 on the Edgar→Gloucester therapeutic instrumental relation. The same structural argument applies: canonical kinds do not carry directional wielder-target semantics. The two 'instrumental' relations taken together demonstrate the kind is not an anomaly but a recurring structural need in this mythos.",
+      "suggested_signature": "If two or more non-canonical-kind relations with the same kind value share a mythos, the A7 check might emit a 'kind_promotion_candidate' noted observation suggesting the kind is structurally recurrent and worth canonical consideration.",
+      "target_observation": {
+        "severity": "noted",
+        "code": "character_arc_relation_kind_noncanonical",
+        "target_id": "arc_edgar_gloucester_instrumental",
+        "message": "ArCharacterArcRelation 'arc_edgar_gloucester_instrumental' declares kind='instrumental' which is not in ['foil', 'mirror', 'parallel']; admitted under canonical-plus-open discipline."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 50000,
+      "assessment": "endorses",
+      "comment": "This is the most structurally significant observation in the set. The A7 check correctly detects that two same-kind, same-target relations with opposite polarities (malicious vs therapeutic) constitute a load-bearing polarity inversion. This is not decorative — the play's formal architecture in the Gloucester subplot rests on the audience reading Edgar's staged Dover fall through Edmund's staged wound. The observation names the structural shape the canonical vocabulary would need to express if 'instrumental' were promoted.",
+      "suggested_signature": "An A7 check might further verify that paired opposite-polarity instrumentals on a shared target have over_event_ids that do NOT overlap, confirming the wielder-chains are causally independent despite targeting the same character — a tighter structural test than polarity contrast alone.",
+      "target_observation": {
+        "severity": "noted",
+        "code": "character_arc_relation_paired_polarity_contrast",
+        "target_id": "arc_edgar_gloucester_instrumental",
+        "message": "ArCharacterArcRelation records ['arc_edgar_gloucester_instrumental', 'arc_edmund_gloucester_instrumental'] share non-canonical kind='instrumental' and target character_ref_id='ar_gloucester' in mythos 'ar_lear' with distinct polarities ['malicious', 'therapeutic']; structurally-load-bearing polarity-inversion on shared target."
+      }
+    }
+  ],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "partial",
+    "rationale": "The encoding operates fluently within Aristotelian vocabulary throughout: mythos, complex plot, peripeteia, anagnorisis, hamartia, catharsis, complication, denouement, pity, and fear are all deployed on their own terms. The anagnorisis_chain with parallel steps and the separated peripeteia-anagnorisis binding handle Lear's staggered-recognition structure well. The ArCharacterArcRelation apparatus (parallel, foil, instrumental) cleanly expresses the double-plot architecture. Two scope limits prevent a full 'yes': (1) the single peripeteia_event_id per ArMythos forces the Gloucester-subplot blinding to be called a 'peripeteia-analog' in prose rather than formally marked — the dialect cannot express a secondary peripeteia on a parallel arc without either a second ArMythos or a phase-level peripeteia marker; (2) the 'instrumental' kind, though structurally necessary and well-argued, remains non-canonical, and the two instrumental relations on Gloucester together demonstrate a recurring formal need the canonical vocabulary cannot yet absorb. Cordelia's anagnorisis_absent=true is a successful sketch-05 extension, though the hamartia_text prose has not caught up with the structural field.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "secondary peripeteia: the ArMythos carries a single peripeteia_event_id, so a parallel-plot mythos (asserts_unity_of_action=False) that has a subplot with its own reversal (Gloucester's blinding) can only name the subplot reversal as a 'peripeteia-analog' in prose rather than formally mark it — the dialect has no apparatus for per-arc or per-phase peripeteia",
+      "instrumental-kind promotion: two directional, opposite-polarity instrumental ArCharacterArcRelations on the same target demonstrate the kind is not an edge-case anomaly but a recurring structural shape — the canonical three-kind vocabulary (parallel, mirror, foil) cannot express wielder-target asymmetry, and 'instrumental' hovers in non-canonical admitted status rather than being formally recognised"
+    ],
+    "relations_wanted": [
+      "ArMythos.secondary_peripeteia_event_ids or ArPhase-level peripeteia_event_id to formally mark subplot reversals in parallel-plot mythoi where asserts_unity_of_action=False",
+      "Promotion of 'instrumental' to canonical ArCharacterArcRelation kind, given demonstrated structural recurrence and the paired-polarity forcing function surfaced by ao_2",
+      "ArMythosRelation kind='contains' or 'subplot' to formally express the Lear-Gloucester structural relationship beyond the ArCharacterArcRelation parallel — the two plots share a mythos but the current encoding can only express their connection at character-arc level, not at mythos level"
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_lear",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The summary faithfully traces the complete mythos through both main-plot and subplot incidents, naming every major substrate event. The peripeteia (stripping of the retinue), anagnorisis (Lear-Cordelia reconciliation), and catastrophe (the four terminal deaths) are all correctly identified and in causal order. The one substrate-exceeding detail — a servant's fatal wounding of Cornwall — is consistent with the substrate's declared non-exhaustiveness."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_lear_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The phase annotation correctly maps antecedent conditions (standing events at negative τ_s) and both plots' catastrophic decisions to the scope_event_ids, with accurate τ_s assignments throughout. The summary that both plots' first reversals are staged in the middle is structurally consistent with peripeteia_event_id falling inside ph_lear_middle."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_lear_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The binding phase correctly identifies the peripeteia at E_goneril_strips_retinue (τ_s=14), the Gloucester-subplot anagnorisis at E_cornwall_regan_blind_gloucester, and the denouement-onset at E_lear_meets_blind_gloucester — all consistent with the ArMythos structural fields. The characterisation of the blinding as a 'peripeteia-analog' is appropriately hedged given the single peripeteia_event_id constraint. Minor imprecision: 'setting the tone for Cordelia's return' reads as if Cordelia has not yet returned, but E_cordelia_returns (τ_s=26) precedes the denouement event (τ_s=27); context makes clear the referent is the reconciliation, not the military return."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_lear_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The unbinding phase accurately traces the post-anagnorisis catastrophe cascade, with correct τ_s values for all named events. The identification of three offstage_death-typed events is substrate-verified. The characterisation of E_edmund_confesses as a post-main parallel chain step (τ_s=35 > main at τ_s=28) is structurally sound and connects correctly to the anagnorisis_chain record."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_lear",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia — demand for the performance of love over its substance — is classical Aristotelian error-of-judgment (hamartia per Poetics 1453a), grounded in the love-test events (E_love_test_goneril through E_cordelia_disinherited). The closing framing as 'an error of judgment about what can be measured, not a moral failing' is well-calibrated to Aristotle's own insistence that the hero's fall proceed from hamartia rather than vice."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_gloucester",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "Credulity as hamartia is well-grounded in E_edmund_forges_letter, E_edmund_shows_gloucester, and E_edmund_stages_wound. The parallel with Lear's hamartia (surface-vs-substance failure under a test) is structurally justified by the arc_lear_gloucester_parallel relation. The blinding-as-outward-sign / anagnorisis-at-same-scene claim is substrate-verified at E_cornwall_regan_blind_gloucester and consistent with arstep_gloucester_blinding."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_cordelia",
+        "field": "hamartia_text",
+        "verdict": "needs-work",
+        "rationale": "The hamartia characterisation itself — truth-telling at a moment that structurally requires flattery — is well-grounded in E_love_test_cordelia and stays in Aristotelian vocabulary. However, the prose asserts 'The dialect lacks a way to mark tragic hero whose hamartia produces catastrophe for others but whose own arc does not contain a recognition moment,' while the record's own structural field anagnorisis_absent=true (shipped by sketch-05) is precisely that marking. The prose references 'OQ-LEAR-3' as an open question but the question appears to be resolved by the field present on this very record. The hamartia_text should acknowledge the structural resolution rather than asserting the gap still exists."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_edmund",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The instrumental-wielding characterisation is well-grounded in the substrate's instrument_creation / instrument_deployment / instrument_reinforcement event chain. The distinction between Edmund's rise-from-low-estate arc and the classical tragic-hero fall-from-high-estate is sound Aristotelian analysis, and is_tragic_hero=False is consistent. The deathbed reversal is correctly linked to arstep_edmund_confesses."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_edgar",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The brief credulity hamartia is correctly grounded in E_edmund_warns_edgar / E_edgar_flees. The restorative (non-tragic) arc characterisation is consistent with is_tragic_hero=False. The prose faithfully names the A13 relations (foil to Edmund, therapeutic-instrumental on Gloucester) that motivate Edgar's ArCharacter authoring."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_gloucester_blinding",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies Gloucester's recognition at E_cornwall_regan_blind_gloucester as a parallel step (step_kind=parallel, character_ref_id=ar_gloucester, precipitates_main=false) structurally independent of Lear's main anagnorisis. The compression of outward blinding and inward recognition into one substrate beat is well-observed and grounded."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_edmund_confesses",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies this as a post-main parallel step (τ_s=35 > τ_s=28), characterises the reversal as characterological rather than epistemic (Edmund knew his acts), and draws the structural consequence — post-main placement converts what would be redemption into futility. The connection to Cordelia's hanging (the rescue arrives too late) is substrate-grounded at E_cordelia_hanged (τ_s=36)."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_lear_gloucester_parallel",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The parallel relation is exhaustively grounded across eight over_event_ids tracing both fathers' misreadings, reversals, recognitions, reconciliations, and deaths. The deliberate non-assertion of unity of action (asserts_unity_of_action=False) is correctly explained as the encoding's response to thematic-but-not-causal unity between the two arcs."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_edgar_edmund_foil",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The foil relation is well-grounded in the brothers' symmetric-and-opposite arcs: legitimate/illegitimate, concealment-for-preservation vs concealment-for-destruction, therapeutic Dover deception vs destructive wound-deception. The over_event_ids span the full substrate chain from E_gloucester_family through E_edmund_confesses. The trial-by-combat as legal restoration of primogeniture is a clean Aristotelian reading."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_edmund_gloucester_instrumental",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation meticulously grounds the four-beat instrumental chain in substrate events with correct τ_s values. The argument for why canonical kinds (parallel, mirror, foil) do not capture the wielder-target asymmetry is well-structured. Directionality and polarity fields match the prose (directional, malicious). Sketch-05 formalisation is correctly cited."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_edgar_gloucester_instrumental",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The inverse-polarity therapeutic instrumental relation is grounded in E_edgar_leads_blind_gloucester and E_gloucester_suicide_attempt. The structural identity of the instrument-shape (fabricated world-state inducing belief) with opposite outcome is the foil-at-the-relation-level the annotation claims. The paired-polarity observation connecting to ao_2 is well-drawn."
+      }
+    ],
+    "observation_commentaries": [
+      {
+        "target_observation_id": "ao_0",
+        "assessment": "endorses",
+        "rationale": "The observation correctly notes that 'instrumental' is non-canonical under sketch-03's three-kind vocabulary. The annotation on arc_edmund_gloucester_instrumental explicitly argues why parallel, mirror, and foil are structurally inadequate: the wielder-target asymmetry is the relation's content, not a symmetric opposition or tracking. Admission under canonical-plus-open discipline is the right disposition.",
+        "suggested_signature": null
+      },
+      {
+        "target_observation_id": "ao_1",
+        "assessment": "endorses",
+        "rationale": "Parallel observation to ao_0 on the Edgar→Gloucester therapeutic instrumental relation. The same structural argument applies: canonical kinds do not carry directional wielder-target semantics. The two 'instrumental' relations taken together demonstrate the kind is not an anomaly but a recurring structural need in this mythos.",
+        "suggested_signature": "If two or more non-canonical-kind relations with the same kind value share a mythos, the A7 check might emit a 'kind_promotion_candidate' noted observation suggesting the kind is structurally recurrent and worth canonical consideration."
+      },
+      {
+        "target_observation_id": "ao_2",
+        "assessment": "endorses",
+        "rationale": "This is the most structurally significant observation in the set. The A7 check correctly detects that two same-kind, same-target relations with opposite polarities (malicious vs therapeutic) constitute a load-bearing polarity inversion. This is not decorative — the play's formal architecture in the Gloucester subplot rests on the audience reading Edgar's staged Dover fall through Edmund's staged wound. The observation names the structural shape the canonical vocabulary would need to express if 'instrumental' were promoted.",
+        "suggested_signature": "An A7 check might further verify that paired opposite-polarity instrumentals on a shared target have over_event_ids that do NOT overlap, confirming the wielder-chains are causally independent despite targeting the same character — a tighter structural test than polarity contrast alone."
+      }
+    ],
+    "dialect_reading": {
+      "read_on_terms": "partial",
+      "rationale": "The encoding operates fluently within Aristotelian vocabulary throughout: mythos, complex plot, peripeteia, anagnorisis, hamartia, catharsis, complication, denouement, pity, and fear are all deployed on their own terms. The anagnorisis_chain with parallel steps and the separated peripeteia-anagnorisis binding handle Lear's staggered-recognition structure well. The ArCharacterArcRelation apparatus (parallel, foil, instrumental) cleanly expresses the double-plot architecture. Two scope limits prevent a full 'yes': (1) the single peripeteia_event_id per ArMythos forces the Gloucester-subplot blinding to be called a 'peripeteia-analog' in prose rather than formally marked — the dialect cannot express a secondary peripeteia on a parallel arc without either a second ArMythos or a phase-level peripeteia marker; (2) the 'instrumental' kind, though structurally necessary and well-argued, remains non-canonical, and the two instrumental relations on Gloucester together demonstrate a recurring formal need the canonical vocabulary cannot yet absorb. Cordelia's anagnorisis_absent=true is a successful sketch-05 extension, though the hamartia_text prose has not caught up with the structural field.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "secondary peripeteia: the ArMythos carries a single peripeteia_event_id, so a parallel-plot mythos (asserts_unity_of_action=False) that has a subplot with its own reversal (Gloucester's blinding) can only name the subplot reversal as a 'peripeteia-analog' in prose rather than formally mark it — the dialect has no apparatus for per-arc or per-phase peripeteia",
+        "instrumental-kind promotion: two directional, opposite-polarity instrumental ArCharacterArcRelations on the same target demonstrate the kind is not an edge-case anomaly but a recurring structural shape — the canonical three-kind vocabulary (parallel, mirror, foil) cannot express wielder-target asymmetry, and 'instrumental' hovers in non-canonical admitted status rather than being formally recognised"
+      ],
+      "relations_wanted": [
+        "ArMythos.secondary_peripeteia_event_ids or ArPhase-level peripeteia_event_id to formally mark subplot reversals in parallel-plot mythoi where asserts_unity_of_action=False",
+        "Promotion of 'instrumental' to canonical ArCharacterArcRelation kind, given demonstrated structural recurrence and the paired-polarity forcing function surfaced by ao_2",
+        "ArMythosRelation kind='contains' or 'subplot' to formally express the Lear-Gloucester structural relationship beyond the ArCharacterArcRelation parallel — the two plots share a mythos but the current encoding can only express their connection at character-arc level, not at mythos level"
+      ]
+    }
+  }
+}
