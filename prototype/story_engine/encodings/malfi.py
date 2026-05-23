@@ -1,18 +1,43 @@
 """
 The Duchess of Malfi — the encoded fabula (substrate skeleton).
 
-**Session 1 scope:** entities, canonical branches, prop constructors,
-event helpers, FABULA (the canonical spine, ~34 events from pre-play
-standing facts through the Act-V mutual killings and Delio's return
-with the heir), and zero derivation rules (rationale below).
-Knowledge effects authored only on the load-bearing beats —
-Bosola's spying, the apricot ploy, the horoscope, Ferdinand's
-bedchamber confrontation, the dead-hand and waxworks tortures,
-the strangling, the corpse-view recognitions, the night-violence
-of Act V. Deferred to Session 2+: Aristotelian overlay
-(`malfi_aristotelian.py`), PREPLAY_DISCLOSURES, SJUZHET,
-DESCRIPTIONS, full per-event knowledge projections,
-encoding-specific tests, live reader-model probe run.
+**Session 1 scope (0b5e0e3):** entities, canonical branches, prop
+constructors, event helpers, FABULA (the canonical spine, 34
+events from pre-play standing facts through the Act-V mutual
+killings and Delio's return with the heir), and zero derivation
+rules (rationale below). Knowledge effects authored only on the
+load-bearing beats — Bosola's spying, the apricot ploy, the
+horoscope, Ferdinand's bedchamber confrontation, the dead-hand
+and waxworks tortures, the strangling, the corpse-view
+recognitions, the night-violence of Act V.
+
+**Session 2 scope (32acd45):** Aristotelian overlay in the
+sibling module `malfi_aristotelian.py` (sketches 01-05). The
+overlay pressures **OQ-LEAR-4 (secondary peripeteia for
+subplot)** with four structurally-distinct character-arc
+peripeteia events within a single mythos — the Duchess at
+capture (τ_s=17), Ferdinand at corpse-view (τ_s=23), Bosola at
+corpse-view (τ_s=24), Antonio in the dark (τ_s=30). Surfaces
+two additional banked open questions (OQ-AP7 third-encoding
+re-surface; OQ-MALFI-1 new — sequentially-wielded-instrument).
+
+**Session 3 scope (this file):** PREPLAY_DISCLOSURES (4 facts —
+The Duchess opens with less audience-pre-knowledge than Hamlet
+or Macbeth; the Aragonese family structure, the Duchess's
+widowhood, the Cardinal's office, and Ferdinand's ducal title
+are pre-loaded), SJUZHET (30 in-play entries with focalization —
+the Duchess focalizes 10, Bosola 7, Ferdinand 5, Cardinal 2,
+Antonio 2, Delio 1, with 3 omniscient public-or-chaos scenes;
+Bosola's near-Duchess focalization count is the encoding's
+structural surface for the critical-tradition reading that
+Bosola is the play's structural co-protagonist), DESCRIPTIONS
+(12 interpretive records covering Bosola's transformation
+register, Ferdinand's lycanthropy reading, the Cardinal's
+interiority absence, the Duchess's marriage motivation, the
+OQ-LEAR-4/OQ-AP7/OQ-MALFI-1 reader frames, Webster's parodic-
+Catholic setting, the play's instrument density, the "Duchess
+of Malfi still" reading, Antonio's anti-recognition register,
+and the eldest son's survival as structural payload).
 
 Story content only. No substrate logic. This file parallels
 `hamlet.py` and `lear.py` in shape and is the **fifth Shakespearean-
@@ -1614,3 +1639,1092 @@ FABULA = [
 # the interpretive shape.
 
 RULES = ()
+
+
+# ============================================================================
+# Session 3 — PREPLAY_DISCLOSURES + SJUZHET + DESCRIPTIONS
+# ============================================================================
+
+
+# ----------------------------------------------------------------------------
+# Preplay disclosures
+# ----------------------------------------------------------------------------
+#
+# What does a Jacobean audience know coming into *The Duchess of Malfi*?
+# Less than for Hamlet (the regicide is pre-loaded by folklore + the
+# Ghost's exposition) and less than for Macbeth (the witch-prophecy
+# tradition pre-loads supernatural agency). Webster's play opens with
+# Antonio's return from France in the Duchess's court — a clean
+# expository slate, with the opening dialogue between Delio and
+# Antonio establishing the dramatis personae fresh.
+#
+# Four pre-play disclosures: the Aragonese family structure (Duchess
+# + Ferdinand + Cardinal as siblings), the Duchess's widowhood and
+# her sovereignty over Amalfi, the Cardinal's ecclesiastical office,
+# and Ferdinand's ducal title (Calabria). These are the elements the
+# audience grasps within the first hundred lines and that the
+# play's action depends on knowing.
+#
+# Deliberately NOT in preplay: the secret marriage, Bosola's
+# intelligencer commission, Ferdinand's psychic obsession with his
+# sister, the Cardinal's relationship with Julia. Each is established
+# *during* the action. The audience's gradual acquisition of these
+# is the play's primary epistemic engine — especially the secret
+# marriage, whose acquisition by Ferdinand+Cardinal across Acts II-III
+# is the play's central dramatic-irony arc.
+#
+# These four mirror Lear's "minimal disclosures" posture (Lear shipped
+# six; Hamlet shipped seven with the Ghost-lore included). Webster
+# is the corpus's lightest preplay-knowledge encoding.
+
+PREPLAY_DISCLOSURES = (
+    Disclosure(prop=sibling_of("ferdinand", "duchess"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=sibling_of("cardinal", "duchess"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=duchess_of("duchess", "amalfi"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=widow("duchess"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=churchman("cardinal"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+    Disclosure(prop=duke_of("ferdinand", "calabria"),
+               slot=Slot.KNOWN, confidence=Confidence.CERTAIN,
+               via=Narrative.DISCLOSURE.value),
+)
+
+
+# ----------------------------------------------------------------------------
+# Sjuzhet — largely linear; τ_d ≈ τ_s ordering for in-play events.
+# ----------------------------------------------------------------------------
+#
+# The five pre-play events (E_aragon_family, E_duchess_widowed,
+# E_cardinal_julia_liaison, E_bosola_galley_service,
+# E_antonio_returns_from_france) span τ_s=-30 to τ_s=-3. Of these,
+# only E_antonio_returns_from_france is staged — it IS Webster's
+# opening scene (Delio welcomes Antonio back from France, Act I.i).
+# The other four are standing facts; their content reaches the
+# audience through PREPLAY_DISCLOSURES at τ_d=0 (the opening
+# scene's first entry) and through subsequent exposition.
+#
+# Focalization distribution (30 in-play sjuzhet entries):
+#   duchess:    10 entries  (wooing/marriage/pregnancy/pilgrimage/
+#                            parting/imprisonment/3-tortures/strangling)
+#   bosola:      7 entries  (commission-acceptance/apricot/horoscope/
+#                            capture/corpse-resolve/kills-antonio/
+#                            kills-cardinal)
+#   ferdinand:   5 entries  (warning/letter-reading/bedchamber/
+#                            corpse-view/lycanthropy)
+#   cardinal:    2 entries  (Julia poisoning, night-room setup)
+#   antonio:     2 entries  (return + welcome, first child birth)
+#   delio:       1 entry    (closing speech with heir)
+#   None:        3 entries  (the Loretto banishment dumb-show, the
+#                            flight to Ancona, the mutual-wounding
+#                            chaos)
+#
+# Bosola's near-Duchess focalization count (7 vs 10) is the
+# substrate-layer surface for the critical-tradition reading that
+# Bosola is the play's structural co-protagonist (Empson 1935, Lucas
+# 1927/1958, Bradbrook 1980). The Duchess is the title character and
+# the principal pathos site; Bosola is the structural witness and
+# the play's recognition-and-reversal carrier. The 17-point Bosola/
+# Duchess focalization sum (10+7) is the corpus's most concentrated
+# bi-focal distribution — contrast Lear (17 lear / 6 edmund / 5
+# edgar / 5 gloucester = wide), Hamlet (12 hamlet + 4 others = single-
+# focal-dominant), and Oedipus (10 oedipus + 4 others = single-focal-
+# dominant).
+#
+# The 5-entry Ferdinand share reflects his role as orchestrator-also-
+# recognizer (corpus first per Session 2 — Aristotelian overlay). The
+# Cardinal's 2-entry share is structurally minimal — Webster gives him
+# few solo scenes; he is a recurring antagonist but rarely the
+# scene's focalizing center. The 3 None entries cover ceremonial
+# (Loretto), in-transit (flight), and chaotic-multi-agent (the
+# mutual-wounding finale).
+
+SJUZHET = [
+
+    # τ_d=0 — Act 1 Scene 1 opens. Antonio's return from France;
+    # Delio's welcome. The play's first staged event. Antonio
+    # focalizes — the welcome is to him, the dialogue is between
+    # him and Delio, and Webster gives Antonio the opening
+    # exposition ('In seeking to reduce both State and People /
+    # To a fix'd order, their judicious King / Begins at home').
+    # PREPLAY_DISCLOSURES attach here.
+    SjuzhetEntry(
+        event_id="E_antonio_returns_from_france",
+        τ_d=0,
+        focalizer_id="antonio",
+        disclosures=PREPLAY_DISCLOSURES,
+    ),
+
+    # τ_d=1 — Act 1 Scene 1 mid: the Cardinal + Ferdinand confer,
+    # then jointly warn the Duchess against remarriage. Ferdinand
+    # focalizes — his speeches dominate the warning scene
+    # ('Marry! they are most luxurious / Will wed twice'), his
+    # affect is the scene's primary register, and Webster gives
+    # him the famous incest-undertone speech ('Inform her... /
+    # Of his low birth and dowerless state'). The Duchess's
+    # response is brief; the warning is Ferdinand's.
+    SjuzhetEntry(
+        event_id="E_brothers_warn_duchess",
+        τ_d=1,
+        focalizer_id="ferdinand",
+        disclosures=(),
+    ),
+
+    # τ_d=2 — Act 1 Scene 1 close: Ferdinand commissions Bosola.
+    # Bosola focalizes — the scene's weight is his cynical
+    # acceptance ('Take your devils, / Which hell calls angels;
+    # these cursed gifts would make / You a corrupter, me an
+    # impudent traitor; / And should I take these, they'd take
+    # me to hell'). Self-aware corruption is the scene's
+    # structural center; Ferdinand is the offerer, Bosola is the
+    # accepter, but Bosola's reluctance-overcome is what Webster
+    # foregrounds.
+    SjuzhetEntry(
+        event_id="E_ferdinand_hires_bosola",
+        τ_d=2,
+        focalizer_id="bosola",
+        disclosures=(),
+    ),
+
+    # τ_d=3 — Act 1 Scene 1 final: the Duchess woos Antonio with
+    # Cariola concealed. The Duchess focalizes — Webster gives her
+    # the role-inverting speech ('The misery of us that are born
+    # great! / We are forced to woo, because none dare woo us')
+    # and the proposal is hers. Cariola is the witness; Antonio
+    # is the recipient; the Duchess is the agent and the
+    # focalizer.
+    SjuzhetEntry(
+        event_id="E_duchess_woos_antonio",
+        τ_d=3,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=4 — Act 1 Scene 1 closing per-verba marriage. The Duchess
+    # focalizes — the canon-law speech ('I have heard lawyers say,
+    # a contract in a chamber / Per verba presenti, is absolute
+    # marriage') is hers; the marriage's structural authority is
+    # her assertion of it; the scene closes the act with her
+    # voice carrying the action's stakes.
+    SjuzhetEntry(
+        event_id="E_secret_marriage",
+        τ_d=4,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=5 — Act 2 Scene 1 implicit. The Duchess is visibly
+    # pregnant; Webster opens Act II with Bosola noting her
+    # changed appearance. The pregnancy event itself is
+    # internal-state-change but the staged scene around it
+    # establishes it for the audience. The Duchess focalizes —
+    # the pregnancy is her body, her secrecy, her structural
+    # vulnerability; Bosola's noting in the same scene becomes
+    # the apricot-ploy at τ_d=6.
+    SjuzhetEntry(
+        event_id="E_duchess_pregnant_first",
+        τ_d=5,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=6 — Act 2 Scene 1 mid: the apricot ploy. Bosola
+    # focalizes — the scene's structural center is his
+    # intelligencer's instrument (the apricots, possibly doctored),
+    # his observation of the Duchess's discomfort, and his
+    # inferential leap ('I have a strange suspicion / She has
+    # had some pollution'). Webster foregrounds Bosola's mind
+    # working through the test.
+    SjuzhetEntry(
+        event_id="E_apricot_ploy",
+        τ_d=6,
+        focalizer_id="bosola",
+        disclosures=(),
+    ),
+
+    # τ_d=7 — Act 2 Scene 2 implicit. The first child is born
+    # offstage during a household commotion. Webster gives Antonio
+    # the worried-husband scene ('Heaven open all secret springs
+    # of comfort / On her safe delivery!'). Antonio focalizes —
+    # the birth is his structural moment as father, his anxiety
+    # is the scene's weight, and his subsequent error (dropping
+    # the horoscope) is the consequence-of-distraction.
+    SjuzhetEntry(
+        event_id="E_first_child_born",
+        τ_d=7,
+        focalizer_id="antonio",
+        disclosures=(),
+    ),
+
+    # τ_d=8 — Act 2 Scene 3: Antonio drops the horoscope; Bosola
+    # finds it. Bosola focalizes — the discovery is his, the
+    # reading is his, the inference (the child's existence) is
+    # his. Webster gives Bosola the soliloquy of inference ('I
+    # have it! This is some boy's nativity, and the day / Of
+    # birth'); the scene's structural center is the
+    # intelligencer's confirmation of what the apricot-ploy
+    # suggested.
+    SjuzhetEntry(
+        event_id="E_horoscope_dropped",
+        τ_d=8,
+        focalizer_id="bosola",
+        disclosures=(),
+    ),
+
+    # τ_d=9 — Act 2 Scene 5: Ferdinand reads Bosola's letter,
+    # rages. The scene's structural center is Ferdinand's
+    # response — his 'Damn her! that body of hers' speech with
+    # the Cardinal restraining him. Ferdinand focalizes — his
+    # affect is the scene's weight, his violence-of-affect
+    # establishes the play's psychic register, and the Cardinal's
+    # restraining role positions him as the scene's secondary
+    # foil.
+    SjuzhetEntry(
+        event_id="E_bosola_letters_ferdinand",
+        τ_d=9,
+        focalizer_id="ferdinand",
+        disclosures=(),
+    ),
+
+    # τ_d=10 — Act 3 Scene 2: Ferdinand confronts the Duchess in
+    # her bedchamber with a dagger. The scene's structural center
+    # is Ferdinand's calculated entrance + dagger-gesture +
+    # speech ('Die then, quickly!'); the Duchess responds but
+    # does not confirm the marriage. Ferdinand focalizes — the
+    # scene's pressure is what his appearance carries, and the
+    # bedchamber's intimacy reads as transgression by his
+    # presence in it. Webster's most psychologically dense scene
+    # before the strangling.
+    SjuzhetEntry(
+        event_id="E_ferdinand_confronts_duchess",
+        τ_d=10,
+        focalizer_id="ferdinand",
+        disclosures=(),
+    ),
+
+    # τ_d=11 — Act 3 Scene 2 close: the Duchess devises the
+    # pilgrimage cover-story. The Duchess focalizes — the plan
+    # is hers, Cariola's protest ('I do not like this jesting
+    # with religion') is voiced but overruled, and the strategy
+    # of fleeing-under-cover is the Duchess's response to
+    # Ferdinand's pressure. Webster's stage-management has
+    # Antonio listening + accepting; the Duchess is the agent
+    # and the focalizer.
+    SjuzhetEntry(
+        event_id="E_duchess_devises_pilgrimage",
+        τ_d=11,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=12 — Act 3 Scene 4 implicit (the family travels). The
+    # flight to Ancona is in-transit; Webster compresses. No
+    # single focalizer; the scene's structural weight is
+    # geographical (movement away from Amalfi) rather than
+    # character-internal. None focalizes.
+    SjuzhetEntry(
+        event_id="E_flight_to_ancona",
+        τ_d=12,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=13 — Act 3 Scene 4: the Loretto banishment ritual. The
+    # Cardinal performs a dumb-show — strips ecclesiastical robes,
+    # invests himself with arms for the Forli campaign, then
+    # banishes the Duchess + Antonio + eldest son. Webster's
+    # stage-direction frames this as a dumb-show with two
+    # pilgrim commentators describing the action. None focalizes
+    # — the dumb-show is ceremonial and the pilgrims' commentary
+    # is the audience-side reading; no single character carries
+    # the scene's weight.
+    SjuzhetEntry(
+        event_id="E_banishment_at_loretto",
+        τ_d=13,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=14 — Act 3 Scene 5: the Duchess parts from Antonio. The
+    # Duchess focalizes — the parting speech ('Be a good mother
+    # to your little ones, / And save them from the tiger') is
+    # hers; her instructions to Antonio about the eldest son's
+    # safety carry the scene; her recognition that this is the
+    # last meeting in life is the scene's emotional weight.
+    SjuzhetEntry(
+        event_id="E_duchess_sends_antonio_away",
+        τ_d=14,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=15 — Act 3 Scene 5 close: the capture in the
+    # countryside. Bosola focalizes — the masked interception is
+    # his, his speech to the Duchess ('You are a Duchess, but
+    # there is a difference / Between the noblest and the
+    # vilest woman') is the scene's verbal center, and his
+    # masked-and-then-unmasking shape is the scene's structural
+    # motion (the masking carries the dramatic-irony moment as
+    # the Duchess does not yet know her captor's identity).
+    # **This is the Duchess's main arc peripeteia** per
+    # AR_MALFI_MYTHOS; the focalizer is Bosola because the
+    # scene's structural agent is the captor, not the captured.
+    SjuzhetEntry(
+        event_id="E_capture_in_countryside",
+        τ_d=15,
+        focalizer_id="bosola",
+        disclosures=(),
+    ),
+
+    # τ_d=16 — Act 4 Scene 1: the imprisonment opens. The
+    # Duchess focalizes — the prison-cell scene's structural
+    # center is her endurance; the famous 'I am Duchess of Malfi
+    # still' will land at τ_d=20 but its register begins here
+    # with her response to confinement ('I'll tell thee a
+    # miracle; / I am not mad yet, to my cause of sorrow'). Her
+    # stoic self-possession is the scene's primary affect.
+    SjuzhetEntry(
+        event_id="E_imprisonment",
+        τ_d=16,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=17 — Act 4 Scene 1 mid: the dead-hand torture. The
+    # Duchess focalizes — the scene's structural test is her
+    # response to the deception, and Webster makes the test of
+    # her stoicism the focal load. Ferdinand has left the chamber
+    # darkened; the dead-hand is presented mute, with the
+    # candle then lit revealing the figures. The Duchess's
+    # speech ('What witchcraft doth he practise, that he hath
+    # left / A dead man's hand here?') is the scene's
+    # interpretive center.
+    SjuzhetEntry(
+        event_id="E_dead_hand_scene",
+        τ_d=17,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=18 — Act 4 Scene 1 close: the waxworks torture. The
+    # Duchess focalizes — the discovery of the wax figures of
+    # 'dead' Antonio and the children is hers, the grief is
+    # hers, the despair-speech ('There is not between heaven
+    # and earth one wish / I stay for after this') is the scene's
+    # weight.
+    SjuzhetEntry(
+        event_id="E_waxworks_scene",
+        τ_d=18,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=19 — Act 4 Scene 2 opens: the madmen masque. The
+    # Duchess focalizes — her endurance of the dance-of-madmen
+    # is the scene's structural test, her speech to Cariola
+    # about the madmen ('Th' heaven o'er my head seems made of
+    # molten brass, / The earth of flaming sulphur') carries the
+    # scene's affect; the masque is performed FOR her.
+    SjuzhetEntry(
+        event_id="E_madmen_masque",
+        τ_d=19,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=20 — Act 4 Scene 2 close: the strangling. The Duchess
+    # focalizes — the famous 'I am Duchess of Malfi still' is
+    # hers, the scene's moral center is her defiance, Bosola is
+    # the executor but the scene's structural weight is her
+    # final speech. Webster makes the strangling structurally
+    # her scene even though Bosola is the agent — her last words
+    # carry; her death is the climax of her arc and the play's
+    # primary pathos. Cariola's strangling immediately follows
+    # (compressed into the same SJUZHET entry); the children's
+    # strangling is offstage and authorial-reticent.
+    SjuzhetEntry(
+        event_id="E_strangling",
+        τ_d=20,
+        focalizer_id="duchess",
+        disclosures=(),
+    ),
+
+    # τ_d=21 — Act 4 Scene 2 final: Ferdinand views the corpse.
+    # **The main anagnorisis** per AR_MALFI_MYTHOS. Ferdinand
+    # focalizes — the famous 'Cover her face; mine eyes dazzle:
+    # she died young' is his line; the scene's recognition-and-
+    # reversal lands in his speech; his madness-onset is the
+    # scene's structural turn. The Duchess is dead and cannot
+    # focalize.
+    SjuzhetEntry(
+        event_id="E_ferdinand_views_corpse",
+        τ_d=21,
+        focalizer_id="ferdinand",
+        disclosures=(),
+    ),
+
+    # τ_d=22 — Act 4 Scene 2 epilogue: Bosola alone with the
+    # corpse. Bosola focalizes — **the play's most explicit
+    # mid-arc reversal**, the resolution to revenge, the
+    # brief revival of the Duchess ('Mercy.') and her final
+    # death, and Bosola's recognition speech ('I am angry with
+    # myself, now that I wake'). Webster makes the scene
+    # structurally Bosola's — the instrument's collapse into
+    # avenger.
+    SjuzhetEntry(
+        event_id="E_bosola_resolves_revenge",
+        τ_d=22,
+        focalizer_id="bosola",
+        disclosures=(),
+    ),
+
+    # τ_d=23 — Act 5 Scene 2: Ferdinand's lycanthropy. Webster
+    # stages the court-physician scene where the doctor (not an
+    # entity) reports Ferdinand's wolf-skin delusion. Ferdinand
+    # focalizes — the lycanthropy is his; his behaviour is the
+    # scene's structural weight; his speech 'Strangling is a
+    # very quiet death' surfaces his persistent obsession with
+    # the act he ordered.
+    SjuzhetEntry(
+        event_id="E_ferdinand_lycanthropy",
+        τ_d=23,
+        focalizer_id="ferdinand",
+        disclosures=(),
+    ),
+
+    # τ_d=24 — Act 5 Scene 2 mid: the Cardinal poisons Julia.
+    # The Cardinal focalizes — the calculation is his, the
+    # poisoned-Bible setup is his, Julia is the recipient but
+    # the Cardinal is the agent. Bosola is hidden behind the
+    # arras and overhears the confession; his knowledge is
+    # crucial but he is not the scene's focalizer (he is the
+    # eavesdropper). The Cardinal's speech 'I am puzzled in a
+    # question about hell' carries the scene.
+    SjuzhetEntry(
+        event_id="E_cardinal_poisons_julia",
+        τ_d=24,
+        focalizer_id="cardinal",
+        disclosures=(),
+    ),
+
+    # τ_d=25 — Act 5 Scene 5 opens: Bosola visits the Cardinal.
+    # The Cardinal focalizes — his instruction to attendants
+    # ('howsoe'er he do entreat you, be deaf to him') is the
+    # scene's setup, his calculation is the scene's structural
+    # ground, his self-trapping is the scene's dramatic irony.
+    # Webster's blackest-comedy is the Cardinal's instruction
+    # turning against him.
+    SjuzhetEntry(
+        event_id="E_bosola_visits_cardinal_at_night",
+        τ_d=25,
+        focalizer_id="cardinal",
+        disclosures=(),
+    ),
+
+    # τ_d=26 — Act 5 Scene 5 mid: Bosola kills Antonio by
+    # mistake. **Antonio's arc peripeteia** per AR_STEP_ANTONIO_
+    # DARK_RECOGNITION. Bosola focalizes — the dark-room
+    # confusion is his, the stab is his, the recognition mid-
+    # wound is his ('Antonio! / The man I would have sav'd
+    # 'bove mine own life!'). Antonio is the victim and dies
+    # almost immediately; the scene's structural agent is
+    # Bosola. The anti-recognition shape is carried in his
+    # speech.
+    SjuzhetEntry(
+        event_id="E_bosola_kills_antonio",
+        τ_d=26,
+        focalizer_id="bosola",
+        disclosures=(),
+    ),
+
+    # τ_d=27 — Act 5 Scene 5 mid: Bosola kills the Cardinal.
+    # Bosola focalizes — the stab is his, the Cardinal's cries
+    # for help (ignored by attendants per the earlier
+    # instruction) are the scene's dramatic irony, Bosola's
+    # speech 'Now it seems thy greatness was only outward' is
+    # the scene's verbal center.
+    SjuzhetEntry(
+        event_id="E_bosola_kills_cardinal",
+        τ_d=27,
+        focalizer_id="bosola",
+        disclosures=(),
+    ),
+
+    # τ_d=28 — Act 5 Scene 5 close: the mutual wounding. Ferdinand
+    # enters in his lycanthropic state and the three-way
+    # confrontation collapses into mutual stabbings. No single
+    # focalizer — Webster's scene is chaos with multiple
+    # competing affects: Ferdinand's mad rage, the dying
+    # Cardinal's bitter recognition, Bosola's final-act speech.
+    # None focalizes the chaos.
+    SjuzhetEntry(
+        event_id="E_mutual_wounding_ferdinand_bosola",
+        τ_d=28,
+        focalizer_id=None,
+        disclosures=(),
+    ),
+
+    # τ_d=29 — Act 5 Scene 5 final: Delio enters with the eldest
+    # son. **The play's closing.** Delio focalizes — the closing
+    # speech is his ('In all our quest of greatness, / Like
+    # wanton boys, whose pastime is their care, / We follow
+    # after bubbles blown in the air'), the structural payload
+    # (the surviving heir entrusted to the audience's hope) is
+    # his to carry, the scene's affect (rueful witness) is his.
+    SjuzhetEntry(
+        event_id="E_delio_arrives_with_heir",
+        τ_d=29,
+        focalizer_id="delio",
+        disclosures=(),
+    ),
+
+]
+
+
+# ----------------------------------------------------------------------------
+# Descriptions — fold-invisible interpretive records
+# ----------------------------------------------------------------------------
+#
+# Twelve descriptions covering:
+#
+#   1. Three character-register questions the substrate declines to
+#      settle (Bosola's transformation, Ferdinand's lycanthropy, the
+#      Cardinal's interiority).
+#   2. Two character-motivation questions (the Duchess's marriage,
+#      Antonio's passivity).
+#   3. Three reader frames carrying the Session-2 OQ findings into
+#      substrate scope (OQ-LEAR-4 four-arc-peripeteia,
+#      OQ-AP7 third-encoding distance-6,
+#      OQ-MALFI-1 sequentially-wielded-instrument).
+#   4. Two thematic-structural readings (Webster's parodic-Catholic
+#      setting, the play's instrument density relative to the
+#      corpus).
+#   5. Two iconic-line readings (the "Duchess of Malfi still"
+#      moment, the eldest son's survival as structural payload).
+#
+# Probe-authored edits and answers are not present in Session 3;
+# they would be added by Session 5's probe pass against Malfi.
+
+DESCRIPTIONS = [
+
+    Description(
+        id="D_bosola_transformation_register_undecided",
+        attached_to=anchor_event("E_bosola_resolves_revenge"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Bosola's reversal at τ_s=24 — alone with the "
+              "Duchess's corpse, attempting revival, resolving to "
+              "revenge — is substrate-recorded as the moment "
+              "`avenger(bosola)` is asserted; what the reversal "
+              "MEANS at character-register level is not. Three "
+              "readings the text supports: (a) GENUINE REPENTANCE "
+              "— Bosola recognizes his complicity in an act that "
+              "exceeds what his hamartia (accepting the "
+              "commission knowing the work was corrupting) "
+              "allowed for, and turns to vengeance as moral "
+              "reconstruction; his subsequent killings of "
+              "Cardinal and Ferdinand are then redemptive even as "
+              "they consume him. (b) HIRELING RESENTMENT — Bosola "
+              "was always going to turn on whoever betrayed him; "
+              "the Duchess's body is the proximate cause but his "
+              "structural disposition was prior; the avenger-arc "
+              "is character-internal and not particularly moral. "
+              "(c) DAMNATION-VIA-RECOGNITION — Bosola sees what "
+              "he has done and cannot un-do it; his subsequent "
+              "acts (the night-room sequence, the killing of "
+              "Antonio by mistake) are post-redemption damnation, "
+              "where the recognition arrives but cannot save. The "
+              "substrate commits to none of these. Bosola's last "
+              "speech ('Mine is another voyage') names the "
+              "transit but not its destination. Webster's dark "
+              "comedy of moral ambiguity is the substrate's "
+              "position — the reversal is structural, the moral "
+              "register is reader-side. Sketch-04 OQ-AP14's "
+              "instrumental-relation discipline carries the "
+              "structural arc; descriptions-layer carries the "
+              "interpretive question."),
+        is_question=True,
+        authored_by="author",
+        τ_a=200,
+    ),
+
+    Description(
+        id="D_ferdinand_lycanthropy_register_undecided",
+        attached_to=anchor_event("E_ferdinand_lycanthropy"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Ferdinand's lycanthropy at τ_s=25 — the wolf-skin "
+              "delusion, the graveyard-digging, the howling — is "
+              "substrate-recorded as `lycanthropy(ferdinand)`; "
+              "what the transformation IS in the play's "
+              "ontology is not. Four candidate readings: (a) "
+              "CLINICAL — Ferdinand suffers a real psychiatric "
+              "lycanthropic condition (a textually-attested early-"
+              "modern diagnostic category; Robert Burton's "
+              "*Anatomy of Melancholy* describes it). The "
+              "doctor-scene treats it medically. (b) HYSTERICAL "
+              "— Webster's dark comedy renders Ferdinand's "
+              "madness as performance; the wolf-skin delusion is "
+              "psychogenic rather than literal. (c) PUNITIVE — "
+              "divine retribution for the Duchess's murder; the "
+              "transformation is supernatural-providential, even "
+              "if the play does not name a deity. (d) SYMBOLIC — "
+              "Webster makes the brother's bestiality literal; "
+              "the wolf-form is the moral truth of Ferdinand's "
+              "possessive-incestuous violence rendered as flesh. "
+              "Each reading carries the play differently: "
+              "clinical reads as case-study; hysterical reads as "
+              "satire of the brother-orchestrator's collapse; "
+              "punitive reads as divine-providence-in-tragedy; "
+              "symbolic reads as moral-allegorical. The substrate "
+              "commits to none. Unlike Hamlet's feigning_madness "
+              "(agent-level, never promoted to world-fact) and "
+              "Lear's mad('lear') (world-asserted at storm-onset, "
+              "register left open by description), Webster's "
+              "lycanthropy IS asserted at world-level as a "
+              "specific behavioral shape — but the metaphysical "
+              "register of the assertion is reader-side."),
+        is_question=True,
+        authored_by="author",
+        τ_a=201,
+    ),
+
+    Description(
+        id="D_cardinal_interiority_register_undecided",
+        attached_to=anchor_event("E_cardinal_poisons_julia"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("The Cardinal has no soliloquy of self-reckoning in "
+              "the entire play. Webster gives him brief moments "
+              "of self-questioning ('I am puzzled in a question "
+              "about hell'; 'How tedious is a guilty conscience!') "
+              "but no extended interior monologue equivalent to "
+              "Hamlet's 'To be or not to be', Edmund's 'Now, gods, "
+              "stand up for bastards', or Macbeth's 'Tomorrow and "
+              "tomorrow and tomorrow'. The Cardinal's substrate "
+              "trace is calculation throughout: warning, "
+              "Loretto-banishment-ritual, Julia-poisoning, "
+              "body-disposal arrangement, killed-while-attendants-"
+              "ignore. Three readings: (a) PURE CALCULATOR — "
+              "Webster's anti-Catholic gibe; the prince of the "
+              "Church is morally vacuous, his interiority is "
+              "stage-machinery for political acts, his absence "
+              "of soliloquy IS the character. (b) HIDDEN GRIEF — "
+              "the Cardinal too loved his sister and the "
+              "absence of self-reckoning is Webster's "
+              "characteristic withholding of interiority that "
+              "the audience would expect; the 'puzzled in a "
+              "question about hell' line is the surface of "
+              "depth he will not let us see. (c) PSYCHOPATHIC "
+              "SHALLOWNESS — there is no interiority because "
+              "there is nothing to render; the Cardinal is "
+              "Webster's portrait of moral absence, distinct "
+              "from Ferdinand's pathology and Bosola's "
+              "self-aware corruption. Each reading would commit "
+              "the play to a different anti-Catholic register; "
+              "the substrate declines."),
+        is_question=True,
+        authored_by="author",
+        τ_a=202,
+    ),
+
+    Description(
+        id="D_duchess_marriage_motivation_undecided",
+        attached_to=anchor_event("E_duchess_woos_antonio"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("The Duchess's wooing of Antonio at τ_s=3 is "
+              "substrate-recorded as her initiative; what drives "
+              "the initiative is not. Three readings the text "
+              "supports: (a) LOVE — the Duchess genuinely loves "
+              "Antonio (the role-reversed wooing scene, with its "
+              "explicit acknowledgment of the rank-gap and "
+              "explicit consent-clearing, reads as careful "
+              "courtship rather than impulsive). (b) DEFIANCE — "
+              "the brothers' opening warning at τ_s=0 against "
+              "remarriage prompts the act; without the warning, "
+              "the Duchess might not have proposed; the marriage "
+              "is structurally a response. (c) PRINCIPLE — the "
+              "per-verba marriage is canonically valid by the "
+              "play's standards, the Duchess's articulation "
+              "('I have heard lawyers say, a contract in a "
+              "chamber / Per verba presenti, is absolute "
+              "marriage') deploys legal-religious authority; the "
+              "marriage is right by the canonical frame and the "
+              "Duchess is asserting that rightness. The "
+              "substrate commits to none. Cordelia's "
+              "motivation-question (D_cordelia_motivation_"
+              "undecided in lear.py) is the parallel — both "
+              "tragic-hero women elect an act that defies "
+              "male-orchestrated expectations, and both "
+              "rationales (honesty/pride/faith for Cordelia; "
+              "love/defiance/principle for the Duchess) are "
+              "left textually plural. The pattern is corpus-"
+              "wide: female tragic-hero motivation under male-"
+              "pressured circumstances tends to authorial "
+              "reticence."),
+        is_question=True,
+        authored_by="author",
+        τ_a=203,
+    ),
+
+    Description(
+        id="D_antonio_passivity_register",
+        attached_to=anchor_event("E_bosola_kills_antonio"),
+        kind="authorial-uncertainty",
+        attention=Attention.STRUCTURAL,
+        text=("Antonio's arc is structurally reactive throughout: "
+              "wooed (he does not initiate), fled (the Duchess "
+              "directs), separated (the Duchess sends him away), "
+              "killed (Bosola in the dark, by mistake). The "
+              "play's anti-tragic-hero shape per malfi_"
+              "aristotelian.py's `AR_ANTONIO.is_tragic_hero="
+              "False`. Two reading-registers: (a) PASSIVE "
+              "RECIPIENT OF FORTUNE — Antonio carries the marital "
+              "fate without agency; his death by mistake is the "
+              "extension of his structural passivity into the "
+              "final beat; his arc is the play's saddest because "
+              "least chosen. (b) FULLY-CONSENSUAL PARTICIPANT — "
+              "Antonio's acceptance of the Duchess's proposal is "
+              "active consent across the rank-gap, his "
+              "willingness to abandon his children with her at "
+              "the parting is a moral decision, his return to "
+              "Rome for reconciliation with the Cardinal is "
+              "deliberate; his death is tragic precisely because "
+              "the chosen-path turns at the last instant from "
+              "reconciliation to murder-in-the-dark. The "
+              "substrate's reactive trace (Antonio observes more "
+              "than he initiates across the play's events) is "
+              "consistent with reading (a); but Antonio's "
+              "world-fact involvement (accepting the marriage, "
+              "co-parenting, returning to Rome) is consistent "
+              "with reading (b). The Aristotelian overlay's "
+              "is_tragic_hero=False marks the absence of "
+              "classical hamartia-with-deliberation, not the "
+              "absence of agency. The descriptions-layer carries "
+              "the question."),
+        is_question=True,
+        authored_by="author",
+        τ_a=204,
+    ),
+
+    Description(
+        id="D_oq_lear_4_reader_frame",
+        attached_to=anchor_event("E_strangling"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("**OQ-LEAR-4 substrate-layer reader frame.** Webster's "
+              "*Duchess of Malfi* authors four structurally-distinct "
+              "character-arc peripeteia events within a single "
+              "mythos: the Duchess at E_capture_in_countryside "
+              "(τ_s=17, main arc reversal), Ferdinand at "
+              "E_ferdinand_views_corpse (τ_s=23, tormentor→madman), "
+              "Bosola at E_bosola_resolves_revenge (τ_s=24, "
+              "instrument→avenger), Antonio at E_bosola_kills_"
+              "antonio (τ_s=30, anti-recognition). The dialect's "
+              "single `peripeteia_event_id` slot at "
+              "AR_MALFI_MYTHOS scope carries one of the four (the "
+              "Duchess's at τ_s=17); the main anagnorisis slot at "
+              "AR_MALFI_MYTHOS.anagnorisis_event_id carries "
+              "Ferdinand's recognition at τ_s=23; the anagnorisis "
+              "chain steps (AR_STEP_BOSOLA_RESOLVES, AR_STEP_"
+              "ANTONIO_DARK_RECOGNITION) carry the third and "
+              "fourth under semantic stretch of A11. The "
+              "uneven-distribution of structural information "
+              "across these four sites is OQ-LEAR-4's substrate "
+              "signature.\n\n"
+              "Reader-side question (Session 5 probe): do you "
+              "read the four peripeteia events as structurally "
+              "coordinated (one unified arc-shape with four "
+              "instantiation sites) or as structurally distinct "
+              "(four separate arcs converging by accident)? The "
+              "dialect's current shape forces the latter "
+              "reading; the candidate sketch-06 extension "
+              "(`secondary_peripeteia_event_ids` field per "
+              "malfi_aristotelian.py's OQ_LEAR_4_FINDING) would "
+              "support the former. Cross-encoding pressure with "
+              "Lear's Gloucester-subplot peripeteia is now real."),
+        is_question=True,
+        authored_by="author",
+        τ_a=210,
+    ),
+
+    Description(
+        id="D_oq_ap7_reader_frame",
+        attached_to=anchor_event("E_ferdinand_views_corpse"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("**OQ-AP7 substrate-layer reader frame.** Webster's "
+              "peripeteia-anagnorisis distance is 6 (τ_s=17 → "
+              "τ_s=23), the corpus narrowest SEPARATED. Three "
+              "encodings under one dialect category exhibit three "
+              "analytical shapes:\n\n"
+              "- Webster's 6: INTENSE. The dense Act-IV "
+              "  compression. Capture → imprisonment → three "
+              "  tortures → strangling → recognition. Six τ_s "
+              "  units span the unbinding-to-recognition arc; "
+              "  the structural content is INTENSITY rather than "
+              "  DELAY.\n"
+              "- Hamlet's 9: DELAYED. The verification-to-belated-"
+              "  recognition arc. The structural content IS the "
+              "  delay (Hamlet's famous procrastination).\n"
+              "- Lear's 14: ACCUMULATING. The slow-burn-of-"
+              "  suffering arc. The structural content is the "
+              "  ACCUMULATION of suffering before recognition.\n\n"
+              "Three distinct analytical shapes, one dialect "
+              "category. Reader-side question (Session 5 probe): "
+              "do you read the three under a single 'separated' "
+              "frame or do you spontaneously distinguish them? "
+              "Webster's encoding presses the case for a "
+              "tripartite refinement (intense / delayed / "
+              "accumulating) or a numerical "
+              "peripeteia_anagnorisis_distance field. See "
+              "malfi_aristotelian.py's OQ_AP7_RE_SURFACE for the "
+              "dialect-layer surface."),
+        is_question=True,
+        authored_by="author",
+        τ_a=211,
+    ),
+
+    Description(
+        id="D_oq_malfi_1_reader_frame",
+        attached_to=anchor_event("E_bosola_visits_cardinal_at_night"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("**OQ-MALFI-1 substrate-layer reader frame.** Webster "
+              "authors two `kind=\"instrumental\"` "
+              "ArCharacterArcRelation records on the same target "
+              "(Bosola) with the same polarity (malicious) but "
+              "distinct wielders and temporal phases — the "
+              "Cardinal in pre-play galley service plus the Act V "
+              "body-disposal re-employment (substrate-grounded at "
+              "E_bosola_galley_service τ_s=-12 and E_bosola_visits_"
+              "cardinal_at_night τ_s=29); Ferdinand in the play's "
+              "primary commission through every torture, the "
+              "strangling, and the mutual wounding (substrate-"
+              "grounded at E_ferdinand_hires_bosola τ_s=1 through "
+              "E_mutual_wounding_ferdinand_bosola τ_s=32). The "
+              "structural shape — one instrument-character passed "
+              "across two employers across time with consistent "
+              "moral polarity — is distinct from Lear's "
+              "polarity-contrast shape (Edmund and Edgar wielding "
+              "two distinct instrument-chains against Gloucester "
+              "with opposite polarity).\n\n"
+              "Reader-side question (Session 5 probe): do you read "
+              "the Cardinal-Bosola brackets (pre-play service + "
+              "Act V re-employment) as a SINGLE instrumental "
+              "relation persisting across time, or as TWO distinct "
+              "deployments? The substrate authors it as one "
+              "relation; the temporal-discontinuity is reader-"
+              "visible. The play's tragic-irony depends on this "
+              "transferability — Bosola's willingness to be "
+              "re-employed by the Cardinal in Act V (after a play "
+              "of service to Ferdinand) is part of what makes his "
+              "arc peripeteia at τ_s=24 explicit (he turns "
+              "against BOTH wielders simultaneously). See "
+              "malfi_aristotelian.py's OQ_MALFI_1_FINDING for the "
+              "dialect-layer surface and the three candidate "
+              "canonical extensions."),
+        is_question=True,
+        authored_by="author",
+        τ_a=212,
+    ),
+
+    Description(
+        id="D_websters_parodic_catholic_setting",
+        attached_to=anchor_event("E_banishment_at_loretto"),
+        kind="texture",
+        attention=Attention.INTERPRETIVE,
+        text=("Webster's setting is nominally Catholic Italy "
+              "(Amalfi, Rome, Loretto) and the play's apparatus "
+              "is thoroughly Catholic — the per verba marriage's "
+              "canonical validity, the Cardinal's ecclesiastical "
+              "office, the Loretto pilgrimage shrine, the "
+              "poisoned Bible. But the play's treatment of Catholic "
+              "institutions is satirical-bordering-on-violently-"
+              "hostile: the Cardinal abandons his ecclesiastical "
+              "office in a stage-direction dumb-show (literally "
+              "removing his robes for armour at Loretto, τ_s=15), "
+              "the per-verba marriage's canonical validity is "
+              "structurally vindicated by the Duchess's death "
+              "(she dies 'Duchess of Malfi still' — meaning the "
+              "marriage held), the poisoned Bible (τ_s=27) makes "
+              "the most-Catholic object a murder weapon. The "
+              "play's parodic-Catholic reading is a deliberate "
+              "Jacobean Protestant inflection: Webster (writing "
+              "for a Protestant English audience under James I) "
+              "displays Catholic institutional moral collapse as "
+              "the play's social register. The substrate marks "
+              "the Catholic apparatus structurally without "
+              "endorsing the satire; the descriptions-layer "
+              "carries the parodic reading. The corpus's first "
+              "encoding to author institutional-religious "
+              "satire as structural ground (Hamlet's Catholic-"
+              "Protestant axis is present but not satirical; "
+              "Lear's gods-as-flies invocation is rhetorical "
+              "rather than institutional)."),
+        is_question=False,
+        authored_by="author",
+        τ_a=220,
+    ),
+
+    Description(
+        id="D_play_instrument_density",
+        attached_to=anchor_event("E_madmen_masque"),
+        kind="texture",
+        attention=Attention.STRUCTURAL,
+        text=("Webster's play is the corpus's densest "
+              "instrument-user. Six distinct instruments operate "
+              "across the action:\n\n"
+              "1. The apricots (E_apricot_ploy, τ_s=7) — Bosola's "
+              "   doctored fruit, the play's first instrument.\n"
+              "2. The horoscope (E_horoscope_dropped, τ_s=9) — "
+              "   Antonio's dropped paper bearing the child's "
+              "   nativity; Bosola's inference engine.\n"
+              "3. The dead hand (E_dead_hand_scene, τ_s=19) — "
+              "   Ferdinand's torture-instrument, a severed hand "
+              "   bearing a wedding ring.\n"
+              "4. The waxworks (E_waxworks_scene, τ_s=20) — "
+              "   wax figures of 'dead' Antonio and the children.\n"
+              "5. The madmen masque (E_madmen_masque, τ_s=21) — "
+              "   eight masked dancers commissioned to torment "
+              "   the Duchess; the play's most theatrical "
+              "   instrument.\n"
+              "6. The poisoned Bible (E_cardinal_poisons_julia, "
+              "   τ_s=27) — the Cardinal's instrument against "
+              "   Julia.\n\n"
+              "Plus the play's PERSONAL instruments: Bosola "
+              "as Ferdinand's instrument (the AR_FERDINAND_BOSOLA_"
+              "INSTRUMENTAL A13 relation), Bosola as the "
+              "Cardinal's instrument (AR_CARDINAL_BOSOLA_"
+              "INSTRUMENTAL). Compare:\n\n"
+              "- Hamlet: 1 instrument (the Mousetrap) + 1 personal "
+              "  (Laertes as Claudius's instrument).\n"
+              "- Lear: 3 instruments (forged letter, staged "
+              "  wound, staged cliff-fall) + 0 personal.\n"
+              "- Macbeth, Oedipus, Rashomon: 0 instruments each.\n\n"
+              "Webster's 6 + 2 = 8 instrument-and-instrumental-"
+              "relation count is the corpus high by a wide "
+              "margin. The density is structurally load-bearing: "
+              "the play's anti-Catholic satire (a Bible as poison) "
+              "and the Aristotelian overlay's two non-canonical "
+              "instrumental relations (OQ-MALFI-1) both turn on "
+              "the instrument-dense surface. If OQ-AP14 forces a "
+              "canonical extension (sketch-06 candidate per "
+              "lear_aristotelian.py's OQ_AP14_FINDING), Webster's "
+              "instrument-density would be the second-site forcing "
+              "evidence."),
+        is_question=False,
+        authored_by="author",
+        τ_a=221,
+    ),
+
+    Description(
+        id="D_duchess_of_malfi_still_reading",
+        attached_to=anchor_event("E_strangling"),
+        kind="reader-frame",
+        attention=Attention.STRUCTURAL,
+        text=("'I am Duchess of Malfi still.' Webster's most "
+              "famous line, spoken by the Duchess at τ_s=22 "
+              "moments before the strangling. The substrate "
+              "records the strangling event and the Duchess's "
+              "death; the line itself is reader-side. Two "
+              "structural readings:\n\n"
+              "- ANAGNORISIS-REFUSAL. The Duchess could in "
+              "  principle recognize her hamartia (marrying "
+              "  secretly across rank in defiance of the "
+              "  brothers' enforcement capacity) at the threshold "
+              "  of death; she refuses to. The line is the "
+              "  rhetorical seal on her refusal. Sketch-05 A18 "
+              "  `anagnorisis_absent=True` on AR_DUCHESS (per "
+              "  malfi_aristotelian.py) structurally carries the "
+              "  refusal — corpus second use of the field after "
+              "  Cordelia. The Cordelia parallel is meaningful: "
+              "  both women die holding the ground their "
+              "  hamartia chose; both deaths are pathos sites "
+              "  because the anagnorisis-refusal is not "
+              "  cowardice but principle.\n"
+              "- ASSERTION-OF-PERSISTENCE. The Duchess "
+              "  declares that her title (and by extension her "
+              "  worth, her marriage's validity, her standing-"
+              "  before-history) persists into death. The "
+              "  per-verba marriage's canonical validity is "
+              "  structurally vindicated by her continued "
+              "  Duchess-status at the moment of strangling; the "
+              "  line is the substrate-vindication of "
+              "  secret_marriage(duchess, antonio) as a world-"
+              "  fact that her killers cannot dissolve. Reading "
+              "  (b) is reader-completionist; reading (a) is "
+              "  dialect-load-bearing.\n\n"
+              "The two readings are compatible — the refusal "
+              "is by means of the assertion. The substrate "
+              "commits to neither separately; the line's "
+              "interpretive weight is reader-side, but the "
+              "anagnorisis-refusal IS now structurally carried by "
+              "the A18 field at dialect scope (Session 2)."),
+        is_question=False,
+        authored_by="author",
+        τ_a=230,
+    ),
+
+    Description(
+        id="D_eldest_son_survival_structural_payload",
+        attached_to=anchor_event("E_delio_arrives_with_heir"),
+        kind="texture",
+        attention=Attention.STRUCTURAL,
+        text=("The play's closing structural payload: Delio "
+              "arrives at the Cardinal's palace with the "
+              "Duchess's eldest son (substrate-grounded by "
+              "duchess_son entity, surviving the Acts III-V "
+              "catastrophe in transit with Antonio). Delio's "
+              "closing speech entrusts the boy to Pescara and "
+              "the surviving court: 'In all our quest of "
+              "greatness, / Like wanton boys, whose pastime is "
+              "their care, / We follow after bubbles blown in "
+              "the air.'\n\n"
+              "The structural-payload role parallels Edgar's at "
+              "Lear's close (the wronged-son-restored, surviving "
+              "the catastrophe to inherit and rule) and "
+              "Horatio's at Hamlet's close (the survivor-witness "
+              "tasked to tell the story). But the Duchess's son "
+              "is a CHILD, not an adult inheritor — the "
+              "structural shape differs: where Edgar and Horatio "
+              "are present-tense survivors with immediate "
+              "agency, the Duchess's son is future-tense "
+              "promise. The play's restoration is deferred to "
+              "the offstage future; Webster will not show "
+              "what becomes of the boy. The catharsis is split "
+              "between the catastrophe (the Duchess's death, "
+              "Bosola's recognition, Ferdinand's lycanthropy, "
+              "the brothers' mutual collapse) and the deferred "
+              "hope (the boy who may grow up to be Duke of "
+              "Amalfi, who may have heard the story, who may "
+              "make different choices). Cordelia's offstage "
+              "hanging is the corpus's emptiest closing pathos "
+              "site; the Duchess's surviving son is the corpus's "
+              "most deferred. Both are non-classical Aristotelian "
+              "shapes; both register as legitimate-but-restless "
+              "endings.\n\n"
+              "Webster's closing line — 'These wretched eminent "
+              "things / Leave no more fame behind 'em, than "
+              "should one / Fall in a frost, and leave his "
+              "print in snow' — sets the boy's future-tense "
+              "against the catastrophe's past-tense. The "
+              "substrate marks the eldest son's survival "
+              "structurally; the descriptions-layer carries the "
+              "thematic weight."),
+        is_question=False,
+        authored_by="author",
+        τ_a=231,
+    ),
+
+]
+
