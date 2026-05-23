@@ -28,6 +28,10 @@
     "is_tragic_hero": {
       "type": "boolean",
       "description": "Optional flag distinguishing the central tragic hero from other characters who may also carry a hamartia (e.g., Jocasta in Oedipus). Python default is false; schema admits absence and false interchangeably. PFS6-C5."
+    },
+    "anagnorisis_absent": {
+      "type": "boolean",
+      "description": "A18 (aristotelian-sketch-05). Optional authorial claim that this character is a tragic hero whose hamartia produces catastrophe for others but whose own arc does not contain a recognition moment (e.g., Cordelia in Lear). Python default is false; schema admits absence and false interchangeably. Pre-sketch-05 silence is preserved by the default — the dialect makes no claim about whether a character has an anagnorisis unless the author sets this field true. A7.16 enforces consistency (only on is_tragic_hero=true characters; never on the mythos's main-anagnorisis character; never on characters with chain steps). PFS16-C6."
     }
   },
   "additionalProperties": false

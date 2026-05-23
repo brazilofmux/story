@@ -28,6 +28,11 @@
     "annotation": {
       "type": "string",
       "description": "Optional author prose annotation. Python default is empty string; schema admits the empty string and absence interchangeably. PFS13-AS4."
+    },
+    "step_kind": {
+      "type": "string",
+      "enum": ["", "parallel", "precipitating", "staging"],
+      "description": "A14 (aristotelian-sketch-03). Closed enum classifying the chain step. {parallel} is a non-causal sibling recognition (Lady Macbeth's sleepwalking; Gloucester's blinding). {precipitating} causes the mythos's main anagnorisis (Jocasta in Oedipus). {staging} sets up the main anagnorisis by displaying evidence to the recognizer (Hamlet's Mousetrap). Empty string (Python default) means 'derive from precipitates_main + character identity' for back-compat; A7.11 carries the derivation rules. Unlike A10/A13's canonical-plus-open kind discipline, step_kind is closed at the schema layer — invalid non-empty values are rejected at shape time, matching peripeteia_anagnorisis_binding (PFS13-M13). PFS16-AS5."
     }
   },
   "additionalProperties": false

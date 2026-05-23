@@ -110,6 +110,11 @@
       "type": "integer",
       "description": "Configurable τ_s bound for the peripeteia_anagnorisis_binding='adjacent' check — |τ_s(peripeteia) − τ_s(anagnorisis)| ≤ this value. Python default is 3 (Oedipus-scale pacing); encodings with a different dramatic clock (decades-long fabula; single-dramatic-day compression) override. Carried unconditionally by the dataclass; verifier reads it only when peripeteia_anagnorisis_binding='adjacent' (same unconditional-carry pattern as unity_of_time_bound and unity_of_place_max_locations). Per PFS13-M14 / OQ4, no schema-level default is declared — Python carries it. PFS13-M14."
     },
+    "anagnorisis_character_ref_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A14 (aristotelian-sketch-03). Optional ArCharacter id naming the character whose recognition lands at anagnorisis_event_id. Required for step_kind='staging' to verify (A7.11 invariant 2). Absence leaves pre-sketch-03 encodings unchanged; A7.11's back-compat derivation treats absent as 'no staging classification available' and any empty-step_kind chain step derives to 'parallel' (different char) or 'precipitating' (from precipitates_main). Plain-string reference per PFS6-X2; resolution into the mythos's characters tuple is A7.11's job. PFS16-M17."
+    },
     "co_presence_requirements": {
       "type": "array",
       "items": {

@@ -315,6 +315,15 @@ def _load_aristotelian_anagnorisis_step_schema() -> dict:
         return json.load(f)
 
 
+def _load_aristotelian_character_arc_relation_schema() -> dict:
+    schema_path = (
+        _repo_root() / "schema" / "aristotelian"
+        / "character_arc_relation.json"
+    )
+    with open(schema_path) as f:
+        return json.load(f)
+
+
 def _build_schema_registry() -> Registry:
     """Build a referencing Registry mapping canonical $id URIs to the
     loaded schemas. Lets cross-file $refs resolve without fetching —
@@ -393,6 +402,7 @@ def _build_schema_registry() -> Registry:
         _load_aristotelian_anagnorisis_step_schema(),
         _load_aristotelian_co_presence_requirement_schema(),
         _load_aristotelian_audience_knowledge_constraint_schema(),
+        _load_aristotelian_character_arc_relation_schema(),
         _load_save_the_cat_co_presence_requirement_schema(),
         _load_save_the_cat_strand_convergence_requirement_schema(),
     ):
@@ -618,6 +628,55 @@ def _discover_encoding_aristotelian_relations():
                 isinstance(value, tuple)
                 and value
                 and all(isinstance(v, ArMythosRelation) for v in value)
+            ):
+                for v in value:
+                    rels_seen[v.id] = v
+        if not rels_seen:
+            continue
+        rels_out.append((name, list(rels_seen.values())))
+    return rels_out
+
+
+def _discover_encoding_aristotelian_character_arc_relations():
+    """Walks encoding modules for module-level attributes holding
+    ArCharacterArcRelation records. Returns a list of (encoding_name,
+    relations). Per PFS16-D.
+
+    Mirrors _discover_encoding_aristotelian_relations's shape: attrs
+    whose value is either an ArCharacterArcRelation or a tuple of
+    ArCharacterArcRelation. Dedup by id within each module — Hamlet
+    and Lear both export the individual relation singletons (e.g.,
+    AR_HAMLET_LAERTES_MIRROR) plus the AR_*_CHARACTER_ARC_RELATIONS
+    tuple containing them; dedup picks each record once.
+    """
+    from story_engine.core.aristotelian import ArCharacterArcRelation
+    encodings_dir = (
+        _repo_root() / "prototype" / "story_engine" / "encodings"
+    )
+    rels_out: list = []
+    for py_path in sorted(encodings_dir.glob("*.py")):
+        name = py_path.stem
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(
+                f"story_engine.encodings.{name}"
+            )
+        except Exception:
+            continue
+        rels_seen: dict = {}
+        for attr_name in dir(module):
+            if not attr_name.startswith("AR_"):
+                continue
+            value = getattr(module, attr_name, None)
+            if isinstance(value, ArCharacterArcRelation):
+                rels_seen[value.id] = value
+            elif (
+                isinstance(value, tuple)
+                and value
+                and all(
+                    isinstance(v, ArCharacterArcRelation) for v in value
+                )
             ):
                 for v in value:
                     rels_seen[v.id] = v
@@ -1094,11 +1153,14 @@ def _dump_archaracter(character) -> dict:
     to schema/aristotelian/character.json (production-format-
     sketch-06 PFS6-D3). Field-for-field isomorphic: id / name /
     is_tragic_hero always emitted; character_ref_id and
-    hamartia_text omitted when None."""
+    hamartia_text omitted when None. anagnorisis_absent (PFS16-C6)
+    always emits — dataclass bool default; same posture as
+    is_tragic_hero."""
     out = {
         "id": character.id,
         "name": character.name,
         "is_tragic_hero": character.is_tragic_hero,
+        "anagnorisis_absent": character.anagnorisis_absent,
     }
     if character.character_ref_id is not None:
         out["character_ref_id"] = character.character_ref_id
@@ -1166,6 +1228,13 @@ def _dump_armythos(mythos) -> dict:
         out["peripeteia_anagnorisis_binding"] = (
             mythos.peripeteia_anagnorisis_binding
         )
+    # Sketch-03 anagnorisis_character_ref_id (PFS16-M17) omits when
+    # None — same omit-on-None posture as the optional event-id
+    # pointers above.
+    if mythos.anagnorisis_character_ref_id is not None:
+        out["anagnorisis_character_ref_id"] = (
+            mythos.anagnorisis_character_ref_id
+        )
     # Sketch-04 soft preference strings omit when empty (matches the
     # annotation-when-empty precedent; mirrors PFS13-MR4).
     if mythos.tonal_register:
@@ -1180,11 +1249,13 @@ def _dump_armythos(mythos) -> dict:
 def _dump_ar_anagnorisis_step(step) -> dict:
     """Map a Python ArAnagnorisisStep to a JSON-compatible dict
     conforming to schema/aristotelian/anagnorisis_step.json
-    (production-format-sketch-13 PFS13-D2). Required fields always
-    emit (id, event_id, character_ref_id); precipitates_main always
-    emits (dataclass always carries a boolean, same posture as the
-    asserts_unity_* booleans in _dump_armythos); annotation omits
-    when empty string (matching ArPhase.annotation convention)."""
+    (production-format-sketch-13 PFS13-D2 + PFS16-AS5). Required
+    fields always emit (id, event_id, character_ref_id);
+    precipitates_main always emits (dataclass always carries a
+    boolean); annotation omits when empty string (matching
+    ArPhase.annotation convention); step_kind omits when empty
+    string (PFS16-AS5; the empty string is Python's default and
+    means 'derive from precipitates_main + character identity')."""
     out = {
         "id": step.id,
         "event_id": step.event_id,
@@ -1193,6 +1264,8 @@ def _dump_ar_anagnorisis_step(step) -> dict:
     }
     if step.annotation:
         out["annotation"] = step.annotation
+    if step.step_kind:
+        out["step_kind"] = step.step_kind
     return out
 
 
@@ -1212,6 +1285,32 @@ def _dump_ar_mythos_relation(rel) -> dict:
     }
     if rel.annotation:
         out["annotation"] = rel.annotation
+    return out
+
+
+def _dump_ar_character_arc_relation(rel) -> dict:
+    """Map a Python ArCharacterArcRelation to a JSON-compatible dict
+    conforming to schema/aristotelian/character_arc_relation.json
+    (PFS16-CAR1..CAR8). Required fields always emit (id, kind,
+    character_ref_ids, mythos_id); over_event_ids always emits as
+    array (matching mythoi_ids posture in _dump_ar_mythos_relation —
+    tuple-of-strings always renders); annotation omits when empty;
+    sketch-05 directionality + polarity omit when empty (matching
+    the annotation-when-empty PFS13-MR4 precedent, since empty is
+    the dataclass default and means 'no claim')."""
+    out = {
+        "id": rel.id,
+        "kind": rel.kind,
+        "character_ref_ids": list(rel.character_ref_ids),
+        "mythos_id": rel.mythos_id,
+        "over_event_ids": list(rel.over_event_ids),
+    }
+    if rel.annotation:
+        out["annotation"] = rel.annotation
+    if rel.directionality:
+        out["directionality"] = rel.directionality
+    if rel.polarity:
+        out["polarity"] = rel.polarity
     return out
 
 
@@ -2560,6 +2659,8 @@ def test_aristotelian_character_schema_has_expected_shape():
     assert set(schema["properties"].keys()) == {
         "id", "name", "character_ref_id",
         "hamartia_text", "is_tragic_hero",
+        # PFS16-C6 (aristotelian-sketch-05 A18)
+        "anagnorisis_absent",
     }
     # character_ref_id optional non-empty string (PFS6-C3)
     ref = schema["properties"]["character_ref_id"]
@@ -2568,6 +2669,10 @@ def test_aristotelian_character_schema_has_expected_shape():
     # is_tragic_hero optional boolean (PFS6-C5)
     assert (
         schema["properties"]["is_tragic_hero"]["type"] == "boolean"
+    )
+    # anagnorisis_absent optional boolean (PFS16-C6)
+    assert (
+        schema["properties"]["anagnorisis_absent"]["type"] == "boolean"
     )
 
 
@@ -2607,6 +2712,8 @@ def test_aristotelian_mythos_schema_has_expected_shape():
         "audience_knowledge_constraints",
         "tonal_register",
         "binding_distance_preference",
+        # PFS16-M17 amendment (sketch-03 A14)
+        "anagnorisis_character_ref_id",
     }
     # central_event_ids non-empty array (PFS6-M3)
     central = schema["properties"]["central_event_ids"]
@@ -2755,6 +2862,8 @@ def test_aristotelian_anagnorisis_step_schema_has_expected_shape():
     assert set(schema["properties"].keys()) == {
         "id", "event_id", "character_ref_id",
         "precipitates_main", "annotation",
+        # PFS16-AS5 amendment (aristotelian-sketch-03 A14)
+        "step_kind",
     }
     # PFS13-AS2 — three id fields are non-empty strings
     for field in ("id", "event_id", "character_ref_id"):
@@ -2769,6 +2878,82 @@ def test_aristotelian_anagnorisis_step_schema_has_expected_shape():
     annotation = schema["properties"]["annotation"]
     assert annotation["type"] == "string"
     assert "minLength" not in annotation
+    # PFS16-AS5 — step_kind closed enum at four values (empty included)
+    step_kind = schema["properties"]["step_kind"]
+    assert step_kind["type"] == "string"
+    assert set(step_kind["enum"]) == {
+        "", "parallel", "precipitating", "staging",
+    }
+
+
+def test_aristotelian_character_arc_relation_schema_metaschema_valid():
+    """ArCharacterArcRelation schema validates against JSON Schema
+    2020-12 metaschema (PFS16-CAR1..CAR8)."""
+    schema = _load_aristotelian_character_arc_relation_schema()
+    Draft202012Validator.check_schema(schema)
+    assert schema["$schema"] == (
+        "https://json-schema.org/draft/2020-12/schema"
+    )
+    assert schema["$id"].startswith(
+        "https://brazilofmux.github.io/story/schema/aristotelian/"
+        "character_arc_relation.json"
+    )
+
+
+def test_aristotelian_character_arc_relation_schema_has_expected_shape():
+    """Spot-check of ArCharacterArcRelation schema structure per
+    aristotelian-sketch-03 A13 + sketch-05 A17 + PFS16-CAR1..CAR8."""
+    schema = _load_aristotelian_character_arc_relation_schema()
+    assert schema["title"] == "ArCharacterArcRelation"
+    assert schema["$id"] == (
+        "https://brazilofmux.github.io/story/schema/"
+        "aristotelian/character_arc_relation.json"
+    )
+    # PFS16-CAR1 — four required fields (A13 dataclass essentials)
+    assert set(schema["required"]) == {
+        "id", "kind", "character_ref_ids", "mythos_id",
+    }
+    assert schema["additionalProperties"] is False
+    assert set(schema["properties"].keys()) == {
+        "id", "kind", "character_ref_ids", "mythos_id",
+        "over_event_ids", "annotation",
+        # PFS16-CAR7 / CAR8 — sketch-05 A17
+        "directionality", "polarity",
+    }
+    # PFS16-CAR1 — id is non-empty string
+    assert schema["properties"]["id"]["type"] == "string"
+    assert schema["properties"]["id"]["minLength"] == 1
+    # PFS16-CAR2 — kind open non-empty string (A13 canonical-plus-open)
+    kind = schema["properties"]["kind"]
+    assert kind["type"] == "string"
+    assert kind["minLength"] == 1
+    assert "enum" not in kind
+    # PFS16-CAR3 — character_ref_ids array, minItems=2
+    refs = schema["properties"]["character_ref_ids"]
+    assert refs["type"] == "array"
+    assert refs["minItems"] == 2
+    assert refs["items"]["type"] == "string"
+    assert refs["items"]["minLength"] == 1
+    # PFS16-CAR4 — mythos_id non-empty string
+    mid = schema["properties"]["mythos_id"]
+    assert mid["type"] == "string"
+    assert mid["minLength"] == 1
+    # PFS16-CAR5 — over_event_ids optional array, no minItems
+    over = schema["properties"]["over_event_ids"]
+    assert over["type"] == "array"
+    assert "minItems" not in over
+    # PFS16-CAR6 — annotation open string
+    annotation = schema["properties"]["annotation"]
+    assert annotation["type"] == "string"
+    assert "minLength" not in annotation
+    # PFS16-CAR7 / CAR8 — directionality + polarity open strings,
+    # canonical-plus-open at the verifier layer; schema admits any
+    # string (including empty default).
+    for field in ("directionality", "polarity"):
+        prop = schema["properties"][field]
+        assert prop["type"] == "string"
+        assert "enum" not in prop
+        assert "minLength" not in prop
 
 
 def test_aristotelian_phase_corpus_conformance():
@@ -3156,6 +3341,100 @@ def test_aristotelian_mythos_relation_corpus_conformance():
     assert total >= 1, (
         f"expected at least 1 ArMythosRelation record per PFS13 "
         f"corpus expectations; found {total}"
+    )
+
+
+def test_aristotelian_character_arc_relation_corpus_conformance():
+    """Every ArCharacterArcRelation discovered at encoding scope
+    validates against schema/aristotelian/character_arc_relation.json
+    (PFS16-CAR1..CAR8). Hamlet ships 2 (mirror + foil); Lear ships 4
+    (parallel + foil + 2 instrumental, the corpus's first multi-record,
+    multi-kind A13 set + first sketch-05 A17 directional/polarity
+    fields exercised in the corpus)."""
+    schema = _load_aristotelian_character_arc_relation_schema()
+    validator = Draft202012Validator(schema)
+
+    rels_by_encoding = (
+        _discover_encoding_aristotelian_character_arc_relations()
+    )
+    assert rels_by_encoding, (
+        "expected at least one encoding with ArCharacterArcRelation "
+        "records; found none"
+    )
+
+    total = 0
+    clean_passes = 0
+    kind_counts: dict = {}
+    directionality_counts: dict = {}
+    polarity_counts: dict = {}
+    new_findings: list = []
+
+    for encoding_name, relations in rels_by_encoding:
+        for rel in relations:
+            total += 1
+            dumped = _dump_ar_character_arc_relation(rel)
+            kind_counts[dumped["kind"]] = (
+                kind_counts.get(dumped["kind"], 0) + 1
+            )
+            d = dumped.get("directionality", "(empty)")
+            directionality_counts[d] = directionality_counts.get(d, 0) + 1
+            p = dumped.get("polarity", "(empty)")
+            polarity_counts[p] = polarity_counts.get(p, 0) + 1
+            errors = sorted(
+                validator.iter_errors(dumped),
+                key=lambda e: list(e.absolute_path),
+            )
+            if not errors:
+                clean_passes += 1
+                continue
+            new_findings.append({
+                "encoding": encoding_name,
+                "relation_id": rel.id,
+                "errors": [
+                    {
+                        "path": list(e.absolute_path),
+                        "validator": e.validator,
+                        "message": e.message,
+                    }
+                    for e in errors
+                ],
+            })
+
+    print()
+    print(
+        f"test_aristotelian_character_arc_relation_corpus_conformance: "
+        f"{total} ArCharacterArcRelation records"
+    )
+    print(f"  clean passes:               {clean_passes}")
+    print(f"  by kind:                    {dict(sorted(kind_counts.items()))}")
+    print(
+        f"  by directionality:          "
+        f"{dict(sorted(directionality_counts.items()))}"
+    )
+    print(
+        f"  by polarity:                "
+        f"{dict(sorted(polarity_counts.items()))}"
+    )
+    if new_findings:
+        print(f"  NEW findings (fail):        {len(new_findings)}")
+        for finding in new_findings:
+            print(
+                f"    {finding['encoding']}: {finding['relation_id']}"
+            )
+            for err in finding["errors"]:
+                print(
+                    f"      - path={err['path']} "
+                    f"validator={err['validator']}: {err['message']}"
+                )
+
+    assert not new_findings, (
+        f"{len(new_findings)} ArCharacterArcRelation conformance "
+        f"finding(s); see output."
+    )
+    # Hamlet (2) + Lear (4) = 6 minimum given the current corpus.
+    assert total >= 2, (
+        f"expected at least 2 ArCharacterArcRelation records per "
+        f"PFS16 corpus expectations; found {total}"
     )
 
 

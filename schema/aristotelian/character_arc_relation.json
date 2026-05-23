@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brazilofmux.github.io/story/schema/aristotelian/character_arc_relation.json",
+  "title": "ArCharacterArcRelation",
+  "description": "A13 (aristotelian-sketch-03). Structural relation between two or more ArCharacter records *within a single ArMythos*. Hamlet's three-way tragic-hero parallelism (pairwise mirror Hamlet-Laertes + foil Hamlet-Claudius) is the canonical case; Lear's instrumental relations (Edmund→Gloucester + Edgar→Gloucester) are the first multi-record, multi-kind set in the corpus. Distinguished from A10 ArMythosRelation by scope: A10 ties ≥2 ArMythos records (inter-mythos); A13 ties ≥2 ArCharacter ids within one ArMythos named by mythos_id. Encoding-scope record (tupled as AR_*_CHARACTER_ARC_RELATIONS at module level); passed to verify() via the character_arc_relations kwarg. Sketch-05 (A17) adds directionality + polarity as orthogonal fields; canonical kinds are symmetric by construction, non-canonical kinds (e.g., 'instrumental') are typically directional and carry polarity. PFS16-CAR1..CAR8.",
+  "type": "object",
+  "required": ["id", "kind", "character_ref_ids", "mythos_id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this relation (e.g., 'ar_hamlet_laertes_mirror'). PFS16-CAR1."
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Open non-empty string. Canonical vocabulary {parallel, mirror, foil} per A13; A7.10 check 1 emits severity=noted for non-canonical values (e.g., 'instrumental'). Schema admits open non-empty string without close-enum, mirroring A10 / PFS13-MR2's canonical-plus-open discipline. PFS16-CAR2."
+    },
+    "character_ref_ids": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Participating ArCharacter ids within mythos_id's characters tuple. ≥2 required (A7.10 check 2 separately enforces resolution within the named mythos at verification time). Order is load-bearing when directionality='directional' — position 0 is wielder, position 1 is target (A17, sketch-05). Plain-string references per PFS6-X2. PFS16-CAR3."
+    },
+    "mythos_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The ArMythos id this relation binds to. A7.10 check 2 enforces mythos resolution at verification time. Plain-string reference per PFS6-X2. PFS16-CAR4."
+    },
+    "over_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Optional substrate event ids where the arcs track / mirror — substrate-check skipped when not threaded. No minItems; empty array is the Python default. Plain-string references per PFS6-X2. PFS16-CAR5."
+    },
+    "annotation": {
+      "type": "string",
+      "description": "Optional author prose annotation. Python default is empty string; schema admits the empty string and absence interchangeably. PFS16-CAR6."
+    },
+    "directionality": {
+      "type": "string",
+      "description": "A17 (sketch-05). Canonical-plus-open vocabulary {symmetric, directional} + empty string (default; derives from kind — canonical → symmetric, non-canonical → empty / no claim). When 'directional', character_ref_ids position 0 is wielder, position 1 is target. A7.15 enforces value-canonicity and kind-compatibility. PFS16-CAR7."
+    },
+    "polarity": {
+      "type": "string",
+      "description": "A17 (sketch-05). Canonical-plus-open vocabulary {malicious, therapeutic, neutral, sanctioned} + empty string (default; not-applicable). Strongest signal on directional non-canonical relations. A7.15 emits noted on polarity-set-but-directionality-symmetric; paired-non-canonical-polarity-contrast noted when two records share target + non-canonical kind + different polarities (A7.15 check 5, the corpus's first highlight observation). PFS16-CAR8."
+    }
+  },
+  "additionalProperties": false
+}
