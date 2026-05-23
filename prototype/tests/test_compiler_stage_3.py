@@ -1044,6 +1044,115 @@ def test_scene_3_bad_precondition_order_still_finds_optimal_plan():
     )
 
 
+def test_s4p_oq3_phantom_operator_inflates_risk_score_documenting_finding():
+    """S4P-OQ3 forcing test (banked, not fixed).
+
+    `_precondition_risk` is a static heuristic: it takes
+    `max(len(del_effects))` across ALL operators whose add_effects
+    can establish a precondition — even operators whose own
+    preconditions are never satisfiable in the current state. A
+    "phantom" operator inflates the precondition's risk score and
+    causes the sort to defer it past preconditions whose sub-plans
+    will undo state the phantom-targeted one needs.
+
+    Construction: PHANTOM_VISION achieves knows(AGENT, FACT) with
+    three del_effects (three at-deletions). Its `has(AGENT, FOCUS)`
+    precondition is never satisfiable in scene 3 — the scene's
+    type registry has no OBJECT_TYPE term, so the planner cannot
+    bind FOCUS at all. The phantom is unreachable.
+
+    Yet its mere presence in the operator library inflates
+    `risk(knows)` from 0 (learn_from has no del_effects) to 3
+    (PHANTOM_VISION has three). The sort then orders preconditions
+    as alive×2 (0), at×2 (1), knows (3) — i.e., last — which is
+    the same order sketch-04 S4P1 was supposed to fix. The 5-step
+    Oracle-travel plan re-emerges.
+
+    This is the documented S4P-OQ3 forcing scene. Banked, not
+    fixed: the natural escalation per sketch-04 §Next steps is
+    insertion-search in `_plan_with_bindings` (try each
+    intermediate position for each precondition, pick the shortest
+    sub-plan), which sidesteps the risk heuristic entirely.
+
+    The test pins both arms — the canonical 4-step plan (without
+    the phantom) and the 5-step suboptimal plan (with the phantom)
+    — so a future fix can flip the second assertion when
+    insertion-search (or another escalation) lands.
+    """
+    # Phantom that achieves knows(AGENT, FACT) but requires an
+    # OBJECT_TYPE focus that scene 3's universe doesn't contain.
+    PHANTOM_VISION = OperatorSchema(
+        name="vision",
+        params=("AGENT", "FACT"),
+        variable_types={
+            "AGENT": AGENT_TYPE,
+            "FACT": FACT_TYPE,
+            "FOCUS": OBJECT_TYPE,
+            "LOC": LOCATION_TYPE,
+            "LOC2": LOCATION_TYPE,
+            "LOC3": LOCATION_TYPE,
+        },
+        preconditions=(
+            Prop("has", ("AGENT", "FOCUS")),
+            Prop("at", ("AGENT", "LOC")),
+        ),
+        add_effects=(Prop("knows", ("AGENT", "FACT")),),
+        del_effects=(
+            Prop("at", ("AGENT", "LOC")),
+            Prop("at", ("AGENT", "LOC2")),
+            Prop("at", ("AGENT", "LOC3")),
+        ),
+    )
+
+    # Baseline: canonical 4-step plan emerges via the precondition-risk sort.
+    baseline = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, DEFEAT_BY_RIDDLE),
+    )
+    assert isinstance(baseline, tuple), (
+        f"baseline expected to succeed; got {type(baseline)}"
+    )
+    assert len(baseline) == 4, (
+        f"baseline expected the 4-step optimal plan; got "
+        f"{len(baseline)} steps: {[e.type for e in baseline]}"
+    )
+
+    # Forcing case: phantom in library inflates risk(knows) → 3.
+    # Sort defers knows past at; planner regresses to the 5-step
+    # Oracle-travel plan that sketch-03 surfaced and S4P1 thought
+    # it had retired.
+    forced = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        _sphinx_riddle_goal(),
+        (TRAVEL, LEARN_FROM, PHANTOM_VISION, DEFEAT_BY_RIDDLE),
+    )
+    assert isinstance(forced, tuple), (
+        f"phantom-library case expected to still find a plan "
+        f"(the phantom is in the library but the existing operators "
+        f"can still build a 5-step plan); got {type(forced)}"
+    )
+    assert len(forced) == 5, (
+        f"S4P-OQ3 forcing case: with PHANTOM_VISION inflating "
+        f"risk(knows), the planner is expected to regress to the "
+        f"5-step Oracle-travel plan. Got {len(forced)} steps. If "
+        f"this assertion fires with len=4, the heuristic has been "
+        f"fixed (insertion-search or state-aware risk has landed) "
+        f"and S4P-OQ3 can move from banked to closed."
+    )
+    forced_types = [e.type for e in forced]
+    # The 5-step plan has the Oracle traveling to the gates of
+    # Thebes — the canonical failure mode sketch-04 S4P1 was meant
+    # to retire.
+    assert forced_types[2] == "travel" and (
+        forced[2].participants.get("AGENT") == "oracle"
+    ), (
+        f"S4P-OQ3 forcing case: the 5-step plan's third step is "
+        f"expected to be the Oracle traveling to Thebes. Got "
+        f"{forced_types[2]} with participants {forced[2].participants}"
+    )
+
+
 # ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
@@ -1113,6 +1222,8 @@ TESTS = [
     test_scene_3_learn_from_alone_on_co_located_agents,
     test_scene_3_defeat_by_riddle_schema_valid,
     test_scene_3_bad_precondition_order_still_finds_optimal_plan,
+    # Sketch-04 — S4P-OQ3 forcing case (banked, not fixed)
+    test_s4p_oq3_phantom_operator_inflates_risk_score_documenting_finding,
 ]
 
 
