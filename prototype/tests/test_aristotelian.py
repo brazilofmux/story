@@ -3175,6 +3175,363 @@ def test_hamlet_aristotelian_canonical_relations_symmetric():
 
 
 # ============================================================================
+# Integration — Malfi (sixth Aristotelian encoding)
+# ============================================================================
+
+
+def test_malfi_aristotelian_verifies_clean_up_to_instrumental_noted():
+    """Sixth worked case: Malfi under A1-A18 verifies against the
+    real malfi.py FABULA with exactly two noted observations, both
+    the expected character_arc_relation_kind_noncanonical codes for
+    the two `kind="instrumental"` records (Ferdinand → Bosola and
+    Cardinal → Bosola). No advises-review severity observations; no
+    other noted codes. Unlike Lear's two-instrumental pair (different
+    polarities → A7.15 check 5 fires noted), Malfi's two
+    instrumentals are polarity-concordant (both malicious) so the
+    paired-non-canonical-polarity-contrast does NOT fire — see
+    OQ-MALFI-1."""
+    from story_engine.encodings.malfi import FABULA
+    from story_engine.encodings.malfi_aristotelian import (
+        AR_MALFI_MYTHOS, AR_MALFI_CHARACTER_ARC_RELATIONS,
+    )
+    obs = verify(
+        AR_MALFI_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_MALFI_MYTHOS,),
+        character_arc_relations=AR_MALFI_CHARACTER_ARC_RELATIONS,
+    )
+    assert len(obs) == 2, (
+        f"Expected exactly 2 observations; got {len(obs)}:\n"
+        + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
+                    for o in obs)
+    )
+    for o in obs:
+        assert o.severity == SEVERITY_NOTED, (
+            f"Expected only noted severity; got {o.severity} on "
+            f"{o.code}"
+        )
+        assert o.code == "character_arc_relation_kind_noncanonical"
+    ids_flagged = sorted(o.message.split("'")[1] for o in obs)
+    assert ids_flagged == [
+        "arc_cardinal_bosola_instrumental",
+        "arc_ferdinand_bosola_instrumental",
+    ]
+
+
+def test_malfi_aristotelian_records_shape():
+    """Structural pins on AR_MALFI_MYTHOS. Distinct from earlier
+    encodings: peripeteia (E_capture_in_countryside) and anagnorisis
+    (E_ferdinand_views_corpse) distinct events; complication +
+    denouement set (Hamlet/Lear pattern); asserts_unity_of_action=
+    True (contrast Lear's False); five ArCharacter records — three
+    tragic heroes (Duchess, Bosola, Ferdinand) and two non-tragic
+    (Antonio, Cardinal)."""
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    m = AR_MALFI_MYTHOS
+    assert m.plot_kind == PLOT_COMPLEX
+    assert len(m.phases) == 3
+    assert [ph.role for ph in m.phases] == [
+        PHASE_BEGINNING, PHASE_MIDDLE, PHASE_END,
+    ]
+    assert m.peripeteia_event_id == "E_capture_in_countryside"
+    assert m.anagnorisis_event_id == "E_ferdinand_views_corpse"
+    assert m.peripeteia_event_id != m.anagnorisis_event_id
+    assert m.complication_event_id == "E_ferdinand_confronts_duchess"
+    assert m.denouement_event_id == "E_capture_in_countryside"
+    # Unity of action — TRUE (corpus difference from Lear).
+    assert m.asserts_unity_of_action is True
+    assert m.asserts_unity_of_time is False
+    assert m.asserts_unity_of_place is False
+    assert m.aims_at_catharsis is True
+    # Five ArCharacter records.
+    assert len(m.characters) == 5
+    ids = sorted(c.id for c in m.characters)
+    assert ids == [
+        "ar_antonio", "ar_bosola", "ar_cardinal",
+        "ar_duchess", "ar_ferdinand",
+    ]
+
+
+def test_malfi_aristotelian_three_tragic_heroes():
+    """OQ-AP6 third-encoding generalization pin. Malfi is the
+    corpus's third ≥3-tragic-hero encoding after Hamlet and Lear.
+    Duchess / Bosola / Ferdinand are the three tragic heroes;
+    Antonio and Cardinal are authored as non-tragic ArCharacters.
+    Bosola as tragic hero is the corpus's first instrument-character
+    tragic hero (Empson / Lucas reading)."""
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    chars = {c.id: c for c in AR_MALFI_MYTHOS.characters}
+    assert chars["ar_duchess"].is_tragic_hero is True
+    assert chars["ar_bosola"].is_tragic_hero is True
+    assert chars["ar_ferdinand"].is_tragic_hero is True
+    assert chars["ar_antonio"].is_tragic_hero is False
+    assert chars["ar_cardinal"].is_tragic_hero is False
+    tragic_heroes = [c for c in AR_MALFI_MYTHOS.characters
+                     if c.is_tragic_hero]
+    assert len(tragic_heroes) == 3
+
+
+def test_malfi_aristotelian_asserts_unity_of_action_true_corpus_distinction():
+    """Cross-encoding pin. Malfi affirms unity_of_action=True
+    despite four character-arc peripeteia (OQ-LEAR-4 forcing),
+    distinguishing classical-unity (one action, many recognitions)
+    from Lear's parallel-actions shape (asserts_unity_of_action=
+    False, the corpus first). Confirms OQ-LEAR-2's binary holds:
+    True/False is structurally adequate — Webster's four arc-
+    peripeteia all converge within the Duchess's action, not
+    alongside it."""
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    assert AR_MALFI_MYTHOS.asserts_unity_of_action is True
+    # Cross-encoding: Lear remains False; Hamlet/Macbeth/Oedipus/
+    # Rashomon remain True (or default-true).
+    from story_engine.encodings.lear_aristotelian import AR_LEAR_MYTHOS
+    from story_engine.encodings.hamlet_aristotelian import AR_HAMLET_MYTHOS
+    assert AR_LEAR_MYTHOS.asserts_unity_of_action is False
+    assert AR_HAMLET_MYTHOS.asserts_unity_of_action is True
+
+
+def test_malfi_aristotelian_binding_is_separated_distance_six():
+    """OQ-AP7 third-encoding re-surface pin. Malfi exercises
+    BINDING_SEPARATED at distance 6 — corpus narrowest
+    (Oedipus COINCIDENT, Macbeth COINCIDENT, Hamlet 9, Lear 14).
+    Three distinct analytical shapes (intense / delayed /
+    accumulating) all under one dialect category. Raw τ_s distance
+    recovered from substrate."""
+    from story_engine.encodings.malfi import FABULA
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    assert AR_MALFI_MYTHOS.peripeteia_anagnorisis_binding == (
+        BINDING_SEPARATED
+    )
+    events_by_id = {e.id: e for e in FABULA}
+    p_τ_s = events_by_id[AR_MALFI_MYTHOS.peripeteia_event_id].τ_s
+    a_τ_s = events_by_id[AR_MALFI_MYTHOS.anagnorisis_event_id].τ_s
+    distance = abs(a_τ_s - p_τ_s)
+    assert distance == 6, (
+        f"Expected peripeteia-anagnorisis distance 6; got {distance} "
+        f"(p_τ_s={p_τ_s}, a_τ_s={a_τ_s})"
+    )
+
+
+def test_malfi_aristotelian_chain_two_parallel_both_post_main():
+    """OQ-LEAR-4 substrate-overlay pin. Malfi authors a two-step
+    anagnorisis chain, both step_kind=parallel, both **post-main**
+    — corpus first multi-post-main chain (Lear's chain had one
+    post-main step, Edmund-confesses; Malfi has two: Bosola at
+    τ_s=24 and Antonio at τ_s=30). Both carry arc-peripeteia
+    content under semantic stretch of A11."""
+    from story_engine.encodings.malfi import FABULA
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    chain = AR_MALFI_MYTHOS.anagnorisis_chain
+    assert len(chain) == 2
+    for step in chain:
+        assert step.step_kind == STEP_KIND_PARALLEL
+        assert step.precipitates_main is False
+    # Both steps' τ_s > main anagnorisis τ_s.
+    events_by_id = {e.id: e for e in FABULA}
+    main_τ_s = events_by_id[AR_MALFI_MYTHOS.anagnorisis_event_id].τ_s
+    for step in chain:
+        step_τ_s = events_by_id[step.event_id].τ_s
+        assert step_τ_s > main_τ_s, (
+            f"Chain step {step.id} (τ_s={step_τ_s}) expected post-"
+            f"main (>{main_τ_s})"
+        )
+    # Specific step ids.
+    step_ids = sorted(s.id for s in chain)
+    assert step_ids == [
+        "arstep_antonio_dark_recognition",
+        "arstep_bosola_resolves",
+    ]
+
+
+def test_malfi_aristotelian_four_character_arc_relations_two_instrumental():
+    """A13 (sketch-03) authoring pin. Malfi authors four A13
+    relations — 2 canonical (foil + parallel) + 2 non-canonical
+    (instrumental). All intra-mythos (mythos_id="ar_malfi"); all
+    character_ref_ids tuples size >= 2."""
+    from story_engine.encodings.malfi_aristotelian import (
+        AR_MALFI_CHARACTER_ARC_RELATIONS,
+    )
+    assert len(AR_MALFI_CHARACTER_ARC_RELATIONS) == 4
+    kinds = sorted(r.kind for r in AR_MALFI_CHARACTER_ARC_RELATIONS)
+    assert kinds == ["foil", "instrumental", "instrumental", "parallel"]
+    for rel in AR_MALFI_CHARACTER_ARC_RELATIONS:
+        assert rel.mythos_id == "ar_malfi"
+        assert len(rel.character_ref_ids) >= 2
+
+
+def test_malfi_aristotelian_instrumental_relations_share_target_bosola_same_polarity():
+    """OQ-MALFI-1 substrate signature pin. Malfi's two non-canonical
+    instrumental relations share target (Bosola) AND polarity
+    (malicious) — distinct from Lear's polarity-CONTRAST shape
+    (same target Gloucester, opposite polarities). Webster's shape
+    is sequentially-wielded-instrument with polarity-CONCORDANCE.
+    Both relations are directional (wielder, target) tuples."""
+    from story_engine.encodings.malfi_aristotelian import (
+        AR_CARDINAL_BOSOLA_INSTRUMENTAL,
+        AR_FERDINAND_BOSOLA_INSTRUMENTAL,
+    )
+    for rel in (
+        AR_CARDINAL_BOSOLA_INSTRUMENTAL, AR_FERDINAND_BOSOLA_INSTRUMENTAL,
+    ):
+        assert rel.kind == "instrumental"
+        assert rel.directionality == DIRECTIONALITY_DIRECTIONAL
+        assert rel.polarity == POLARITY_MALICIOUS
+        # Tuple convention: (wielder, target). Target is Bosola.
+        assert rel.character_ref_ids[1] == "ar_bosola"
+    # Distinct wielders (Cardinal, Ferdinand).
+    wielders = sorted([
+        AR_CARDINAL_BOSOLA_INSTRUMENTAL.character_ref_ids[0],
+        AR_FERDINAND_BOSOLA_INSTRUMENTAL.character_ref_ids[0],
+    ])
+    assert wielders == ["ar_cardinal", "ar_ferdinand"]
+
+
+def test_malfi_aristotelian_ferdinand_orchestrator_also_recognizer():
+    """Corpus-first structural pin. Ferdinand is BOTH the
+    catastrophe's orchestrator (via the AR_FERDINAND_BOSOLA_
+    INSTRUMENTAL relation; he wields Bosola against the Duchess)
+    AND the main-anagnorisis character (AR_MALFI_MYTHOS.
+    anagnorisis_character_ref_id == 'ar_ferdinand'). Prior
+    orchestrators in the corpus (Claudius in Hamlet, Edmund in
+    Lear) carried only partial recognition; Ferdinand's
+    corpse-view at τ_s=23 is the most-complete recognition by an
+    orchestrator."""
+    from story_engine.encodings.malfi_aristotelian import (
+        AR_FERDINAND_BOSOLA_INSTRUMENTAL,
+        AR_MALFI_MYTHOS,
+    )
+    assert AR_MALFI_MYTHOS.anagnorisis_character_ref_id == "ar_ferdinand"
+    # Ferdinand is also the wielder of an instrumental relation
+    # against (transitively) the Duchess.
+    assert (
+        AR_FERDINAND_BOSOLA_INSTRUMENTAL.character_ref_ids[0]
+        == "ar_ferdinand"
+    )
+
+
+def test_malfi_aristotelian_duchess_anagnorisis_absent_corpus_second():
+    """A18 (sketch-05) corpus-second pin. AR_DUCHESS authors
+    anagnorisis_absent=True — corpus second use after Cordelia
+    (AR_CORDELIA). The pattern generalizes cleanly: female tragic
+    hero whose hamartia produces catastrophe for others but
+    whose own arc has no recognition moment ("I am Duchess of
+    Malfi still")."""
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    chars = {c.id: c for c in AR_MALFI_MYTHOS.characters}
+    assert chars["ar_duchess"].anagnorisis_absent is True
+    assert chars["ar_duchess"].is_tragic_hero is True
+    # Other ArCharacters do NOT carry anagnorisis_absent.
+    for cid in ("ar_antonio", "ar_bosola", "ar_ferdinand", "ar_cardinal"):
+        assert chars[cid].anagnorisis_absent is False
+    # The Duchess is NOT the main-anagnorisis character — that's
+    # Ferdinand. A18 requires this distinctness.
+    assert (
+        AR_MALFI_MYTHOS.anagnorisis_character_ref_id != "ar_duchess"
+    )
+
+
+def test_malfi_aristotelian_probe_findings_authored():
+    """Three OQ findings authored as prose constants for probe-
+    side consumption: OQ_LEAR_4_FINDING (cross-encoding pressure
+    confirmation), OQ_AP7_RE_SURFACE (third-encoding pressure
+    with corpus-narrowest distance), OQ_MALFI_1_FINDING (new
+    forcing function — sequentially-wielded-instrument with
+    polarity-concordance)."""
+    from story_engine.encodings.malfi_aristotelian import (
+        OQ_AP7_RE_SURFACE, OQ_FINDINGS, OQ_LEAR_4_FINDING,
+        OQ_MALFI_1_FINDING,
+    )
+    assert "OQ-LEAR-4" in OQ_LEAR_4_FINDING
+    assert "OQ-AP7" in OQ_AP7_RE_SURFACE
+    assert "OQ-MALFI-1" in OQ_MALFI_1_FINDING
+    finding_keys = sorted(k for k, _ in OQ_FINDINGS)
+    assert finding_keys == ["OQ_AP7", "OQ_LEAR_4", "OQ_MALFI_1"]
+    assert len(OQ_FINDINGS) == 3
+
+
+def test_malfi_aristotelian_no_mythos_relation_authored():
+    """Malfi is single-mythos; no AR_MALFI_RELATIONS attribute.
+    All A13 relations are intra-mythos (mythos_id="ar_malfi")."""
+    import story_engine.encodings.malfi_aristotelian as mod
+    assert not hasattr(mod, "AR_MALFI_RELATIONS")
+
+
+def test_malfi_aristotelian_sketch04_fields_authored():
+    """A15 + A16 authoring pin. Phase bounds + pacing preferences
+    + 3 co-presence requirements + 3 audience-knowledge constraints
+    + tonal_register=TRAGIC_WITH_IRONY (Webster's signature;
+    distinct from Lear's TRAGIC_PURE) + binding_distance_preference=
+    NEAR (matches the narrow SEPARATED distance 6)."""
+    from story_engine.core.aristotelian import BINDING_PREF_NEAR
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    # Phase bounds + pacing on every phase.
+    for ph in AR_MALFI_MYTHOS.phases:
+        assert ph.min_event_count > 0
+        assert ph.max_event_count >= ph.min_event_count
+        assert ph.pacing_preference in (
+            PACING_EVEN, PACING_SLOW_BURN, PACING_RAPID_ESCALATION,
+        )
+    # Three co-presence + three audience-knowledge.
+    assert len(AR_MALFI_MYTHOS.co_presence_requirements) == 3
+    assert len(AR_MALFI_MYTHOS.audience_knowledge_constraints) == 3
+    # Tonal register + binding distance preference.
+    assert (
+        AR_MALFI_MYTHOS.tonal_register
+        == TONAL_REGISTER_TRAGIC_WITH_IRONY
+    )
+    assert (
+        AR_MALFI_MYTHOS.binding_distance_preference
+        == BINDING_PREF_NEAR
+    )
+
+
+def test_malfi_sjuzhet_focalization_distribution():
+    """Session 3 SJUZHET pin. The Duchess focalizes 10 entries;
+    Bosola 7. The 10/7 bi-focal distribution is the corpus's most
+    concentrated bi-focal pattern — substrate-layer surface for
+    the critical-tradition reading (Empson, Lucas, Bradbrook)
+    that Bosola is the play's structural co-protagonist. 30
+    total in-play SJUZHET entries from a 34-event FABULA (the
+    5 pre-play events are not in sjuzhet; E_antonio_returns_from_
+    france opens the play at τ_d=0)."""
+    from story_engine.encodings.malfi import SJUZHET
+    assert len(SJUZHET) == 30
+    foc_counts = {}
+    for s in SJUZHET:
+        foc_counts[s.focalizer_id] = foc_counts.get(
+            s.focalizer_id, 0,
+        ) + 1
+    assert foc_counts["duchess"] == 10
+    assert foc_counts["bosola"] == 7
+    assert foc_counts["ferdinand"] == 5
+    assert foc_counts["cardinal"] == 2
+    assert foc_counts["antonio"] == 2
+    assert foc_counts["delio"] == 1
+    assert foc_counts[None] == 3
+
+
+def test_malfi_preplay_disclosures_and_descriptions_count():
+    """Session 3 substrate-completion pins. Six preplay disclosures
+    (Aragonese family pair + Duchess widowed + Duchess of Amalfi +
+    Cardinal churchman + Ferdinand Duke of Calabria). Twelve
+    Descriptions covering the three character-register questions,
+    two character-motivation questions, three OQ reader frames,
+    two thematic readings, and two iconic-line readings."""
+    from story_engine.encodings.malfi import (
+        DESCRIPTIONS, PREPLAY_DISCLOSURES,
+    )
+    assert len(PREPLAY_DISCLOSURES) == 6
+    assert len(DESCRIPTIONS) == 12
+    # Spot-check the OQ reader-frame descriptions.
+    desc_ids = {d.id for d in DESCRIPTIONS}
+    assert "D_oq_lear_4_reader_frame" in desc_ids
+    assert "D_oq_ap7_reader_frame" in desc_ids
+    assert "D_oq_malfi_1_reader_frame" in desc_ids
+    # The Duchess-of-Malfi-still iconic-line reading.
+    assert "D_duchess_of_malfi_still_reading" in desc_ids
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -3367,6 +3724,22 @@ TESTS = [
     test_lear_aristotelian_cordelia_anagnorisis_absent_true,
     test_lear_aristotelian_no_anagnorisis_absent_a716_violations,
     test_hamlet_aristotelian_canonical_relations_symmetric,
+    # Integration — Malfi (sixth Aristotelian encoding)
+    test_malfi_aristotelian_verifies_clean_up_to_instrumental_noted,
+    test_malfi_aristotelian_records_shape,
+    test_malfi_aristotelian_three_tragic_heroes,
+    test_malfi_aristotelian_asserts_unity_of_action_true_corpus_distinction,
+    test_malfi_aristotelian_binding_is_separated_distance_six,
+    test_malfi_aristotelian_chain_two_parallel_both_post_main,
+    test_malfi_aristotelian_four_character_arc_relations_two_instrumental,
+    test_malfi_aristotelian_instrumental_relations_share_target_bosola_same_polarity,
+    test_malfi_aristotelian_ferdinand_orchestrator_also_recognizer,
+    test_malfi_aristotelian_duchess_anagnorisis_absent_corpus_second,
+    test_malfi_aristotelian_probe_findings_authored,
+    test_malfi_aristotelian_no_mythos_relation_authored,
+    test_malfi_aristotelian_sketch04_fields_authored,
+    test_malfi_sjuzhet_focalization_distribution,
+    test_malfi_preplay_disclosures_and_descriptions_count,
 ]
 
 
