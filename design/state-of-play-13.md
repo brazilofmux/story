@@ -1,8 +1,9 @@
 # State of play — sketch 13
 
-**Status:** active
+**Status:** superseded
 **Date:** 2026-04-22
 **Supersedes:** [state-of-play-12](state-of-play-12.md)
+**Superseded by:** [state-of-play-14](state-of-play-14.md)
 
 Cold-start orientation doc, rewritten (not amended) at the
 milestone where the **compiler-family arc retires the project's
