@@ -1,0 +1,349 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_malfi"
+    ],
+    "observation_count": 2,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_malfi",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The action_summary faithfully traces the complete mythos from the secret marriage through the catastrophe, grounding each structural claim (peripeteia at capture, main anagnorisis at Ferdinand's corpse-viewing, anti-recognition at Antonio's dark-room death) in named substrate events. Aristotelian vocabulary is used consistently; the plot's complex shape (peripeteia + anagnorisis) is correctly identified."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_malfi_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The beginning phase annotation correctly identifies the antecedent conditions and the two catastrophic commitments (Ferdinand's commission of Bosola, the Duchess's secret marriage) that give the complication its force. All τ_s references match the substrate scope_event_ids. The closing claim — Ferdinand knowing the marriage exists but not the spouse's identity — is a defensible reading given that the substrate distinguishes E_horoscope_dropped (Antonio's document found by Bosola) from E_bosola_letters_ferdinand (what Bosola actually reports)."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_malfi_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The middle phase annotation correctly positions the peripeteia (E_capture_in_countryside) at the close of the middle, citing Aristotle's structural prescription. The five-event count leading to the capture is accurate. The parenthetical note about Webster's compression of additional pregnancies is process commentary rather than Aristotelian annotation, but it is marked as such and does not distort the structural claim."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_malfi_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The end phase annotation is the encoding's densest and most structurally self-aware. It correctly identifies both the unbinding (imprisonment through strangling) and the catastrophe (Act V's dark-room sequence), names the main anagnorisis and both chain steps by ID, and explicitly flags the dialect-structural limitation (OQ-LEAR-4) that prevents a single event from carrying both the main anagnorisis and an arc peripeteia. All τ_s values match substrate events precisely."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_duchess",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia is precisely identified as the tactical error of concealment rather than the marriage itself, distinguishing canonical-law validity from political misjudgement — a faithful rendering of hamartia as 'missing the mark.' The argument for anagnorisis_absent is grounded in the Duchess's stoic self-possession through the prison scenes and the strangling; the structural claim that recognition-absence preserves the honourable register is well-articulated."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_antonio",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The text openly acknowledges that Antonio's arc is reactive and that is_tragic_hero is False, thereby framing the hamartia as a structural-participation error rather than a classical tragic hero's deliberated misjudgement. The anti-anagnorisic death (recognition and wound simultaneous, outcome unalterable) is grounded in E_bosola_kills_antonio typed as mistaken_killing. The justification for authoring a non-tragic-hero ArCharacter — relational and chain-step requirements — is explicit and coherent."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_bosola",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "Bosola's hamartia — accepting the commission against better judgement — is grounded in the substrate's E_ferdinand_hires_bosola and supported by the verbal self-awareness the text attributes to him. The claim that Bosola is the play's structural tragic hero by arc-shape and onstage presence, distinct from the titular Duchess, is bold but defensible within Aristotelian terms: his arc carries deliberation (accepting the commission), peripeteia (instrument → avenger at τ_s=24), and recognition (the explicit 'I am angry with myself, now that I wake')."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_ferdinand",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia as misrecognition of possessive-incestuous obsession as political interest is a sophisticated reading consistent with Aristotle's hamartia-as-error-of-judgement. The recognition at the corpse ('Cover her face; mine eyes dazzle: she died young') is the play's main anagnorisis and is correctly identified as the classical structure — knowledge that the act exceeds what the agent can bear — collapsing Ferdinand from tormentor to madman in a single beat."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_cardinal",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The Cardinal's hamartia as politically-calculated complicity is appropriate for a non-tragic-hero character whose role in the action is instrumental rather than deliberative-tragic. The text's claim that the Cardinal has 'no anagnorisic structure' is consistent with is_tragic_hero=False and anagnorisis_absent=False (the latter field being semantically active only for tragic heroes per sketch-05). The structural irony of his death — attendants refusing aid per his own instruction — is well-noted as the play's blackest comedy."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_bosola_resolves",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies the step as post-main and parallel, grounded in Bosola's explicit verbal recognition at τ_s=24. The observation that the two corpse-side beats (Ferdinand τ_s=23, Bosola τ_s=24) are serial rather than coupled is structurally precise. The self-aware flagging of A11 semantic stretch — the step carrying both anagnorisis and arc peripeteia — is honest about the dialect's limitation."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_antonio_dark_recognition",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation faithfully renders the anti-anagnorisic shape — simultaneous recognition and mortal wound, no possibility of altered outcome — grounded in E_bosola_kills_antonio typed as mistaken_killing. The claim that this is 'a deeper semantic stretch of A11 than the Bosola step' is well-argued: while Bosola's beat is a genuine anagnorisis with an incidental peripeteia, Antonio's beat is a recognition that structurally cannot function as one (too late to alter outcome), making the chain-step apparatus carry something it was not designed for."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_duchess_ferdinand_twin_foil",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The foil relation is grounded in the twin bond and the structural inversion of the arcs — love/secrecy/motherhood vs. control/violence/collapse — across the same pressures. The over_event_ids span from the pre-play family structure through Ferdinand's mutual wounding, correctly tracing the foil through both characters' complete arcs. Symmetric directionality is appropriate for a canonical foil kind."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_duchess_antonio_parallel",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The parallel relation is well-grounded: the over_event_ids trace shared fortune from the wooing through both characters' deaths. The structural claim that both die for the same act (the marriage), at the hands of Ferdinand-and-Bosola, neither in the other's presence, is supported by the substrate — E_strangling (τ_s=22) and E_bosola_kills_antonio (τ_s=30) are separated in time and place but caused by the same antecedent."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_ferdinand_bosola_instrumental",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The non-canonical 'instrumental' kind is well-justified: the Ferdinand-Bosola relation is structurally distinct from foil, mirror, or parallel — one character wields the other as an instrument of violence. The annotation correctly traces the instrumental chain through commission, torture, strangling, and reversal (instrument-turning-against-wielder). Directional tuple with malicious polarity is accurately applied. The comparison to Lear's artifact-mediated instrumentality is structurally grounded."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_cardinal_bosola_instrumental",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies the pre-play galley service and Act V reactivation as the Cardinal's instrumental relation with Bosola. The structural observation that a single instrument is wielded by two distinct employers (vs. Lear's two wielders on a shared target) is well-formed. The note that the A7 paired-non-canonical-polarity-contrast check does not fire because both instrumentals share malicious polarity is a useful finding about the check's scope."
+    }
+  ],
+  "observation_commentaries": [
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 50000,
+      "assessment": "endorses",
+      "comment": "The 'instrumental' kind for arc_ferdinand_bosola_instrumental is the structurally correct choice. The Ferdinand-Bosola relation is a wielder-instrument relation with directional agency and malicious polarity — none of the canonical kinds (foil, mirror, parallel) carry directionality or the asymmetry of one character executing another's violence. Admitting it under canonical-plus-open discipline at severity 'noted' is appropriate — the observation correctly flags the extension without treating it as an error.",
+      "suggested_signature": "paired_instrumental_concordance: when two or more non-canonical 'instrumental' ArCharacterArcRelations share the same instrument character (character_ref_ids[1] identical) and the same polarity, flag the paired-concordance shape — the current paired-non-canonical-polarity-contrast check only fires on opposing polarities.",
+      "target_observation": {
+        "severity": "noted",
+        "code": "character_arc_relation_kind_noncanonical",
+        "target_id": "arc_ferdinand_bosola_instrumental",
+        "message": "ArCharacterArcRelation 'arc_ferdinand_bosola_instrumental' declares kind='instrumental' which is not in ['foil', 'mirror', 'parallel']; admitted under canonical-plus-open discipline."
+      }
+    },
+    {
+      "commenter_id": "llm:claude-opus-4-6",
+      "commented_at_τ_a": 50000,
+      "assessment": "endorses",
+      "comment": "Same structural reasoning as ao_0. The Cardinal-Bosola instrumental relation is the pre-play and Act V bracket of a dual-employer pattern unique in the corpus. The annotation on arc_cardinal_bosola_instrumental correctly identifies the structural novelty (shared instrument, not shared target) and the check-gap (polarity-concordance not caught). The 'noted' severity is accurate — non-canonical kind is admitted, not prohibited.",
+      "suggested_signature": null,
+      "target_observation": {
+        "severity": "noted",
+        "code": "character_arc_relation_kind_noncanonical",
+        "target_id": "arc_cardinal_bosola_instrumental",
+        "message": "ArCharacterArcRelation 'arc_cardinal_bosola_instrumental' declares kind='instrumental' which is not in ['foil', 'mirror', 'parallel']; admitted under canonical-plus-open discipline."
+      }
+    }
+  ],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The encoding consistently deploys mythos, peripeteia, anagnorisis, hamartia, catharsis, unity of action, complex plot, complication, and denouement in their Aristotelian senses. The three-tragic-hero structure (Duchess, Bosola, Ferdinand) is argued through hamartia and recognition-shape rather than through protagonist/antagonist vocabulary. The peripeteia at the close of the middle phase is explicitly cited as matching Aristotle's structural prescription (Poetics 1452a). The anagnorisis_absent flag on the Duchess is a productive use of sketch-05's apparatus — a tragic hero whose hamartia produces catastrophe but who never recognizes the error, yielding a tragic register Aristotle would classify as less perfect but that Webster deploys for its honourable-defiance pathos. The anagnorisis_chain's two post-main parallel steps stretch the A11 apparatus honestly, with the Antonio dark-room step pushing the furthest (anti-anagnorisis is a negation of the Aristotelian category, not a standard instance of it). The non-canonical 'instrumental' arc relation is the encoding's most significant dialect extension and is well-motivated by the play's structure. No reversion to other-dialect vocabulary was needed at any point in the review.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "peripeteia-field singularity: the ArMythos can carry only one peripeteia_event_id, but the play contains at least four character-level reversals (Duchess at capture, Ferdinand at corpse-viewing, Bosola at corpse-resolving, Antonio at dark-room death). The chain-step apparatus absorbs some of this pressure for anagnorisis but there is no parallel apparatus for secondary peripeteiai.",
+      "anti-anagnorisis: the Antonio dark-room step carries a recognition that arrives simultaneously with the mortal wound and cannot alter outcome. Aristotelian anagnorisis presupposes a recognition that changes the agent's relation to the action; anti-anagnorisis is a structurally distinct shape (recognition-without-agency) that the chain-step apparatus carries only under semantic stretch.",
+      "simultaneous anagnorisis and arc peripeteia at a single event: Ferdinand's corpse-viewing is both the main anagnorisis and his arc peripeteia (tormentor → madman). The dialect fields cannot mark both structural functions at a single event, acknowledged by the encoding as OQ-LEAR-4."
+    ],
+    "relations_wanted": [
+      "ArSecondaryPeripeteia or an ArPeripeteiaStep chain (analogous to anagnorisis_chain) to carry multiple character-level reversals within a single mythos, since Webster's play has at least four distinct reversals and the current apparatus marks only the mythos-level one.",
+      "ArInstrumentalChain or a typed sub-relation within ArCharacterArcRelation linking two non-canonical 'instrumental' relations that share the same instrument character (Bosola wielded by both Ferdinand and the Cardinal), enabling the dialect to express the dual-employer pattern and check polarity concordance vs. contrast across the pair.",
+      "anagnorisis_qualifier field on ArAnagnorisisStep (values: 'genuine' | 'anti' | 'partial') to distinguish standard recognition from anti-anagnorisic shapes (recognition-too-late) and partial recognitions (Claudius's prayer-without-repentance) without semantic stretch of the chain apparatus."
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_malfi",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The action_summary faithfully traces the complete mythos from the secret marriage through the catastrophe, grounding each structural claim (peripeteia at capture, main anagnorisis at Ferdinand's corpse-viewing, anti-recognition at Antonio's dark-room death) in named substrate events. Aristotelian vocabulary is used consistently; the plot's complex shape (peripeteia + anagnorisis) is correctly identified."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_malfi_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The beginning phase annotation correctly identifies the antecedent conditions and the two catastrophic commitments (Ferdinand's commission of Bosola, the Duchess's secret marriage) that give the complication its force. All τ_s references match the substrate scope_event_ids. The closing claim — Ferdinand knowing the marriage exists but not the spouse's identity — is a defensible reading given that the substrate distinguishes E_horoscope_dropped (Antonio's document found by Bosola) from E_bosola_letters_ferdinand (what Bosola actually reports)."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_malfi_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The middle phase annotation correctly positions the peripeteia (E_capture_in_countryside) at the close of the middle, citing Aristotle's structural prescription. The five-event count leading to the capture is accurate. The parenthetical note about Webster's compression of additional pregnancies is process commentary rather than Aristotelian annotation, but it is marked as such and does not distort the structural claim."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_malfi_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The end phase annotation is the encoding's densest and most structurally self-aware. It correctly identifies both the unbinding (imprisonment through strangling) and the catastrophe (Act V's dark-room sequence), names the main anagnorisis and both chain steps by ID, and explicitly flags the dialect-structural limitation (OQ-LEAR-4) that prevents a single event from carrying both the main anagnorisis and an arc peripeteia. All τ_s values match substrate events precisely."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_duchess",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia is precisely identified as the tactical error of concealment rather than the marriage itself, distinguishing canonical-law validity from political misjudgement — a faithful rendering of hamartia as 'missing the mark.' The argument for anagnorisis_absent is grounded in the Duchess's stoic self-possession through the prison scenes and the strangling; the structural claim that recognition-absence preserves the honourable register is well-articulated."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_antonio",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The text openly acknowledges that Antonio's arc is reactive and that is_tragic_hero is False, thereby framing the hamartia as a structural-participation error rather than a classical tragic hero's deliberated misjudgement. The anti-anagnorisic death (recognition and wound simultaneous, outcome unalterable) is grounded in E_bosola_kills_antonio typed as mistaken_killing. The justification for authoring a non-tragic-hero ArCharacter — relational and chain-step requirements — is explicit and coherent."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_bosola",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "Bosola's hamartia — accepting the commission against better judgement — is grounded in the substrate's E_ferdinand_hires_bosola and supported by the verbal self-awareness the text attributes to him. The claim that Bosola is the play's structural tragic hero by arc-shape and onstage presence, distinct from the titular Duchess, is bold but defensible within Aristotelian terms: his arc carries deliberation (accepting the commission), peripeteia (instrument → avenger at τ_s=24), and recognition (the explicit 'I am angry with myself, now that I wake')."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_ferdinand",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia as misrecognition of possessive-incestuous obsession as political interest is a sophisticated reading consistent with Aristotle's hamartia-as-error-of-judgement. The recognition at the corpse ('Cover her face; mine eyes dazzle: she died young') is the play's main anagnorisis and is correctly identified as the classical structure — knowledge that the act exceeds what the agent can bear — collapsing Ferdinand from tormentor to madman in a single beat."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_cardinal",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The Cardinal's hamartia as politically-calculated complicity is appropriate for a non-tragic-hero character whose role in the action is instrumental rather than deliberative-tragic. The text's claim that the Cardinal has 'no anagnorisic structure' is consistent with is_tragic_hero=False and anagnorisis_absent=False (the latter field being semantically active only for tragic heroes per sketch-05). The structural irony of his death — attendants refusing aid per his own instruction — is well-noted as the play's blackest comedy."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_bosola_resolves",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the step as post-main and parallel, grounded in Bosola's explicit verbal recognition at τ_s=24. The observation that the two corpse-side beats (Ferdinand τ_s=23, Bosola τ_s=24) are serial rather than coupled is structurally precise. The self-aware flagging of A11 semantic stretch — the step carrying both anagnorisis and arc peripeteia — is honest about the dialect's limitation."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_antonio_dark_recognition",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation faithfully renders the anti-anagnorisic shape — simultaneous recognition and mortal wound, no possibility of altered outcome — grounded in E_bosola_kills_antonio typed as mistaken_killing. The claim that this is 'a deeper semantic stretch of A11 than the Bosola step' is well-argued: while Bosola's beat is a genuine anagnorisis with an incidental peripeteia, Antonio's beat is a recognition that structurally cannot function as one (too late to alter outcome), making the chain-step apparatus carry something it was not designed for."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_duchess_ferdinand_twin_foil",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The foil relation is grounded in the twin bond and the structural inversion of the arcs — love/secrecy/motherhood vs. control/violence/collapse — across the same pressures. The over_event_ids span from the pre-play family structure through Ferdinand's mutual wounding, correctly tracing the foil through both characters' complete arcs. Symmetric directionality is appropriate for a canonical foil kind."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_duchess_antonio_parallel",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The parallel relation is well-grounded: the over_event_ids trace shared fortune from the wooing through both characters' deaths. The structural claim that both die for the same act (the marriage), at the hands of Ferdinand-and-Bosola, neither in the other's presence, is supported by the substrate — E_strangling (τ_s=22) and E_bosola_kills_antonio (τ_s=30) are separated in time and place but caused by the same antecedent."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_ferdinand_bosola_instrumental",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The non-canonical 'instrumental' kind is well-justified: the Ferdinand-Bosola relation is structurally distinct from foil, mirror, or parallel — one character wields the other as an instrument of violence. The annotation correctly traces the instrumental chain through commission, torture, strangling, and reversal (instrument-turning-against-wielder). Directional tuple with malicious polarity is accurately applied. The comparison to Lear's artifact-mediated instrumentality is structurally grounded."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_cardinal_bosola_instrumental",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the pre-play galley service and Act V reactivation as the Cardinal's instrumental relation with Bosola. The structural observation that a single instrument is wielded by two distinct employers (vs. Lear's two wielders on a shared target) is well-formed. The note that the A7 paired-non-canonical-polarity-contrast check does not fire because both instrumentals share malicious polarity is a useful finding about the check's scope."
+      }
+    ],
+    "observation_commentaries": [
+      {
+        "target_observation_id": "ao_0",
+        "assessment": "endorses",
+        "rationale": "The 'instrumental' kind for arc_ferdinand_bosola_instrumental is the structurally correct choice. The Ferdinand-Bosola relation is a wielder-instrument relation with directional agency and malicious polarity — none of the canonical kinds (foil, mirror, parallel) carry directionality or the asymmetry of one character executing another's violence. Admitting it under canonical-plus-open discipline at severity 'noted' is appropriate — the observation correctly flags the extension without treating it as an error.",
+        "suggested_signature": "paired_instrumental_concordance: when two or more non-canonical 'instrumental' ArCharacterArcRelations share the same instrument character (character_ref_ids[1] identical) and the same polarity, flag the paired-concordance shape — the current paired-non-canonical-polarity-contrast check only fires on opposing polarities."
+      },
+      {
+        "target_observation_id": "ao_1",
+        "assessment": "endorses",
+        "rationale": "Same structural reasoning as ao_0. The Cardinal-Bosola instrumental relation is the pre-play and Act V bracket of a dual-employer pattern unique in the corpus. The annotation on arc_cardinal_bosola_instrumental correctly identifies the structural novelty (shared instrument, not shared target) and the check-gap (polarity-concordance not caught). The 'noted' severity is accurate — non-canonical kind is admitted, not prohibited.",
+        "suggested_signature": null
+      }
+    ],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The encoding consistently deploys mythos, peripeteia, anagnorisis, hamartia, catharsis, unity of action, complex plot, complication, and denouement in their Aristotelian senses. The three-tragic-hero structure (Duchess, Bosola, Ferdinand) is argued through hamartia and recognition-shape rather than through protagonist/antagonist vocabulary. The peripeteia at the close of the middle phase is explicitly cited as matching Aristotle's structural prescription (Poetics 1452a). The anagnorisis_absent flag on the Duchess is a productive use of sketch-05's apparatus — a tragic hero whose hamartia produces catastrophe but who never recognizes the error, yielding a tragic register Aristotle would classify as less perfect but that Webster deploys for its honourable-defiance pathos. The anagnorisis_chain's two post-main parallel steps stretch the A11 apparatus honestly, with the Antonio dark-room step pushing the furthest (anti-anagnorisis is a negation of the Aristotelian category, not a standard instance of it). The non-canonical 'instrumental' arc relation is the encoding's most significant dialect extension and is well-motivated by the play's structure. No reversion to other-dialect vocabulary was needed at any point in the review.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "peripeteia-field singularity: the ArMythos can carry only one peripeteia_event_id, but the play contains at least four character-level reversals (Duchess at capture, Ferdinand at corpse-viewing, Bosola at corpse-resolving, Antonio at dark-room death). The chain-step apparatus absorbs some of this pressure for anagnorisis but there is no parallel apparatus for secondary peripeteiai.",
+        "anti-anagnorisis: the Antonio dark-room step carries a recognition that arrives simultaneously with the mortal wound and cannot alter outcome. Aristotelian anagnorisis presupposes a recognition that changes the agent's relation to the action; anti-anagnorisis is a structurally distinct shape (recognition-without-agency) that the chain-step apparatus carries only under semantic stretch.",
+        "simultaneous anagnorisis and arc peripeteia at a single event: Ferdinand's corpse-viewing is both the main anagnorisis and his arc peripeteia (tormentor → madman). The dialect fields cannot mark both structural functions at a single event, acknowledged by the encoding as OQ-LEAR-4."
+      ],
+      "relations_wanted": [
+        "ArSecondaryPeripeteia or an ArPeripeteiaStep chain (analogous to anagnorisis_chain) to carry multiple character-level reversals within a single mythos, since Webster's play has at least four distinct reversals and the current apparatus marks only the mythos-level one.",
+        "ArInstrumentalChain or a typed sub-relation within ArCharacterArcRelation linking two non-canonical 'instrumental' relations that share the same instrument character (Bosola wielded by both Ferdinand and the Cardinal), enabling the dialect to express the dual-employer pattern and check polarity concordance vs. contrast across the pair.",
+        "anagnorisis_qualifier field on ArAnagnorisisStep (values: 'genuine' | 'anti' | 'partial') to distinguish standard recognition from anti-anagnorisic shapes (recognition-too-late) and partial recognitions (Claudius's prayer-without-repentance) without semantic stretch of the chain apparatus."
+      ]
+    }
+  }
+}
