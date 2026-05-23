@@ -32,221 +32,30 @@ from story_engine.core.compiler_stage_3 import (
     reset_visited_guard_counter,
     visited_guard_fires,
 )
+from story_engine.core.compiler_scenes import (
+    ACQUIRE,
+    AGENT_TYPE,
+    DEFEAT_BY_RIDDLE,
+    FACT_TYPE,
+    KILLS,
+    LEARN_FROM,
+    LOCATION_TYPE,
+    OBJECT_TYPE,
+    TRAVEL,
+    _acquire_en_route_start_state,
+    _crossroads_start_state,
+    _kills_oedipus_laius_goal,
+    _sphinx_riddle_goal,
+    _sphinx_riddle_start_state,
+    _type_assertions,
+    _type_assertions_scene_3,
+)
 
 
 # ----------------------------------------------------------------------------
 # Type constants (sketch-02 S3P8)
 # ----------------------------------------------------------------------------
 
-AGENT_TYPE = "agent"
-LOCATION_TYPE = "location"
-OBJECT_TYPE = "object"
-FACT_TYPE = "fact"          # sketch-03 S3P11
-
-
-# ----------------------------------------------------------------------------
-# Operator fixtures (migrated to sketch-02 typed form)
-# ----------------------------------------------------------------------------
-
-
-TRAVEL = OperatorSchema(
-    name="travel",
-    params=("AGENT", "FROM", "TO"),
-    variable_types={
-        "AGENT": AGENT_TYPE,
-        "FROM": LOCATION_TYPE,
-        "TO": LOCATION_TYPE,
-    },
-    preconditions=(
-        Prop("at", ("AGENT", "FROM")),
-        Prop("path", ("FROM", "TO")),
-    ),
-    add_effects=(Prop("at", ("AGENT", "TO")),),
-    del_effects=(Prop("at", ("AGENT", "FROM")),),
-)
-
-
-KILLS = OperatorSchema(
-    name="kills",
-    params=("KILLER", "VICTIM"),
-    variable_types={
-        "KILLER": AGENT_TYPE,
-        "VICTIM": AGENT_TYPE,
-        "LOC": LOCATION_TYPE,
-        "WEAPON": OBJECT_TYPE,
-    },
-    preconditions=(
-        Prop("at", ("KILLER", "LOC")),
-        Prop("at", ("VICTIM", "LOC")),
-        Prop("has", ("KILLER", "WEAPON")),
-        Prop("alive", ("KILLER",)),
-        Prop("alive", ("VICTIM",)),
-    ),
-    add_effects=(Prop("dead", ("VICTIM",)),),
-    del_effects=(Prop("alive", ("VICTIM",)),),
-)
-
-
-ACQUIRE = OperatorSchema(
-    name="acquire",
-    params=("AGENT", "ITEM", "LOCATION"),
-    variable_types={
-        "AGENT": AGENT_TYPE,
-        "ITEM": OBJECT_TYPE,
-        "LOCATION": LOCATION_TYPE,
-    },
-    preconditions=(
-        Prop("at", ("AGENT", "LOCATION")),
-        Prop("at", ("ITEM", "LOCATION")),
-    ),
-    add_effects=(Prop("has", ("AGENT", "ITEM")),),
-    del_effects=(Prop("at", ("ITEM", "LOCATION")),),
-)
-
-
-# sketch-03 S3P12: knowledge-acquisition operator.
-# S3P14 ordering: knows-of-teacher BEFORE at-preconds so the planner
-# picks FACT + LOCATION that align with an existing teacher-knows
-# relation, rather than spatial exploration followed by
-# backtracking on FACT.
-LEARN_FROM = OperatorSchema(
-    name="learn_from",
-    params=("STUDENT", "TEACHER", "FACT", "LOCATION"),
-    variable_types={
-        "STUDENT": AGENT_TYPE,
-        "TEACHER": AGENT_TYPE,
-        "FACT": FACT_TYPE,
-        "LOCATION": LOCATION_TYPE,
-    },
-    preconditions=(
-        Prop("knows", ("TEACHER", "FACT")),
-        Prop("at", ("STUDENT", "LOCATION")),
-        Prop("at", ("TEACHER", "LOCATION")),
-    ),
-    add_effects=(Prop("knows", ("STUDENT", "FACT")),),
-    del_effects=(),
-)
-
-
-# sketch-03 S3P12 + S3P14: the Oedipus-vs-Sphinx event.
-# `knows` precondition listed FIRST per S3P14 ordering discipline —
-# otherwise the planner satisfies `at(agent, LOC)` first, then
-# can't satisfy `knows(agent, fact)` without undoing location
-# setup (the student must be with the teacher at DIFFERENT
-# location).
-DEFEAT_BY_RIDDLE = OperatorSchema(
-    name="defeat_by_riddle",
-    params=("AGENT", "OPPONENT"),
-    variable_types={
-        "AGENT": AGENT_TYPE,
-        "OPPONENT": AGENT_TYPE,
-        "FACT": FACT_TYPE,
-        "LOC": LOCATION_TYPE,
-    },
-    preconditions=(
-        Prop("knows", ("AGENT", "FACT")),
-        Prop("at", ("AGENT", "LOC")),
-        Prop("at", ("OPPONENT", "LOC")),
-        Prop("alive", ("AGENT",)),
-        Prop("alive", ("OPPONENT",)),
-    ),
-    add_effects=(Prop("dead", ("OPPONENT",)),),
-    del_effects=(Prop("alive", ("OPPONENT",)),),
-)
-
-
-# ----------------------------------------------------------------------------
-# State fixtures
-# ----------------------------------------------------------------------------
-
-
-def _type_assertions() -> frozenset:
-    """Canonical type/2 assertions for the Oedipus spike universe.
-    Migrations + new scenes compose these into their start state."""
-    return frozenset({
-        Prop("type", ("oedipus", AGENT_TYPE)),
-        Prop("type", ("laius", AGENT_TYPE)),
-        Prop("type", ("corinth", LOCATION_TYPE)),
-        Prop("type", ("thebes", LOCATION_TYPE)),
-        Prop("type", ("crossroads", LOCATION_TYPE)),
-        Prop("type", ("sword", OBJECT_TYPE)),
-    })
-
-
-def _crossroads_start_state() -> frozenset:
-    """Scene 1: Oedipus already has the sword. Kill gap is co-location."""
-    return _type_assertions() | frozenset({
-        Prop("at", ("oedipus", "corinth")),
-        Prop("at", ("laius", "thebes")),
-        Prop("has", ("oedipus", "sword")),
-        Prop("path", ("corinth", "crossroads")),
-        Prop("path", ("thebes", "crossroads")),
-        Prop("alive", ("oedipus",)),
-        Prop("alive", ("laius",)),
-    })
-
-
-def _acquire_en_route_start_state() -> frozenset:
-    """Scene 2 (sketch-02 S3P10): Oedipus at Corinth unarmed; sword
-    at crossroads; Laius at Thebes. Gap is both co-location AND
-    weapon acquisition."""
-    return _type_assertions() | frozenset({
-        Prop("at", ("oedipus", "corinth")),
-        Prop("at", ("laius", "thebes")),
-        Prop("at", ("sword", "crossroads")),  # sword at location, not held
-        Prop("path", ("corinth", "crossroads")),
-        Prop("path", ("thebes", "crossroads")),
-        Prop("alive", ("oedipus",)),
-        Prop("alive", ("laius",)),
-    })
-
-
-def _type_assertions_scene_3() -> frozenset:
-    """Scene 3's universe: Oedipus + Sphinx + Oracle (3 agents);
-    Corinth + Delphi + thebes_gates (3 locations); riddle_answer
-    (1 fact). No objects needed."""
-    return frozenset({
-        Prop("type", ("oedipus", AGENT_TYPE)),
-        Prop("type", ("sphinx",  AGENT_TYPE)),
-        Prop("type", ("oracle",  AGENT_TYPE)),
-        Prop("type", ("corinth",      LOCATION_TYPE)),
-        Prop("type", ("delphi",       LOCATION_TYPE)),
-        Prop("type", ("thebes_gates", LOCATION_TYPE)),
-        Prop("type", ("riddle_answer", FACT_TYPE)),
-    })
-
-
-def _sphinx_riddle_start_state() -> frozenset:
-    """Scene 3 (sketch-03 S3P13): Oedipus at Corinth; Sphinx at
-    thebes_gates; Oracle at Delphi knowing the riddle's answer.
-    Paths route via Delphi (no direct Corinth → thebes_gates)."""
-    return _type_assertions_scene_3() | frozenset({
-        Prop("at", ("oedipus", "corinth")),
-        Prop("alive", ("oedipus",)),
-        Prop("at", ("sphinx", "thebes_gates")),
-        Prop("alive", ("sphinx",)),
-        Prop("at", ("oracle", "delphi")),
-        Prop("alive", ("oracle",)),
-        Prop("knows", ("oracle", "riddle_answer")),
-        Prop("path", ("corinth", "delphi")),
-        Prop("path", ("delphi", "thebes_gates")),
-    })
-
-
-def _sphinx_riddle_goal() -> PlanningGoal:
-    """Goal for scene 3: defeat_by_riddle with AGENT/OPPONENT bound;
-    FACT and LOC enumerated."""
-    return PlanningGoal(
-        operator=DEFEAT_BY_RIDDLE,
-        bindings={"AGENT": "oedipus", "OPPONENT": "sphinx"},
-    )
-
-
-def _kills_oedipus_laius_goal() -> PlanningGoal:
-    return PlanningGoal(
-        operator=KILLS,
-        bindings={"KILLER": "oedipus", "VICTIM": "laius"},
-    )
 
 
 # ----------------------------------------------------------------------------
@@ -1177,6 +986,64 @@ def test_scene_3_defeat_by_riddle_schema_valid():
     assert DEFEAT_BY_RIDDLE.variable_types["FACT"] == FACT_TYPE
 
 
+def test_scene_3_bad_precondition_order_still_finds_optimal_plan():
+    """S4P4 / S3P-OQ10: when the GOAL operator lists `knows` AFTER the
+    spatial `at` preconditions — the order sketch-03 worked around with
+    S3P14 ordering discipline — the planner must still find the
+    4-step optimal plan rather than the 5-step Oracle-travel plan.
+
+    Forcing test: pass `badly_ordered` as the goal operator (not just
+    as a library operator — `plan_to_goal` iterates `goal.operator.
+    preconditions`, so only the goal's ordering exercises the
+    bad-ordering path). On the pre-sketch-04 planner this returns 5
+    steps with the Oracle traveling to Oedipus; with sketch-04's
+    precondition-risk sort it returns the 4-step mythological plan.
+    """
+    badly_ordered = OperatorSchema(
+        name="defeat_by_riddle",
+        params=DEFEAT_BY_RIDDLE.params,
+        variable_types=DEFEAT_BY_RIDDLE.variable_types,
+        preconditions=(
+            Prop("at", ("AGENT", "LOC")),
+            Prop("at", ("OPPONENT", "LOC")),
+            Prop("alive", ("AGENT",)),
+            Prop("alive", ("OPPONENT",)),
+            Prop("knows", ("AGENT", "FACT")),
+        ),
+        add_effects=DEFEAT_BY_RIDDLE.add_effects,
+        del_effects=DEFEAT_BY_RIDDLE.del_effects,
+    )
+    bad_goal = PlanningGoal(
+        operator=badly_ordered,
+        bindings={"AGENT": "oedipus", "OPPONENT": "sphinx"},
+    )
+
+    result = plan_to_goal(
+        _sphinx_riddle_start_state(),
+        bad_goal,
+        (TRAVEL, LEARN_FROM, badly_ordered),
+    )
+
+    assert isinstance(result, tuple), (
+        f"expected tuple on success even with bad ordering; got {type(result)}"
+    )
+    assert len(result) == 4, (
+        f"bad ordering must still yield the 4-step optimal plan; "
+        f"got {len(result)} steps: {[e.type for e in result]}"
+    )
+    types = [e.type for e in result]
+    assert types == ["travel", "learn_from", "travel", "defeat_by_riddle"], (
+        f"type sequence must match the mythologically correct order "
+        f"(Oedipus travels to Delphi, learns from Oracle, travels to "
+        f"Thebes' gates, defeats Sphinx); got {types}"
+    )
+    # Oedipus, not the Oracle, must be the agent who moves through Delphi.
+    assert result[1].participants["LOCATION"] == "delphi", (
+        "learn_from must happen at Delphi, not at thebes_gates "
+        "(the 5-step Oracle-travel failure mode)"
+    )
+
+
 # ----------------------------------------------------------------------------
 # Test runner
 # ----------------------------------------------------------------------------
@@ -1245,6 +1112,7 @@ TESTS = [
     test_scene_3_visited_guard_firings_are_bounded,
     test_scene_3_learn_from_alone_on_co_located_agents,
     test_scene_3_defeat_by_riddle_schema_valid,
+    test_scene_3_bad_precondition_order_still_finds_optimal_plan,
 ]
 
 

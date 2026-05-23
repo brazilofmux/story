@@ -128,6 +128,20 @@ class PlanningError:
     relaxations: Tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class CausalLink:
+    """A protected causal link: the step at `establisher_idx` asserts
+    `prop`, which is required by the step at `consumer_idx`.
+
+    Used for threat detection and resolution (promotion/demotion)
+    per compilation-stage-3-sketch-04. Internal to the planner search;
+    not part of the public API returned to callers.
+    """
+    establisher_idx: int
+    prop: Prop
+    consumer_idx: int
+
+
 # Depth bound on recursive goal regression. The spike's worked example
 # needs depth 2 (goal → travel); 4 gives slack without blowing up the
 # Cartesian enumeration when semantically-nonsensical variable bindings
@@ -360,6 +374,183 @@ def reset_visited_guard_counter() -> None:
     _VISITED_GUARD_FIRES = 0
 
 
+def detect_threats(
+    plan_steps: list,
+    causal_links: list[CausalLink],
+    candidate_step_idx: int,
+    candidate_del_effects: tuple[Prop, ...],
+) -> list[tuple[CausalLink, int]]:
+    """Return list of (threatened_link, threatening_step_idx) pairs.
+
+    A del-effect threatens a causal link if it unifies with the
+    protected prop and the candidate step would be placed strictly
+    after the establisher and strictly before the consumer in the
+    total order being built.
+
+    This is the core detection primitive for sketch-04 minimal
+    threat resolution. Currently returns threats; resolution
+    (demotion) is applied by the caller.
+    """
+    threats: list[tuple[CausalLink, int]] = []
+    for link in causal_links:
+        for del_p in candidate_del_effects:
+            if _unify_prop(del_p, link.prop, {}) is not None:
+                # Would the candidate sit between establisher and consumer?
+                if link.establisher_idx < candidate_step_idx < link.consumer_idx:
+                    threats.append((link, candidate_step_idx))
+    return threats
+
+
+def try_repair_by_demoting(
+    steps: list,
+    links: list[CausalLink],
+    threatening_idx: int,
+    threatening_del_effects: tuple[Prop, ...],
+) -> Optional[tuple[list, list[CausalLink]]]:
+    """Attempt to resolve threats by demoting the threatening step to
+    the position immediately after the consumer of the first threatened
+    link (sketch-04, S4P3).
+
+    Returns (repaired_steps, repaired_links) if the move clears the
+    threat without creating a new one; otherwise None.
+    """
+    if not links or threatening_idx >= len(steps):
+        return None
+
+    relevant_threat = None
+    for link, t_idx in detect_threats(
+        steps, links, threatening_idx, threatening_del_effects,
+    ):
+        if t_idx == threatening_idx:
+            relevant_threat = (link, t_idx)
+            break
+    if relevant_threat is None:
+        return None
+
+    link, _ = relevant_threat
+    consumer_idx = link.consumer_idx
+
+    # detect_threats guarantees threatening_idx < consumer_idx, but be
+    # defensive: nothing to demote if already past the consumer.
+    if threatening_idx >= consumer_idx:
+        return None
+
+    step_to_move = steps[threatening_idx]
+
+    # Move step_to_move from its current position to immediately after
+    # the consumer. Concretely: keep everything before the threat in
+    # place, then everything between (exclusive of threat, inclusive of
+    # consumer), then the moved step, then everything after the consumer.
+    left = steps[:threatening_idx]
+    middle = steps[threatening_idx + 1 : consumer_idx + 1]
+    right = steps[consumer_idx + 1 :]
+    new_steps = left + middle + [step_to_move] + right
+
+    # Index remap: the moved step lands at position consumer_idx (in old
+    # numbering, the count of items now to its left equals consumer_idx).
+    # Items strictly between threatening and consumer shift left by 1
+    # (the removal). Items after consumer keep their original index
+    # (removal then re-insertion cancel out).
+    def new_index(old_idx: int) -> int:
+        if old_idx == threatening_idx:
+            return consumer_idx
+        if old_idx < threatening_idx:
+            return old_idx
+        if old_idx <= consumer_idx:
+            return old_idx - 1
+        return old_idx
+
+    new_links: list[CausalLink] = [
+        CausalLink(
+            new_index(lnk.establisher_idx),
+            lnk.prop,
+            new_index(lnk.consumer_idx),
+        )
+        for lnk in links
+    ]
+
+    new_threatening_pos = new_index(threatening_idx)
+    if detect_threats(
+        new_steps, new_links, new_threatening_pos, threatening_del_effects,
+    ):
+        return None
+    return (new_steps, new_links)
+
+
+def try_repair_by_promoting(
+    steps: list,
+    links: list[CausalLink],
+    threatening_idx: int,
+    threatening_del_effects: tuple[Prop, ...],
+) -> Optional[tuple[list, list[CausalLink]]]:
+    """Symmetric dual of demotion: move the threatening step to
+    immediately before the establisher of the first threatened link
+    (sketch-04, S4P-OQ1).
+
+    Returns (repaired_steps, repaired_links) if the move clears the
+    threat without creating a new one; otherwise None.
+    """
+    if not links or threatening_idx >= len(steps):
+        return None
+
+    relevant_threat = None
+    for link, t_idx in detect_threats(
+        steps, links, threatening_idx, threatening_del_effects,
+    ):
+        if t_idx == threatening_idx:
+            relevant_threat = (link, t_idx)
+            break
+    if relevant_threat is None:
+        return None
+
+    link, _ = relevant_threat
+    establisher_idx = link.establisher_idx
+
+    if threatening_idx <= establisher_idx:
+        return None
+
+    step_to_move = steps[threatening_idx]
+
+    # Move step_to_move from its current position to immediately before
+    # the establisher. Layout: [items before establisher] + [moved step]
+    # + [items between establisher and threat, inclusive of establisher,
+    # exclusive of threat] + [items after threat].
+    left = steps[:establisher_idx]
+    middle = steps[establisher_idx:threatening_idx]
+    right = steps[threatening_idx + 1 :]
+    new_steps = left + [step_to_move] + middle + right
+
+    # Index remap: the moved step lands at position establisher_idx.
+    # Items in [establisher_idx, threatening_idx) shift right by 1.
+    # Items after threatening_idx keep their original index (removal
+    # shifts them left by 1; the earlier insertion at establisher_idx
+    # shifts everything from establisher onward right by 1; net zero).
+    def new_index(old_idx: int) -> int:
+        if old_idx == threatening_idx:
+            return establisher_idx
+        if old_idx < establisher_idx:
+            return old_idx
+        if old_idx < threatening_idx:
+            return old_idx + 1
+        return old_idx
+
+    new_links: list[CausalLink] = [
+        CausalLink(
+            new_index(lnk.establisher_idx),
+            lnk.prop,
+            new_index(lnk.consumer_idx),
+        )
+        for lnk in links
+    ]
+
+    new_threatening_pos = new_index(threatening_idx)
+    if detect_threats(
+        new_steps, new_links, new_threatening_pos, threatening_del_effects,
+    ):
+        return None
+    return (new_steps, new_links)
+
+
 # ============================================================================
 # Plan-step application
 # ============================================================================
@@ -385,6 +576,36 @@ def _apply_plan_steps(
 # ============================================================================
 
 
+def _precondition_risk(
+    grounded_p: Prop,
+    operators: Tuple[OperatorSchema, ...],
+) -> int:
+    """How disruptive is achieving `grounded_p`? Returns the max
+    number of del_effects across operators whose add_effects can
+    establish it.
+
+    Lower risk means the precondition can be established by an
+    operator that doesn't undo prior state — so it's safe to
+    achieve first. Higher risk means the achiever deletes state
+    that other preconditions may depend on; defer it.
+
+    The forcing case is sphinx-vs-Oedipus with `defeat_by_riddle`
+    preconditions listed in the order `at, at, alive, alive, knows`:
+    achieving `at` first via travel deletes `at(oed, FROM)`, which
+    the later `knows` step needs (learn_from at Delphi). Sorting
+    `knows` (achievable by `learn_from` — del_effects=()) before
+    `at` (achievable by `travel` — del_effects=(at,)) keeps Oedipus
+    at Delphi long enough for learn_from to fire.
+    """
+    max_del = -1
+    for op in operators:
+        for add in op.add_effects:
+            if _unify_prop(add, grounded_p, {}) is not None:
+                if len(op.del_effects) > max_del:
+                    max_del = len(op.del_effects)
+    return max_del if max_del >= 0 else 0
+
+
 def _plan_with_bindings(
     bindings, goal_op, start_state, operators, max_depth,
 ):
@@ -401,20 +622,35 @@ def _plan_with_bindings(
         if not _is_fully_ground(p):
             return None
 
+    # Sort preconditions by risk ascending (tie-break: original schema
+    # order). Achieving safer preconditions first prevents their sub-
+    # plans' del_effects from clobbering state that riskier ones depend
+    # on. This makes precondition order a planner concern rather than
+    # a schema-author concern (sketch-04 S4P-OQ10).
+    sort_order = sorted(
+        range(len(grounded_preconds)),
+        key=lambda i: (
+            _precondition_risk(grounded_preconds[i], operators),
+            i,
+        ),
+    )
+
     plan: list = []
     state = set(start_state)
     type_registry = _build_type_registry(start_state)
-    for p in grounded_preconds:
+    for i in sort_order:
+        p = grounded_preconds[i]
         if p in state:
             continue
-        sub = _achieve(
+        sub_result = _achieve(
             p, frozenset(state), operators, max_depth,
             frozenset(), type_registry,
         )
-        if sub is None:
+        if sub_result is None:
             return None
-        plan.extend(sub)
-        state = set(_apply_plan_steps(tuple(sub), frozenset(state)))
+        sub_steps, _sub_links = sub_result
+        plan.extend(sub_steps)
+        state = set(_apply_plan_steps(tuple(sub_steps), frozenset(state)))
 
     # Sanity: every precondition now satisfied.
     for p in grounded_preconds:
@@ -431,17 +667,16 @@ def _achieve(
     max_depth: int,
     visited: FrozenSet[Prop],
     type_registry: Dict[str, str],
-) -> Optional[list]:
-    """Return a list of (operator, bindings) steps that achieve
-    `target` from `state`, or None if no operator library + depth
-    combination can. Caller is responsible for ensuring `target` is
-    fully ground.
+) -> Optional[tuple[list, list[CausalLink]]]:
+    """Return a tuple (plan_steps, causal_links) for steps that achieve
+    `target` from `state`, or None on failure.
 
-    Per sketch-02 S3P8, `visited` is defensive belt-and-suspenders —
-    typed enumeration should prevent the nonsensical cascades that
-    visited originally caught. Firings are counted via the
-    module-level _VISITED_GUARD_FIRES counter for forcing-function
-    S3P-OQ9 evidence."""
+    causal_links is initially empty in this first threading step
+    (sketch-04 minimal). Real links will be populated in follow-on
+    edits when we record establishments.
+
+    Per sketch-02 S3P8 and sketch-04, `visited` remains defensive.
+    """
     global _VISITED_GUARD_FIRES
     if target in visited:
         _VISITED_GUARD_FIRES += 1
@@ -449,7 +684,7 @@ def _achieve(
     if max_depth <= 0:
         return None
     if target in state:
-        return []
+        return ([], [])
 
     new_visited = visited | {target}
 
@@ -476,22 +711,94 @@ def _achieve(
                 ]
                 if not all(_is_fully_ground(p) for p in full_grounded):
                     return None
+
                 subplan: list = []
+                collected_links: list[CausalLink] = []
                 cur_state = set(state)
+
+                # Track (precond, local_establisher_idx) for preconditions we had to achieve
+                precond_to_establisher: list[tuple[Prop, int]] = []
+
+                offset = 0
                 for p in full_grounded:
                     if p in cur_state:
                         continue
-                    sub = _achieve(
+                    sub_result = _achieve(
                         p, frozenset(cur_state), operators,
                         max_depth - 1, new_visited, type_registry,
                     )
-                    if sub is None:
+                    if sub_result is None:
                         return None
-                    subplan.extend(sub)
+                    sub_steps, sub_links = sub_result
+
+                    if sub_steps:
+                        # The last step in this subplan is the one whose add_effect
+                        # established `p` (classic regression: the action that directly
+                        # produces the desired proposition is the establisher).
+                        establisher_local = offset + len(sub_steps) - 1
+                        precond_to_establisher.append((p, establisher_local))
+
+                    subplan.extend(sub_steps)
+                    # Shift sub_links from sub-plan-local indices into
+                    # this _achieve's coordinate system before merging.
+                    collected_links.extend(
+                        CausalLink(
+                            l.establisher_idx + offset,
+                            l.prop,
+                            l.consumer_idx + offset,
+                        )
+                        for l in sub_links
+                    )
+                    offset += len(sub_steps)
                     cur_state = set(_apply_plan_steps(
-                        tuple(sub), frozenset(cur_state),
+                        tuple(sub_steps), frozenset(cur_state),
                     ))
-                return subplan + [(op, full_b)]
+
+                candidate_steps = subplan + [(op, full_b)]
+                current_op_idx = len(subplan)   # index of the step we are adding right now
+
+                # Populate real CausalLinks for every precondition this operator step consumes.
+                for p, establisher_local in precond_to_establisher:
+                    link = CausalLink(
+                        establisher_idx=establisher_local,
+                        prop=p,
+                        consumer_idx=current_op_idx,
+                    )
+                    collected_links.append(link)
+
+                new_step_idx = len(candidate_steps) - 1
+
+                threats = detect_threats(
+                    candidate_steps,
+                    collected_links,
+                    new_step_idx,
+                    op.del_effects,
+                )
+                if threats:
+                    # Try demotion first (most common win in current scenes)
+                    repaired = try_repair_by_demoting(
+                        candidate_steps,
+                        collected_links,
+                        new_step_idx,
+                        op.del_effects,
+                    )
+                    if repaired is not None:
+                        return repaired
+
+                    # Symmetric promotion case
+                    repaired = try_repair_by_promoting(
+                        candidate_steps,
+                        collected_links,
+                        new_step_idx,
+                        op.del_effects,
+                    )
+                    if repaired is not None:
+                        return repaired
+
+                    # Both repairs failed (or not applicable) — give up on this branch
+                    return None
+
+                return (candidate_steps, collected_links)
 
             if free_vars_remaining:
                 for ext in _enumerate_variable_bindings(
@@ -501,7 +808,7 @@ def _achieve(
                     full_b = {**bindings, **ext}
                     result = _try(full_b)
                     if result is not None:
-                        return result
+                        return result   # result is now (steps, links) or None
             else:
                 result = _try(bindings)
                 if result is not None:
