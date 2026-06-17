@@ -68,6 +68,11 @@
       "items": {"type": "string", "minLength": 1},
       "description": "A19 (aristotelian-sketch-06). Optional supplementary arc-peripeteia substrate events beyond the singular peripeteia_event_id, for mythoi with multiple tragic arcs (Webster's Duchess of Malfi: four arc-peripeteiai in one mythos; Lear: Gloucester's blinding secondary to Lear's stripping). Orthogonal to the anagnorisis apparatus — a secondary peripeteia event may also be the anagnorisis_event_id or a chain-step event. A7.17 checks central-membership, distinct-from-main, no-duplicates, and substrate-resolution; it does NOT forbid anagnorisis overlap or constrain ordering vs the main. Plain-string references per PFS6-X2. Python default is the empty tuple; schema admits absence and empty array interchangeably. AS06-2."
     },
+    "pathos_character_ref_ids": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "description": "A22 (aristotelian-sketch-07). Optional pathos-centre: the character(s) carrying the play's pity-and-fear (Aristotle's pathos, Poetics 1452b), each id referencing an ArCharacter in this mythos's characters by its id. Orthogonal to anagnorisis_character_ref_id (the pathos-centre may be the recognizer or split off from it) and to is_tragic_hero (the Duchess of Malfi is both pathos-centre and tragic hero; the Revenger's Tragedy's Gloriana is an arc-less, non-agentive pity-object). A tuple admitting a distributed centre. A7.19 checks resolution, no-duplicates, and concordance with each referent's pathos_carrier flag; it imposes no arc requirement and no distinctness/coincidence constraint vs the anagnorisis character. Plain-string references per PFS6-X2. Python default is the empty tuple; schema admits absence and empty array interchangeably. AS07-2."
+    },
     "asserts_unity_of_action": {
       "type": "boolean",
       "description": "Aristotelian (Poetics 1451a) — defaults to true in Python. The A7 unity-of-action check runs unconditionally in the verifier; this field exists for authorial explicitness and for encodings that deliberately reject the assertion. PFS6-M8."

@@ -32,6 +32,10 @@
     "anagnorisis_absent": {
       "type": "boolean",
       "description": "A18 (aristotelian-sketch-05). Optional authorial claim that this character is a tragic hero whose hamartia produces catastrophe for others but whose own arc does not contain a recognition moment (e.g., Cordelia in Lear). Python default is false; schema admits absence and false interchangeably. Pre-sketch-05 silence is preserved by the default — the dialect makes no claim about whether a character has an anagnorisis unless the author sets this field true. A7.16 enforces consistency (only on is_tragic_hero=true characters; never on the mythos's main-anagnorisis character; never on characters with chain steps). PFS16-C6."
+    },
+    "pathos_carrier": {
+      "type": "boolean",
+      "description": "A23 (aristotelian-sketch-07). Optional authorial claim that this character carries the play's pity-and-fear (Aristotle's pathos, Poetics 1452b) — the pity-object / suffering-centre. Orthogonal to is_tragic_hero: a pathos carrier may bear no arc at all (the Revenger's Tragedy's Gloriana — dead before the play, present only as a skull) or be the tragic hero itself (the Duchess of Malfi). Python default is false; schema admits absence and false interchangeably. Pre-sketch-07 silence is preserved by the default. A7.19 enforces concordance with the mythos-level pathos_character_ref_ids (a named pathos-centre must carry this flag). AS07-3."
     }
   },
   "additionalProperties": false

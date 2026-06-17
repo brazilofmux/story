@@ -2,11 +2,21 @@
 The Revenger's Tragedy — Aristotelian overlay (Session 2).
 
 Sibling to `revengers_tragedy.py` (the substrate skeleton, Session 1).
-Authors the Aristotelian dialect overlay (sketches 01-06): one ArMythos,
-three ArPhases, seven ArCharacters, two ArCharacterArcRelations, a
-one-step anagnorisis chain, and the sketch-04 hard/soft extension
-fields. Verifies clean against the real FABULA (noted-only observations
+Authors the Aristotelian dialect overlay (sketches 01-07): one ArMythos,
+three ArPhases, seven ArCharacters, ONE ArCharacterArcRelation, a
+one-step anagnorisis chain, the sketch-04 hard/soft extension fields,
+and (sketch-07) the A22 pathos-centre field + A23 pathos_carrier flags.
+Verifies clean against the real FABULA (noted-only observations
 expected; see the Session-4 tests).
+
+**LANDED (sketch-07, 2026-06-17).** OQ-MALFI-3 — the forcing target this
+encoding was built to press — is now CLOSED. The pathos-centre claim,
+described below as living under *semantic stretch*, now has its typed
+home: A22 `ArMythos.pathos_character_ref_ids=("ar_gloriana",
+"ar_antonio_wife")` + A23 `pathos_carrier=True` on both. The overloaded
+`AR_PATHOS_CLUSTER_PARALLEL` relation (the stretch) is RETIRED. The
+narrative below is preserved as the forcing record; OQ_MALFI_3_FINDING
+carries the closure note.
 
 **Primary forcing target: OQ-MALFI-3 (pathos-hero vs arc-hero split).**
 Surfaced by the Malfi Session-6 re-probe and banked as the strongest
@@ -33,9 +43,10 @@ before sketch-06's A19 gave them a home:
     skull-prop* — so a hypothetical `pathos_character_ref_id` would
     point at a non-agentive figure, pressuring whether the field admits
     a dead/absent referent. (2) The pathos is *distributed* — Gloriana,
-    Antonio's wife, and Castiza form a parallel pity-cluster
-    (AR_PATHOS_CLUSTER_PARALLEL), pressuring whether a single ref id
-    even suffices. Malfi's pathos-bearer (the Duchess) was a single
+    Antonio's wife, and Castiza form a parallel pity-cluster (carried,
+    before sketch-07, by the now-retired AR_PATHOS_CLUSTER_PARALLEL),
+    pressuring whether a single ref id even suffices — answered by A22's
+    tuple shape. Malfi's pathos-bearer (the Duchess) was a single
     living agent; Webster's avenger was at least pitiable; Middleton's
     avenger (Vindice) is morally corroded and hard to pity, so the
     pathos has nowhere to go but the violated women.
@@ -289,6 +300,11 @@ AR_GLORIANA = ArCharacter(
     # here is not merely distinct from the recognizer but is a dead,
     # non-agentive, prop-borne figure.**
     is_tragic_hero=False,
+    # A23 (sketch-07) — the pathos-carrier flag, landed. Gloriana is the
+    # mythos's pathos-centre (named in AR_REVENGERS_MYTHOS.pathos_
+    # character_ref_ids). The arc-less, non-agentive pity-object the
+    # field was designed to admit.
+    pathos_carrier=True,
 )
 
 AR_ANTONIO_WIFE = ArCharacter(
@@ -301,6 +317,10 @@ AR_ANTONIO_WIFE = ArCharacter(
     # mourning"). Part of the distributed pathos cluster; is_tragic_hero
     # =False (she has no deliberative arc — she is wronged and dies).
     is_tragic_hero=False,
+    # A23 (sketch-07) — pathos-carrier. The living pity-object beside
+    # Gloriana; the second member of the mythos's distributed pathos-
+    # centre (pathos_character_ref_ids).
+    pathos_carrier=True,
 )
 
 AR_CASTIZA = ArCharacter(
@@ -392,47 +412,21 @@ AR_VINDICE_HIPPOLITO_PARALLEL = ArCharacterArcRelation(
     directionality=DIRECTIONALITY_SYMMETRIC,
 )
 
-AR_PATHOS_CLUSTER_PARALLEL = ArCharacterArcRelation(
-    id="arc_pathos_cluster_parallel",
-    kind=ARC_RELATION_PARALLEL,
-    character_ref_ids=("ar_gloriana", "ar_antonio_wife"),
-    mythos_id="ar_revengers",
-    over_event_ids=(
-        "E_gloriana_poisoned",            # Gloriana destroyed (pre-play)
-        "E_junior_rapes_antonio_wife",    # Antonio's wife violated
-        "E_antonio_wife_suicide",
-    ),
-    annotation=(
-        "The play's distributed pathos-centre, authored as a parallel "
-        "cluster because the dialect has no other way to mark it. Two "
-        "PURE pity-objects carry the pity-and-fear that the morally-"
-        "corroded avenger cannot: Gloriana poisoned for her chastity "
-        "(dead before the play, present as a skull) and Antonio's wife "
-        "raped and driven to suicide. **This relation is a semantic "
-        "stretch**: ArCharacterArcRelation types relations between "
-        "characters' *arcs*, but Gloriana and Antonio's wife have no "
-        "arcs — they are pity-objects, not agents with trajectories. "
-        "The cluster is authored as 'parallel' to give the pathos-"
-        "centre SOME structural footing, but the right home is a "
-        "mythos-level pathos field (see OQ_MALFI_3_FINDING).\n\n"
-        "**Session-5 probe refinement.** The earlier authoring grouped "
-        "Castiza here too; the probe correctly flagged that as "
-        "imprecise — Castiza HOLDS under the corruption-test and so "
-        "possesses a minimal arc (resistance and vindication), making "
-        "her a threatened-innocence figure rather than a pure pity-"
-        "object. She is excluded from this cluster and carried as the "
-        "bordering case (still part of the pathos texture via "
-        "ar_castiza and the descriptions, but not arc-less). The "
-        "probe's own proposed pathos field listed only Gloriana and "
-        "Antonio's wife — this narrowing aligns the encoding with the "
-        "reader's reading. Symmetric, canonical kind; polarity empty."
-    ),
-    directionality=DIRECTIONALITY_SYMMETRIC,
-)
+# NOTE (sketch-07): the distributed pathos-centre was previously carried
+# here by an `AR_PATHOS_CLUSTER_PARALLEL` ArCharacterArcRelation grouping
+# Gloriana + Antonio's wife — a **semantic stretch**, since that record
+# types relations between arc-bearing agents' *arcs*, and these two pity-
+# objects have no arcs. The Session-5 probe flagged exactly this ("forced
+# to overload ArCharacterArcRelation as a workaround") and proposed the
+# mythos-level pathos field. Sketch-07 lands A22 `pathos_character_ref_ids`
+# as that field, so the relation is RETIRED: the pathos-centre claim now
+# lives in its proper home (AR_REVENGERS_MYTHOS.pathos_character_ref_ids
+# + per-character pathos_carrier flags), not in an overloaded arc-relation.
+# This is the honest de-stretch — the relation existed only to give the
+# pathos-centre structural footing, and A22 is that footing.
 
 AR_REVENGERS_CHARACTER_ARC_RELATIONS = (
     AR_VINDICE_HIPPOLITO_PARALLEL,
-    AR_PATHOS_CLUSTER_PARALLEL,
 )
 
 
@@ -538,8 +532,9 @@ AR_REVENGERS_MYTHOS = ArMythos(
         "Nine years before the play, the Duke poisons Gloriana, "
         "Vindice's betrothed, for refusing his lust; Vindice has kept "
         "her skull ever since. **Gloriana — dead, a skull, the emblem "
-        "of the play's grief — is its pathos-centre, though the dialect "
-        "has no field to mark her as such.** When the corrupt court "
+        "of the play's grief — is its pathos-centre** (named, with "
+        "Antonio's wife, in pathos_character_ref_ids). When the corrupt "
+        "court "
         "needs a procurer, Vindice takes the disguise of 'Piato' to "
         "enter Lussurioso's service and avenge himself. Around him the "
         "court rots: the Duchess's youngest son rapes Antonio's wife "
@@ -650,6 +645,19 @@ AR_REVENGERS_MYTHOS = ArMythos(
     # OQ-LEAR-4 / A19 is not re-pressured here — the encoding's pressure
     # is OQ-MALFI-3 (pathos/arc split), not multiplicity of tragic arcs.
     secondary_peripeteia_event_ids=(),
+    # A22 (sketch-07) — the pathos-centre, now with a typed home. The
+    # play's pity-and-fear is carried by two arc-less pity-objects, NOT
+    # by the morally-corroded avenger (Vindice, the tragic hero and
+    # recognizer). This is OQ-MALFI-3 landed: the pathos-centre is split
+    # off from BOTH the tragic hero and the recognizer, and is borne by
+    # characters with no arcs — Gloriana (dead before the play, present
+    # only as a skull) and Antonio's wife (raped, driven to suicide).
+    # Castiza is deliberately excluded: the Session-5 probe read her as
+    # arc-bearing (resistance + vindication), not a pure pity-object, and
+    # proposed exactly this two-member list. The claim that previously
+    # lived in annotations + an overloaded parallel relation now lives
+    # here. See OQ_MALFI_3_FINDING (CLOSED).
+    pathos_character_ref_ids=("ar_gloriana", "ar_antonio_wife"),
 )
 
 
@@ -732,7 +740,22 @@ OQ_MALFI_3_FINDING = (
     "relation was narrowed to `(ar_gloriana, ar_antonio_wife)` "
     "accordingly. OQ-MALFI-3 is now cross-encoding CONFIRMED with a "
     "probe-proposed shape; sketch-07 is its home.\n\n"
-    "Artifact: reader_model_revengers_aristotelian_output.json."
+    "**CLOSED — sketch-07 (2026-06-17).** Landed exactly as recommended: "
+    "A22 `ArMythos.pathos_character_ref_ids` (the tuple, option 1) + A23 "
+    "`ArCharacter.pathos_carrier` (the probe's companion flag), with the "
+    "A7.19 concordance check. This encoding migrated to "
+    "`pathos_character_ref_ids=('ar_gloriana', 'ar_antonio_wife')` with "
+    "`pathos_carrier=True` on both; the overloaded "
+    "AR_PATHOS_CLUSTER_PARALLEL relation is RETIRED (the stretch is gone, "
+    "not merely re-annotated). Malfi migrated `(ar_duchess,)`. All three "
+    "forcing axes are now expressible in one voice: the total split "
+    "(pathos-centre disjoint from the tragic-hero set), the non-agentive "
+    "referent (A22 imposes no arc requirement — Gloriana the skull is a "
+    "valid referent), and the distribution (the tuple carries two). "
+    "Verified by the Session-7 re-probe (see aristotelian-sketch-07.md).\n\n"
+    "Artifact: reader_model_revengers_aristotelian_output.json (Session 5, "
+    "forcing); reader_model_revengers_aristotelian_session7_output.json "
+    "(Session 7, closure)."
 )
 
 S6P_OQ1_FINDING = (

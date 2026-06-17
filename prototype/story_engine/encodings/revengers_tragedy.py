@@ -1335,13 +1335,13 @@ DESCRIPTIONS = [
               "(threatened by Vindice's own corruption-test and "
               "holding). They share no arc — they are pity-objects, not "
               "agents — but together they carry the pathos the corroded "
-              "avenger cannot. A single `pathos_character_ref_id` could "
-              "not name the cluster; this is the sub-question OQ-MALFI-3 "
-              "raises about whether the field should be a tuple. The "
-              "encoding gives the cluster what structural footing it can "
-              "via the AR_PATHOS_CLUSTER_PARALLEL relation — itself a "
-              "stretch, since the dialect types relations between arcs, "
-              "and these women have none."),
+              "avenger cannot. A single pathos ref could not name the "
+              "cluster; this is the sub-question OQ-MALFI-3 raised about "
+              "whether the field should be a tuple. Sketch-07 answered it: "
+              "the overlay now names them in A22 "
+              "`ArMythos.pathos_character_ref_ids` (a tuple), retiring the "
+              "earlier overloaded arc-relation that gave the cluster its "
+              "only footing."),
         is_question=False,
         authored_by="author",
         τ_a=201,

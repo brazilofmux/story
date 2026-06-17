@@ -477,6 +477,15 @@ AR_DUCHESS = ArCharacter(
     # carries hamartia-without-recognition; the Duchess's
     # carries defiance-without-collapse.
     anagnorisis_absent=True,
+    # A23 (sketch-07) — pathos-carrier. The Duchess is the play's
+    # principal pity-site, named at mythos level in pathos_character_
+    # ref_ids. The corpus case proving A22/A23 orthogonality to
+    # is_tragic_hero: she is BOTH the pathos-centre AND an arc-bearing
+    # tragic hero (contrast the Revenger's arc-less pity-objects). The
+    # OQ-MALFI-3 split here is pathos-centre (Duchess) vs the main
+    # RECOGNIZER (Ferdinand, anagnorisis_character_ref_id), not vs the
+    # tragic-hero set.
+    pathos_carrier=True,
 )
 
 AR_ANTONIO = ArCharacter(
@@ -1242,6 +1251,15 @@ AR_MALFI_MYTHOS = ArMythos(
         "E_bosola_resolves_revenge",    # τ_s=24 — also AR_STEP_BOSOLA_RESOLVES
         "E_bosola_kills_antonio",       # τ_s=30 — also AR_STEP_ANTONIO_DARK_RECOGNITION
     ),
+    # A22 (sketch-07) — the pathos-centre, landed. OQ-MALFI-3 (which this
+    # encoding's Session-6 re-probe SURFACED) is the split between the
+    # principal pity-site (the Duchess) and the main RECOGNIZER (Ferdinand,
+    # anagnorisis_character_ref_id). Before sketch-07 the dialect had no
+    # field naming the Duchess as the pathos-centre. A22 carries it now;
+    # the Duchess is also is_tragic_hero=True, so this is the corpus's
+    # pathos-centre-IS-the-tragic-hero case (contrast the Revenger's, where
+    # the pathos-centre is arc-less). See OQ_MALFI_3_FINDING (CLOSED).
+    pathos_character_ref_ids=("ar_duchess",),
 )
 
 
@@ -1483,7 +1501,21 @@ OQ_MALFI_3_FINDING = (
     "Probe's proposed shape: `ArMythos.pathos_character_ref_id`. "
     "Banked; forcing function is a second split-pathos encoding "
     "(candidate: a revenge tragedy where the avenger recognizes but "
-    "a victim bears the pathos)."
+    "a victim bears the pathos).\n\n"
+    "**CLOSED — sketch-07 (2026-06-17).** The candidate second site "
+    "was authored (The Revenger's Tragedy, SoP-16): the avenger "
+    "Vindice recognizes, the arc-less violated women bear the pathos. "
+    "Its Session-5 probe re-confirmed the finding and proposed the "
+    "tuple shape + a companion flag. Sketch-07 landed A22 "
+    "`ArMythos.pathos_character_ref_ids: Tuple[str, ...]` and A23 "
+    "`ArCharacter.pathos_carrier: bool`, with the A7.19 concordance "
+    "check. Malfi migrated `pathos_character_ref_ids=('ar_duchess',)` "
+    "with `pathos_carrier=True` on the Duchess — the corpus case where "
+    "the pathos-centre IS the tragic hero, split only from the "
+    "recognizer (Ferdinand). The Revenger's migrated the two arc-less "
+    "pity-objects. Verified by the Session-7 re-probe. The probe's "
+    "original singular `pathos_character_ref_id` was widened to the "
+    "tuple to carry the Revenger's distributed case."
 )
 
 OQ_MALFI_4_FINDING = (

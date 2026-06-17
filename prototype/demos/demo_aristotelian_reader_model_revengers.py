@@ -250,7 +250,7 @@ def main() -> int:
     ]
     pathos_cluster = [
         c for c in AR_REVENGERS_MYTHOS.characters
-        if c.id in ("ar_gloriana", "ar_antonio_wife", "ar_castiza")
+        if c.id in AR_REVENGERS_MYTHOS.pathos_character_ref_ids
     ]
 
     print("Aristotelian reader-model probe — The Revenger's Tragedy")
@@ -266,8 +266,10 @@ def main() -> int:
     print(
         f"  anagnorisis_character_ref_id: "
         f"{AR_REVENGERS_MYTHOS.anagnorisis_character_ref_id} "
-        f"(Vindice — the arc-hero; pathos-centre is Gloriana, a "
-        f"DIFFERENT character the dialect cannot mark — OQ-MALFI-3)"
+        f"(Vindice — the arc-hero; pathos-centre is "
+        f"{', '.join(AR_REVENGERS_MYTHOS.pathos_character_ref_ids)} — "
+        f"DIFFERENT, now named via A22 pathos_character_ref_ids: "
+        f"OQ-MALFI-3 closed)"
     )
     print(
         f"  peripeteia → anagnorisis: "

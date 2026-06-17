@@ -3626,10 +3626,11 @@ def test_revengers_aristotelian_single_tragic_hero():
 
 
 def test_revengers_aristotelian_pathos_arc_split_oq_malfi_3():
-    """The OQ-MALFI-3 forcing structure. The pathos-centre (Gloriana)
-    and the anagnorisis-bearer (Vindice) are distinct characters; the
-    dialect has NO field to mark Gloriana as the pathos-centre. The
-    absence of `pathos_character_ref_id` on ArMythos IS the forcing."""
+    """OQ-MALFI-3 LANDED (sketch-07, A22/A23). The pathos-centre is
+    split off from BOTH the recognizer (Vindice) and the tragic-hero
+    set, and is borne by an arc-less character (Gloriana). The mythos
+    now NAMES the pathos-centre via pathos_character_ref_ids, and the
+    referent carries the A23 pathos_carrier flag."""
     from story_engine.encodings.revengers_tragedy_aristotelian import (
         AR_REVENGERS_MYTHOS,
     )
@@ -3638,43 +3639,62 @@ def test_revengers_aristotelian_pathos_arc_split_oq_malfi_3():
     # Both the arc-hero and the pathos-centre are authored characters.
     assert "ar_vindice" in char_ids
     assert "ar_gloriana" in char_ids
-    # The anagnorisis-bearer is Vindice, NOT the pathos-centre.
+    # The anagnorisis-bearer is Vindice, NOT the pathos-centre — the
+    # total split this encoding forces.
     assert m.anagnorisis_character_ref_id == "ar_vindice"
-    assert m.anagnorisis_character_ref_id != "ar_gloriana"
-    # Gloriana is the pathos-centre but not a tragic hero (no arc).
+    assert "ar_vindice" not in m.pathos_character_ref_ids
+    # A22: the pathos-centre is now named at mythos level.
+    assert "ar_gloriana" in m.pathos_character_ref_ids
+    # Gloriana is the pathos-centre but bears no arc (is_tragic_hero
+    # False) — A22 admits an arc-less, non-agentive referent.
     gloriana = next(c for c in m.characters if c.id == "ar_gloriana")
     assert gloriana.is_tragic_hero is False
     assert gloriana.character_ref_id == "gloriana"
-    # The dialect has no field to carry the pathos-centre role — the
-    # ArMythos has no pathos_character_ref_id. This absence is the
-    # OQ-MALFI-3 forcing.
-    assert not hasattr(m, "pathos_character_ref_id")
-    assert not hasattr(m, "pathos_character_ref_ids")
+    # A23: the referent carries the pathos_carrier flag (concordance).
+    assert gloriana.pathos_carrier is True
+    # The split is total: the pathos-centre is disjoint from the
+    # tragic-hero set.
+    heroes = {c.id for c in m.characters if c.is_tragic_hero}
+    assert heroes.isdisjoint(set(m.pathos_character_ref_ids))
 
 
 def test_revengers_aristotelian_pathos_cluster_distributed():
-    """The distributed pathos-centre, carried (under stretch) by
-    AR_PATHOS_CLUSTER_PARALLEL — the OQ-MALFI-3 'single ref
-    insufficient' sub-question. Post-Session-5: the cluster is the TWO
-    pure pity-objects (Gloriana, Antonio's wife); Castiza was narrowed
-    out per the probe's refinement (she holds under the test and so has
-    a minimal arc, unlike the arc-less pity-objects)."""
+    """A22 carries the DISTRIBUTED pathos-centre as a tuple — the
+    OQ-MALFI-3 'single ref insufficient' sub-question, answered. The
+    centre is the TWO pure pity-objects (Gloriana, Antonio's wife),
+    each arc-less and each flagged pathos_carrier. Castiza is excluded
+    (the probe read her as arc-bearing, not a pure pity-object), and is
+    NOT flagged — so A7.19 check 4 emits no noted for her. Sketch-07
+    retired the AR_PATHOS_CLUSTER_PARALLEL relation that previously
+    carried this under stretch."""
     from story_engine.encodings.revengers_tragedy_aristotelian import (
-        AR_REVENGERS_MYTHOS, AR_PATHOS_CLUSTER_PARALLEL,
+        AR_REVENGERS_MYTHOS,
     )
+    m = AR_REVENGERS_MYTHOS
     cluster = {"ar_gloriana", "ar_antonio_wife"}
-    by_id = {c.id: c for c in AR_REVENGERS_MYTHOS.characters}
+    by_id = {c.id: c for c in m.characters}
+    # A22 names exactly the two pure pity-objects, as a tuple.
+    assert set(m.pathos_character_ref_ids) == cluster
+    assert len(m.pathos_character_ref_ids) == 2
     for cid in cluster:
         assert cid in by_id
         assert by_id[cid].is_tragic_hero is False
-    # The cluster relation names the two pure pity-objects.
-    assert AR_PATHOS_CLUSTER_PARALLEL.kind == ARC_RELATION_PARALLEL
-    assert set(AR_PATHOS_CLUSTER_PARALLEL.character_ref_ids) == cluster
-    assert AR_PATHOS_CLUSTER_PARALLEL.directionality == DIRECTIONALITY_SYMMETRIC
-    # Castiza is still authored as a character (the bordering case) but
-    # excluded from the pure-pity-object cluster.
+        # A23 concordance: each named carrier is flagged.
+        assert by_id[cid].pathos_carrier is True
+    # Castiza is still authored (the bordering case) but is neither
+    # named in the pathos centre nor flagged.
     assert "ar_castiza" in by_id
-    assert "ar_castiza" not in AR_PATHOS_CLUSTER_PARALLEL.character_ref_ids
+    assert "ar_castiza" not in m.pathos_character_ref_ids
+    assert by_id["ar_castiza"].pathos_carrier is False
+    # The overloaded relation is gone — the de-stretch.
+    rel_ids = {
+        r.id for r in
+        __import__(
+            "story_engine.encodings.revengers_tragedy_aristotelian",
+            fromlist=["AR_REVENGERS_CHARACTER_ARC_RELATIONS"],
+        ).AR_REVENGERS_CHARACTER_ARC_RELATIONS
+    }
+    assert "arc_pathos_cluster_parallel" not in rel_ids
 
 
 def test_revengers_aristotelian_binding_adjacent_corpus_first():
@@ -3710,21 +3730,24 @@ def test_revengers_aristotelian_duke_anti_anagnorisis():
     assert step.precipitates_main is False
 
 
-def test_revengers_aristotelian_two_parallel_relations():
-    """Two ArCharacterArcRelations, both canonical kind=parallel,
-    symmetric. No instrumental relations: Vindice is a self-directed
-    avenger, not a wielded instrument (OQ-MALFI-1/4 do not recur)."""
+def test_revengers_aristotelian_one_parallel_relation():
+    """ONE ArCharacterArcRelation after sketch-07 retired the pathos
+    cluster (Vindice↔Hippolito, the avenger brothers). Canonical
+    kind=parallel, symmetric. No instrumental relations: Vindice is a
+    self-directed avenger, not a wielded instrument (OQ-MALFI-1/4 do
+    not recur). The pathos-centre is now carried by A22, not by an
+    overloaded arc-relation."""
     from story_engine.encodings.revengers_tragedy_aristotelian import (
         AR_REVENGERS_CHARACTER_ARC_RELATIONS,
     )
     rels = AR_REVENGERS_CHARACTER_ARC_RELATIONS
-    assert len(rels) == 2
+    assert len(rels) == 1
     for r in rels:
         assert r.kind == ARC_RELATION_PARALLEL
         assert r.directionality == DIRECTIONALITY_SYMMETRIC
         assert r.polarity == ""
     ids = sorted(r.id for r in rels)
-    assert ids == ["arc_pathos_cluster_parallel", "arc_vindice_hippolito_parallel"]
+    assert ids == ["arc_vindice_hippolito_parallel"]
 
 
 def test_revengers_aristotelian_no_secondary_peripeteia():
@@ -4087,6 +4110,153 @@ def test_lear_aristotelian_secondary_peripeteia_migrated():
 
 
 # ============================================================================
+# Sketch-07 — A22 pathos_character_ref_ids + A23 pathos_carrier (A7.19)
+# ============================================================================
+
+
+def _pathos_char(cid: str, *, carrier: bool = False,
+                 hero: bool = False):
+    """A minimal ArCharacter for A7.19 tests."""
+    return ArCharacter(
+        id=cid, name=cid, is_tragic_hero=hero, pathos_carrier=carrier,
+    )
+
+
+def test_a22_pathos_default_empty_silent():
+    """Pre-sketch-07 default: no pathos field, no A7.19 observation."""
+    m = _three_phase_mythos()
+    assert m.pathos_character_ref_ids == ()
+    obs = verify(m)
+    assert not any(o.code.startswith("pathos_") for o in obs)
+
+
+def test_a22_pathos_clean_named_and_flagged():
+    """A7.19 clean: a named pathos-centre that resolves and carries the
+    A23 flag produces no observation. The centre is split from the
+    tragic hero (arc-less pity-object) — A7.19 imposes no distinctness
+    or coincidence requirement, so the split is silent."""
+    m = _three_phase_mythos(
+        characters=(
+            _pathos_char("ar_hero", hero=True),
+            _pathos_char("ar_pity", carrier=True),
+        ),
+        pathos_character_ref_ids=("ar_pity",),
+    )
+    obs = verify(m)
+    assert not any(o.code.startswith("pathos_") for o in obs)
+
+
+def test_a22_pathos_centre_may_be_the_tragic_hero():
+    """A7.19 admits the coincidence case: the pathos-centre IS the
+    tragic hero (Malfi's Duchess). pathos_carrier + is_tragic_hero on
+    one character is clean — orthogonal axes."""
+    m = _three_phase_mythos(
+        characters=(_pathos_char("ar_duchess", carrier=True, hero=True),),
+        pathos_character_ref_ids=("ar_duchess",),
+    )
+    obs = verify(m)
+    assert not any(o.code.startswith("pathos_") for o in obs)
+
+
+def test_a22_pathos_unresolved():
+    """A7.19 check 1: a pathos ref that resolves to no character."""
+    m = _three_phase_mythos(
+        characters=(_pathos_char("ar_real", carrier=True),),
+        pathos_character_ref_ids=("ar_ghost",),
+    )
+    obs = verify(m)
+    assert _has_code(obs, "pathos_character_unresolved")
+
+
+def test_a22_pathos_duplicate():
+    """A7.19 check 2: a duplicated entry within the tuple."""
+    m = _three_phase_mythos(
+        characters=(_pathos_char("ar_pity", carrier=True),),
+        pathos_character_ref_ids=("ar_pity", "ar_pity"),
+    )
+    obs = verify(m)
+    assert _has_code(obs, "pathos_character_duplicate")
+
+
+def test_a22_pathos_named_but_not_flagged():
+    """A7.19 check 3: a named pathos-centre whose ArCharacter does NOT
+    set pathos_carrier=True — A22/A23 disagree (advises-review)."""
+    m = _three_phase_mythos(
+        characters=(_pathos_char("ar_pity", carrier=False),),
+        pathos_character_ref_ids=("ar_pity",),
+    )
+    obs = verify(m)
+    assert _has_code(obs, "pathos_character_not_flagged")
+
+
+def test_a23_flagged_but_not_named_is_noted():
+    """A7.19 check 4: a character flagged pathos_carrier=True that the
+    mythos's pathos_character_ref_ids omits — NOTED, not advises-review
+    (a narrower per-mythos centre is legitimate)."""
+    m = _three_phase_mythos(
+        characters=(
+            _pathos_char("ar_named", carrier=True),
+            _pathos_char("ar_unnamed", carrier=True),
+        ),
+        pathos_character_ref_ids=("ar_named",),
+    )
+    obs = verify(m)
+    noted = [o for o in obs if o.code == "pathos_carrier_not_in_mythos_list"]
+    assert len(noted) == 1
+    assert noted[0].severity == SEVERITY_NOTED
+    assert noted[0].target_id == "ar_unnamed"
+    # The named-and-flagged one does NOT trigger the noted.
+    assert not _has_code(obs, "pathos_character_not_flagged")
+
+
+def test_revengers_aristotelian_pathos_centre_landed():
+    """A22/A23 migration (the OQ-MALFI-3 forcer): the Revenger's names
+    its two arc-less pity-objects as the distributed pathos-centre, both
+    flagged, and verifies clean (no pathos observation)."""
+    from story_engine.encodings.revengers_tragedy import FABULA
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS, AR_REVENGERS_CHARACTER_ARC_RELATIONS,
+    )
+    m = AR_REVENGERS_MYTHOS
+    assert m.pathos_character_ref_ids == ("ar_gloriana", "ar_antonio_wife")
+    obs = verify(
+        m, substrate_events=tuple(FABULA), mythoi=(m,),
+        character_arc_relations=AR_REVENGERS_CHARACTER_ARC_RELATIONS,
+    )
+    assert not any(o.code.startswith("pathos_") for o in obs)
+
+
+def test_malfi_aristotelian_pathos_centre_landed():
+    """A22/A23 migration (the OQ-MALFI-3 surfacing site): Malfi names the
+    Duchess as the pathos-centre — a centre that is ALSO the tragic hero,
+    split only from the recognizer (Ferdinand). Clean."""
+    from story_engine.encodings.malfi import FABULA
+    from story_engine.encodings.malfi_aristotelian import (
+        AR_MALFI_MYTHOS, AR_MALFI_CHARACTER_ARC_RELATIONS,
+    )
+    m = AR_MALFI_MYTHOS
+    assert m.pathos_character_ref_ids == ("ar_duchess",)
+    duchess = next(c for c in m.characters if c.id == "ar_duchess")
+    assert duchess.pathos_carrier is True
+    assert duchess.is_tragic_hero is True       # the coincidence case
+    # The split: pathos-centre is NOT the recognizer.
+    assert m.anagnorisis_character_ref_id == "ar_ferdinand"
+    assert "ar_ferdinand" not in m.pathos_character_ref_ids
+    obs = verify(
+        m, substrate_events=tuple(FABULA), mythoi=(m,),
+        character_arc_relations=AR_MALFI_CHARACTER_ARC_RELATIONS,
+    )
+    assert not any(o.code.startswith("pathos_") for o in obs)
+
+
+def test_malfi_aristotelian_oq_malfi_3_closed_note():
+    """The OQ_MALFI_3_FINDING constant records the sketch-07 closure."""
+    from story_engine.encodings.malfi_aristotelian import OQ_MALFI_3_FINDING
+    assert "CLOSED" in OQ_MALFI_3_FINDING
+    assert "sketch-07" in OQ_MALFI_3_FINDING
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -4303,7 +4473,7 @@ TESTS = [
     test_revengers_aristotelian_pathos_cluster_distributed,
     test_revengers_aristotelian_binding_adjacent_corpus_first,
     test_revengers_aristotelian_duke_anti_anagnorisis,
-    test_revengers_aristotelian_two_parallel_relations,
+    test_revengers_aristotelian_one_parallel_relation,
     test_revengers_aristotelian_no_secondary_peripeteia,
     test_revengers_aristotelian_unity_of_action_true,
     test_revengers_aristotelian_sketch04_fields_authored,
@@ -4330,6 +4500,17 @@ TESTS = [
     test_malfi_aristotelian_secondary_peripeteia_migrated,
     test_malfi_aristotelian_antonio_anti_anagnorisis_migrated,
     test_lear_aristotelian_secondary_peripeteia_migrated,
+    # Sketch-07 — A22 pathos_character_ref_ids + A23 pathos_carrier (A7.19)
+    test_a22_pathos_default_empty_silent,
+    test_a22_pathos_clean_named_and_flagged,
+    test_a22_pathos_centre_may_be_the_tragic_hero,
+    test_a22_pathos_unresolved,
+    test_a22_pathos_duplicate,
+    test_a22_pathos_named_but_not_flagged,
+    test_a23_flagged_but_not_named_is_noted,
+    test_revengers_aristotelian_pathos_centre_landed,
+    test_malfi_aristotelian_pathos_centre_landed,
+    test_malfi_aristotelian_oq_malfi_3_closed_note,
 ]
 
 

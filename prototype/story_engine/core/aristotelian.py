@@ -250,6 +250,17 @@ class ArCharacter:
     sets this field True. A7.16 enforces consistency (only on
     is_tragic_hero=True characters; never on the mythos's main-
     anagnorisis character; never on characters with chain steps).
+
+    `pathos_carrier` (sketch-07, A23) is an authorial claim that this
+    character carries the play's pity-and-fear (Aristotle's *pathos*,
+    Poetics 1452b) — the pity-object / suffering-centre. It is
+    *orthogonal to `is_tragic_hero`*: a pathos carrier may bear no arc
+    at all (Gloriana in the Revenger's Tragedy — dead before the play,
+    present only as a skull), or may simultaneously be the tragic hero
+    (the Duchess of Malfi, who is both the principal pity-site and an
+    arc-bearing hero). False default preserves pre-sketch-07 silence.
+    A7.19 enforces concordance with the mythos-level
+    `pathos_character_ref_ids` (A22).
     """
     id: str
     name: str
@@ -257,6 +268,7 @@ class ArCharacter:
     hamartia_text: Optional[str] = None
     is_tragic_hero: bool = False
     anagnorisis_absent: bool = False
+    pathos_carrier: bool = False         # A23 (sketch-07)
 
 
 @dataclass(frozen=True)
@@ -463,6 +475,21 @@ class ArMythos:
     # duplicates, and substrate-resolution; it does NOT forbid overlap
     # with anagnorisis events or constrain ordering vs the main.
     secondary_peripeteia_event_ids: Tuple[str, ...] = ()
+    # A22 (sketch-07) — the mythos's pathos-centre(s): the character(s)
+    # who carry the play's pity-and-fear (Aristotle's *pathos*, Poetics
+    # 1452b) independent of arc-bearing. Empty default preserves pre-
+    # sketch-07 silence. Each id references an ArCharacter in
+    # `characters` (by `.id`). Orthogonal to `anagnorisis_character_
+    # ref_id` and to `is_tragic_hero`: the pathos-centre may coincide
+    # with the tragic hero (the ordinary case) OR be split off from
+    # both the hero and the recognizer (the OQ-MALFI-3 case — Malfi's
+    # Duchess as pathos-centre vs Ferdinand the recognizer; the
+    # Revenger's Gloriana + Antonio's wife as arc-less pity-objects vs
+    # Vindice the avenger). A7.19 checks resolution, no-duplicates, and
+    # concordance with each referent's A23 `pathos_carrier` flag; it
+    # does NOT require the pathos-centre to be distinct from — or to
+    # coincide with — the anagnorisis character (both shapes are valid).
+    pathos_character_ref_ids: Tuple[str, ...] = ()
 
 
 # ============================================================================
@@ -1644,6 +1671,99 @@ def _check_anagnorisis_qualifier(mythos: ArMythos) -> list:
     return out
 
 
+def _check_pathos_centre(mythos: ArMythos) -> list:
+    """A7.19. Structural integrity for A22 pathos_character_ref_ids
+    (the mythos's pathos-centre) and its A23 ArCharacter.pathos_carrier
+    concordance.
+
+    1. **resolution.** Each id ∈ pathos_character_ref_ids resolves to
+       an ArCharacter in mythos.characters (by `.id`, the convention
+       the anagnorisis chain uses). Unresolved → advises-review
+       `pathos_character_unresolved`.
+    2. **no-duplicates.** No id appears twice in the tuple →
+       advises-review `pathos_character_duplicate`.
+    3. **named ⇒ flagged.** A resolved referent with
+       `pathos_carrier=False` → advises-review
+       `pathos_character_not_flagged`: the mythos names it a pathos-
+       centre but the ArCharacter does not declare itself one; the A22
+       and A23 surfaces disagree.
+    4. **flagged ⇒ named (informational).** An ArCharacter in
+       mythos.characters with `pathos_carrier=True` that is NOT named
+       in pathos_character_ref_ids → NOTED
+       `pathos_carrier_not_in_mythos_list`. NOTED, not advises-review:
+       a character may legitimately self-declare as a pathos carrier
+       while a given mythos's pathos-centre list is narrower (e.g. a
+       character shared across mythoi). The asymmetry mirrors the
+       authoritative-list-with-character-echo design.
+
+    Deliberately NOT checked: distinctness from (or coincidence with)
+    `anagnorisis_character_ref_id` or the `is_tragic_hero` set — the
+    pathos-centre may be the tragic hero, the recognizer, both, or
+    neither (the whole point of A22 is to admit the split AND the
+    coincidence). No arc requirement: an arc-less, non-agentive
+    referent (a dead character present only as a prop) is valid.
+    """
+    out: list = []
+    chars_by_id = {c.id: c for c in mythos.characters}
+    seen: set = set()
+
+    for cid in mythos.pathos_character_ref_ids:
+        # Check 1 — resolution
+        char = chars_by_id.get(cid)
+        if char is None:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="pathos_character_unresolved",
+                target_id=mythos.id,
+                message=(f"ArMythos {mythos.id!r} names "
+                         f"pathos_character_ref_id {cid!r} which does "
+                         f"not resolve to an ArCharacter in the mythos's "
+                         f"`characters`."),
+            ))
+        # Check 2 — no duplicates within the tuple
+        if cid in seen:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="pathos_character_duplicate",
+                target_id=mythos.id,
+                message=(f"ArMythos {mythos.id!r} lists "
+                         f"pathos_character_ref_id {cid!r} more than "
+                         f"once; A22 requires distinct entries."),
+            ))
+        seen.add(cid)
+        # Check 3 — named ⇒ flagged
+        if char is not None and not char.pathos_carrier:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="pathos_character_not_flagged",
+                target_id=mythos.id,
+                message=(f"ArMythos {mythos.id!r} names ArCharacter "
+                         f"{cid!r} as a pathos-centre but the character "
+                         f"declares pathos_carrier=False; A22 and A23 "
+                         f"disagree. Set pathos_carrier=True on the "
+                         f"character, or drop it from "
+                         f"pathos_character_ref_ids."),
+            ))
+
+    # Check 4 — flagged ⇒ named (NOTED)
+    named = set(mythos.pathos_character_ref_ids)
+    for char in mythos.characters:
+        if char.pathos_carrier and char.id not in named:
+            out.append(ArObservation(
+                severity=SEVERITY_NOTED,
+                code="pathos_carrier_not_in_mythos_list",
+                target_id=char.id,
+                message=(f"ArCharacter {char.id!r} declares "
+                         f"pathos_carrier=True but is not named in "
+                         f"ArMythos {mythos.id!r}'s "
+                         f"pathos_character_ref_ids; the mythos's pathos-"
+                         f"centre list omits a self-declared carrier "
+                         f"(valid if intentional — e.g. a narrower "
+                         f"per-mythos centre)."),
+            ))
+    return out
+
+
 def _derived_step_kind(
     step: ArAnagnorisisStep,
     anagnorisis_character_ref_id: Optional[str],
@@ -2040,6 +2160,12 @@ def verify(
     fields, plus A21 (A7.15 check 6). A7.17 / A7.18 walk the existing
     structures and skip cleanly when sketch-06 fields stay at
     defaults; no new kwarg.
+
+    Sketch-07 adds A22 (ArMythos.pathos_character_ref_ids) and A23
+    (ArCharacter.pathos_carrier) as new optional fields. A7.19 walks
+    the existing structures (resolution + A22/A23 concordance) and
+    skips cleanly when the sketch-07 fields stay at defaults; no new
+    kwarg.
     """
     events_by_id = {e.id: e for e in substrate_events}
 
@@ -2070,6 +2196,7 @@ def verify(
     out.extend(_check_character_anagnorisis_absent(mythos))
     out.extend(_check_secondary_peripeteia(mythos, events_by_id))
     out.extend(_check_anagnorisis_qualifier(mythos))
+    out.extend(_check_pathos_centre(mythos))
     return out
 
 

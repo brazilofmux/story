@@ -420,6 +420,22 @@ convention, a main-level (not just step-level) anagnorisis \
 qualifier, audience-level parallel-plot catharsis apparatus — \
 flag that too.
 
+Note on sketch-07: the dialect adds a mythos-level pathos field. \
+(1) `ArMythos.pathos_character_ref_ids` — a list naming the \
+character(s) who carry the play's pity-and-fear (Aristotle's \
+*pathos*, Poetics 1452b), each id referencing an ArCharacter. It \
+is orthogonal to `anagnorisis_character_ref_id` (the pathos-centre \
+may be the recognizer, or split off from both the recognizer and \
+the tragic hero) and imposes no arc requirement (a dead, non- \
+agentive referent is admissible). (2) `ArCharacter.pathos_carrier` \
+— a bool echoing the claim at character level. Judge these on the \
+substrate as you would any field: if the pathos-centre now reads \
+as expressible WITHOUT strain, say so; if the shape is wrong (too \
+coarse, mis-placed, the wrong cardinality) or the pathos-centre is \
+STILL not fully expressible, say that instead and propose the \
+better shape. Do not assume the field closes the gap merely \
+because it exists.
+
 ## Your contract
 
 R1. Typed I/O only. You produce structured output matching the \
@@ -550,6 +566,12 @@ def _ar_character_to_dict(character: ArCharacter) -> dict:
         # own arc does not contain a recognition moment. False
         # default preserves pre-sketch-05 silence.
         "anagnorisis_absent": character.anagnorisis_absent,
+        # Sketch-07 A23 — pathos_carrier marks a character who carries
+        # the play's pity-and-fear (Aristotle's pathos), independent of
+        # arc-bearing: a pathos carrier may be arc-less (the Revenger's
+        # Gloriana) or the tragic hero itself (Malfi's Duchess). False
+        # default preserves pre-sketch-07 silence.
+        "pathos_carrier": character.pathos_carrier,
     }
 
 
@@ -594,6 +616,14 @@ def _ar_mythos_to_dict(mythos: ArMythos) -> dict:
         # anagnorisis_event_id or a chain-step event).
         "secondary_peripeteia_event_ids":
             list(mythos.secondary_peripeteia_event_ids),
+        # Sketch-07 A22 — the pathos-centre: the character(s) carrying
+        # the play's pity-and-fear at mythos level, distinct from (or
+        # coincident with) the anagnorisis character. A tuple, admitting
+        # a distributed centre (the Revenger's two arc-less pity-objects)
+        # or a single one (Malfi's Duchess). Orthogonal to is_tragic_hero
+        # and to anagnorisis_character_ref_id.
+        "pathos_character_ref_ids":
+            list(mythos.pathos_character_ref_ids),
         "anagnorisis_event_id": mythos.anagnorisis_event_id,
         "asserts_unity_of_action": mythos.asserts_unity_of_action,
         "asserts_unity_of_time": mythos.asserts_unity_of_time,

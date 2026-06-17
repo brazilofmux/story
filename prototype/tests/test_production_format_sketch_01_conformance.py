@@ -1161,6 +1161,9 @@ def _dump_archaracter(character) -> dict:
         "name": character.name,
         "is_tragic_hero": character.is_tragic_hero,
         "anagnorisis_absent": character.anagnorisis_absent,
+        # pathos_carrier (AS07-3) always emits — dataclass bool default;
+        # same posture as is_tragic_hero / anagnorisis_absent.
+        "pathos_carrier": character.pathos_carrier,
     }
     if character.character_ref_id is not None:
         out["character_ref_id"] = character.character_ref_id
@@ -1215,6 +1218,16 @@ def _dump_armythos(mythos) -> dict:
             _dump_ar_audience_knowledge_constraint(c)
             for c in mythos.audience_knowledge_constraints
         ],
+        # Sketch-06 A19 secondary_peripeteia + sketch-07 A22 pathos
+        # centre: optional string arrays, emit unconditionally (empty
+        # array is the Python default and is admissible at the schema
+        # layer; mirrors the other array fields above).
+        "secondary_peripeteia_event_ids": list(
+            mythos.secondary_peripeteia_event_ids
+        ),
+        "pathos_character_ref_ids": list(
+            mythos.pathos_character_ref_ids
+        ),
     }
     if mythos.complication_event_id is not None:
         out["complication_event_id"] = mythos.complication_event_id
@@ -2661,6 +2674,8 @@ def test_aristotelian_character_schema_has_expected_shape():
         "hamartia_text", "is_tragic_hero",
         # PFS16-C6 (aristotelian-sketch-05 A18)
         "anagnorisis_absent",
+        # AS07-3 (aristotelian-sketch-07 A23)
+        "pathos_carrier",
     }
     # character_ref_id optional non-empty string (PFS6-C3)
     ref = schema["properties"]["character_ref_id"]
@@ -2673,6 +2688,10 @@ def test_aristotelian_character_schema_has_expected_shape():
     # anagnorisis_absent optional boolean (PFS16-C6)
     assert (
         schema["properties"]["anagnorisis_absent"]["type"] == "boolean"
+    )
+    # pathos_carrier optional boolean (AS07-3)
+    assert (
+        schema["properties"]["pathos_carrier"]["type"] == "boolean"
     )
 
 
@@ -2716,6 +2735,8 @@ def test_aristotelian_mythos_schema_has_expected_shape():
         "anagnorisis_character_ref_id",
         # AS06-2 amendment (sketch-06 A19)
         "secondary_peripeteia_event_ids",
+        # AS07-2 amendment (sketch-07 A22)
+        "pathos_character_ref_ids",
     }
     # central_event_ids non-empty array (PFS6-M3)
     central = schema["properties"]["central_event_ids"]
@@ -2727,6 +2748,12 @@ def test_aristotelian_mythos_schema_has_expected_shape():
     assert secondary["items"]["type"] == "string"
     assert secondary["items"]["minLength"] == 1
     assert "minItems" not in secondary   # may be empty
+    # pathos_character_ref_ids optional string array (AS07-2)
+    pathos = schema["properties"]["pathos_character_ref_ids"]
+    assert pathos["type"] == "array"
+    assert pathos["items"]["type"] == "string"
+    assert pathos["items"]["minLength"] == 1
+    assert "minItems" not in pathos   # may be empty
     # plot_kind closed enum (PFS6-M4)
     assert set(schema["properties"]["plot_kind"]["enum"]) == {
         "simple", "complex",

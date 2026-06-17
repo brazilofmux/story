@@ -1,0 +1,171 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_revengers"
+    ],
+    "observation_count": 0,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_revengers",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The action_summary is comprehensive, accurately grounded in every named substrate event, and consistently Aristotelian. It correctly identifies the peripeteia (E_vindice_confesses) and the main anagnorisis (E_antonio_condemns_vindice) one beat apart, names the pathos-centres (Gloriana's skull, Antonio's wife), and frames the hamartia as appetite rather than act. The closing formulation — 'the instrument of justice destroyed by the same hunger that drove it' — is a faithful Aristotelian distillation of the complex-plot structure."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_revengers_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "All events cited fall within the phase's scope_event_ids. The annotation correctly orders antecedent wounds (E_gloriana_poisoned at τ_s=−90) before the play-proper action, identifies the complication entry (E_vindice_hired_as_piato), and expressively names both pathos-centres — Gloriana's pre-play death and Antonio's wife's suicide — as the phase's pity-and-fear locus. Good Aristotelian phrasing throughout."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_revengers_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation accurately frames the middle phase as 'plots that recoil on their authors,' a strong Aristotelian principle (error producing the opposite of its intention). It correctly names the Castiza/Gratiana bifurcation, the warrant-recoil producing Junior's accidental execution, and the Duke's anti-recognition at E_duke_killed_by_skull. All cited events are within scope_event_ids."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_revengers_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation is tightly grounded: it traces the Piato-identity joke (E_lussurioso_orders_piato_killed, E_vindice_hired_as_himself), Gratiana's repentance, the double masque slaughter, and the peripeteia–anagnorisis adjacency at τ_s=20–21. The τ_s values match the substrate. The description of the peripeteia as 'the confession recoiling' is precise Aristotelian language for a reversal that springs from the agent's own act."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_vindice",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia_text makes a sharp and well-grounded distinction: the hamartia is not the revenge itself but the relish — the appetite that makes Vindice test Castiza, stage the masque with craftsman's pride, and finally boast. Each claim is traceable to substrate events. The closing comparison to Webster's Duchess (anagnorisis_absent) is out-of-encoding but serves a legitimate Aristotelian clarification: it distinguishes a hero who dies *without* recognition from one who dies *of* his recognition. The Poetics vocabulary (hamartia, anagnorisis, recognition) is precise throughout."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_duke_dying_recognition",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The core description is excellent: the Duke's forced double recognition (his killer's identity and his wife's adultery) as anti-anagnorisis — real, complete, too late — is well-grounded in E_duke_killed_by_skull and precisely typed by the step's structural fields (step_kind='parallel', anagnorisis_qualifier='anti', precipitates_main=false). However, the final two sentences make inter-encoding claims ('The corpus's second anti-anagnorisis after Webster's Antonio') and meta-dialect claims ('confirming the sketch-06 value generalises to a second encoding') that cannot be verified from this mythos and belong in a design observation, not a step annotation. Trimming the cross-corpus commentary would leave a clean, self-standing annotation."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_vindice_hippolito_parallel",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation accurately describes the parallel arc: Hippolito participates in every over_event_id (skull killing, masque killing, confession, condemnation, execution) but carries neither hamartia nor recognition. The claim that Hippolito is 'the loyal instrument who shares the deed and the death without the deliberation' is well-grounded — the substrate confirms Hippolito as participant ('brother') in all these events while ar_hippolito has no hamartia_text and is_tragic_hero=false. Symmetric directionality and empty polarity are correctly mirrored in the prose."
+    }
+  ],
+  "observation_commentaries": [],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The encoding reads cleanly on Aristotelian terms throughout. The core Poetics apparatus — mythos (single complex action), peripeteia (confession-as-reversal), anagnorisis (Vindice's too-late self-recognition), hamartia (appetite rather than act), pathos (Gloriana and Antonio's wife as pity-and-fear centres), catharsis, complication/denouement, unity of action — is deployed precisely and without strain. The sketch-06 anti-anagnorisis qualifier proves load-bearing a second time: the Duke's dying recognition is a genuinely different shape from Webster's Antonio (a villain forced to see, vs. a victim deceived) yet the same structural typing carries both. The sketch-07 pathos_character_ref_ids field is tested with a strong forcing case: Gloriana is a skull, dead nine years before the play; Antonio's wife kills herself in Act I. Neither has agency or arc, yet the field expressively names them as pathos-centres without requiring arc machinery — the field's cardinality (list) and its orthogonality to anagnorisis_character_ref_id are both confirmed as correct. The peripeteia_anagnorisis_binding='adjacent' with a one-beat gap is a tight, verifiable structural claim.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "Satirical register: The Revenger's Tragedy operates in a heavily satirical, mordantly comic mode (allegorical names, Grand Guignol excess, audience complicity in Vindice's glee). Aristotelian tragedy vocabulary has no register for the tone that makes this play's catharsis qualitatively different from, say, Oedipus's — catharsis is a bool, and pity-and-fear is the only affect-pair available.",
+      "Audience-sympathy management: The play's distinctive effect is the audience's simultaneous thrill and horror at Vindice's escalating ingenuity. The dialect can name catharsis and pathos but cannot type the audience's shifting moral alignment with the tragic hero — a position between pity (for the wronged Vindice) and fear (of the monster Vindice becomes). An audience-level modifier on catharsis would capture this.",
+      "Avenger-to-dead-beloved structural relation: Vindice's relationship to Gloriana (motivation, memorial, and literal weapon) is not expressible as a character-arc relation — Gloriana has no arc. The relation is not parallel, mirror, or foil; it is something like 'debt' or 'memorial,' where one character's entire action is owed to the dead other. The current ArCharacterArcRelation kinds presuppose two arcs and therefore cannot type it."
+    ],
+    "relations_wanted": [
+      "ArCharacterArcRelation kind 'memorial' or 'debt' — a directional relation from a living agent to a dead, non-agentive character whose death is the living agent's motive force. Vindice→Gloriana is the forcing case; the dead character is also the pathos-centre. Would pair naturally with pathos_character_ref_ids.",
+      "ArMythos.catharsis_mode or an ArCatharsis record typing the audience's affective trajectory — distinguishing (at minimum) 'sympathetic-fall' (Oedipus), 'horrified-complicity' (The Revenger's Tragedy), and 'unreconciled-suffering' (The Duchess of Malfi). A bool aims_at_catharsis cannot discriminate these."
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_revengers",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The action_summary is comprehensive, accurately grounded in every named substrate event, and consistently Aristotelian. It correctly identifies the peripeteia (E_vindice_confesses) and the main anagnorisis (E_antonio_condemns_vindice) one beat apart, names the pathos-centres (Gloriana's skull, Antonio's wife), and frames the hamartia as appetite rather than act. The closing formulation — 'the instrument of justice destroyed by the same hunger that drove it' — is a faithful Aristotelian distillation of the complex-plot structure."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_revengers_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "All events cited fall within the phase's scope_event_ids. The annotation correctly orders antecedent wounds (E_gloriana_poisoned at τ_s=−90) before the play-proper action, identifies the complication entry (E_vindice_hired_as_piato), and expressively names both pathos-centres — Gloriana's pre-play death and Antonio's wife's suicide — as the phase's pity-and-fear locus. Good Aristotelian phrasing throughout."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_revengers_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation accurately frames the middle phase as 'plots that recoil on their authors,' a strong Aristotelian principle (error producing the opposite of its intention). It correctly names the Castiza/Gratiana bifurcation, the warrant-recoil producing Junior's accidental execution, and the Duke's anti-recognition at E_duke_killed_by_skull. All cited events are within scope_event_ids."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_revengers_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation is tightly grounded: it traces the Piato-identity joke (E_lussurioso_orders_piato_killed, E_vindice_hired_as_himself), Gratiana's repentance, the double masque slaughter, and the peripeteia–anagnorisis adjacency at τ_s=20–21. The τ_s values match the substrate. The description of the peripeteia as 'the confession recoiling' is precise Aristotelian language for a reversal that springs from the agent's own act."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_vindice",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia_text makes a sharp and well-grounded distinction: the hamartia is not the revenge itself but the relish — the appetite that makes Vindice test Castiza, stage the masque with craftsman's pride, and finally boast. Each claim is traceable to substrate events. The closing comparison to Webster's Duchess (anagnorisis_absent) is out-of-encoding but serves a legitimate Aristotelian clarification: it distinguishes a hero who dies *without* recognition from one who dies *of* his recognition. The Poetics vocabulary (hamartia, anagnorisis, recognition) is precise throughout."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_duke_dying_recognition",
+        "field": "annotation",
+        "verdict": "needs-work",
+        "rationale": "The core description is excellent: the Duke's forced double recognition (his killer's identity and his wife's adultery) as anti-anagnorisis — real, complete, too late — is well-grounded in E_duke_killed_by_skull and precisely typed by the step's structural fields (step_kind='parallel', anagnorisis_qualifier='anti', precipitates_main=false). However, the final two sentences make inter-encoding claims ('The corpus's second anti-anagnorisis after Webster's Antonio') and meta-dialect claims ('confirming the sketch-06 value generalises to a second encoding') that cannot be verified from this mythos and belong in a design observation, not a step annotation. Trimming the cross-corpus commentary would leave a clean, self-standing annotation."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_vindice_hippolito_parallel",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation accurately describes the parallel arc: Hippolito participates in every over_event_id (skull killing, masque killing, confession, condemnation, execution) but carries neither hamartia nor recognition. The claim that Hippolito is 'the loyal instrument who shares the deed and the death without the deliberation' is well-grounded — the substrate confirms Hippolito as participant ('brother') in all these events while ar_hippolito has no hamartia_text and is_tragic_hero=false. Symmetric directionality and empty polarity are correctly mirrored in the prose."
+      }
+    ],
+    "observation_commentaries": [],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The encoding reads cleanly on Aristotelian terms throughout. The core Poetics apparatus — mythos (single complex action), peripeteia (confession-as-reversal), anagnorisis (Vindice's too-late self-recognition), hamartia (appetite rather than act), pathos (Gloriana and Antonio's wife as pity-and-fear centres), catharsis, complication/denouement, unity of action — is deployed precisely and without strain. The sketch-06 anti-anagnorisis qualifier proves load-bearing a second time: the Duke's dying recognition is a genuinely different shape from Webster's Antonio (a villain forced to see, vs. a victim deceived) yet the same structural typing carries both. The sketch-07 pathos_character_ref_ids field is tested with a strong forcing case: Gloriana is a skull, dead nine years before the play; Antonio's wife kills herself in Act I. Neither has agency or arc, yet the field expressively names them as pathos-centres without requiring arc machinery — the field's cardinality (list) and its orthogonality to anagnorisis_character_ref_id are both confirmed as correct. The peripeteia_anagnorisis_binding='adjacent' with a one-beat gap is a tight, verifiable structural claim.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "Satirical register: The Revenger's Tragedy operates in a heavily satirical, mordantly comic mode (allegorical names, Grand Guignol excess, audience complicity in Vindice's glee). Aristotelian tragedy vocabulary has no register for the tone that makes this play's catharsis qualitatively different from, say, Oedipus's — catharsis is a bool, and pity-and-fear is the only affect-pair available.",
+        "Audience-sympathy management: The play's distinctive effect is the audience's simultaneous thrill and horror at Vindice's escalating ingenuity. The dialect can name catharsis and pathos but cannot type the audience's shifting moral alignment with the tragic hero — a position between pity (for the wronged Vindice) and fear (of the monster Vindice becomes). An audience-level modifier on catharsis would capture this.",
+        "Avenger-to-dead-beloved structural relation: Vindice's relationship to Gloriana (motivation, memorial, and literal weapon) is not expressible as a character-arc relation — Gloriana has no arc. The relation is not parallel, mirror, or foil; it is something like 'debt' or 'memorial,' where one character's entire action is owed to the dead other. The current ArCharacterArcRelation kinds presuppose two arcs and therefore cannot type it."
+      ],
+      "relations_wanted": [
+        "ArCharacterArcRelation kind 'memorial' or 'debt' — a directional relation from a living agent to a dead, non-agentive character whose death is the living agent's motive force. Vindice→Gloriana is the forcing case; the dead character is also the pathos-centre. Would pair naturally with pathos_character_ref_ids.",
+        "ArMythos.catharsis_mode or an ArCatharsis record typing the audience's affective trajectory — distinguishing (at minimum) 'sympathetic-fall' (Oedipus), 'horrified-complicity' (The Revenger's Tragedy), and 'unreconciled-suffering' (The Duchess of Malfi). A bool aims_at_catharsis cannot discriminate these."
+      ]
+    }
+  }
+}
