@@ -439,6 +439,113 @@ def _extract_text(response) -> str:
     return "".join(out).strip()
 
 
+def _scene_structural_flags(entry, mythos):
+    """Recompute the per-scene structural lookups (phase, peripeteia,
+    anagnorisis, secondary peripeteia, chain step) for one sjuzhet entry
+    from the mythos — the same lookups `generate_draft`'s loop computes,
+    factored so a single scene can be (re-)rendered in isolation."""
+    phase_role = None
+    is_peri = is_anag = is_sec = False
+    chain_step = None
+    if mythos is not None:
+        for ph in getattr(mythos, "phases", ()) or ():
+            if entry.event_id in getattr(ph, "scope_event_ids", ()):
+                phase_role = getattr(ph, "role", None)
+        is_peri = entry.event_id == getattr(mythos, "peripeteia_event_id", None)
+        is_anag = entry.event_id == getattr(mythos, "anagnorisis_event_id", None)
+        is_sec = entry.event_id in (
+            getattr(mythos, "secondary_peripeteia_event_ids", ()) or ()
+        )
+        for s in getattr(mythos, "anagnorisis_chain", ()) or ():
+            if getattr(s, "event_id", None) == entry.event_id:
+                chain_step = s
+    return phase_role, is_peri, is_anag, is_sec, chain_step
+
+
+def render_scene_prose(
+    *,
+    entry,
+    sjuzhet,
+    fabula,
+    entities,
+    descriptions=(),
+    mythos=None,
+    preplay_disclosures=(),
+    title: str = "",
+    dialect_note: str = "",
+    story_so_far: str = "",
+    extra_directive: str = "",
+    model: str = "claude-opus-4-6",
+    effort: str = "medium",
+    max_tokens: int = 4000,
+    client: Optional["anthropic.Anthropic"] = None,
+) -> str:
+    """Render (or RE-render) a single sjuzhet scene in isolation, with
+    the full story bible for context and an optional `extra_directive`
+    appended to the scene brief. This is the primitive the repair loop
+    uses: given a structural drift, re-render the responsible scene with
+    a corrective directive, keeping the same bible + brief the original
+    generation used.
+
+    `sjuzhet` is the FULL staged order (for the bible's backstory /
+    irony baseline); `entry` is the one scene to render."""
+    name_map = _name_map(entities)
+    fabula_by_id = {e.id: e for e in fabula}
+
+    phase_role, is_peri, is_anag, is_sec, chain_step = \
+        _scene_structural_flags(entry, mythos)
+
+    descs_for_event = [
+        d for d in descriptions
+        if getattr(getattr(d, "attached_to", None), "target_id", None)
+        == entry.event_id
+    ]
+
+    brief = build_scene_brief(
+        entry=entry,
+        fabula_by_id=fabula_by_id,
+        name_map=name_map,
+        phase_role=phase_role,
+        is_peripeteia=is_peri,
+        is_anagnorisis=is_anag,
+        is_secondary_peripeteia=is_sec,
+        chain_step=chain_step,
+        mythos=mythos,
+        descriptions_for_event=descs_for_event,
+    )
+    if extra_directive:
+        brief = (brief + "\n\n** REVISION DIRECTIVE (a prior draft of this "
+                 "beat drifted from the structure; honor this) **\n"
+                 + extra_directive)
+
+    bible = build_story_bible(
+        title=title, sjuzhet=sjuzhet, fabula=fabula, entities=entities,
+        mythos=mythos, preplay_disclosures=preplay_disclosures,
+        dialect_note=dialect_note,
+    )
+    system_prompt = SYSTEM_PROMPT_TEMPLATE.format(bible=bible)
+
+    sof = story_so_far or "STORY SO FAR: (render this beat in isolation)"
+    user_prompt = (
+        f"{sof}\n\nRender the scene now, from this brief:\n\n{brief}"
+    )
+
+    if client is None:
+        client = anthropic.Anthropic()
+    response = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        thinking={"type": "adaptive"},
+        output_config={"effort": effort},
+        system=[{
+            "type": "text", "text": system_prompt,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    return _extract_text(response)
+
+
 def generate_draft(
     *,
     title: str,
