@@ -3556,6 +3556,276 @@ def test_malfi_preplay_disclosures_and_descriptions_count():
 
 
 # ============================================================================
+# The Revenger's Tragedy (Session 4 — forces OQ-MALFI-3)
+# ============================================================================
+
+
+def test_revengers_aristotelian_verifies_clean():
+    """Seventh worked case: the Revenger's Tragedy under A1-A21 verifies
+    against the real FABULA with ZERO observations — the corpus-cleanest
+    result. Both arc relations are canonical kind=parallel (no
+    kind_noncanonical noted) and the anti chain step is non-
+    precipitating (no qualifier-precipitates noted)."""
+    from story_engine.encodings.revengers_tragedy import FABULA
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS, AR_REVENGERS_CHARACTER_ARC_RELATIONS,
+    )
+    obs = verify(
+        AR_REVENGERS_MYTHOS,
+        substrate_events=FABULA,
+        mythoi=(AR_REVENGERS_MYTHOS,),
+        character_arc_relations=AR_REVENGERS_CHARACTER_ARC_RELATIONS,
+    )
+    assert obs == [], (
+        "Expected zero observations; got:\n"
+        + "\n".join(f"  [{o.severity}] {o.code}: {o.message}" for o in obs)
+    )
+
+
+def test_revengers_aristotelian_records_shape():
+    """Structural pins on AR_REVENGERS_MYTHOS. Peripeteia (the confession
+    recoiling) and anagnorisis (the self-undoing recognition) are
+    distinct, adjacent events; complication + denouement set; single
+    tragic hero (Vindice); seven characters."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS,
+    )
+    m = AR_REVENGERS_MYTHOS
+    assert m.id == "ar_revengers"
+    assert m.plot_kind == PLOT_COMPLEX
+    assert [ph.role for ph in m.phases] == [
+        PHASE_BEGINNING, PHASE_MIDDLE, PHASE_END,
+    ]
+    assert m.peripeteia_event_id == "E_vindice_confesses"
+    assert m.anagnorisis_event_id == "E_antonio_condemns_vindice"
+    assert m.peripeteia_event_id != m.anagnorisis_event_id
+    assert m.complication_event_id == "E_vindice_hired_as_piato"
+    assert m.denouement_event_id == "E_duke_killed_by_skull"
+    assert m.anagnorisis_character_ref_id == "ar_vindice"
+    assert len(m.characters) == 7
+    # All 31 FABULA events are central, partitioned across the phases.
+    assert len(m.central_event_ids) == 31
+    phase_union = set()
+    for ph in m.phases:
+        phase_union |= set(ph.scope_event_ids)
+    assert phase_union == set(m.central_event_ids)
+
+
+def test_revengers_aristotelian_single_tragic_hero():
+    """Corpus lean case: exactly ONE tragic hero (Vindice). Contrast
+    Malfi's three and Lear's two. Vindice owns the only hamartia-with-
+    deliberation arc; everyone else is pity-object, companion, or
+    target."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS,
+    )
+    heroes = [c for c in AR_REVENGERS_MYTHOS.characters if c.is_tragic_hero]
+    assert [c.id for c in heroes] == ["ar_vindice"]
+    assert heroes[0].hamartia_text is not None
+    assert heroes[0].character_ref_id == "vindice"
+
+
+def test_revengers_aristotelian_pathos_arc_split_oq_malfi_3():
+    """The OQ-MALFI-3 forcing structure. The pathos-centre (Gloriana)
+    and the anagnorisis-bearer (Vindice) are distinct characters; the
+    dialect has NO field to mark Gloriana as the pathos-centre. The
+    absence of `pathos_character_ref_id` on ArMythos IS the forcing."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS,
+    )
+    m = AR_REVENGERS_MYTHOS
+    char_ids = {c.id for c in m.characters}
+    # Both the arc-hero and the pathos-centre are authored characters.
+    assert "ar_vindice" in char_ids
+    assert "ar_gloriana" in char_ids
+    # The anagnorisis-bearer is Vindice, NOT the pathos-centre.
+    assert m.anagnorisis_character_ref_id == "ar_vindice"
+    assert m.anagnorisis_character_ref_id != "ar_gloriana"
+    # Gloriana is the pathos-centre but not a tragic hero (no arc).
+    gloriana = next(c for c in m.characters if c.id == "ar_gloriana")
+    assert gloriana.is_tragic_hero is False
+    assert gloriana.character_ref_id == "gloriana"
+    # The dialect has no field to carry the pathos-centre role — the
+    # ArMythos has no pathos_character_ref_id. This absence is the
+    # OQ-MALFI-3 forcing.
+    assert not hasattr(m, "pathos_character_ref_id")
+    assert not hasattr(m, "pathos_character_ref_ids")
+
+
+def test_revengers_aristotelian_pathos_cluster_distributed():
+    """The pathos is distributed across three violated women, none a
+    tragic hero, carried (under stretch) by AR_PATHOS_CLUSTER_PARALLEL —
+    the OQ-MALFI-3 'single ref insufficient' sub-question."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS, AR_PATHOS_CLUSTER_PARALLEL,
+    )
+    cluster = {"ar_gloriana", "ar_antonio_wife", "ar_castiza"}
+    by_id = {c.id: c for c in AR_REVENGERS_MYTHOS.characters}
+    for cid in cluster:
+        assert cid in by_id
+        assert by_id[cid].is_tragic_hero is False
+    # The cluster relation names all three, kind=parallel, symmetric.
+    assert AR_PATHOS_CLUSTER_PARALLEL.kind == ARC_RELATION_PARALLEL
+    assert set(AR_PATHOS_CLUSTER_PARALLEL.character_ref_ids) == cluster
+    assert AR_PATHOS_CLUSTER_PARALLEL.directionality == DIRECTIONALITY_SYMMETRIC
+
+
+def test_revengers_aristotelian_binding_adjacent_corpus_first():
+    """A12: peripeteia (τ_s=20) and anagnorisis (τ_s=21) are ADJACENT —
+    distance 1, the corpus's narrowest and its FIRST use of the ADJACENT
+    cell (Oedipus/Hamlet/Lear/Malfi SEPARATED; Macbeth COINCIDENT)."""
+    from story_engine.encodings.revengers_tragedy import FABULA
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS,
+    )
+    assert AR_REVENGERS_MYTHOS.peripeteia_anagnorisis_binding == BINDING_ADJACENT
+    by_id = {e.id: e for e in FABULA}
+    p = by_id[AR_REVENGERS_MYTHOS.peripeteia_event_id].τ_s
+    a = by_id[AR_REVENGERS_MYTHOS.anagnorisis_event_id].τ_s
+    assert abs(p - a) == 1
+
+
+def test_revengers_aristotelian_duke_anti_anagnorisis():
+    """A20 generalization: the Duke's dying recognition is the corpus's
+    second anti-anagnorisis (after Webster's Antonio), a villain's
+    too-late recognition. One chain step, qualifier='anti', non-
+    precipitating."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS, AR_STEP_DUKE_DYING_RECOGNITION,
+    )
+    chain = AR_REVENGERS_MYTHOS.anagnorisis_chain
+    assert len(chain) == 1
+    step = chain[0]
+    assert step is AR_STEP_DUKE_DYING_RECOGNITION
+    assert step.event_id == "E_duke_killed_by_skull"
+    assert step.character_ref_id == "ar_duke"
+    assert step.anagnorisis_qualifier == QUALIFIER_ANTI
+    assert step.precipitates_main is False
+
+
+def test_revengers_aristotelian_two_parallel_relations():
+    """Two ArCharacterArcRelations, both canonical kind=parallel,
+    symmetric. No instrumental relations: Vindice is a self-directed
+    avenger, not a wielded instrument (OQ-MALFI-1/4 do not recur)."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_CHARACTER_ARC_RELATIONS,
+    )
+    rels = AR_REVENGERS_CHARACTER_ARC_RELATIONS
+    assert len(rels) == 2
+    for r in rels:
+        assert r.kind == ARC_RELATION_PARALLEL
+        assert r.directionality == DIRECTIONALITY_SYMMETRIC
+        assert r.polarity == ""
+    ids = sorted(r.id for r in rels)
+    assert ids == ["arc_pathos_cluster_parallel", "arc_vindice_hippolito_parallel"]
+
+
+def test_revengers_aristotelian_no_secondary_peripeteia():
+    """A19 is empty: the Revenger's Tragedy has a single tragic arc
+    (Vindice); the other reversals are villain falls, not tragic-hero
+    arc-peripeteiai. OQ-LEAR-4 is not re-pressured here — the pressure
+    is OQ-MALFI-3, not multiplicity of tragic arcs."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS,
+    )
+    assert AR_REVENGERS_MYTHOS.secondary_peripeteia_event_ids == ()
+
+
+def test_revengers_aristotelian_unity_of_action_true():
+    """asserts_unity_of_action=True — the Duchess's-sons subplot feeds
+    the main revenge rather than running as a separable plot (contrast
+    Lear's False)."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS,
+    )
+    assert AR_REVENGERS_MYTHOS.asserts_unity_of_action is True
+
+
+def test_revengers_aristotelian_sketch04_fields_authored():
+    """A15 + A16 authoring pins: 2 co-presence + 2 audience-knowledge
+    constraints + per-phase pacing + tonal_register (tragic-with-irony,
+    Middleton's black comedy) + binding_distance_preference=NEAR (the
+    distance-1 ADJACENT binding)."""
+    from story_engine.core.aristotelian import BINDING_PREF_NEAR
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_MYTHOS,
+    )
+    m = AR_REVENGERS_MYTHOS
+    assert len(m.co_presence_requirements) == 2
+    assert len(m.audience_knowledge_constraints) == 2
+    for ph in m.phases:
+        assert ph.pacing_preference in (PACING_EVEN, PACING_RAPID_ESCALATION)
+        assert ph.min_event_count > 0
+    assert m.tonal_register == TONAL_REGISTER_TRAGIC_WITH_IRONY
+    assert m.binding_distance_preference == BINDING_PREF_NEAR
+
+
+def test_revengers_aristotelian_no_mythos_relation_authored():
+    """The Revenger's Tragedy is single-mythos; no AR_REVENGERS_RELATIONS
+    attribute. All A13 relations are intra-mythos (mythos_id=
+    'ar_revengers')."""
+    import story_engine.encodings.revengers_tragedy_aristotelian as mod
+    assert not hasattr(mod, "AR_REVENGERS_RELATIONS")
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        AR_REVENGERS_CHARACTER_ARC_RELATIONS,
+    )
+    for r in AR_REVENGERS_CHARACTER_ARC_RELATIONS:
+        assert r.mythos_id == "ar_revengers"
+
+
+def test_revengers_aristotelian_probe_findings_authored():
+    """Two OQ findings authored for probe-side consumption: OQ_MALFI_3
+    (cross-encoding confirmation, pressed three axes harder than Malfi)
+    and S6P_OQ1 (main-level anagnorisis_qualifier forcing candidate)."""
+    from story_engine.encodings.revengers_tragedy_aristotelian import (
+        OQ_FINDINGS, OQ_MALFI_3_FINDING, S6P_OQ1_FINDING,
+    )
+    assert "OQ-MALFI-3" in OQ_MALFI_3_FINDING
+    assert "pathos" in OQ_MALFI_3_FINDING.lower()
+    assert "S6P-OQ1" in S6P_OQ1_FINDING
+    assert "main" in S6P_OQ1_FINDING.lower()
+    finding_keys = sorted(k for k, _ in OQ_FINDINGS)
+    assert finding_keys == ["OQ_MALFI_3", "S6P_OQ1"]
+    assert len(OQ_FINDINGS) == 2
+
+
+def test_revengers_sjuzhet_focalization_distribution():
+    """Session 3 SJUZHET pin — the OQ-MALFI-3 surface at the focalization
+    layer. Vindice (the arc-hero) focalizes 13 of 28 in-play entries;
+    the pathos-cluster focalizes near-zero (Gloriana 0, Antonio's wife
+    0, Castiza 1). The pathos-centre cannot focalize — she is dead and a
+    prop. The structural inverse of Malfi (pathos-bearer Duchess
+    focalized 10)."""
+    from story_engine.encodings.revengers_tragedy import SJUZHET
+    assert len(SJUZHET) == 28
+    foc = {}
+    for s in SJUZHET:
+        foc[s.focalizer_id] = foc.get(s.focalizer_id, 0) + 1
+    assert foc["vindice"] == 13
+    assert foc.get("gloriana", 0) == 0
+    assert foc.get("antonio_wife", 0) == 0
+    assert foc["castiza"] == 1
+    assert foc[None] == 3
+
+
+def test_revengers_preplay_disclosures_and_descriptions_count():
+    """Session 3 substrate-completion pins: 5 preplay disclosures (the
+    opening soliloquy front-loads the motive) and 9 descriptions
+    carrying the OQ-MALFI-3 / S6P-OQ1 reader frames."""
+    from story_engine.encodings.revengers_tragedy import (
+        PREPLAY_DISCLOSURES, DESCRIPTIONS,
+    )
+    assert len(PREPLAY_DISCLOSURES) == 5
+    assert len(DESCRIPTIONS) == 9
+    desc_ids = {d.id for d in DESCRIPTIONS}
+    assert "D_gloriana_skull_pathos_centre" in desc_ids
+    assert "D_pathos_distributed_cluster" in desc_ids
+    assert "D_vindice_anagnorisis_register_undecided" in desc_ids
+    assert "D_duke_anti_recognition_frame" in desc_ids
+    assert "D_binding_adjacent_register" in desc_ids
+
+
+# ============================================================================
 # Sketch-06 — A19 secondary_peripeteia_event_ids (A7.17)
 # ============================================================================
 
@@ -4018,6 +4288,22 @@ TESTS = [
     test_malfi_aristotelian_sketch04_fields_authored,
     test_malfi_sjuzhet_focalization_distribution,
     test_malfi_preplay_disclosures_and_descriptions_count,
+    # The Revenger's Tragedy (Session 4 — forces OQ-MALFI-3)
+    test_revengers_aristotelian_verifies_clean,
+    test_revengers_aristotelian_records_shape,
+    test_revengers_aristotelian_single_tragic_hero,
+    test_revengers_aristotelian_pathos_arc_split_oq_malfi_3,
+    test_revengers_aristotelian_pathos_cluster_distributed,
+    test_revengers_aristotelian_binding_adjacent_corpus_first,
+    test_revengers_aristotelian_duke_anti_anagnorisis,
+    test_revengers_aristotelian_two_parallel_relations,
+    test_revengers_aristotelian_no_secondary_peripeteia,
+    test_revengers_aristotelian_unity_of_action_true,
+    test_revengers_aristotelian_sketch04_fields_authored,
+    test_revengers_aristotelian_no_mythos_relation_authored,
+    test_revengers_aristotelian_probe_findings_authored,
+    test_revengers_sjuzhet_focalization_distribution,
+    test_revengers_preplay_disclosures_and_descriptions_count,
     # Sketch-06 — A19 / A20 / A21
     test_a19_secondary_peripeteia_clean,
     test_a19_secondary_peripeteia_default_empty_silent,
