@@ -93,6 +93,22 @@ def _nm(name_map: dict, eid: str) -> str:
     return name_map.get(eid, eid)
 
 
+def _char_name(ref_id: str, mythos, name_map: dict) -> str:
+    """Resolve a character reference (an ArCharacter id like 'ar_duchess',
+    or a substrate-entity id) to a readable name. Prefers the ArCharacter
+    record's own name, then its substrate identity hook, then the raw id.
+    Keeps the generator dialect-light — works whether refs point at
+    ArCharacter ids or substrate entity ids."""
+    if not ref_id:
+        return ref_id
+    for c in getattr(mythos, "characters", ()) or ():
+        if getattr(c, "id", None) == ref_id:
+            return getattr(c, "name", None) or _nm(name_map, ref_id)
+        if getattr(c, "character_ref_id", None) == ref_id:
+            return getattr(c, "name", None) or _nm(name_map, ref_id)
+    return _nm(name_map, ref_id)
+
+
 def _render_prop(prop, name_map: dict) -> str:
     """Render a structural Prop as a readable predicate, entity args
     resolved to display names where known."""
@@ -220,6 +236,60 @@ def build_story_bible(
             lines.append(f"\n- PERIPETEIA (the reversal) lands at: {peri}")
         if anag:
             lines.append(f"- ANAGNORISIS (the recognition) lands at: {anag}")
+        # A19 (sketch-06) — secondary reversals, for mythoi carrying
+        # multiple tragic arcs (Malfi's four; Lear's Gloucester). Surfaced
+        # only when present; single-arc plays (Oedipus) skip this.
+        secondary = getattr(mythos, "secondary_peripeteia_event_ids", ()) or ()
+        if secondary:
+            lines.append(
+                f"- SECONDARY REVERSALS (other arcs falling): "
+                f"{', '.join(secondary)}"
+            )
+        # A11/A14/A20 (sketch-02/03/06) — the staggered recognition chain,
+        # incl. anti-recognitions (real but too late to alter outcome).
+        chain = getattr(mythos, "anagnorisis_chain", ()) or ()
+        if chain:
+            lines.append("\n## Staggered recognitions (the chain)")
+            for step in chain:
+                who = _char_name(getattr(step, "character_ref_id", ""),
+                                 mythos, name_map)
+                qual = getattr(step, "anagnorisis_qualifier", "") or ""
+                tag = ""
+                if qual == "anti":
+                    tag = " — an ANTI-recognition: real, but arrives too " \
+                          "late to change anything"
+                elif qual == "partial":
+                    tag = " — a PARTIAL recognition (incomplete grasp)"
+                lines.append(
+                    f"- {who} recognizes at {getattr(step, 'event_id', '?')}"
+                    f"{tag}"
+                )
+        # A22 (sketch-07) — the pathos-centre: who carries the play's
+        # pity-and-fear. Distinct from the recognizer when the play splits
+        # them (Malfi: the Duchess suffers, Ferdinand recognizes).
+        pathos = getattr(mythos, "pathos_character_ref_ids", ()) or ()
+        if pathos:
+            names = ", ".join(_char_name(p, mythos, name_map) for p in pathos)
+            lines.append(
+                f"\n## Pathos-centre (the play's pity-and-fear lives here)\n"
+                f"- {names} — render their suffering as the emotional centre, "
+                f"even where they are not the one who comes to knowledge"
+            )
+        # A5 (sketch-01) — the tragic hero(es) and their hamartia. The
+        # error of judgement that drives the fall; rich generation input.
+        chars = getattr(mythos, "characters", ()) or ()
+        heroes = [c for c in chars if getattr(c, "is_tragic_hero", False)]
+        if heroes:
+            lines.append("\n## Tragic hero(es) and the error that undoes them")
+            for c in heroes:
+                ham = getattr(c, "hamartia_text", None)
+                base = getattr(c, "name", c.id)
+                if getattr(c, "pathos_carrier", False):
+                    base += " (also the pathos-centre)"
+                if ham:
+                    lines.append(f"- {base}: {ham}")
+                else:
+                    lines.append(f"- {base}")
         phases = getattr(mythos, "phases", ()) or ()
         if phases:
             lines.append("\n## Phase structure")
@@ -275,6 +345,9 @@ def build_scene_brief(
     is_peripeteia: bool,
     is_anagnorisis: bool,
     descriptions_for_event: list,
+    is_secondary_peripeteia: bool = False,
+    chain_step=None,
+    mythos=None,
 ) -> str:
     event = fabula_by_id.get(entry.event_id)
     lines = []
@@ -286,6 +359,24 @@ def build_scene_brief(
         marks.append("THIS IS THE PERIPETEIA (the reversal)")
     if is_anagnorisis:
         marks.append("THIS IS THE ANAGNORISIS (the recognition)")
+    if is_secondary_peripeteia:
+        marks.append("THIS IS A SECONDARY REVERSAL (another arc falling "
+                     "here — give it weight, but not the main reversal's)")
+    if chain_step is not None:
+        who = _char_name(getattr(chain_step, "character_ref_id", ""),
+                         mythos, name_map)
+        qual = getattr(chain_step, "anagnorisis_qualifier", "") or ""
+        if qual == "anti":
+            marks.append(f"{who} RECOGNIZES here — but it is an "
+                         f"ANTI-recognition: the truth lands too late to "
+                         f"change the outcome (render the bitterness of "
+                         f"recognition-without-remedy)")
+        elif qual == "partial":
+            marks.append(f"{who} PARTIALLY recognizes here (an incomplete "
+                         f"grasp of the truth)")
+        else:
+            marks.append(f"{who} RECOGNIZES here (a staggered recognition "
+                         f"in the chain)")
     if marks:
         lines.append("** " + "; ".join(marks) + " **")
 
@@ -378,12 +469,21 @@ def generate_draft(
     # Phase + peripeteia/anagnorisis lookup from the mythos.
     phase_of: dict = {}
     peri_id = anag_id = None
+    secondary_peri: set = set()
+    chain_by_event: dict = {}
     if mythos is not None:
         for ph in getattr(mythos, "phases", ()) or ():
             for eid in ph.scope_event_ids:
                 phase_of[eid] = getattr(ph, "role", None)
         peri_id = getattr(mythos, "peripeteia_event_id", None)
         anag_id = getattr(mythos, "anagnorisis_event_id", None)
+        secondary_peri = set(
+            getattr(mythos, "secondary_peripeteia_event_ids", ()) or ()
+        )
+        for step in getattr(mythos, "anagnorisis_chain", ()) or ():
+            eid = getattr(step, "event_id", None)
+            if eid:
+                chain_by_event[eid] = step
 
     # Descriptions grouped by anchored event id.
     descs_by_event: dict = {}
@@ -416,6 +516,9 @@ def generate_draft(
             phase_role=phase_of.get(entry.event_id),
             is_peripeteia=(entry.event_id == peri_id),
             is_anagnorisis=(entry.event_id == anag_id),
+            is_secondary_peripeteia=(entry.event_id in secondary_peri),
+            chain_step=chain_by_event.get(entry.event_id),
+            mythos=mythos,
             descriptions_for_event=descs_by_event.get(entry.event_id, []),
         )
         foc = getattr(entry, "focalizer_id", None)
