@@ -80,6 +80,22 @@ class GenerationResult:
         return "\n\n".join(s.prose.strip() for s in self.scenes)
 
 
+def result_to_payload(result) -> dict:
+    """A JSON-serializable per-scene payload of a GenerationResult — the
+    structured-draft artifact the convergence loop mutates and re-scores
+    (a repaired scene's prose can be substituted and the draft
+    reassembled). 'tau_d' uses an ASCII key for round-trip safety."""
+    return {
+        "title": result.title,
+        "story_bible": result.story_bible,
+        "scenes": [
+            {"tau_d": s.τ_d, "event_id": s.event_id,
+             "focalizer": s.focalizer, "prose": s.prose}
+            for s in result.scenes
+        ],
+    }
+
+
 # ============================================================================
 # Substrate rendering helpers
 # ============================================================================
