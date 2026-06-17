@@ -105,8 +105,11 @@ def _name_map(entities) -> dict:
     return {e.id: e.name for e in entities}
 
 
-def _nm(name_map: dict, eid: str) -> str:
-    return name_map.get(eid, eid)
+def _nm(name_map, eid) -> str:
+    # Coerce to str: Prop args may be non-entity primitives (ints, e.g. a
+    # round count) that have no name-map entry. The Aristotelian encodings
+    # used only string args; other dialects' substrates (Rocky) do not.
+    return str(name_map.get(eid, eid))
 
 
 def _char_name(ref_id: str, mythos, name_map: dict) -> str:
@@ -199,6 +202,57 @@ def _backstory_facts(sjuzhet, fabula, name_map: dict) -> list:
     return facts
 
 
+class DialectFrame:
+    """The dialect-specific seam of the generator — an ABSTRACT interface.
+
+    A frame turns a story's OVERLAY (its dialect reading — an ArMythos, a
+    Dramatica storyform, …) into the two dialect-specific surfaces the
+    renderer needs: the bible's structural sections, and each scene's
+    structural marks. Everything else the generator does (dramatis
+    personae, backstory, the irony baseline, the telling order, per-scene
+    facts/knowledge/focalization) is dialect-NEUTRAL and lives here in the
+    generator.
+
+    The generator defines only this neutral interface — it privileges NO
+    dialect. Each dialect ships a peer frame in its own module:
+    `aristotelian_generation.AristotelianFrame`,
+    `dramatica_generation.DramaticaFrame`. Neither is "the default"; the
+    generator picks one from what the caller passes (`mythos=` → the
+    Aristotelian peer; `adapter=` → any frame).
+
+    `_char_name` and the other render helpers in this module are
+    dialect-neutral utilities the peer frames may reuse.
+    """
+
+    def __init__(self, overlay=None):
+        self.overlay = overlay
+
+    def bible_sections(self, *, name_map) -> list:
+        raise NotImplementedError(
+            "DialectFrame is abstract; use a dialect peer frame "
+            "(AristotelianFrame, DramaticaFrame) or subclass it.")
+
+    def scene_lines(self, *, entry, name_map) -> list:
+        raise NotImplementedError(
+            "DialectFrame is abstract; use a dialect peer frame "
+            "(AristotelianFrame, DramaticaFrame) or subclass it.")
+
+
+def _resolve_frame(adapter, mythos):
+    """Pick the dialect frame, privileging none: an explicit `adapter`
+    (any DialectFrame peer), else the Aristotelian peer over a `mythos`
+    (deferred import keeps the generator free of dialect imports at load
+    time), else None (no overlay → no dialect sections)."""
+    if adapter is not None:
+        return adapter
+    if mythos is not None:
+        from story_engine.core.aristotelian_generation import (
+            AristotelianFrame,
+        )
+        return AristotelianFrame(mythos)
+    return None
+
+
 def build_story_bible(
     *,
     title: str,
@@ -206,6 +260,7 @@ def build_story_bible(
     fabula,
     entities,
     mythos=None,
+    frame=None,
     preplay_disclosures=(),
     dialect_note: str = "",
 ) -> str:
@@ -271,77 +326,10 @@ def build_story_bible(
         for p in pre:
             lines.append(f"- {p}")
 
-    # The arc (from the mythos if present).
-    if mythos is not None:
-        lines.append("\n## Dramatic arc")
-        if getattr(mythos, "action_summary", ""):
-            lines.append(mythos.action_summary)
-        peri = getattr(mythos, "peripeteia_event_id", None)
-        anag = getattr(mythos, "anagnorisis_event_id", None)
-        if peri:
-            lines.append(f"\n- PERIPETEIA (the reversal) lands at: {peri}")
-        if anag:
-            lines.append(f"- ANAGNORISIS (the recognition) lands at: {anag}")
-        # A19 (sketch-06) — secondary reversals, for mythoi carrying
-        # multiple tragic arcs (Malfi's four; Lear's Gloucester). Surfaced
-        # only when present; single-arc plays (Oedipus) skip this.
-        secondary = getattr(mythos, "secondary_peripeteia_event_ids", ()) or ()
-        if secondary:
-            lines.append(
-                f"- SECONDARY REVERSALS (other arcs falling): "
-                f"{', '.join(secondary)}"
-            )
-        # A11/A14/A20 (sketch-02/03/06) — the staggered recognition chain,
-        # incl. anti-recognitions (real but too late to alter outcome).
-        chain = getattr(mythos, "anagnorisis_chain", ()) or ()
-        if chain:
-            lines.append("\n## Staggered recognitions (the chain)")
-            for step in chain:
-                who = _char_name(getattr(step, "character_ref_id", ""),
-                                 mythos, name_map)
-                qual = getattr(step, "anagnorisis_qualifier", "") or ""
-                tag = ""
-                if qual == "anti":
-                    tag = " — an ANTI-recognition: real, but arrives too " \
-                          "late to change anything"
-                elif qual == "partial":
-                    tag = " — a PARTIAL recognition (incomplete grasp)"
-                lines.append(
-                    f"- {who} recognizes at {getattr(step, 'event_id', '?')}"
-                    f"{tag}"
-                )
-        # A22 (sketch-07) — the pathos-centre: who carries the play's
-        # pity-and-fear. Distinct from the recognizer when the play splits
-        # them (Malfi: the Duchess suffers, Ferdinand recognizes).
-        pathos = getattr(mythos, "pathos_character_ref_ids", ()) or ()
-        if pathos:
-            names = ", ".join(_char_name(p, mythos, name_map) for p in pathos)
-            lines.append(
-                f"\n## Pathos-centre (the play's pity-and-fear lives here)\n"
-                f"- {names} — render their suffering as the emotional centre, "
-                f"even where they are not the one who comes to knowledge"
-            )
-        # A5 (sketch-01) — the tragic hero(es) and their hamartia. The
-        # error of judgement that drives the fall; rich generation input.
-        chars = getattr(mythos, "characters", ()) or ()
-        heroes = [c for c in chars if getattr(c, "is_tragic_hero", False)]
-        if heroes:
-            lines.append("\n## Tragic hero(es) and the error that undoes them")
-            for c in heroes:
-                ham = getattr(c, "hamartia_text", None)
-                base = getattr(c, "name", c.id)
-                if getattr(c, "pathos_carrier", False):
-                    base += " (also the pathos-centre)"
-                if ham:
-                    lines.append(f"- {base}: {ham}")
-                else:
-                    lines.append(f"- {base}")
-        phases = getattr(mythos, "phases", ()) or ()
-        if phases:
-            lines.append("\n## Phase structure")
-            for ph in phases:
-                role = getattr(ph, "role", "?")
-                lines.append(f"- {role}: {', '.join(ph.scope_event_ids)}")
+    # The dialect-specific structural sections (the arc), via the frame.
+    frame = _resolve_frame(frame, mythos)
+    if frame is not None:
+        lines.extend(frame.bible_sections(name_map=name_map))
     return "\n".join(lines)
 
 
@@ -387,13 +375,8 @@ def build_scene_brief(
     entry,
     fabula_by_id: dict,
     name_map: dict,
-    phase_role: Optional[str],
-    is_peripeteia: bool,
-    is_anagnorisis: bool,
     descriptions_for_event: list,
-    is_secondary_peripeteia: bool = False,
-    chain_step=None,
-    mythos=None,
+    structural_lines=(),
 ) -> str:
     event = fabula_by_id.get(entry.event_id)
     lines = []
@@ -403,33 +386,9 @@ def build_scene_brief(
                      f"the chronological action — compare to the staging "
                      f"order above to know whether it is being told early or "
                      f"late relative to when it happens)")
-    if phase_role:
-        lines.append(f"Phase: {phase_role}")
-    marks = []
-    if is_peripeteia:
-        marks.append("THIS IS THE PERIPETEIA (the reversal)")
-    if is_anagnorisis:
-        marks.append("THIS IS THE ANAGNORISIS (the recognition)")
-    if is_secondary_peripeteia:
-        marks.append("THIS IS A SECONDARY REVERSAL (another arc falling "
-                     "here — give it weight, but not the main reversal's)")
-    if chain_step is not None:
-        who = _char_name(getattr(chain_step, "character_ref_id", ""),
-                         mythos, name_map)
-        qual = getattr(chain_step, "anagnorisis_qualifier", "") or ""
-        if qual == "anti":
-            marks.append(f"{who} RECOGNIZES here — but it is an "
-                         f"ANTI-recognition: the truth lands too late to "
-                         f"change the outcome (render the bitterness of "
-                         f"recognition-without-remedy)")
-        elif qual == "partial":
-            marks.append(f"{who} PARTIALLY recognizes here (an incomplete "
-                         f"grasp of the truth)")
-        else:
-            marks.append(f"{who} RECOGNIZES here (a staggered recognition "
-                         f"in the chain)")
-    if marks:
-        lines.append("** " + "; ".join(marks) + " **")
+    # Dialect-specific structural marks (phase / act, peripeteia, signpost…)
+    # from the frame.
+    lines.extend(structural_lines)
 
     foc = getattr(entry, "focalizer_id", None)
     lines.append(f"Focalization: {_nm(name_map, foc) if foc else '(omniscient)'}")
@@ -490,29 +449,6 @@ def _extract_text(response) -> str:
     return "".join(out).strip()
 
 
-def _scene_structural_flags(entry, mythos):
-    """Recompute the per-scene structural lookups (phase, peripeteia,
-    anagnorisis, secondary peripeteia, chain step) for one sjuzhet entry
-    from the mythos — the same lookups `generate_draft`'s loop computes,
-    factored so a single scene can be (re-)rendered in isolation."""
-    phase_role = None
-    is_peri = is_anag = is_sec = False
-    chain_step = None
-    if mythos is not None:
-        for ph in getattr(mythos, "phases", ()) or ():
-            if entry.event_id in getattr(ph, "scope_event_ids", ()):
-                phase_role = getattr(ph, "role", None)
-        is_peri = entry.event_id == getattr(mythos, "peripeteia_event_id", None)
-        is_anag = entry.event_id == getattr(mythos, "anagnorisis_event_id", None)
-        is_sec = entry.event_id in (
-            getattr(mythos, "secondary_peripeteia_event_ids", ()) or ()
-        )
-        for s in getattr(mythos, "anagnorisis_chain", ()) or ():
-            if getattr(s, "event_id", None) == entry.event_id:
-                chain_step = s
-    return phase_role, is_peri, is_anag, is_sec, chain_step
-
-
 def render_scene_prose(
     *,
     entry,
@@ -521,6 +457,7 @@ def render_scene_prose(
     entities,
     descriptions=(),
     mythos=None,
+    adapter=None,
     preplay_disclosures=(),
     title: str = "",
     dialect_note: str = "",
@@ -542,9 +479,7 @@ def render_scene_prose(
     irony baseline); `entry` is the one scene to render."""
     name_map = _name_map(entities)
     fabula_by_id = {e.id: e for e in fabula}
-
-    phase_role, is_peri, is_anag, is_sec, chain_step = \
-        _scene_structural_flags(entry, mythos)
+    frame = _resolve_frame(adapter, mythos)
 
     descs_for_event = [
         d for d in descriptions
@@ -556,12 +491,8 @@ def render_scene_prose(
         entry=entry,
         fabula_by_id=fabula_by_id,
         name_map=name_map,
-        phase_role=phase_role,
-        is_peripeteia=is_peri,
-        is_anagnorisis=is_anag,
-        is_secondary_peripeteia=is_sec,
-        chain_step=chain_step,
-        mythos=mythos,
+        structural_lines=(frame.scene_lines(entry=entry, name_map=name_map)
+                          if frame else ()),
         descriptions_for_event=descs_for_event,
     )
     if extra_directive:
@@ -571,7 +502,7 @@ def render_scene_prose(
 
     bible = build_story_bible(
         title=title, sjuzhet=sjuzhet, fabula=fabula, entities=entities,
-        mythos=mythos, preplay_disclosures=preplay_disclosures,
+        frame=frame, preplay_disclosures=preplay_disclosures,
         dialect_note=dialect_note,
     )
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(bible=bible)
@@ -605,6 +536,7 @@ def generate_draft(
     entities,
     descriptions=(),
     mythos=None,
+    adapter=None,
     preplay_disclosures=(),
     dialect_note: str = "",
     model: str = "claude-opus-4-6",
@@ -617,31 +549,17 @@ def generate_draft(
     """Render the encoding's sjuzhet into a first-draft prose script,
     scene by scene, substrate-driven.
 
+    The overlay reaches the renderer through a DialectFrame: pass either
+    `mythos` (a tragic-arc overlay — the default frame reads it) OR an
+    `adapter` (a DialectFrame subclass for another dialect, e.g. Dramatica).
+
     `dry_run=True` builds the bible and per-scene briefs and returns
     them WITHOUT calling the API (each SceneDraft.prose is empty) — for
     inspecting exactly what the substrate hands the renderer.
     """
     name_map = _name_map(entities)
     fabula_by_id = {e.id: e for e in fabula}
-
-    # Phase + peripeteia/anagnorisis lookup from the mythos.
-    phase_of: dict = {}
-    peri_id = anag_id = None
-    secondary_peri: set = set()
-    chain_by_event: dict = {}
-    if mythos is not None:
-        for ph in getattr(mythos, "phases", ()) or ():
-            for eid in ph.scope_event_ids:
-                phase_of[eid] = getattr(ph, "role", None)
-        peri_id = getattr(mythos, "peripeteia_event_id", None)
-        anag_id = getattr(mythos, "anagnorisis_event_id", None)
-        secondary_peri = set(
-            getattr(mythos, "secondary_peripeteia_event_ids", ()) or ()
-        )
-        for step in getattr(mythos, "anagnorisis_chain", ()) or ():
-            eid = getattr(step, "event_id", None)
-            if eid:
-                chain_by_event[eid] = step
+    frame = _resolve_frame(adapter, mythos)
 
     # Descriptions grouped by anchored event id.
     descs_by_event: dict = {}
@@ -653,7 +571,7 @@ def generate_draft(
 
     bible = build_story_bible(
         title=title, sjuzhet=sjuzhet, fabula=fabula, entities=entities,
-        mythos=mythos, preplay_disclosures=preplay_disclosures,
+        frame=frame, preplay_disclosures=preplay_disclosures,
         dialect_note=dialect_note,
     )
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(bible=bible)
@@ -671,12 +589,8 @@ def generate_draft(
             entry=entry,
             fabula_by_id=fabula_by_id,
             name_map=name_map,
-            phase_role=phase_of.get(entry.event_id),
-            is_peripeteia=(entry.event_id == peri_id),
-            is_anagnorisis=(entry.event_id == anag_id),
-            is_secondary_peripeteia=(entry.event_id in secondary_peri),
-            chain_step=chain_by_event.get(entry.event_id),
-            mythos=mythos,
+            structural_lines=(frame.scene_lines(entry=entry, name_map=name_map)
+                              if frame else ()),
             descriptions_for_event=descs_by_event.get(entry.event_id, []),
         )
         foc = getattr(entry, "focalizer_id", None)
