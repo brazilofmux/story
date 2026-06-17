@@ -1,0 +1,135 @@
+# Quarter — an original tragedy authored in the human story format.
+#
+# No Python. A writer edits this file, runs the author CLI to verify the
+# structure, fixes what the verifier flags, and generates a draft.
+#
+#   .venv/bin/python3 -m demos.author_story stories/quarter.story.toml --generate
+
+title    = "Quarter"
+logline  = "A victorious general spares his beaten enemy out of mercy — and the mercy he was proudest of returns by night to destroy the city he swore to hold."
+telling  = "chronological"   # try "reverse" to tell it backward
+
+# What the audience knows entering (optional). For a chronological telling
+# we keep it empty and let the story unfold.
+preplay  = []
+
+
+# ---- Characters ------------------------------------------------------------
+# role is one of: "tragic-hero", "pathos-centre", "figure".
+
+[[characters]]
+id = "aldric"
+name = "General Aldric"
+role = "tragic-hero"
+hamartia = """Mercy mistaken for greatness — the vanity of the magnanimous victor. Aldric's error is not cowardice or weakness: it is that he would rather be the general who spared his enemy than the general who kept his city safe. He overrules the rule of war and his own lieutenant to grant quarter, loving the picture of his own clemency more than the lives it puts at risk. The error is a missing-of-the-mark: he mistakes a private virtue for a public duty, and does not see the difference until the city is burning."""
+
+[[characters]]
+id = "doran"
+name = "Doran"
+role = "pathos-centre"
+# Doran, the loyal lieutenant, urged the execution the rule of war demanded;
+# he is overruled, and he is the one who dies in the breach the mercy opened.
+
+[[characters]]
+id = "korin"
+name = "Korin"
+role = "figure"
+# The spared enemy commander.
+
+[[places]]
+id = "the_city"
+name = "the city of Vared"
+
+
+# ---- Events (chronological story-time = `when`) ----------------------------
+
+[[events]]
+id = "siege_won"
+when = 0
+who = ["aldric", "korin", "the_city"]
+roles = ["victor", "captured", "place"]
+focalizer = "aldric"
+summary = "Aldric's siege of Vared ends in victory; the enemy commander Korin is taken alive, and the city is Aldric's to hold."
+establishes = ["holds(aldric, the_city)", "captured(korin)"]
+
+[[events]]
+id = "the_counsel"
+when = 1
+who = ["doran", "aldric"]
+roles = ["lieutenant", "general"]
+focalizer = "doran"
+summary = "Doran, by the rule of war, urges that Korin be put to death — a living enemy commander is a war not yet ended. Aldric hears him out and is unmoved; he wants to be the victor who spared his enemy."
+note = "The complication. Doran is right, and is overruled; the hamartia is the overruling."
+
+[[events]]
+id = "quarter_given"
+when = 2
+who = ["aldric", "korin"]
+roles = ["general", "spared"]
+focalizer = "aldric"
+summary = "Before the assembled army Aldric grants Korin quarter and releases him on his parole — a famous clemency, sung that very night."
+establishes = ["spared(korin)"]
+
+[[events]]
+id = "korin_returns"
+when = 10
+who = ["korin"]
+roles = ["enemy"]
+focalizer = "korin"
+summary = "Korin, freed, breaks his parole, raises a new army from the old one's remnants, and marches back on Vared."
+establishes = ["raises_army(korin)"]
+
+[[events]]
+id = "night_assault"
+when = 12
+who = ["korin", "aldric", "the_city"]
+roles = ["enemy", "general", "place"]
+mark = "peripeteia"
+focalizer = "aldric"
+summary = "Korin's host breaches Vared by night. The mercy Aldric was proudest of has come back as the army at the gate; the clemency is the wound. The city he swore to hold is overrun in the dark."
+note = "The peripeteia: the spared enemy is the instrument of the city's fall. The virtue becomes the mechanism of the catastrophe."
+establishes = ["city_breached(aldric)"]
+
+[[events]]
+id = "doran_falls"
+when = 13
+who = ["doran", "korin"]
+roles = ["lieutenant", "enemy"]
+focalizer = "doran"
+summary = "Doran holds the breach and is cut down in it. Dying, he understands the whole shape — that the mercy he argued against has killed him and the city both — and the understanding arrives too late to be any use."
+note = "Doran is the pathos-centre; the error was Aldric's, the death is his. His recognition is real and powerless."
+
+[[events]]
+id = "aldric_recognizes"
+when = 20
+who = ["aldric"]
+roles = ["general"]
+mark = "anagnorisis"
+recognizer = "aldric"
+focalizer = "aldric"
+summary = "In the ash of Vared, Aldric recognizes that his mercy was not greatness but vanity — that he loved the picture of his own clemency more than the men and the city he was sworn to keep, and that Doran, whom he overruled, paid the price he would not."
+
+[[events]]
+id = "aldric_undone"
+when = 22
+who = ["aldric"]
+roles = ["general"]
+focalizer = "aldric"
+summary = "Aldric lays down his command. The general famed for mercy ends without an army, without a city, without the one lieutenant who told him the truth — undone by the very virtue the songs had praised."
+establishes = ["undone(aldric)"]
+
+
+# ---- Anti-recognitions (recognition that arrives too late) -----------------
+
+[[anti_recognitions]]
+at = "doran_falls"
+who = "doran"
+note = "Doran sees, dying, that the mercy he warned against killed him and the city."
+
+
+# ---- Structure: which events belong to beginning / middle / end ------------
+
+[phases]
+beginning = ["siege_won", "the_counsel", "quarter_given"]
+middle    = ["korin_returns", "night_assault"]
+end       = ["doran_falls", "aldric_recognizes", "aldric_undone"]
