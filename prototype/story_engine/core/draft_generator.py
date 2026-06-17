@@ -210,10 +210,40 @@ def build_story_bible(
     dialect_note: str = "",
 ) -> str:
     name_map = _name_map(entities)
+    fabula_by_id = {e.id: e for e in fabula}
     lines = []
     lines.append(f"# STORY BIBLE — {title}")
     if dialect_note:
         lines.append(f"\nFrame: {dialect_note}")
+
+    # Telling order — surface when the staged order (τ_d) diverges from
+    # chronological story-time (τ_s). This is what lets the renderer honor
+    # a non-linear telling (in medias res, reverse-chronological, fractured)
+    # instead of defaulting to chronological narration.
+    staged = sorted(sjuzhet, key=lambda s: s.τ_d)
+    staged_τs = [
+        getattr(fabula_by_id.get(s.event_id), "τ_s", None) for s in staged
+    ]
+    known = [t for t in staged_τs if t is not None]
+    if len(known) >= 2 and known != sorted(known):
+        descending = known == sorted(known, reverse=True)
+        shape = ("REVERSE-CHRONOLOGICAL (the staging moves backward through "
+                 "time)" if descending else
+                 "NON-LINEAR (the staging is out of chronological sequence)")
+        lines.append(
+            f"\n## Telling order — {shape}\n"
+            f"This story is NOT told in chronological order. Each scene below "
+            f"is staged in narration order (τ_d) but carries its true "
+            f"position in the action (τ_s). The audience meets later events "
+            f"before earlier ones — render the resulting dramatic irony: in "
+            f"every scene, write as though the audience already knows what "
+            f"comes after it in the story even though it has not been staged "
+            f"yet. Do NOT silently reorder events into chronology."
+        )
+        for s in staged:
+            t = getattr(fabula_by_id.get(s.event_id), "τ_s", "?")
+            lines.append(f"- staged #{s.τ_d} ← story-time τ_s={t}: "
+                         f"{s.event_id}")
 
     # Dramatis personae (agents).
     agents = [e for e in entities if getattr(e, "kind", "") == "agent"]
@@ -367,7 +397,12 @@ def build_scene_brief(
 ) -> str:
     event = fabula_by_id.get(entry.event_id)
     lines = []
-    lines.append(f"SCENE (τ_d={entry.τ_d}) — event {entry.event_id}")
+    lines.append(f"SCENE (staged τ_d={entry.τ_d}) — event {entry.event_id}")
+    if event is not None:
+        lines.append(f"Story-time: τ_s={event.τ_s} (this beat's position in "
+                     f"the chronological action — compare to the staging "
+                     f"order above to know whether it is being told early or "
+                     f"late relative to when it happens)")
     if phase_role:
         lines.append(f"Phase: {phase_role}")
     marks = []

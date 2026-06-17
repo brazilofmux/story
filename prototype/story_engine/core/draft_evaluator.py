@@ -125,6 +125,15 @@ class DecompiledStructure(BaseModel):
                     "main one — other arcs falling. Each entry names the "
                     "character and the turn. Empty if the fall is single."
     )
+    telling_order: str = Field(
+        default="",
+        description="How the PROSE is ordered relative to the story's "
+                    "chronology, judged from the prose's own sequence: "
+                    "'chronological' if events are narrated in the order they "
+                    "happen; 'reverse' if the telling moves backward through "
+                    "time (the aftermath staged first, the origin last); "
+                    "'non-linear' if fractured or interleaved out of order."
+    )
     overall_read: str = Field(
         description="Does the prose hold together as a tragedy on "
                     "Aristotelian terms? One or two sentences."
@@ -147,6 +156,12 @@ SAY SO; do not smooth the split away. If a recognition lands too late \
 to change anything, mark it 'anti'. Name characters exactly as the \
 prose names them. Where the text does not support a structural claim, \
 leave the field empty rather than inventing one.
+
+Report the telling order honestly: if the prose narrates the aftermath \
+before the cause — moving backward through time — say 'reverse'; if it \
+jumps around, 'non-linear'; if it runs in chronological sequence, \
+'chronological'. Judge only from the order the PROSE presents events, \
+not the order in which they happen.
 
 Produce the typed structure. Prose belongs only inside the fields.
 """
