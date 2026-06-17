@@ -395,29 +395,37 @@ AR_VINDICE_HIPPOLITO_PARALLEL = ArCharacterArcRelation(
 AR_PATHOS_CLUSTER_PARALLEL = ArCharacterArcRelation(
     id="arc_pathos_cluster_parallel",
     kind=ARC_RELATION_PARALLEL,
-    character_ref_ids=("ar_gloriana", "ar_antonio_wife", "ar_castiza"),
+    character_ref_ids=("ar_gloriana", "ar_antonio_wife"),
     mythos_id="ar_revengers",
     over_event_ids=(
         "E_gloriana_poisoned",            # Gloriana destroyed (pre-play)
         "E_junior_rapes_antonio_wife",    # Antonio's wife violated
         "E_antonio_wife_suicide",
-        "E_vindice_tests_castiza",        # Castiza threatened, holds
     ),
     annotation=(
         "The play's distributed pathos-centre, authored as a parallel "
-        "cluster because the dialect has no other way to mark it. Three "
-        "violated women carry the pity-and-fear that the morally-"
+        "cluster because the dialect has no other way to mark it. Two "
+        "PURE pity-objects carry the pity-and-fear that the morally-"
         "corroded avenger cannot: Gloriana poisoned for her chastity "
-        "(dead before the play, present as a skull), Antonio's wife "
-        "raped and driven to suicide, Castiza threatened by Vindice's "
-        "own corruption-test and holding. **This relation is a "
-        "semantic stretch**: ArCharacterArcRelation types relations "
-        "between characters' *arcs*, but Gloriana and Antonio's wife "
-        "have no arcs — they are pity-objects, not agents with "
-        "trajectories. The cluster is authored as 'parallel' to give "
-        "the pathos-centre SOME structural footing, but the right home "
-        "is a mythos-level pathos field (see OQ_MALFI_3_FINDING). "
-        "Symmetric, canonical kind; polarity empty."
+        "(dead before the play, present as a skull) and Antonio's wife "
+        "raped and driven to suicide. **This relation is a semantic "
+        "stretch**: ArCharacterArcRelation types relations between "
+        "characters' *arcs*, but Gloriana and Antonio's wife have no "
+        "arcs — they are pity-objects, not agents with trajectories. "
+        "The cluster is authored as 'parallel' to give the pathos-"
+        "centre SOME structural footing, but the right home is a "
+        "mythos-level pathos field (see OQ_MALFI_3_FINDING).\n\n"
+        "**Session-5 probe refinement.** The earlier authoring grouped "
+        "Castiza here too; the probe correctly flagged that as "
+        "imprecise — Castiza HOLDS under the corruption-test and so "
+        "possesses a minimal arc (resistance and vindication), making "
+        "her a threatened-innocence figure rather than a pure pity-"
+        "object. She is excluded from this cluster and carried as the "
+        "bordering case (still part of the pathos texture via "
+        "ar_castiza and the descriptions, but not arc-less). The "
+        "probe's own proposed pathos field listed only Gloriana and "
+        "Antonio's wife — this narrowing aligns the encoding with the "
+        "reader's reading. Symmetric, canonical kind; polarity empty."
     ),
     directionality=DIRECTIONALITY_SYMMETRIC,
 )
@@ -701,9 +709,30 @@ OQ_MALFI_3_FINDING = (
     "   single-locus mythos-level reading.\n\n"
     "Recommendation: sketch-07 should land option 1 (the tuple), with "
     "Malfi migrating `(ar_duchess,)` and the Revenger's migrating "
-    "`(ar_gloriana, ar_antonio_wife, ar_castiza)`. The Session-5 probe "
-    "of this arc will test whether the reader surfaces the same shape "
-    "or a different one."
+    "`(ar_gloriana, ar_antonio_wife)`.\n\n"
+    "**CONFIRMED — Session-5 probe (this arc).** The pathos-centre gap "
+    "was the ONLY vocabulary strain in an otherwise fully-clean read "
+    "(read_on_terms=yes, drift empty, 7/8 approved, 0 rejected). The "
+    "probe independently proposed BOTH the encoding's recommended "
+    "shapes: (1) `ArMythos.pathos_character_ref_ids` — explicitly a "
+    "LIST/tuple 'naming characters or objects that carry the play's "
+    "pity-and-fear without possessing arcs of their own (Gloriana's "
+    "skull, Antonio's wife)', and orthogonal to ArCharacterArcRelation; "
+    "(2) `ArCharacter.pathos_carrier: bool`. It recognised all three "
+    "forcing axes — non-agentive ('Gloriana as skull… pity-objects "
+    "without arcs'), distributed ('spread across multiple non-agent "
+    "characters'), and the stretch itself ('forced to overload "
+    "ArCharacterArcRelation as a workaround') — and grounded the gap in "
+    "Aristotle's own pathos (Poetics 1452b: 'a structural-field gap, "
+    "not a vocabulary failure'). The probe's pathos field listed only "
+    "Gloriana and Antonio's wife, NOT Castiza; in the same run it "
+    "flagged (one needs-work) that grouping Castiza with the arc-less "
+    "pity-objects was imprecise, since Castiza holds under the "
+    "corruption-test and so has a minimal arc. The encoding's cluster "
+    "relation was narrowed to `(ar_gloriana, ar_antonio_wife)` "
+    "accordingly. OQ-MALFI-3 is now cross-encoding CONFIRMED with a "
+    "probe-proposed shape; sketch-07 is its home.\n\n"
+    "Artifact: reader_model_revengers_aristotelian_output.json."
 )
 
 S6P_OQ1_FINDING = (
@@ -725,12 +754,22 @@ S6P_OQ1_FINDING = (
     "the encoding would have to demote it to a chain step — losing its "
     "status as THE main anagnorisis.\n\n"
     "Candidate canonical extension: **`ArMythos.main_anagnorisis_"
-    "qualifier: str`** (same closed enum as A20). Banked; the "
-    "Session-5 probe of this arc will test whether the reader surfaces "
-    "the main-level qualifier as a needed extension, which would FORCE "
-    "S6P-OQ1 (currently banked unforced). Pairs naturally with "
-    "OQ-MALFI-3 as the sketch-07 candidate cluster: both are "
-    "mythos-level roles the dialect under-specifies."
+    "qualifier: str`** (same closed enum as A20).\n\n"
+    "**NOT FORCED — Session-5 probe (this arc); prediction falsified.** "
+    "The probe read Vindice's main anagnorisis as clean and correct "
+    "('anagnorisis (Vindice's self-recognition as his own foe) … "
+    "correctly deployed'); it did NOT surface a main-level qualifier as "
+    "a gap. The expectation that Vindice's belated, self-destroying "
+    "recognition would force S6P-OQ1 was the encoding's hypothesis, and "
+    "the probe data did not bear it out — the reader was content to "
+    "read the main recognition as genuine-with-tragic-timing rather "
+    "than as needing an anti/partial qualifier. The design-first → "
+    "probe-falsifies rhythm operating at the OQ-prediction layer (cf. "
+    "sketch-06's S6P-OQ1/OQ2, also predicted and unforced). S6P-OQ1 "
+    "stays BANKED UNFORCED; a different forcing site is needed (a "
+    "tragedy whose MAIN recognition is unambiguously anti — the avenger "
+    "who recognises the wrong target as he kills, say). Artifact: "
+    "reader_model_revengers_aristotelian_output.json."
 )
 
 # Tuple export for probe-side consumption. The Revenger's Tragedy's

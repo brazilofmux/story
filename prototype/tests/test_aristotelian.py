@@ -3653,21 +3653,28 @@ def test_revengers_aristotelian_pathos_arc_split_oq_malfi_3():
 
 
 def test_revengers_aristotelian_pathos_cluster_distributed():
-    """The pathos is distributed across three violated women, none a
-    tragic hero, carried (under stretch) by AR_PATHOS_CLUSTER_PARALLEL —
-    the OQ-MALFI-3 'single ref insufficient' sub-question."""
+    """The distributed pathos-centre, carried (under stretch) by
+    AR_PATHOS_CLUSTER_PARALLEL — the OQ-MALFI-3 'single ref
+    insufficient' sub-question. Post-Session-5: the cluster is the TWO
+    pure pity-objects (Gloriana, Antonio's wife); Castiza was narrowed
+    out per the probe's refinement (she holds under the test and so has
+    a minimal arc, unlike the arc-less pity-objects)."""
     from story_engine.encodings.revengers_tragedy_aristotelian import (
         AR_REVENGERS_MYTHOS, AR_PATHOS_CLUSTER_PARALLEL,
     )
-    cluster = {"ar_gloriana", "ar_antonio_wife", "ar_castiza"}
+    cluster = {"ar_gloriana", "ar_antonio_wife"}
     by_id = {c.id: c for c in AR_REVENGERS_MYTHOS.characters}
     for cid in cluster:
         assert cid in by_id
         assert by_id[cid].is_tragic_hero is False
-    # The cluster relation names all three, kind=parallel, symmetric.
+    # The cluster relation names the two pure pity-objects.
     assert AR_PATHOS_CLUSTER_PARALLEL.kind == ARC_RELATION_PARALLEL
     assert set(AR_PATHOS_CLUSTER_PARALLEL.character_ref_ids) == cluster
     assert AR_PATHOS_CLUSTER_PARALLEL.directionality == DIRECTIONALITY_SYMMETRIC
+    # Castiza is still authored as a character (the bordering case) but
+    # excluded from the pure-pity-object cluster.
+    assert "ar_castiza" in by_id
+    assert "ar_castiza" not in AR_PATHOS_CLUSTER_PARALLEL.character_ref_ids
 
 
 def test_revengers_aristotelian_binding_adjacent_corpus_first():

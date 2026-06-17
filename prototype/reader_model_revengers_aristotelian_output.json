@@ -1,0 +1,186 @@
+{
+  "context": {
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "current_τ_a": 50000,
+    "anchor_τ_a": 50000,
+    "mythoi_ids": [
+      "ar_revengers"
+    ],
+    "observation_count": 0,
+    "substrate_context_included": true
+  },
+  "annotation_reviews": [
+    {
+      "target_kind": "ArMythos",
+      "target_id": "ar_revengers",
+      "field": "action_summary",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The action_summary faithfully traces the arrangement of incidents from Gloriana's pre-play poisoning through Vindice's execution, naming substrate events accurately and preserving Aristotelian vocabulary throughout — mythos, peripeteia, anagnorisis, anti-recognition. The embedded meta-comment about the dialect lacking a pathos-centre field is unusual for an action_summary (which normally describes incidents, not dialect gaps), but it is brief, self-aware, and does not distort the substantive account."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_revengers_beginning",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation accurately maps its scope events: Gloriana's pre-play poisoning as the antecedent wound, the court corruption establishing the moral frame, Vindice's skull soliloquy as the resolve, and Antonio's wife's suicide as a second living pathos beat. The use of 'pathos' for the suffering that grounds pity-and-fear is properly Aristotelian. The complication (E_vindice_hired_as_piato) sits correctly at this phase's boundary."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_revengers_middle",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "'Plots that recoil on their authors' aptly names the structural logic of this phase in Aristotelian reversal terms. The annotation accurately covers the bifurcated corruption-test, the brothers' warrant backfiring onto their own youngest, and the skull-kiss murder as the titular deed. The reference to the Duke's anti-recognition is consistent with arstep_duke_dying_recognition (anagnorisis_qualifier='anti')."
+    },
+    {
+      "target_kind": "ArPhase",
+      "target_id": "ph_revengers_end",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies the peripeteia (E_vindice_confesses, τ_s=20) and anagnorisis (E_antonio_condemns_vindice, τ_s=21) as falling one beat apart, consistent with peripeteia_anagnorisis_binding='adjacent'. The structural irony of Vindice contracted to kill his own alias is well-grounded in E_lussurioso_orders_piato_killed and E_vindice_hired_as_himself. All scope events are accounted for."
+    },
+    {
+      "target_kind": "ArCharacter",
+      "target_id": "ar_vindice",
+      "field": "hamartia_text",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The hamartia is precisely articulated: not the revenge itself but the relish — the appetite that outlives justice. The progression from justified avenger to self-destructive boaster is grounded in specific substrate events (E_vindice_tests_castiza, E_lussurioso_killed_at_masque, E_vindice_confesses). The recognition ('Tis time to die when we are our own foes') is properly linked to the hamartia as self-undoing. The cross-play comparison to Webster's Duchess is unverifiable from this prompt but supplementary rather than load-bearing."
+    },
+    {
+      "target_kind": "ArAnagnorisisStep",
+      "target_id": "arstep_duke_dying_recognition",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation is well-grounded in E_duke_killed_by_skull: the Duke's double recognition (who kills him and why; his wife's adultery) is accurately derived from the event's participants (vindice, hippolito, gloriana, duchess, spurio). The typing as anti-anagnorisis — real, complete, and wholly too late to alter outcome — correctly motivates anagnorisis_qualifier='anti', step_kind='parallel', and precipitates_main=false. The annotation's closing meta-commentary about sketch-06 generalisation occupies significant space but does not misrepresent the substrate."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_vindice_hippolito_parallel",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "approved",
+      "comment": "The annotation correctly identifies the strict parallel: Hippolito is present at every killing in the over_event_ids (E_duke_killed_by_skull, E_lussurioso_killed_at_masque) and is condemned and executed alongside Vindice (E_antonio_condemns_vindice, E_vindice_executed). The crucial asymmetry within the parallel — Vindice carries hamartia and recognition, Hippolito does not — is properly noted and consistent with the respective ArCharacter records."
+    },
+    {
+      "target_kind": "ArCharacterArcRelation",
+      "target_id": "arc_pathos_cluster_parallel",
+      "field": "annotation",
+      "reviewer_id": "llm:claude-opus-4-6",
+      "reviewed_at_τ_a": 50000,
+      "anchor_τ_a": 50000,
+      "verdict": "needs-work",
+      "comment": "The annotation is admirably honest about the semantic stretch, correctly observing that Gloriana and Antonio's wife lack arcs and are pity-objects rather than agents. However, grouping Castiza with two arc-less characters is imprecise: Castiza holds under the corruption-test and *does* possess a minimal arc (resistance and vindication), making her categorically different from a dead skull and a suicide victim. The 'parallel' kind overstates the structural similarity; what links the three is thematic affinity as objects of violated or threatened chastity, not parallel arcs. A minor revision distinguishing Castiza's agency from the other two would tighten the annotation."
+    }
+  ],
+  "observation_commentaries": [],
+  "dialect_reading": {
+    "reader_id": "llm:claude-opus-4-6",
+    "read_at_τ_a": 50000,
+    "read_on_terms": "yes",
+    "rationale": "The encoding reads cleanly in Aristotelian terms throughout. Peripeteia (the confession recoiling), anagnorisis (Vindice's self-recognition as his own foe), and hamartia (the relish that outlives justice) are correctly deployed and mutually consistent. The anti-anagnorisis on the Duke is a natural extension of Aristotle's recognition category — a recognition that is real but arrives too late to alter the action — and sketch-06's anagnorisis_qualifier='anti' carries it without strain. The complex-plot typing is justified: the mythos contains both peripeteia and anagnorisis, and both are structurally load-bearing. Unity of action holds: the single action is Vindice's revenge from resolve through self-destruction. The only vocabulary strain arose around pathos-centre — the encoding needed to mark characters who carry pity-and-fear without bearing arcs, and had to force them into ArCharacterArcRelation, which presupposes arc-bearing agents. This is a structural-field gap, not a vocabulary failure; Aristotle's own pathos (Poetics 1452b) names suffering within the action, but the dialect's records have no home for it at the mythos level.",
+    "drift_flagged": [],
+    "scope_limits_observed": [
+      "Pathos-carrier expression: ArCharacterArcRelation presupposes arc-bearing characters but cannot natively express characters who are pity-objects without arcs (Gloriana as skull, Antonio's wife as suicide victim). The Aristotelian concept of pathos (suffering within the action that excites pity and fear) is available in vocabulary but has no structural home in the dialect's record types.",
+      "Distributed pathos-centre: the pity-and-fear centre of this play is spread across multiple non-agent characters (Gloriana, Antonio's wife, Castiza). No mythos-level field exists to mark this distribution; the encoding is forced to overload ArCharacterArcRelation as a workaround."
+    ],
+    "relations_wanted": [
+      "ArMythos.pathos_character_ref_ids — a list field at the mythos level naming characters or objects that carry the play's pity-and-fear without possessing arcs of their own (Gloriana's skull, Antonio's wife). Orthogonal to ArCharacterArcRelation, which types structural relations between arc-bearing agents.",
+      "ArCharacter.pathos_carrier: bool — a character-level flag distinguishing pity-objects from arc-agents, enabling the dialect to model characters like Gloriana (dead, a skull, yet the moral centre of the action) without pretending they have arcs."
+    ]
+  },
+  "dropped": [],
+  "raw_output": {
+    "annotation_reviews": [
+      {
+        "target_kind": "ArMythos",
+        "target_id": "ar_revengers",
+        "field": "action_summary",
+        "verdict": "approved",
+        "rationale": "The action_summary faithfully traces the arrangement of incidents from Gloriana's pre-play poisoning through Vindice's execution, naming substrate events accurately and preserving Aristotelian vocabulary throughout — mythos, peripeteia, anagnorisis, anti-recognition. The embedded meta-comment about the dialect lacking a pathos-centre field is unusual for an action_summary (which normally describes incidents, not dialect gaps), but it is brief, self-aware, and does not distort the substantive account."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_revengers_beginning",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation accurately maps its scope events: Gloriana's pre-play poisoning as the antecedent wound, the court corruption establishing the moral frame, Vindice's skull soliloquy as the resolve, and Antonio's wife's suicide as a second living pathos beat. The use of 'pathos' for the suffering that grounds pity-and-fear is properly Aristotelian. The complication (E_vindice_hired_as_piato) sits correctly at this phase's boundary."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_revengers_middle",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "'Plots that recoil on their authors' aptly names the structural logic of this phase in Aristotelian reversal terms. The annotation accurately covers the bifurcated corruption-test, the brothers' warrant backfiring onto their own youngest, and the skull-kiss murder as the titular deed. The reference to the Duke's anti-recognition is consistent with arstep_duke_dying_recognition (anagnorisis_qualifier='anti')."
+      },
+      {
+        "target_kind": "ArPhase",
+        "target_id": "ph_revengers_end",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the peripeteia (E_vindice_confesses, τ_s=20) and anagnorisis (E_antonio_condemns_vindice, τ_s=21) as falling one beat apart, consistent with peripeteia_anagnorisis_binding='adjacent'. The structural irony of Vindice contracted to kill his own alias is well-grounded in E_lussurioso_orders_piato_killed and E_vindice_hired_as_himself. All scope events are accounted for."
+      },
+      {
+        "target_kind": "ArCharacter",
+        "target_id": "ar_vindice",
+        "field": "hamartia_text",
+        "verdict": "approved",
+        "rationale": "The hamartia is precisely articulated: not the revenge itself but the relish — the appetite that outlives justice. The progression from justified avenger to self-destructive boaster is grounded in specific substrate events (E_vindice_tests_castiza, E_lussurioso_killed_at_masque, E_vindice_confesses). The recognition ('Tis time to die when we are our own foes') is properly linked to the hamartia as self-undoing. The cross-play comparison to Webster's Duchess is unverifiable from this prompt but supplementary rather than load-bearing."
+      },
+      {
+        "target_kind": "ArAnagnorisisStep",
+        "target_id": "arstep_duke_dying_recognition",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation is well-grounded in E_duke_killed_by_skull: the Duke's double recognition (who kills him and why; his wife's adultery) is accurately derived from the event's participants (vindice, hippolito, gloriana, duchess, spurio). The typing as anti-anagnorisis — real, complete, and wholly too late to alter outcome — correctly motivates anagnorisis_qualifier='anti', step_kind='parallel', and precipitates_main=false. The annotation's closing meta-commentary about sketch-06 generalisation occupies significant space but does not misrepresent the substrate."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_vindice_hippolito_parallel",
+        "field": "annotation",
+        "verdict": "approved",
+        "rationale": "The annotation correctly identifies the strict parallel: Hippolito is present at every killing in the over_event_ids (E_duke_killed_by_skull, E_lussurioso_killed_at_masque) and is condemned and executed alongside Vindice (E_antonio_condemns_vindice, E_vindice_executed). The crucial asymmetry within the parallel — Vindice carries hamartia and recognition, Hippolito does not — is properly noted and consistent with the respective ArCharacter records."
+      },
+      {
+        "target_kind": "ArCharacterArcRelation",
+        "target_id": "arc_pathos_cluster_parallel",
+        "field": "annotation",
+        "verdict": "needs-work",
+        "rationale": "The annotation is admirably honest about the semantic stretch, correctly observing that Gloriana and Antonio's wife lack arcs and are pity-objects rather than agents. However, grouping Castiza with two arc-less characters is imprecise: Castiza holds under the corruption-test and *does* possess a minimal arc (resistance and vindication), making her categorically different from a dead skull and a suicide victim. The 'parallel' kind overstates the structural similarity; what links the three is thematic affinity as objects of violated or threatened chastity, not parallel arcs. A minor revision distinguishing Castiza's agency from the other two would tighten the annotation."
+      }
+    ],
+    "observation_commentaries": [],
+    "dialect_reading": {
+      "read_on_terms": "yes",
+      "rationale": "The encoding reads cleanly in Aristotelian terms throughout. Peripeteia (the confession recoiling), anagnorisis (Vindice's self-recognition as his own foe), and hamartia (the relish that outlives justice) are correctly deployed and mutually consistent. The anti-anagnorisis on the Duke is a natural extension of Aristotle's recognition category — a recognition that is real but arrives too late to alter the action — and sketch-06's anagnorisis_qualifier='anti' carries it without strain. The complex-plot typing is justified: the mythos contains both peripeteia and anagnorisis, and both are structurally load-bearing. Unity of action holds: the single action is Vindice's revenge from resolve through self-destruction. The only vocabulary strain arose around pathos-centre — the encoding needed to mark characters who carry pity-and-fear without bearing arcs, and had to force them into ArCharacterArcRelation, which presupposes arc-bearing agents. This is a structural-field gap, not a vocabulary failure; Aristotle's own pathos (Poetics 1452b) names suffering within the action, but the dialect's records have no home for it at the mythos level.",
+      "drift_flagged": [],
+      "scope_limits_observed": [
+        "Pathos-carrier expression: ArCharacterArcRelation presupposes arc-bearing characters but cannot natively express characters who are pity-objects without arcs (Gloriana as skull, Antonio's wife as suicide victim). The Aristotelian concept of pathos (suffering within the action that excites pity and fear) is available in vocabulary but has no structural home in the dialect's record types.",
+        "Distributed pathos-centre: the pity-and-fear centre of this play is spread across multiple non-agent characters (Gloriana, Antonio's wife, Castiza). No mythos-level field exists to mark this distribution; the encoding is forced to overload ArCharacterArcRelation as a workaround."
+      ],
+      "relations_wanted": [
+        "ArMythos.pathos_character_ref_ids — a list field at the mythos level naming characters or objects that carry the play's pity-and-fear without possessing arcs of their own (Gloriana's skull, Antonio's wife). Orthogonal to ArCharacterArcRelation, which types structural relations between arc-bearing agents.",
+        "ArCharacter.pathos_carrier: bool — a character-level flag distinguishing pity-objects from arc-agents, enabling the dialect to model characters like Gloriana (dead, a skull, yet the moral centre of the action) without pretending they have arcs."
+      ]
+    }
+  }
+}
