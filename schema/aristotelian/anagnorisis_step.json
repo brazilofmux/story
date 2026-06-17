@@ -33,6 +33,11 @@
       "type": "string",
       "enum": ["", "parallel", "precipitating", "staging"],
       "description": "A14 (aristotelian-sketch-03). Closed enum classifying the chain step. {parallel} is a non-causal sibling recognition (Lady Macbeth's sleepwalking; Gloucester's blinding). {precipitating} causes the mythos's main anagnorisis (Jocasta in Oedipus). {staging} sets up the main anagnorisis by displaying evidence to the recognizer (Hamlet's Mousetrap). Empty string (Python default) means 'derive from precipitates_main + character identity' for back-compat; A7.11 carries the derivation rules. Unlike A10/A13's canonical-plus-open kind discipline, step_kind is closed at the schema layer — invalid non-empty values are rejected at shape time, matching peripeteia_anagnorisis_binding (PFS13-M13). PFS16-AS5."
+    },
+    "anagnorisis_qualifier": {
+      "type": "string",
+      "enum": ["", "genuine", "anti", "partial"],
+      "description": "A20 (aristotelian-sketch-06). Closed enum typing whether the recognition this step carries is {genuine}, {anti} (real but too late to alter outcome — Webster's Antonio recognizing Bosola as the mortal wound lands), or {partial} (an incomplete grasp — the Hamlet Claudius-prayer shape). Empty string (Python default) is read as genuine/unspecified; pre-sketch-06 chains validate unchanged. Orthogonal to step_kind — an anti recognition may be parallel, precipitating, or staging. A7.18 checks the vocabulary and notes anti/partial steps that also precipitate the main recognition. Closed at the schema layer like step_kind. AS06-1."
     }
   },
   "additionalProperties": false

@@ -39,9 +39,11 @@ from story_engine.core.aristotelian import (
     PACING_EVEN, PACING_RAPID_ESCALATION, PACING_SLOW_BURN,
     PHASE_BEGINNING, PHASE_END, PHASE_MIDDLE,
     PLOT_COMPLEX, PLOT_SIMPLE,
+    QUALIFIER_ANTI, QUALIFIER_GENUINE, QUALIFIER_PARTIAL,
     RELATION_CONTAINS, RELATION_CONTESTS, RELATION_PARALLEL,
     SEVERITY_ADVISES_REVIEW, SEVERITY_NOTED,
     STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
+    VALID_ANAGNORISIS_QUALIFIERS,
     TONAL_REGISTER_TRAGIC_PURE, TONAL_REGISTER_TRAGIC_WITH_IRONY,
     VALID_PERIPETEIA_ANAGNORISIS_BINDINGS,
     VALID_PHASE_ROLES, VALID_PLOT_KINDS, VALID_STEP_KINDS,
@@ -3180,16 +3182,17 @@ def test_hamlet_aristotelian_canonical_relations_symmetric():
 
 
 def test_malfi_aristotelian_verifies_clean_up_to_instrumental_noted():
-    """Sixth worked case: Malfi under A1-A18 verifies against the
-    real malfi.py FABULA with exactly two noted observations, both
-    the expected character_arc_relation_kind_noncanonical codes for
-    the two `kind="instrumental"` records (Ferdinand → Bosola and
-    Cardinal → Bosola). No advises-review severity observations; no
-    other noted codes. Unlike Lear's two-instrumental pair (different
-    polarities → A7.15 check 5 fires noted), Malfi's two
-    instrumentals are polarity-concordant (both malicious) so the
-    paired-non-canonical-polarity-contrast does NOT fire — see
-    OQ-MALFI-1."""
+    """Sixth worked case: Malfi under A1-A21 verifies against the real
+    malfi.py FABULA with exactly THREE noted observations and no
+    advises-review. Two are the expected
+    character_arc_relation_kind_noncanonical codes for the
+    `kind="instrumental"` records (Ferdinand → Bosola, Cardinal →
+    Bosola). The third (sketch-06, A21) is
+    character_arc_relation_paired_polarity_concordance: unlike Lear's
+    polarity-contrasting pair (A7.15 check 5), Malfi's two
+    instrumentals are polarity-concordant (both malicious), so check 6
+    fires. This upgrades OQ-MALFI-1 from inspection-only to machine-
+    emitted noted."""
     from story_engine.encodings.malfi import FABULA
     from story_engine.encodings.malfi_aristotelian import (
         AR_MALFI_MYTHOS, AR_MALFI_CHARACTER_ARC_RELATIONS,
@@ -3200,8 +3203,8 @@ def test_malfi_aristotelian_verifies_clean_up_to_instrumental_noted():
         mythoi=(AR_MALFI_MYTHOS,),
         character_arc_relations=AR_MALFI_CHARACTER_ARC_RELATIONS,
     )
-    assert len(obs) == 2, (
-        f"Expected exactly 2 observations; got {len(obs)}:\n"
+    assert len(obs) == 3, (
+        f"Expected exactly 3 observations; got {len(obs)}:\n"
         + "\n".join(f"  [{o.severity}] {o.code}: {o.message}"
                     for o in obs)
     )
@@ -3210,12 +3213,19 @@ def test_malfi_aristotelian_verifies_clean_up_to_instrumental_noted():
             f"Expected only noted severity; got {o.severity} on "
             f"{o.code}"
         )
-        assert o.code == "character_arc_relation_kind_noncanonical"
-    ids_flagged = sorted(o.message.split("'")[1] for o in obs)
-    assert ids_flagged == [
+    by_code = group_by_code(obs)
+    noncanonical = by_code["character_arc_relation_kind_noncanonical"]
+    assert sorted(o.message.split("'")[1] for o in noncanonical) == [
         "arc_cardinal_bosola_instrumental",
         "arc_ferdinand_bosola_instrumental",
     ]
+    concordance = by_code[
+        "character_arc_relation_paired_polarity_concordance"
+    ]
+    assert len(concordance) == 1
+    assert "malicious" in concordance[0].message
+    # Contrast (check 5) must NOT fire — concordant, not contrasting.
+    assert "character_arc_relation_paired_polarity_contrast" not in by_code
 
 
 def test_malfi_aristotelian_records_shape():
@@ -3431,22 +3441,36 @@ def test_malfi_aristotelian_duchess_anagnorisis_absent_corpus_second():
 
 
 def test_malfi_aristotelian_probe_findings_authored():
-    """Three OQ findings authored as prose constants for probe-
-    side consumption: OQ_LEAR_4_FINDING (cross-encoding pressure
-    confirmation), OQ_AP7_RE_SURFACE (third-encoding pressure
-    with corpus-narrowest distance), OQ_MALFI_1_FINDING (new
-    forcing function — sequentially-wielded-instrument with
-    polarity-concordance)."""
+    """OQ findings authored as prose constants for probe-side
+    consumption. Post-Session-6: the three Session-5 findings
+    (OQ_LEAR_4, OQ_MALFI_1, plus the now-constant OQ_MALFI_2) are
+    CLOSED by sketch-06 A19/A21/A20 and carry closure notes; three
+    NEW next-layer findings (OQ_MALFI_3 pathos/arc split,
+    OQ_MALFI_4 instrument-reversal, OQ_MALFI_1B temporal-mode) are
+    banked. OQ_AP7 remains conjectural."""
     from story_engine.encodings.malfi_aristotelian import (
         OQ_AP7_RE_SURFACE, OQ_FINDINGS, OQ_LEAR_4_FINDING,
-        OQ_MALFI_1_FINDING,
+        OQ_MALFI_1_FINDING, OQ_MALFI_1B_FINDING, OQ_MALFI_2_FINDING,
+        OQ_MALFI_3_FINDING, OQ_MALFI_4_FINDING,
     )
-    assert "OQ-LEAR-4" in OQ_LEAR_4_FINDING
     assert "OQ-AP7" in OQ_AP7_RE_SURFACE
+    # Session-5 findings now carry sketch-06 closure notes.
+    assert "OQ-LEAR-4" in OQ_LEAR_4_FINDING
+    assert "CLOSED — sketch-06 A19" in OQ_LEAR_4_FINDING
     assert "OQ-MALFI-1" in OQ_MALFI_1_FINDING
+    assert "CLOSED — sketch-06 A21" in OQ_MALFI_1_FINDING
+    assert "OQ-MALFI-2" in OQ_MALFI_2_FINDING
+    assert "CLOSED sketch-06 A20" in OQ_MALFI_2_FINDING
+    # New Session-6 findings.
+    assert "OQ-MALFI-3" in OQ_MALFI_3_FINDING
+    assert "OQ-MALFI-4" in OQ_MALFI_4_FINDING
+    assert "OQ-MALFI-1B" in OQ_MALFI_1B_FINDING
     finding_keys = sorted(k for k, _ in OQ_FINDINGS)
-    assert finding_keys == ["OQ_AP7", "OQ_LEAR_4", "OQ_MALFI_1"]
-    assert len(OQ_FINDINGS) == 3
+    assert finding_keys == [
+        "OQ_AP7", "OQ_LEAR_4", "OQ_MALFI_1", "OQ_MALFI_1B",
+        "OQ_MALFI_2", "OQ_MALFI_3", "OQ_MALFI_4",
+    ]
+    assert len(OQ_FINDINGS) == 7
 
 
 def test_malfi_aristotelian_no_mythos_relation_authored():
@@ -3529,6 +3553,260 @@ def test_malfi_preplay_disclosures_and_descriptions_count():
     assert "D_oq_malfi_1_reader_frame" in desc_ids
     # The Duchess-of-Malfi-still iconic-line reading.
     assert "D_duchess_of_malfi_still_reading" in desc_ids
+
+
+# ============================================================================
+# Sketch-06 — A19 secondary_peripeteia_event_ids (A7.17)
+# ============================================================================
+
+
+def test_a19_secondary_peripeteia_clean():
+    """A19/A7.17 clean: a secondary peripeteia that is central, not the
+    main peripeteia, and unique produces no observation. (E3 is the
+    anagnorisis event AND a secondary peripeteia — A19 is orthogonal
+    to the anagnorisis axis; no observation for that overlap.)"""
+    m = _three_phase_mythos(secondary_peripeteia_event_ids=("E3",))
+    obs = verify(m)
+    assert not _has_code(obs, "secondary_peripeteia_event_not_central")
+    assert not _has_code(obs, "secondary_peripeteia_equals_main")
+    assert not _has_code(obs, "secondary_peripeteia_duplicate")
+    assert not _has_code(obs, "secondary_peripeteia_event_unresolved")
+
+
+def test_a19_secondary_peripeteia_default_empty_silent():
+    """Pre-sketch-06 default: empty tuple yields no A7.17 observation."""
+    m = _three_phase_mythos()
+    assert m.secondary_peripeteia_event_ids == ()
+    obs = verify(m)
+    assert not any(o.code.startswith("secondary_peripeteia") for o in obs)
+
+
+def test_a19_secondary_peripeteia_not_central():
+    """A7.17 check 1: a secondary peripeteia not in central_event_ids."""
+    m = _three_phase_mythos(secondary_peripeteia_event_ids=("E_ghost",))
+    obs = verify(m)
+    assert _has_code(obs, "secondary_peripeteia_event_not_central")
+
+
+def test_a19_secondary_peripeteia_equals_main():
+    """A7.17 check 2: a secondary peripeteia equal to the main slot."""
+    m = _three_phase_mythos(
+        peripeteia="E2", secondary_peripeteia_event_ids=("E2",),
+    )
+    obs = verify(m)
+    assert _has_code(obs, "secondary_peripeteia_equals_main")
+
+
+def test_a19_secondary_peripeteia_duplicate():
+    """A7.17 check 3: a duplicated entry within the tuple."""
+    m = _three_phase_mythos(secondary_peripeteia_event_ids=("E3", "E3"))
+    obs = verify(m)
+    assert _has_code(obs, "secondary_peripeteia_duplicate")
+
+
+def test_a19_secondary_peripeteia_unresolved_when_substrate_threaded():
+    """A7.17 check 4: central but absent from threaded substrate. E4 is
+    central (in the end phase) but omitted from substrate_events."""
+    m = ArMythos(
+        id="m_test", title="T", action_summary="s",
+        central_event_ids=("E1", "E2", "E3", "E4"),
+        plot_kind=PLOT_COMPLEX,
+        phases=(
+            ArPhase(id="ph_b", role=PHASE_BEGINNING, scope_event_ids=("E1",)),
+            ArPhase(id="ph_m", role=PHASE_MIDDLE, scope_event_ids=("E2",)),
+            ArPhase(id="ph_e", role=PHASE_END, scope_event_ids=("E3", "E4")),
+        ),
+        peripeteia_event_id="E2", anagnorisis_event_id="E3",
+        secondary_peripeteia_event_ids=("E4",),
+    )
+    events = (
+        _synthetic_event("E1", τ_s=0),
+        _synthetic_event("E2", τ_s=10),
+        _synthetic_event("E3", τ_s=20),
+        # E4 deliberately omitted.
+    )
+    obs = verify(m, substrate_events=events)
+    assert _has_code(obs, "secondary_peripeteia_event_unresolved")
+
+
+def test_a19_secondary_peripeteia_resolution_skipped_without_substrate():
+    """A7.17 check 4 skips when no substrate threaded (A7-check-4
+    discipline) — a central-but-unthreaded event is not flagged."""
+    m = _three_phase_mythos(secondary_peripeteia_event_ids=("E3",))
+    obs = verify(m)  # no substrate_events
+    assert not _has_code(obs, "secondary_peripeteia_event_unresolved")
+
+
+# ============================================================================
+# Sketch-06 — A20 anagnorisis_qualifier (A7.18)
+# ============================================================================
+
+
+def test_a20_qualifier_vocabulary_constants():
+    assert VALID_ANAGNORISIS_QUALIFIERS == frozenset(
+        {QUALIFIER_GENUINE, QUALIFIER_ANTI, QUALIFIER_PARTIAL})
+
+
+def test_a20_qualifier_default_empty_silent():
+    """Empty qualifier (default) yields no A7.18 observation."""
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E3", character_ref_id="c1",
+    )
+    assert step.anagnorisis_qualifier == ""
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m)
+    assert not any(o.code.startswith("anagnorisis_qualifier") for o in obs)
+
+
+def test_a20_qualifier_anti_clean():
+    """A valid 'anti' qualifier on a non-precipitating step is clean."""
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E3", character_ref_id="c1",
+        anagnorisis_qualifier=QUALIFIER_ANTI, precipitates_main=False,
+    )
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m)
+    assert not _has_code(obs, "anagnorisis_qualifier_invalid")
+    assert not _has_code(obs, "anagnorisis_qualifier_precipitates_noted")
+
+
+def test_a20_qualifier_invalid_value():
+    """A7.18 check 1: an out-of-vocabulary qualifier advises review."""
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E3", character_ref_id="c1",
+        anagnorisis_qualifier="ironic",
+    )
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m)
+    hits = [o for o in obs if o.code == "anagnorisis_qualifier_invalid"]
+    assert len(hits) == 1
+    assert hits[0].severity == SEVERITY_ADVISES_REVIEW
+
+
+def test_a20_qualifier_anti_precipitates_noted():
+    """A7.18 check 2: anti/partial + precipitates_main emits a noted."""
+    step = ArAnagnorisisStep(
+        id="s1", event_id="E2", character_ref_id="c1",
+        anagnorisis_qualifier=QUALIFIER_PARTIAL, precipitates_main=True,
+    )
+    m = _three_phase_mythos(anagnorisis_chain=(step,))
+    obs = verify(m)
+    hits = [o for o in obs
+            if o.code == "anagnorisis_qualifier_precipitates_noted"]
+    assert len(hits) == 1
+    assert hits[0].severity == SEVERITY_NOTED
+
+
+# ============================================================================
+# Sketch-06 — A21 A7.15 check 6 (paired-polarity-concordance)
+# ============================================================================
+
+
+def _instrumental(rid, target, polarity, mythos_id="m_test"):
+    return ArCharacterArcRelation(
+        id=rid, kind="instrumental",
+        character_ref_ids=("wielder", target),
+        mythos_id=mythos_id,
+        directionality=DIRECTIONALITY_DIRECTIONAL, polarity=polarity,
+    )
+
+
+def test_a21_concordance_fires_on_shared_polarity():
+    """A21/check 6: two non-canonical directional records sharing kind,
+    target, mythos, and a single polarity emit a concordance noted —
+    not the contrast code."""
+    rels = (
+        _instrumental("r1", "victim", POLARITY_MALICIOUS),
+        _instrumental("r2", "victim", POLARITY_MALICIOUS),
+    )
+    obs = verify(_three_phase_mythos(), character_arc_relations=rels)
+    conc = [o for o in obs
+            if o.code == "character_arc_relation_paired_polarity_concordance"]
+    assert len(conc) == 1
+    assert conc[0].severity == SEVERITY_NOTED
+    assert "malicious" in conc[0].message
+    assert not _has_code(
+        obs, "character_arc_relation_paired_polarity_contrast")
+
+
+def test_a21_contrast_still_fires_on_distinct_polarity():
+    """Check 5 unchanged: distinct polarities → contrast, not
+    concordance. The two checks partition the same grouping."""
+    rels = (
+        _instrumental("r1", "victim", POLARITY_MALICIOUS),
+        _instrumental("r2", "victim", POLARITY_THERAPEUTIC),
+    )
+    obs = verify(_three_phase_mythos(), character_arc_relations=rels)
+    assert _has_code(
+        obs, "character_arc_relation_paired_polarity_contrast")
+    assert not _has_code(
+        obs, "character_arc_relation_paired_polarity_concordance")
+
+
+def test_a21_single_record_no_concordance():
+    """A lone instrumental record fires neither check (needs ≥2)."""
+    rels = (_instrumental("r1", "victim", POLARITY_MALICIOUS),)
+    obs = verify(_three_phase_mythos(), character_arc_relations=rels)
+    assert not _has_code(
+        obs, "character_arc_relation_paired_polarity_concordance")
+    assert not _has_code(
+        obs, "character_arc_relation_paired_polarity_contrast")
+
+
+# ============================================================================
+# Sketch-06 — encoding migrations (Malfi + Lear)
+# ============================================================================
+
+
+def test_malfi_aristotelian_secondary_peripeteia_migrated():
+    """A19 migration: Malfi authors the three end-phase arc-peripeteiai
+    into secondary_peripeteia_event_ids; main stays the Duchess's
+    capture. The Ferdinand event is both the main anagnorisis and a
+    secondary peripeteia (orthogonal axes)."""
+    from story_engine.encodings.malfi_aristotelian import AR_MALFI_MYTHOS
+    m = AR_MALFI_MYTHOS
+    assert m.secondary_peripeteia_event_ids == (
+        "E_ferdinand_views_corpse",
+        "E_bosola_resolves_revenge",
+        "E_bosola_kills_antonio",
+    )
+    assert m.peripeteia_event_id == "E_capture_in_countryside"
+    assert m.peripeteia_event_id not in m.secondary_peripeteia_event_ids
+    # Orthogonality: the main anagnorisis is also a secondary peripeteia.
+    assert m.anagnorisis_event_id in m.secondary_peripeteia_event_ids
+    # Every secondary is a central event.
+    for eid in m.secondary_peripeteia_event_ids:
+        assert eid in m.central_event_ids
+
+
+def test_malfi_aristotelian_antonio_anti_anagnorisis_migrated():
+    """A20 migration (OQ-MALFI-2): Antonio's dark-room step is qualified
+    'anti'; Bosola's step is explicitly 'genuine' for contrast."""
+    from story_engine.encodings.malfi_aristotelian import (
+        AR_STEP_ANTONIO_DARK_RECOGNITION, AR_STEP_BOSOLA_RESOLVES,
+    )
+    assert (AR_STEP_ANTONIO_DARK_RECOGNITION.anagnorisis_qualifier
+            == QUALIFIER_ANTI)
+    assert AR_STEP_ANTONIO_DARK_RECOGNITION.precipitates_main is False
+    assert (AR_STEP_BOSOLA_RESOLVES.anagnorisis_qualifier
+            == QUALIFIER_GENUINE)
+
+
+def test_lear_aristotelian_secondary_peripeteia_migrated():
+    """A19 migration (OQ-LEAR-4 first site): Gloucester's blinding moves
+    from parallel-relation prose into secondary_peripeteia_event_ids.
+    The blinding chain step stays (it carries the anagnorisis)."""
+    from story_engine.encodings.lear_aristotelian import (
+        AR_LEAR_MYTHOS, AR_STEP_GLOUCESTER_BLINDING,
+    )
+    assert AR_LEAR_MYTHOS.secondary_peripeteia_event_ids == (
+        "E_cornwall_regan_blind_gloucester",
+    )
+    assert (AR_LEAR_MYTHOS.peripeteia_event_id
+            not in AR_LEAR_MYTHOS.secondary_peripeteia_event_ids)
+    # The chain step that carries Gloucester's anagnorisis is retained.
+    assert (AR_STEP_GLOUCESTER_BLINDING.event_id
+            == "E_cornwall_regan_blind_gloucester")
 
 
 # ============================================================================
@@ -3740,6 +4018,25 @@ TESTS = [
     test_malfi_aristotelian_sketch04_fields_authored,
     test_malfi_sjuzhet_focalization_distribution,
     test_malfi_preplay_disclosures_and_descriptions_count,
+    # Sketch-06 — A19 / A20 / A21
+    test_a19_secondary_peripeteia_clean,
+    test_a19_secondary_peripeteia_default_empty_silent,
+    test_a19_secondary_peripeteia_not_central,
+    test_a19_secondary_peripeteia_equals_main,
+    test_a19_secondary_peripeteia_duplicate,
+    test_a19_secondary_peripeteia_unresolved_when_substrate_threaded,
+    test_a19_secondary_peripeteia_resolution_skipped_without_substrate,
+    test_a20_qualifier_vocabulary_constants,
+    test_a20_qualifier_default_empty_silent,
+    test_a20_qualifier_anti_clean,
+    test_a20_qualifier_invalid_value,
+    test_a20_qualifier_anti_precipitates_noted,
+    test_a21_concordance_fires_on_shared_polarity,
+    test_a21_contrast_still_fires_on_distinct_polarity,
+    test_a21_single_record_no_concordance,
+    test_malfi_aristotelian_secondary_peripeteia_migrated,
+    test_malfi_aristotelian_antonio_anti_anagnorisis_migrated,
+    test_lear_aristotelian_secondary_peripeteia_migrated,
 ]
 
 

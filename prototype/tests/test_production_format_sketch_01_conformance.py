@@ -2714,11 +2714,19 @@ def test_aristotelian_mythos_schema_has_expected_shape():
         "binding_distance_preference",
         # PFS16-M17 amendment (sketch-03 A14)
         "anagnorisis_character_ref_id",
+        # AS06-2 amendment (sketch-06 A19)
+        "secondary_peripeteia_event_ids",
     }
     # central_event_ids non-empty array (PFS6-M3)
     central = schema["properties"]["central_event_ids"]
     assert central["type"] == "array"
     assert central["minItems"] == 1
+    # secondary_peripeteia_event_ids optional string array (AS06-2)
+    secondary = schema["properties"]["secondary_peripeteia_event_ids"]
+    assert secondary["type"] == "array"
+    assert secondary["items"]["type"] == "string"
+    assert secondary["items"]["minLength"] == 1
+    assert "minItems" not in secondary   # may be empty
     # plot_kind closed enum (PFS6-M4)
     assert set(schema["properties"]["plot_kind"]["enum"]) == {
         "simple", "complex",
@@ -2864,6 +2872,8 @@ def test_aristotelian_anagnorisis_step_schema_has_expected_shape():
         "precipitates_main", "annotation",
         # PFS16-AS5 amendment (aristotelian-sketch-03 A14)
         "step_kind",
+        # AS06-1 amendment (aristotelian-sketch-06 A20)
+        "anagnorisis_qualifier",
     }
     # PFS13-AS2 — three id fields are non-empty strings
     for field in ("id", "event_id", "character_ref_id"):
@@ -2883,6 +2893,12 @@ def test_aristotelian_anagnorisis_step_schema_has_expected_shape():
     assert step_kind["type"] == "string"
     assert set(step_kind["enum"]) == {
         "", "parallel", "precipitating", "staging",
+    }
+    # AS06-1 — anagnorisis_qualifier closed enum (sketch-06 A20)
+    qualifier = schema["properties"]["anagnorisis_qualifier"]
+    assert qualifier["type"] == "string"
+    assert set(qualifier["enum"]) == {
+        "", "genuine", "anti", "partial",
     }
 
 

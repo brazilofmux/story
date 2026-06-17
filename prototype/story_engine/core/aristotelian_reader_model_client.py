@@ -392,13 +392,33 @@ the wielder's action on the target. Directional tuple convention: \
 Sketch-05 also adds `ArCharacter.anagnorisis_absent` — a bool \
 marking a tragic hero whose hamartia produces catastrophe for \
 others but whose own arc contains no recognition moment (Cordelia \
-in Lear is the forcing case). If an encoding authors these fields, \
+in Lear is the forcing case).
+
+Note on sketch-06: the dialect adds three things in direct \
+response to the prior Duchess-of-Malfi probe run. (1) \
+`ArMythos.secondary_peripeteia_event_ids` — a list of \
+supplementary arc-peripeteia events beyond the singular \
+`peripeteia_event_id`, for mythoi carrying several tragic arcs \
+(Webster's Duchess has four; Lear's Gloucester blinding is one). \
+It is orthogonal to the anagnorisis apparatus — the same event id \
+may also be the `anagnorisis_event_id` or a chain-step event. (2) \
+`ArAnagnorisisStep.anagnorisis_qualifier` — '' | 'genuine' | \
+'anti' | 'partial'; 'anti' types a recognition that is real but \
+arrives too late to alter outcome (Antonio's dark-room death), \
+'partial' an incomplete grasp. (3) A self-verifier check now \
+machine-emits a 'paired-polarity-concordance' note when two \
+non-canonical directional relations share kind, target, and one \
+polarity (Webster's two malicious instrumentals on Bosola). These \
+three close forcing functions YOU surfaced last run; if they now \
+read as load-bearing, say so in your reading rather than \
+re-proposing them. If an encoding authors any of these fields, \
 they appear inline on the respective records. If an encoding does \
 NOT author them but they would help, flag them in \
 `relations_wanted`. If the dialect still lacks something you \
 wanted — e.g., wielder/target role fields beyond the tuple \
-convention, secondary-peripeteia apparatus for subplots, \
-audience-level parallel-plot catharsis apparatus — flag that too.
+convention, a main-level (not just step-level) anagnorisis \
+qualifier, audience-level parallel-plot catharsis apparatus — \
+flag that too.
 
 ## Your contract
 
@@ -545,6 +565,12 @@ def _ar_anagnorisis_step_to_dict(step) -> dict:
         # identity. Rendered as authored so the probe reads what the
         # encoding actually declared.
         "step_kind": step.step_kind,
+        # Sketch-06 A20 anagnorisis_qualifier: "" | "genuine" | "anti"
+        # | "partial". Empty = unspecified/genuine. "anti" types a
+        # recognition that is real but too late to alter outcome
+        # (Webster's Antonio dark-room death); "partial" an incomplete
+        # grasp. Rendered as authored.
+        "anagnorisis_qualifier": step.anagnorisis_qualifier,
         "precipitates_main": step.precipitates_main,
         "annotation": step.annotation,
     }
@@ -561,6 +587,13 @@ def _ar_mythos_to_dict(mythos: ArMythos) -> dict:
         "complication_event_id": mythos.complication_event_id,
         "denouement_event_id": mythos.denouement_event_id,
         "peripeteia_event_id": mythos.peripeteia_event_id,
+        # Sketch-06 A19 — supplementary arc-peripeteia events beyond
+        # the singular main slot, for mythoi with multiple tragic arcs
+        # (Webster's four arc-peripeteiai; Lear's Gloucester blinding).
+        # Orthogonal to the anagnorisis axis (an entry may also be the
+        # anagnorisis_event_id or a chain-step event).
+        "secondary_peripeteia_event_ids":
+            list(mythos.secondary_peripeteia_event_ids),
         "anagnorisis_event_id": mythos.anagnorisis_event_id,
         "asserts_unity_of_action": mythos.asserts_unity_of_action,
         "asserts_unity_of_time": mythos.asserts_unity_of_time,

@@ -1102,6 +1102,18 @@ AR_LEAR_MYTHOS = ArMythos(
     # lives in the fourteen τ_s of progressive loss between the
     # stripping of his retinue and the reconciliation with Cordelia.
     binding_distance_preference=BINDING_PREF_WIDE,
+    # A19 (sketch-06) — Gloucester's blinding (τ_s=23) as the secondary
+    # peripeteia to Lear's stripping at E_goneril_strips_retinue. This
+    # is the first site OQ-LEAR-4 surfaced (Lear Session 2); before
+    # sketch-06 the blinding's reversal-content lived only in the prose
+    # of the parallel A13 relation (Lear ‖ Gloucester). A19 gives it a
+    # typed home. The arstep_gloucester_blinding chain step stays — it
+    # carries Gloucester's anagnorisis; only the peripeteia aspect
+    # moves here. Webster's four-arc mythos provided the cross-encoding
+    # pressure that confirmed the field shape.
+    secondary_peripeteia_event_ids=(
+        "E_cornwall_regan_blind_gloucester",   # τ_s=23 — also arstep_gloucester_blinding
+    ),
 )
 
 

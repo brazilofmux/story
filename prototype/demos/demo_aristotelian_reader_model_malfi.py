@@ -14,7 +14,43 @@ Session log:
   12 records).
 - Session 4 (a9f8c89): encoding-specific tests (15 tests pinning
   Session 2+3 commitments).
-- Session 5 (this run): live probe — the research payoff.
+- Session 5 (bce79c4): live probe — the research payoff. 15/15
+  approved (corpus first 100%); OQ-LEAR-4 + OQ-MALFI-1 probe-
+  validated; OQ-MALFI-2 (anti-anagnorisis) surfaced NEW. Artifact:
+  reader_model_malfi_aristotelian_output.json.
+- Session 6 (this run): RE-PROBE under aristotelian-sketch-06.
+  Sketch-06 landed A19 (secondary_peripeteia_event_ids), A20
+  (anagnorisis_qualifier), A21 (A7.15 check 6 paired-polarity-
+  concordance) — closing the three findings Session 5 surfaced.
+  The encoding now authors all three; the client renders them.
+  This run is the closure-verification (AA06-9): does the probe
+  read the new fields as load-bearing, or re-propose them? Mirrors
+  Lear Session 6 under sketch-05. Artifact:
+  reader_model_malfi_aristotelian_session6_output.json.
+
+Session-6 closure predictions (inverting Session 5's forcing
+predictions P5/P7/and the new OQ-MALFI-2):
+
+- **C1 (OQ-LEAR-4 closure)**: probe reads
+  `secondary_peripeteia_event_ids` as carrying the four-arc
+  distribution; does NOT re-propose a secondary-peripeteia
+  apparatus in `relations_wanted`. Stronger: the dialect_reading
+  cites the field as structurally load-bearing.
+- **C2 (OQ-MALFI-2 closure)**: probe reads Antonio's
+  `anagnorisis_qualifier="anti"` as typing the dark-room mis-
+  recognition; does NOT re-propose an anagnorisis-qualifier enum.
+- **C3 (OQ-MALFI-1 closure)**: probe reads the machine-emitted
+  `character_arc_relation_paired_polarity_concordance` noted as
+  capturing the two-wielder/one-target/one-polarity shape; does
+  NOT re-propose the concordance check.
+- **C4 (residual pressure, if any)**: probe MAY surface the
+  banked successors — main-level qualifier (S6P-OQ1), secondary-
+  peripeteia↔recognition binding (S6P-OQ2), OQ-AP7 distance
+  refinement, or OQ-MALFI-1-b temporal_phase. Surfacing these is
+  the expected next-layer signal, NOT a closure failure.
+- **C5 (annotation-review baseline)**: ≥ 80% approved across the
+  prose surface; the de-stretched chain-step annotations should
+  read cleaner than Session 5's stretch language.
 
 Banked forcing functions this encoding presses on:
 
@@ -196,6 +232,17 @@ def _cli_args():
         help="output_config.effort (default: high).",
     )
     parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=32_000,
+        help=(
+            "max_tokens for the probe response (default: 32000). "
+            "Raised from the client's 16000 default — effort=high "
+            "extended thinking plus the richer sketch-06 surface can "
+            "overrun 16k and truncate the JSON."
+        ),
+    )
+    parser.add_argument(
         "--current-tau-a",
         type=int,
         default=50_000,
@@ -318,13 +365,12 @@ def main() -> int:
         return 1
 
     # Verify the encoding first so the probe sees the real
-    # observation list. Malfi is expected to produce exactly TWO
-    # observations, both severity=noted and both flagging the
-    # non-canonical kind="instrumental" under sketch-03's canonical-
-    # plus-open discipline. Unlike Lear (whose two instrumentals
-    # have opposite polarities → A7.15 check 5 fires a third
-    # noted), Malfi's two instrumentals are polarity-concordant
-    # (both malicious) so check 5 does NOT fire — OQ-MALFI-1.
+    # observation list. Under sketch-06 Malfi produces exactly THREE
+    # noted observations: two flagging the non-canonical
+    # kind="instrumental" (sketch-03 canonical-plus-open), and the
+    # new A7.15 check 6 paired-polarity-CONCORDANCE on Malfi's two
+    # malicious instrumentals on Bosola (A21, closing OQ-MALFI-1).
+    # No advises-review severity.
     observations = tuple(verify(
         AR_MALFI_MYTHOS, substrate_events=FABULA,
         mythoi=(AR_MALFI_MYTHOS,),
@@ -373,8 +419,14 @@ def main() -> int:
     print(
         f"  anagnorisis_chain: "
         f"{len(AR_MALFI_MYTHOS.anagnorisis_chain)} steps "
-        f"(both step_kind=parallel; both POST-MAIN; corpus first "
-        f"multi-post-main chain — OQ-LEAR-4 forcing)"
+        f"(both step_kind=parallel; both POST-MAIN; Antonio step "
+        f"now anagnorisis_qualifier='anti' — A20, OQ-MALFI-2 closed)"
+    )
+    print(
+        f"  secondary_peripeteia_event_ids: "
+        f"{len(AR_MALFI_MYTHOS.secondary_peripeteia_event_ids)} "
+        f"(Ferdinand τ23 + Bosola τ24 + Antonio τ30 — A19, "
+        f"OQ-LEAR-4 closed)"
     )
     print(
         f"  anagnorisis_character_ref_id: "
@@ -385,8 +437,8 @@ def main() -> int:
         f"  character_arc_relations: "
         f"{len(AR_MALFI_CHARACTER_ARC_RELATIONS)} "
         f"({len(instrumental_relations)} non-canonical "
-        f"kind='instrumental'; OQ-MALFI-1 — polarity-CONCORDANT, "
-        f"distinct from Lear's polarity-contrast)"
+        f"kind='instrumental'; polarity-CONCORDANT — check 6 now "
+        f"machine-emits the concordance noted, A21, OQ-MALFI-1 closed)"
     )
     print(
         f"  complication_event_id: "
@@ -398,8 +450,8 @@ def main() -> int:
     )
     print(
         f"  observations: {len(observations)} "
-        f"(expected 2 noted — instrumental-kind canonical-plus-open; "
-        f"check 5 does NOT fire on Malfi's polarity-concordant pair)"
+        f"(expected 3 noted — 2 instrumental-kind canonical-plus-open "
+        f"+ 1 check-6 paired-polarity-concordance, A21)"
     )
     print(f"  substrate events (for grounding): {len(FABULA)}")
     print(f"  current_τ_a: {args.current_tau_a}")
@@ -415,6 +467,7 @@ def main() -> int:
         current_τ_a=args.current_tau_a,
         anchor_τ_a=args.anchor_tau_a,
         effort=args.effort,
+        max_tokens=args.max_tokens,
         dry_run=args.dry_run,
     )
 

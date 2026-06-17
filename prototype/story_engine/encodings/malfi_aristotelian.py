@@ -216,6 +216,8 @@ from story_engine.core.aristotelian import (
     PHASE_MIDDLE,
     PLOT_COMPLEX,
     POLARITY_MALICIOUS,
+    QUALIFIER_ANTI,
+    QUALIFIER_GENUINE,
     STEP_KIND_PARALLEL,
     TONAL_REGISTER_TRAGIC_WITH_IRONY,
 )
@@ -379,30 +381,36 @@ PH_END = ArPhase(
         "madmen-masque τ_s=21) to the strangling (τ_s=22 — Duchess "
         "+ Cariola + the two younger children). At τ_s=23 "
         "Ferdinand enters and views the corpse: 'Cover her face; "
-        "mine eyes dazzle: she died young.' The recognition-and-"
-        "reversal is the main anagnorisis (the dialect carries it "
-        "via AR_MALFI_MYTHOS.anagnorisis_event_id) and "
-        "simultaneously Ferdinand's arc peripeteia — the dialect's "
-        "field structure cannot mark both, which is one face of "
-        "OQ-LEAR-4. At τ_s=24, Bosola alone with the body resolves "
-        "to revenge — the play's most explicit mid-arc reversal "
-        "and Bosola's arc peripeteia, carried by the chain-step "
-        "apparatus (AR_STEP_BOSOLA_RESOLVES) under semantic stretch "
-        "of A11. Act V (τ_s=25-33) compresses the catastrophe: "
-        "Ferdinand's lycanthropy manifests (τ_s=25); the Cardinal "
-        "poisons Julia for what she has learned (τ_s=27); Bosola "
-        "visits the Cardinal's chambers at night (τ_s=29) and "
-        "Antonio enters into the dark (τ_s=30, the play's anti-"
-        "recognition — Antonio is killed by mistake by the man "
-        "who would have allied with him; Antonio's arc peripeteia, "
-        "carried by AR_STEP_ANTONIO_DARK_RECOGNITION); Bosola "
-        "kills the Cardinal (τ_s=31); Ferdinand enters in his "
-        "lycanthropy and wounds Bosola mortally, Bosola wounds "
-        "Ferdinand fatally (τ_s=32); Delio arrives with the "
-        "Duchess's eldest son (τ_s=33), the survivor and heir. "
-        "The phase carries the corpus's first explicit four-"
-        "character-arc-peripeteia structure within a single "
-        "mythos."
+        "mine eyes dazzle: she died young.' This beat is both the "
+        "main anagnorisis (carried via AR_MALFI_MYTHOS."
+        "anagnorisis_event_id) and Ferdinand's arc peripeteia "
+        "(carried as a secondary peripeteia in A19's "
+        "secondary_peripeteia_event_ids) — A19 and the anagnorisis "
+        "axis are orthogonal, so one event sits in both. At τ_s=24, "
+        "Bosola alone with the body resolves to revenge — the "
+        "play's most explicit mid-arc reversal and Bosola's arc "
+        "peripeteia (A19), his recognition still carried genuinely "
+        "by AR_STEP_BOSOLA_RESOLVES. Act V (τ_s=25-33) compresses "
+        "the catastrophe: Ferdinand's lycanthropy manifests "
+        "(τ_s=25); the Cardinal poisons Julia for what she has "
+        "learned (τ_s=27); Bosola visits the Cardinal's chambers at "
+        "night (τ_s=29) and Antonio enters into the dark (τ_s=30, "
+        "the play's anti-recognition — Antonio is killed by mistake "
+        "by the man who would have allied with him; his arc "
+        "peripeteia in A19, his anti-recognition typed by "
+        "anagnorisis_qualifier='anti' on "
+        "AR_STEP_ANTONIO_DARK_RECOGNITION); Bosola kills the "
+        "Cardinal (τ_s=31); Ferdinand enters in his lycanthropy and "
+        "wounds Bosola mortally, Bosola wounds Ferdinand fatally "
+        "(τ_s=32); Delio arrives with the Duchess's eldest son "
+        "(τ_s=33), the survivor and heir. This phase carries three "
+        "of the mythos's four arc-peripeteiai (Ferdinand, Bosola, "
+        "Antonio); the Duchess's main peripeteia at "
+        "E_capture_in_countryside falls in the middle phase. The "
+        "four-arc-peripeteia structure — the corpus's first within "
+        "a single mythos — completes here but is not wholly "
+        "contained in this phase. Since sketch-06 the structural "
+        "information has a uniform home in A19 (OQ-LEAR-4 closed)."
     ),
 )
 
@@ -661,27 +669,26 @@ AR_STEP_BOSOLA_RESOLVES = ArAnagnorisisStep(
     character_ref_id="ar_bosola",
     step_kind=STEP_KIND_PARALLEL,
     precipitates_main=False,
+    anagnorisis_qualifier=QUALIFIER_GENUINE,   # A20 — explicit, to contrast Antonio's anti
     annotation=(
         "Bosola alone with the Duchess's body at τ_s=24. The "
         "recognition lands explicitly: 'I am angry with myself, "
         "now that I wake.' He attempts to revive her; she "
         "briefly recovers ('Mercy.'); she dies again; he resolves "
-        "to revenge. The same beat carries his arc peripeteia "
-        "(instrument → avenger; `avenger(bosola)` asserted at "
-        "substrate scope at this event). Webster's most explicit "
-        "mid-arc reversal in the corpus. **Post-main parallel "
+        "to revenge. Webster's most explicit mid-arc recognition "
+        "in the corpus, and a genuine one. **Post-main parallel "
         "step.** Different character from main (ar_bosola vs "
         "ar_ferdinand), non-precipitating: Bosola's resolve does "
         "not feed back into Ferdinand's recognition — Ferdinand "
         "has already left the chamber in his own collapse. The "
         "two corpse-side beats (Ferdinand at τ_s=23, Bosola at "
-        "τ_s=24) are structurally serial, not coupled. **A "
-        "semantic stretch of A11**: the chain is for anagnorises "
-        "supplementary to the main; Bosola's beat is an "
-        "anagnorisis (the recognition is explicit and verbal) "
-        "but is *simultaneously* an arc peripeteia, which the "
-        "main-peripeteia field cannot carry. OQ-LEAR-4 forcing "
-        "manifest at this record."
+        "τ_s=24) are structurally serial, not coupled. This beat "
+        "is also Bosola's arc peripeteia (instrument → avenger; "
+        "`avenger(bosola)` asserted at substrate scope here) — but "
+        "since sketch-06 that peripeteia content is carried by "
+        "AR_MALFI_MYTHOS.secondary_peripeteia_event_ids (A19), so "
+        "this chain step now carries only its genuine anagnorisis "
+        "content. OQ-LEAR-4 closed: the A11 stretch is retired."
     ),
 )
 
@@ -691,6 +698,7 @@ AR_STEP_ANTONIO_DARK_RECOGNITION = ArAnagnorisisStep(
     character_ref_id="ar_antonio",
     step_kind=STEP_KIND_PARALLEL,
     precipitates_main=False,
+    anagnorisis_qualifier=QUALIFIER_ANTI,      # A20 — OQ-MALFI-2 closed
     annotation=(
         "Antonio entering the Cardinal's chambers at night (τ_s=30) "
         "intending reconciliation, killed by Bosola who at that "
@@ -704,16 +712,17 @@ AR_STEP_ANTONIO_DARK_RECOGNITION = ArAnagnorisisStep(
         "parallel step**, the second of two post-main steps in the "
         "chain (after AR_STEP_BOSOLA_RESOLVES); the corpus's first "
         "multi-post-main chain. Different character from main "
-        "(ar_antonio vs ar_ferdinand), non-precipitating. **A "
-        "deeper semantic stretch of A11 than the Bosola step**: "
-        "Bosola's beat is an anagnorisis (the recognition is real, "
-        "even if accompanied by an arc peripeteia); Antonio's beat "
-        "is an *anti*-anagnorisis (the recognition is real but "
-        "comes too late to alter outcome) plus an arc peripeteia "
-        "(Antonio's arc reverses from secret-husband-in-exile to "
-        "killed-in-the-dark). The chain step carries neither "
-        "purely; both shapes pressure the apparatus. See "
-        "`OQ_LEAR_4_FINDING` for the structural argument."
+        "(ar_antonio vs ar_ferdinand), non-precipitating. Since "
+        "sketch-06 the two shapes this beat carries each have a "
+        "typed home: the *anti*-recognition is named by "
+        "`anagnorisis_qualifier=\"anti\"` (A20, OQ-MALFI-2 closed), "
+        "and the arc peripeteia (Antonio reverses from secret-"
+        "husband-in-exile to killed-in-the-dark) is carried by "
+        "AR_MALFI_MYTHOS.secondary_peripeteia_event_ids (A19, "
+        "OQ-LEAR-4 closed). The chain step no longer stretches; it "
+        "carries the recognition, now typed as the corpus's first "
+        "anti-anagnorisis. The probe cited the Hamlet Claudius-"
+        "prayer partial-recognition as the adjacent shape."
     ),
 )
 
@@ -799,6 +808,10 @@ AR_DUCHESS_ANTONIO_PARALLEL = ArCharacterArcRelation(
         "E_flight_to_ancona",
         "E_banishment_at_loretto",
         "E_duchess_sends_antonio_away",
+        # Act IV: the Duchess's death — paired with Antonio's below
+        # so the parallel-fate prose ('both die for the same act')
+        # is matched by the structural field (probe Session-6 fix).
+        "E_strangling",
         # Act V: Antonio's death in the dark
         "E_bosola_kills_antonio",
     ),
@@ -1214,6 +1227,21 @@ AR_MALFI_MYTHOS = ArMythos(
     # producing the dense mid-Act-IV cluster that is the play's
     # primary pathos site.
     binding_distance_preference=BINDING_PREF_NEAR,
+    # A19 (sketch-06) — the three end-phase arc-peripeteiai beyond the
+    # Duchess's main reversal at E_capture_in_countryside (τ_s=17).
+    # OQ-LEAR-4 closed: before sketch-06 these were spread across the
+    # main-anagnorisis slot (Ferdinand at τ_s=23) and two chain steps
+    # (Bosola at τ_s=24, Antonio at τ_s=30) under semantic stretch.
+    # A19 carries the peripeteia content uniformly; the chain steps
+    # retain only their (genuine / anti) anagnorisis content. The
+    # Ferdinand event is BOTH the main anagnorisis AND a secondary
+    # peripeteia — A19 is orthogonal to the anagnorisis axis, so the
+    # same event id legitimately appears in both places.
+    secondary_peripeteia_event_ids=(
+        "E_ferdinand_views_corpse",     # τ_s=23 — also anagnorisis_event_id
+        "E_bosola_resolves_revenge",    # τ_s=24 — also AR_STEP_BOSOLA_RESOLVES
+        "E_bosola_kills_antonio",       # τ_s=30 — also AR_STEP_ANTONIO_DARK_RECOGNITION
+    ),
 )
 
 
@@ -1298,7 +1326,17 @@ OQ_LEAR_4_FINDING = (
     "field. The A11 anagnorisis chain returns to purely-"
     "anagnorisic semantics. Session 5's live probe will test "
     "whether the reader-model surfaces the same recommendation "
-    "or proposes a different shape."
+    "or proposes a different shape.\n\n"
+    "**CLOSED — sketch-06 A19 (Session-6 re-probe verified).** "
+    "Sketch-06 landed option 1 (`secondary_peripeteia_event_ids`) "
+    "exactly as recommended; Malfi migrated the three end-phase "
+    "arc-peripeteiai (Ferdinand τ_s=23, Bosola τ_s=24, Antonio "
+    "τ_s=30) and Lear migrated Gloucester's blinding. The Session-6 "
+    "re-probe read 'secondary' as load-bearing Aristotelian "
+    "vocabulary ('peripeteia and anagnorisis including main, "
+    "secondary, genuine, and anti qualifiers') and did NOT "
+    "re-propose a secondary-peripeteia apparatus. Artifact: "
+    "reader_model_malfi_aristotelian_session6_output.json."
 )
 
 OQ_AP7_RE_SURFACE = (
@@ -1394,12 +1432,101 @@ OQ_MALFI_1_FINDING = (
     "shape is single-encoding for now (Hamlet's Claudius-Laertes "
     "is concurrent-wielding-of-one-instrument, not sequential; "
     "Lear's pair is concurrent-with-polarity-contrast); cross-"
-    "encoding pressure for OQ-MALFI-1 awaits a third encoding."
+    "encoding pressure for OQ-MALFI-1 awaits a third encoding.\n\n"
+    "**CLOSED — sketch-06 A21 (Session-6 re-probe verified).** "
+    "Sketch-06 landed candidate #1 (A7.15 check 6, paired-non-"
+    "canonical-polarity-concordance), reusing check 5's grouping. "
+    "The check now machine-emits a `character_arc_relation_paired_"
+    "polarity_concordance` noted on Webster's two malicious "
+    "instrumentals on Bosola. The Session-6 probe ENDORSED the "
+    "finding as 'structurally load-bearing' and did not re-propose "
+    "the check. Candidate #2 (temporal_phase) re-surfaced as the "
+    "next-layer successor — see OQ_MALFI_1B_FINDING — but the core "
+    "concordance pressure is closed."
 )
 
-# Tuple export for probe-side consumption.
+OQ_MALFI_2_FINDING = (
+    "OQ-MALFI-2 — Anti-anagnorisis (recognition-too-late). "
+    "**Surfaced Session-5 probe; CLOSED sketch-06 A20 (Session-6 "
+    "verified).** Antonio's dark-room death (τ_s=30): both parties "
+    "recognize each other in the instant the mortal wound lands — "
+    "the recognition is real but too late to alter outcome. The A14 "
+    "step apparatus typed step_kind (parallel/precipitating/"
+    "staging) but had no axis for whether the recognition is "
+    "genuine, anti, or partial. The Session-5 probe proposed an "
+    "`anagnorisis_qualifier` enum, citing the Hamlet Claudius-"
+    "prayer partial-recognition as an adjacent shape. Sketch-06 "
+    "landed A20 (`ArAnagnorisisStep.anagnorisis_qualifier ∈ "
+    "{'', 'genuine', 'anti', 'partial'}`); Antonio's step is now "
+    "'anti', Bosola's explicitly 'genuine'. The Session-6 re-probe "
+    "read the anti-anagnorisis as load-bearing vocabulary and did "
+    "not re-propose the enum. The 'partial' value is pre-placed "
+    "with no corpus site yet (the Hamlet shape)."
+)
+
+# New forcing functions surfaced by the Session-6 re-probe. None is a
+# closure failure — they are the next-layer pressures the probe's
+# attention moved to once the three sketch-06 findings read as closed.
+
+OQ_MALFI_3_FINDING = (
+    "OQ-MALFI-3 — Pathos-hero vs arc-hero split. **NEW, Session-6 "
+    "probe-surfaced; strongest new finding.** When the principal "
+    "site of pity-and-fear (the Duchess — her strangling is the "
+    "play's emotional centre) and the character bearing the main "
+    "anagnorisis (Ferdinand — 'Cover her face' is the play's "
+    "recognition) are DIFFERENT, Aristotelian vocabulary has no "
+    "formal distinction between the two roles. The dialect encodes "
+    "both via ArCharacter + `anagnorisis_character_ref_id` but "
+    "cannot name the Duchess as the pathos-centre at the ArMythos "
+    "level. Corpus-first: in Oedipus/Lear/Macbeth the suffering "
+    "hero and the recognizing hero coincide; Webster splits them. "
+    "Probe's proposed shape: `ArMythos.pathos_character_ref_id`. "
+    "Banked; forcing function is a second split-pathos encoding "
+    "(candidate: a revenge tragedy where the avenger recognizes but "
+    "a victim bears the pathos)."
+)
+
+OQ_MALFI_4_FINDING = (
+    "OQ-MALFI-4 — Instrument-reversal event on instrumental "
+    "relations. **NEW, Session-6 probe-surfaced.** The instrument-"
+    "character (Bosola) eventually turns on the wielder (kills "
+    "Ferdinand at E_mutual_wounding_ferdinand_bosola). This "
+    "reversal is currently described only in annotation prose; the "
+    "probe proposed a typed "
+    "`ArCharacterArcRelation.instrument_reversal_event_id` so the "
+    "self-verifier could check the reversal event post-dates all "
+    "wielding events in `over_event_ids`. Banked; pairs naturally "
+    "with OQ-MALFI-1B (temporal mode) as the instrumental-relation "
+    "enrichment cluster. Forcing function: a second encoding whose "
+    "instrument turns on its wielder."
+)
+
+OQ_MALFI_1B_FINDING = (
+    "OQ-MALFI-1B — Temporal mode on concordant instrumentals. "
+    "**Banked sketch-06 (option #2/#3 of OQ-MALFI-1); Session-6 "
+    "probe re-proposed it independently.** The A21 concordance "
+    "check fires on Webster's two malicious instrumentals on Bosola "
+    "but does not distinguish their temporal shapes: the Cardinal's "
+    "wielding is *bracketing* (pre-play galley service + Act-V "
+    "reactivation, with a gap), while Ferdinand's is *continuous* "
+    "(Acts I-IV unbroken) — together a relay-like structure. The "
+    "Session-6 probe proposed a `ArCharacterArcRelation` temporal-"
+    "mode field ('bracketing' | 'continuous' | 'episodic') refining "
+    "check 6. Banked; cross-encoding pressure (a third concordant-"
+    "instrumental encoding) is the forcing function, as the "
+    "original OQ-MALFI-1 finding anticipated."
+)
+
+# Tuple export for probe-side consumption. Post-Session-6: the first
+# three are CLOSED (sketch-06 A19/A20/A21, re-probe verified); the
+# last three are the NEW next-layer forcing functions the Session-6
+# probe surfaced. OQ-AP7 remains banked (conjectural).
 OQ_FINDINGS = (
     ("OQ_LEAR_4",       OQ_LEAR_4_FINDING),
     ("OQ_AP7",          OQ_AP7_RE_SURFACE),
     ("OQ_MALFI_1",      OQ_MALFI_1_FINDING),
+    ("OQ_MALFI_2",      OQ_MALFI_2_FINDING),
+    ("OQ_MALFI_3",      OQ_MALFI_3_FINDING),
+    ("OQ_MALFI_4",      OQ_MALFI_4_FINDING),
+    ("OQ_MALFI_1B",     OQ_MALFI_1B_FINDING),
 )

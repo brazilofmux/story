@@ -63,6 +63,11 @@
       "minLength": 1,
       "description": "Optional substrate event id where a character moves from ignorance to knowledge (Poetics 1452a). Per A4, anagnorisis is closer to structural than peripeteia — substrate's identity-and-realization machinery carries knowledge-state transitions, so an anagnorisis event IS a substrate-visible realization event. Plain-string reference per PFS6-X2. PFS6-M7."
     },
+    "secondary_peripeteia_event_ids": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "description": "A19 (aristotelian-sketch-06). Optional supplementary arc-peripeteia substrate events beyond the singular peripeteia_event_id, for mythoi with multiple tragic arcs (Webster's Duchess of Malfi: four arc-peripeteiai in one mythos; Lear: Gloucester's blinding secondary to Lear's stripping). Orthogonal to the anagnorisis apparatus — a secondary peripeteia event may also be the anagnorisis_event_id or a chain-step event. A7.17 checks central-membership, distinct-from-main, no-duplicates, and substrate-resolution; it does NOT forbid anagnorisis overlap or constrain ordering vs the main. Plain-string references per PFS6-X2. Python default is the empty tuple; schema admits absence and empty array interchangeably. AS06-2."
+    },
     "asserts_unity_of_action": {
       "type": "boolean",
       "description": "Aristotelian (Poetics 1451a) — defaults to true in Python. The A7 unity-of-action check runs unconditionally in the verifier; this field exists for authorial explicitness and for encodings that deliberately reject the assertion. PFS6-M8."

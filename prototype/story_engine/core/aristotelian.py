@@ -125,6 +125,21 @@ VALID_STEP_KINDS: frozenset = frozenset({
     STEP_KIND_PARALLEL, STEP_KIND_PRECIPITATING, STEP_KIND_STAGING,
 })
 
+# A20 (sketch-06) — anagnorisis_qualifier closed enum on ArAnagnorisisStep.
+# Empty string (default) means "unspecified / genuine" — back-compat for
+# pre-sketch-06 chains. Non-empty values type whether the recognition is
+# genuine, anti (real-but-too-late mis-recognition; Webster's Antonio at
+# the dark-room death), or partial (incomplete grasp; the Hamlet Claudius-
+# prayer shape the Session-5 probe cited, no corpus site yet).
+
+QUALIFIER_GENUINE = "genuine"
+QUALIFIER_ANTI = "anti"
+QUALIFIER_PARTIAL = "partial"
+
+VALID_ANAGNORISIS_QUALIFIERS: frozenset = frozenset({
+    QUALIFIER_GENUINE, QUALIFIER_ANTI, QUALIFIER_PARTIAL,
+})
+
 # A16-SP1 (sketch-04) — tonal_register controlled-plus-open vocabulary.
 # Per DCS3 (dialect-compilation-surface-sketch-01) side 2 carries no
 # verifier coverage; the constants below are published for encoding
@@ -264,6 +279,16 @@ class ArAnagnorisisStep:
     `central_event_ids` (A7.7 invariant 1) and must not equal
     `anagnorisis_event_id` (A7.7 invariant 3).
 
+    `anagnorisis_qualifier` (A20, sketch-06) types whether the
+    recognition this step carries is genuine, `anti` (real but too
+    late to alter outcome — Webster's Antonio recognizing Bosola in
+    the instant the mortal wound lands), or `partial` (an incomplete
+    grasp). Empty string (default) is read as genuine/unspecified;
+    pre-sketch-06 chains verify unchanged. The qualifier is
+    orthogonal to `step_kind`: an anti recognition may be parallel,
+    precipitating, or staging. A7.18 checks the closed vocabulary
+    and notes anti/partial steps that also `precipitates_main`.
+
     `step_kind` (A14, sketch-03) splits the A11 `precipitates_main`
     binary along a second axis: same-character-as-main vs. different-
     character. Canonical values:
@@ -284,6 +309,7 @@ class ArAnagnorisisStep:
     character_ref_id: str
     precipitates_main: bool = False
     step_kind: str = ""
+    anagnorisis_qualifier: str = ""          # A20 (sketch-06)
     annotation: str = ""
 
 
@@ -428,6 +454,15 @@ class ArMythos:
     # binding distance. Distinct from A12's typed binding assertion;
     # this is a stage-4 ranker scoring input. Empty default = neutral.
     binding_distance_preference: str = ""
+    # A19 (sketch-06) — supplementary arc-peripeteia events beyond the
+    # singular `peripeteia_event_id`. Empty default preserves pre-
+    # sketch-06 silence. Orthogonal to the anagnorisis apparatus: a
+    # secondary peripeteia event may also be an anagnorisis event (the
+    # main one or a chain step) — Webster's Ferdinand beat at τ_s=23 is
+    # both. A7.17 checks central-membership, distinct-from-main, no-
+    # duplicates, and substrate-resolution; it does NOT forbid overlap
+    # with anagnorisis events or constrain ordering vs the main.
+    secondary_peripeteia_event_ids: Tuple[str, ...] = ()
 
 
 # ============================================================================
@@ -1286,6 +1321,16 @@ def _check_character_arc_relation_sketch05_fields(
        `character_arc_relation_paired_polarity_contrast` naming
        both record ids. Structurally-load-bearing authorial pattern
        highlighted, not flagged as error.
+    6. **Paired-non-canonical-polarity CONCORDANCE detection** (A21,
+       sketch-06). Sibling to check 5 over the same grouping: if ≥2
+       records share non-canonical `kind`, target, `mythos_id`, AND a
+       single shared non-empty polarity, emit NOTED with code
+       `character_arc_relation_paired_polarity_concordance` naming all
+       record ids and the shared polarity. Webster's two instrumental
+       relations on Bosola (Ferdinand + Cardinal, both malicious) are
+       the corpus case; check 5 stays silent on concordance, check 6
+       catches it. Checks 5 and 6 partition the same ≥2 group (a group
+       has either one polarity or more than one).
     """
     out: list = []
 
@@ -1367,22 +1412,37 @@ def _check_character_arc_relation_sketch05_fields(
         if len(rels) < 2:
             continue
         polarities = {r.polarity for r in rels}
-        if len(polarities) < 2:
-            continue
-        # Distinct polarities on shared-kind, shared-target pair.
         ids = sorted(r.id for r in rels)
         kind, target, mythos_id = key
-        out.append(ArObservation(
-            severity=SEVERITY_NOTED,
-            code="character_arc_relation_paired_polarity_contrast",
-            target_id=ids[0],
-            message=(f"ArCharacterArcRelation records {ids!r} share "
-                     f"non-canonical kind={kind!r} and target "
-                     f"character_ref_id={target!r} in mythos "
-                     f"{mythos_id!r} with distinct polarities "
-                     f"{sorted(polarities)!r}; structurally-load-"
-                     f"bearing polarity-inversion on shared target."),
-        ))
+        if len(polarities) >= 2:
+            # Check 5 — distinct polarities on shared-kind, shared-target.
+            out.append(ArObservation(
+                severity=SEVERITY_NOTED,
+                code="character_arc_relation_paired_polarity_contrast",
+                target_id=ids[0],
+                message=(f"ArCharacterArcRelation records {ids!r} share "
+                         f"non-canonical kind={kind!r} and target "
+                         f"character_ref_id={target!r} in mythos "
+                         f"{mythos_id!r} with distinct polarities "
+                         f"{sorted(polarities)!r}; structurally-load-"
+                         f"bearing polarity-inversion on shared target."),
+            ))
+        else:
+            # Check 6 (A21, sketch-06) — single shared polarity across
+            # ≥2 records: concordance. Webster's two instrumentals on
+            # Bosola (both malicious) land here.
+            shared = next(iter(polarities))
+            out.append(ArObservation(
+                severity=SEVERITY_NOTED,
+                code="character_arc_relation_paired_polarity_concordance",
+                target_id=ids[0],
+                message=(f"ArCharacterArcRelation records {ids!r} share "
+                         f"non-canonical kind={kind!r}, target "
+                         f"character_ref_id={target!r} in mythos "
+                         f"{mythos_id!r}, AND polarity {shared!r}; "
+                         f"structurally-load-bearing concordant wielding "
+                         f"of one instrument by multiple agents."),
+            ))
 
     return out
 
@@ -1464,6 +1524,123 @@ def _check_character_anagnorisis_absent(mythos) -> list:
                          f"absent claim."),
             ))
 
+    return out
+
+
+# ============================================================================
+# Sketch-06 checks — A7.17 + A7.18
+# ============================================================================
+
+
+def _check_secondary_peripeteia(
+    mythos: ArMythos,
+    events_by_id: dict,
+) -> list:
+    """A7.17. Structural integrity for A19 secondary_peripeteia_event_ids.
+
+    1. Each id ∈ central_event_ids.
+    2. No id equals peripeteia_event_id (redundant with the main slot).
+    3. No id appears twice within the tuple.
+    4. Each id resolves in substrate events when threaded (skips when
+       not, per the A7-check-4 discipline).
+
+    Deliberately NOT checked: overlap with anagnorisis_event_id or
+    chain-step event ids (orthogonal axes — a secondary peripeteia may
+    also be an anagnorisis), and any ordering vs the main peripeteia
+    (a secondary may precede or follow it).
+    """
+    out: list = []
+    central_set = set(mythos.central_event_ids)
+    seen: set = set()
+
+    for eid in mythos.secondary_peripeteia_event_ids:
+        # Check 1 — central membership
+        if eid not in central_set:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="secondary_peripeteia_event_not_central",
+                target_id=mythos.id,
+                message=(f"ArMythos {mythos.id!r} names "
+                         f"secondary_peripeteia_event_id {eid!r} which "
+                         f"is not in central_event_ids; A19 requires "
+                         f"secondary peripeteiai to be central events."),
+            ))
+        # Check 2 — distinct from main
+        if (mythos.peripeteia_event_id is not None
+                and eid == mythos.peripeteia_event_id):
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="secondary_peripeteia_equals_main",
+                target_id=mythos.id,
+                message=(f"ArMythos {mythos.id!r} names "
+                         f"secondary_peripeteia_event_id {eid!r} which "
+                         f"equals peripeteia_event_id; A19 reserves the "
+                         f"main reversal for the singular slot."),
+            ))
+        # Check 3 — no duplicates within the tuple
+        if eid in seen:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="secondary_peripeteia_duplicate",
+                target_id=mythos.id,
+                message=(f"ArMythos {mythos.id!r} lists "
+                         f"secondary_peripeteia_event_id {eid!r} more "
+                         f"than once; A19 requires distinct entries."),
+            ))
+        seen.add(eid)
+        # Check 4 — substrate resolution
+        if events_by_id and eid not in events_by_id:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="secondary_peripeteia_event_unresolved",
+                target_id=mythos.id,
+                message=(f"ArMythos {mythos.id!r} names "
+                         f"secondary_peripeteia_event_id {eid!r} which "
+                         f"is not in the substrate events collection."),
+            ))
+    return out
+
+
+def _check_anagnorisis_qualifier(mythos: ArMythos) -> list:
+    """A7.18. anagnorisis_qualifier vocabulary + co-location on
+    ArAnagnorisisStep records (A20, sketch-06).
+
+    1. anagnorisis_qualifier ∈ {"", "genuine", "anti", "partial"};
+       invalid → advises-review `anagnorisis_qualifier_invalid`.
+    2. An "anti" or "partial" step that also declares
+       precipitates_main=True emits NOTED
+       `anagnorisis_qualifier_precipitates_noted` — a non-genuine
+       recognition that causes the main genuine recognition is
+       structurally unusual (not forbidden).
+    """
+    out: list = []
+    for step in mythos.anagnorisis_chain:
+        q = step.anagnorisis_qualifier
+        # Check 1 — vocabulary (empty allowed)
+        if q != "" and q not in VALID_ANAGNORISIS_QUALIFIERS:
+            out.append(ArObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="anagnorisis_qualifier_invalid",
+                target_id=step.id,
+                message=(f"ArAnagnorisisStep {step.id!r} declares "
+                         f"anagnorisis_qualifier={q!r} which is not in "
+                         f"{sorted(VALID_ANAGNORISIS_QUALIFIERS)} "
+                         f"(or empty)."),
+            ))
+            continue
+        # Check 2 — anti/partial + precipitates_main (noted)
+        if (q in (QUALIFIER_ANTI, QUALIFIER_PARTIAL)
+                and step.precipitates_main):
+            out.append(ArObservation(
+                severity=SEVERITY_NOTED,
+                code="anagnorisis_qualifier_precipitates_noted",
+                target_id=step.id,
+                message=(f"ArAnagnorisisStep {step.id!r} is "
+                         f"anagnorisis_qualifier={q!r} with "
+                         f"precipitates_main=True; a non-genuine "
+                         f"recognition that precipitates the main "
+                         f"recognition is structurally unusual."),
+            ))
     return out
 
 
@@ -1857,6 +2034,12 @@ def verify(
     fields carry no verifier coverage by DCS3. No new kwarg; A7.12-
     A7.14 walk the existing structures and skip cleanly when
     sketch-04 fields stay at defaults.
+
+    Sketch-06 adds A19 (ArMythos.secondary_peripeteia_event_ids) and
+    A20 (ArAnagnorisisStep.anagnorisis_qualifier) as new optional
+    fields, plus A21 (A7.15 check 6). A7.17 / A7.18 walk the existing
+    structures and skip cleanly when sketch-06 fields stay at
+    defaults; no new kwarg.
     """
     events_by_id = {e.id: e for e in substrate_events}
 
@@ -1885,6 +2068,8 @@ def verify(
         mythos, events_by_id,
     ))
     out.extend(_check_character_anagnorisis_absent(mythos))
+    out.extend(_check_secondary_peripeteia(mythos, events_by_id))
+    out.extend(_check_anagnorisis_qualifier(mythos))
     return out
 
 
