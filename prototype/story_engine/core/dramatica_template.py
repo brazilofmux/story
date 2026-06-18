@@ -1578,64 +1578,132 @@ assert len(CANONICAL_ELEMENTS) == 64, (
 # quad beneath each Variation, TRANSCRIBED FROM the Dramatica Table of Story
 # Elements (Write Brothers structure chart), read off the chart directly.
 #
-# Element order is the chart's spatial reading (A=top-left, B=top-right,
-# C=bottom-left, D=bottom-right), matching the Issue Quad convention. NOTE:
-# whether this module's (A,C)/(B,D) dynamic-pair semantics line up with the
-# chart's diagonal-dynamic geometry is a SEPARATE, pre-existing convention
-# question (it affects every quad equally) — tracked, not resolved here. For
-# conflict detection what matters is the element SET, which is order-free.
+# Stored as raw chart READINGS in reading order (e1,e2,e3,e4 = top-left,
+# top-right, bottom-left, bottom-right). The chart's dynamic pairs are the
+# DIAGONAL cells, which in this reading order are (e1,e4) and (e2,e3) —
+# confirmed from known pairs (Pursuit/Avoid in Delay, Logic/Feeling in Choice,
+# Control/Uncontrolled in Preconception). `_canon_element_quad` stores
+# A=e1, B=e2, C=e4, D=e3 so this module's (A,C)/(B,D) dynamic convention lands
+# on the true dynamic pairs and the Solution/Symptom/Response derivation is
+# canonically correct.
 #
-# Only Variations sourced from the chart are listed; the map fills in as more
-# are read. `verify_element_quads` flags any REGISTERED element quad whose
-# element SET disagrees with the canonical placement here.
-CANONICAL_ELEMENT_QUADS: dict = {
-    # -- the four resolved conflicts (dramatica-template-sketch-02) --
-    # Understanding > Interpretation  (Purpose elements)
-    "interpretation": Quad(
-        id="canon_element_interpretation", kind="element-quad",
-        element_A="order", element_B="equity",
-        element_C="inequity", element_D="chaos",
-        authored_by="dramatica-theory"),
-    # Contemplation > Doubt  (Methodology elements)
-    "doubt": Quad(
-        id="canon_element_doubt", kind="element-quad",
-        element_A="reduction", element_B="evaluation",
-        element_C="re-evaluation", element_D="production",
-        authored_by="dramatica-theory"),
-    # Playing a Role > Desire  (Evaluation elements)
-    "desire": Quad(
-        id="canon_element_desire", kind="element-quad",
-        element_A="trust", element_B="expectation",
-        element_C="determination", element_D="test",
-        authored_by="dramatica-theory"),
-    # Changing One's Nature > Commitment  (Motivation elements)
-    "commitment": Quad(
-        id="canon_element_commitment", kind="element-quad",
-        element_A="pursue", element_B="faith",
-        element_C="disbelief", element_D="avoid",
-        authored_by="dramatica-theory"),
-    # -- Situation > Past row (checksum; 'fate'/'destiny' are corpus-used) --
-    "fate": Quad(
-        id="canon_element_fate", kind="element-quad",
-        element_A="knowledge", element_B="order",
-        element_C="chaos", element_D="thought",
-        authored_by="dramatica-theory"),
-    "prediction": Quad(
-        id="canon_element_prediction", kind="element-quad",
-        element_A="actuality", element_B="inertia",
-        element_C="change", element_D="perception",
-        authored_by="dramatica-theory"),
-    "interdiction": Quad(
-        id="canon_element_interdiction", kind="element-quad",
-        element_A="ability", element_B="equity",
-        element_C="inequity", element_D="desire",
-        authored_by="dramatica-theory"),
-    "destiny": Quad(
-        id="canon_element_destiny", kind="element-quad",
-        element_A="aware", element_B="projection",
-        element_C="speculation", element_D="self-aware",
-        authored_by="dramatica-theory"),
+# Checksum: each Type's four Variations together use exactly one of the four
+# character-element categories' 16 elements (Past→Purpose, How-Things-Are-
+# Changing→Evaluation, The-Future→Motivation, …). The map fills in as Types
+# are read; `verify_element_quads` flags any REGISTERED quad whose element SET
+# disagrees with the canonical placement here.
+
+def _canon_element_quad(issue: str, e1: str, e2: str, e3: str, e4: str) -> Quad:
+    """Build a canonical element Quad from a chart reading (e1..e4 in
+    top-left, top-right, bottom-left, bottom-right order). Dynamic pairs are
+    the diagonals (e1,e4) and (e2,e3) → stored at (A,C) and (B,D)."""
+    safe = "".join(c if c.isalnum() else "_" for c in issue)
+    return Quad(id=f"canon_element_{safe}", kind="element-quad",
+                element_A=e1, element_B=e2, element_C=e4, element_D=e3,
+                authored_by="dramatica-theory")
+
+
+# variation -> (top-left, top-right, bottom-left, bottom-right), normalized to
+# this module's element labels (Pursuit→pursue, Un-proven→unproven, etc.).
+_ELEMENT_QUAD_READINGS: dict = {
+    # ---- ACTIVITY (Physics) ----
+    # Understanding (Purpose)
+    "instinct": ("knowledge", "ability", "desire", "thought"),
+    "senses": ("actuality", "aware", "self-aware", "perception"),
+    "interpretation": ("order", "equity", "inequity", "chaos"),
+    "conditioning": ("inertia", "projection", "speculation", "change"),
+    # Doing (Evaluation)
+    "wisdom": ("proven", "theory", "hunch", "unproven"),
+    "skill": ("effect", "trust", "test", "cause"),
+    "experience": ("accurate", "expectation", "determination", "non-accurate"),
+    "enlightenment": ("result", "ending", "unending", "process"),
+    # Obtaining (Motivation)
+    "approach": ("consider", "logic", "feeling", "reconsider"),
+    "self-interest": ("pursue", "control", "uncontrolled", "avoid"),
+    "morality": ("faith", "conscience", "temptation", "disbelief"),
+    "attitude": ("support", "help", "hinder", "oppose"),
+    # Learning (Methodology)
+    "prerequisites": ("certainty", "probability", "possibility", "potentiality"),
+    "strategy": ("proaction", "inaction", "protection", "reaction"),
+    "analysis": ("deduction", "reduction", "production", "induction"),
+    "preconditions": ("acceptance", "evaluation", "re-evaluation", "non-acceptance"),
+    # ---- SITUATION (Universe) ----
+    # The Past (Purpose)
+    "fate": ("knowledge", "order", "chaos", "thought"),
+    "prediction": ("actuality", "inertia", "change", "perception"),
+    "interdiction": ("ability", "equity", "inequity", "desire"),
+    "destiny": ("aware", "projection", "speculation", "self-aware"),
+    # How Things Are Changing (Evaluation)
+    "fact": ("proven", "accurate", "non-accurate", "unproven"),
+    "security": ("effect", "result", "process", "cause"),
+    "threat": ("theory", "expectation", "determination", "hunch"),
+    "fantasy": ("trust", "ending", "unending", "test"),
+    # The Future (Motivation)
+    "openness": ("consider", "faith", "disbelief", "reconsider"),
+    "delay": ("pursue", "support", "oppose", "avoid"),
+    "choice": ("logic", "conscience", "temptation", "feeling"),
+    "preconception": ("control", "help", "hinder", "uncontrolled"),
+    # The Present (Methodology)
+    "work": ("certainty", "deduction", "induction", "potentiality"),
+    "attract": ("proaction", "acceptance", "non-acceptance", "reaction"),
+    "repel": ("probability", "reduction", "production", "possibility"),
+    "attempt": ("inaction", "evaluation", "re-evaluation", "protection"),
+    # ---- MANIPULATION (Psychology) ----
+    # Developing a Plan (Purpose)
+    "state-of-being": ("knowledge", "inertia", "change", "thought"),
+    "situation": ("actuality", "order", "chaos", "perception"),
+    "circumstances": ("aware", "equity", "inequity", "self-aware"),
+    "sense-of-self": ("ability", "projection", "speculation", "desire"),
+    # Playing a Role (Evaluation)
+    "knowledge": ("proven", "result", "process", "unproven"),
+    "ability": ("effect", "accurate", "non-accurate", "cause"),
+    "desire": ("trust", "expectation", "determination", "test"),
+    "thought": ("theory", "ending", "unending", "hunch"),
+    # Changing One's Nature (Motivation)
+    "rationalization": ("consider", "support", "oppose", "reconsider"),
+    "commitment": ("pursue", "faith", "disbelief", "avoid"),
+    "responsibility": ("control", "conscience", "temptation", "uncontrolled"),
+    "obligation": ("logic", "help", "hinder", "feeling"),
+    # Conceiving an Idea (Methodology)
+    "permission": ("certainty", "acceptance", "non-acceptance", "potentiality"),
+    "need": ("proaction", "deduction", "induction", "reaction"),
+    "expediency": ("inaction", "reduction", "production", "protection"),
+    "deficiency": ("probability", "evaluation", "re-evaluation", "possibility"),
+    # ---- FIXED ATTITUDE (Mind) ----
+    # Memories (Purpose)
+    "truth": ("knowledge", "actuality", "perception", "thought"),
+    "evidence": ("ability", "aware", "self-aware", "desire"),
+    "suspicion": ("order", "inertia", "change", "chaos"),
+    "falsehood": ("equity", "projection", "speculation", "inequity"),
+    # Impulsive Responses (Evaluation)
+    "value": ("proven", "effect", "cause", "unproven"),
+    "confidence": ("theory", "trust", "test", "hunch"),
+    "worry": ("accurate", "result", "process", "non-accurate"),
+    "worth": ("expectation", "ending", "unending", "determination"),
+    # Innermost Desires (Motivation)
+    "closure": ("consider", "pursue", "avoid", "reconsider"),
+    "hope": ("logic", "control", "uncontrolled", "feeling"),
+    "dream": ("faith", "support", "oppose", "disbelief"),
+    "denial": ("conscience", "help", "hinder", "temptation"),
+    # Contemplation (Methodology)
+    "investigation": ("certainty", "proaction", "reaction", "potentiality"),
+    "appraisal": ("probability", "inaction", "protection", "possibility"),
+    "reappraisal": ("deduction", "acceptance", "non-acceptance", "induction"),
+    "doubt": ("reduction", "evaluation", "re-evaluation", "production"),
 }
+
+CANONICAL_ELEMENT_QUADS: dict = {
+    issue: _canon_element_quad(issue, *reading)
+    for issue, reading in _ELEMENT_QUAD_READINGS.items()
+}
+
+# Validate every transcribed element against the canonical 64 and 4-distinct.
+for _iss, _q in CANONICAL_ELEMENT_QUADS.items():
+    _els = (_q.element_A, _q.element_B, _q.element_C, _q.element_D)
+    assert all(e in CANONICAL_ELEMENTS for e in _els), \
+        f"CANONICAL_ELEMENT_QUADS[{_iss!r}]: non-canonical element in {_els}"
+    assert len(set(_els)) == 4, \
+        f"CANONICAL_ELEMENT_QUADS[{_iss!r}]: not four distinct: {_els}"
 
 
 @dataclass(frozen=True)

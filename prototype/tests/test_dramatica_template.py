@@ -1460,6 +1460,45 @@ def test_canonical_element_placements_are_canonical():
             assert e in CANONICAL_ELEMENTS, f"{issue}: {e} not canonical"
 
 
+def test_canonical_element_table_is_complete_and_balanced():
+    """The full level-4 map: all 64 Variations placed, 256 cells, the 64
+    distinct elements each appearing exactly 4× (Dramatica's 'chess set'),
+    and each Type's 16 elements forming exactly one character-element
+    category. Transcribed from the Dramatica Table of Story Elements."""
+    from story_engine.core.dramatica_template import (
+        ISSUE_QUADS_BY_CONCERN, CONCERN_QUADS_BY_DOMAIN,
+        MotivationElement, MethodologyElement, EvaluationElement,
+        PurposeElement,
+    )
+    # every canonical Variation is mapped
+    all_variations = {v for q in ISSUE_QUADS_BY_CONCERN.values()
+                      for v in (q.element_A, q.element_B, q.element_C, q.element_D)}
+    assert set(CANONICAL_ELEMENT_QUADS) == all_variations
+    assert len(CANONICAL_ELEMENT_QUADS) == 64
+    # 256 cells, each of the 64 elements appearing exactly 4 times
+    from collections import Counter
+    cells = [e for q in CANONICAL_ELEMENT_QUADS.values()
+             for e in (q.element_A, q.element_B, q.element_C, q.element_D)]
+    assert len(cells) == 256
+    cnt = Counter(cells)
+    assert len(cnt) == 64 and all(v == 4 for v in cnt.values())
+    # each Type's 16 elements = exactly one category
+    cats = {"motivation": {e.value for e in MotivationElement},
+            "methodology": {e.value for e in MethodologyElement},
+            "evaluation": {e.value for e in EvaluationElement},
+            "purpose": {e.value for e in PurposeElement}}
+    v2t = {v: c for c, q in ISSUE_QUADS_BY_CONCERN.items()
+           for v in (q.element_A, q.element_B, q.element_C, q.element_D)}
+    by_type: dict = {}
+    for v, q in CANONICAL_ELEMENT_QUADS.items():
+        by_type.setdefault(v2t[v], set()).update(
+            (q.element_A, q.element_B, q.element_C, q.element_D))
+    for ty, els in by_type.items():
+        assert len(els) == 16, f"{ty}: {len(els)} elements"
+        assert any(els == s for s in cats.values()), \
+            f"{ty} is not exactly one category"
+
+
 def test_verify_detects_non_canonical_placement():
     """A registered element quad whose SET disagrees with the chart placement
     is flagged (the systematic-corpus-drift guard)."""
@@ -1590,6 +1629,7 @@ TESTS = [
     test_verify_element_quads_detects_conflict,
     test_verify_element_quads_reports_coverage,
     test_canonical_element_placements_are_canonical,
+    test_canonical_element_table_is_complete_and_balanced,
     test_verify_detects_non_canonical_placement,
 ]
 
