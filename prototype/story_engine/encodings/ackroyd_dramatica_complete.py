@@ -57,6 +57,8 @@ from story_engine.encodings.ackroyd_dramatic import (
 from story_engine.core.dramatica_template import (
     Domain, DSPAxis, QuadPosition,
     Resolve, Growth, Approach, Limit, Outcome, Judgment,
+    Driver, ProblemSolvingStyle,
+    Dual,
     MotivationElement,
     DomainAssignment, DynamicStoryPoint, Signpost,
     QuadPick, ThematicPicks,
@@ -195,6 +197,18 @@ DYNAMIC_STORY_POINTS = (
     DynamicStoryPoint(
         id="DSP_judgment", axis=DSPAxis.JUDGMENT,
         choice=Judgment.BAD.value, story_id=STORY.id,
+    ),
+    # Driver ACTION = external events precipitate each act turn.
+    DynamicStoryPoint(
+        id="DSP_driver", axis=DSPAxis.DRIVER,
+        choice=Driver.ACTION.value, story_id=STORY.id,
+    ),
+    # PSS Dual = genuinely unresolved — the disputed axis, held dual
+    # per dramatica-precision-limit.
+    DynamicStoryPoint(
+        id="DSP_pss", axis=DSPAxis.PROBLEM_SOLVING_STYLE,
+        choice=Dual({ProblemSolvingStyle.LINEAR, ProblemSolvingStyle.HOLISTIC}),
+        story_id=STORY.id,
     ),
 )
 

@@ -32,6 +32,7 @@ from __future__ import annotations
 from story_engine.core.dramatica_template import (
     DomainAssignment, DynamicStoryPoint, DSPAxis,
     Domain, Resolve, Growth, Approach, Limit, Outcome, Judgment,
+    Driver, ProblemSolvingStyle, Dual,
 )
 from story_engine.encodings.rashomon_dramatic import (
     RASHOMON_ENCODING,
@@ -79,6 +80,16 @@ DYNAMIC_STORY_POINTS_FRAME = (
                       choice=Outcome.SUCCESS.value, story_id=S_frame.id),
     DynamicStoryPoint(id="DSP_frame_judgment", axis=DSPAxis.JUDGMENT,
                       choice=Judgment.GOOD.value, story_id=S_frame.id),
+    # Driver Dual = genuinely unresolved — held dual per dramatica-precision-limit.
+    DynamicStoryPoint(id="DSP_frame_driver", axis=DSPAxis.DRIVER,
+                      choice=Dual({Driver.ACTION, Driver.DECISION}),
+                      story_id=S_frame.id),
+    # PSS Dual = genuinely unresolved — the disputed axis, held dual
+    # per dramatica-precision-limit.
+    DynamicStoryPoint(id="DSP_frame_pss", axis=DSPAxis.PROBLEM_SOLVING_STYLE,
+                      choice=Dual({ProblemSolvingStyle.LINEAR,
+                                   ProblemSolvingStyle.HOLISTIC}),
+                      story_id=S_frame.id),
 )
 
 STORY_GOAL_FRAME = (

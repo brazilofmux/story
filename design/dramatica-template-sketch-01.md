@@ -1,6 +1,6 @@
 # Dramatica template — sketch 01
 
-**Status:** draft, active
+**Status:** active; amended by [dramatica-template-sketch-02](dramatica-template-sketch-02.md) (Q5's *six* dynamics corrected to the canonical eight: Driver + Problem-Solving Style added)
 **Date:** 2026-04-14
 **Supersedes:** nothing (new sketch within the Dramatic dialect)
 **Frames:** [architecture-sketch-02.md](architecture-sketch-02.md), [dramatic-sketch-01.md](dramatic-sketch-01.md)

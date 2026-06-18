@@ -85,6 +85,16 @@ _DSP_GLOSS = {
     "approach": ("Approach", {
         "do-er": "a DO-ER — action-first; the throughline is doing",
         "be-er": "a BE-ER — adaptation-first; the throughline is inner"}),
+    "problem-solving-style": ("Problem-Solving Style", {
+        "linear": "LINEAR — the MC solves step-by-step, cause-and-effect, "
+                  "goal-first",
+        "holistic": "HOLISTIC — the MC solves by balance and relationship, "
+                    "intuitive leaps"}),
+    "driver": ("Driver", {
+        "action": "ACTION-driven — events force the choices; each turn is "
+                  "precipitated by something happening",
+        "decision": "DECISION-driven — choices precipitate the events; each "
+                    "turn is precipitated by someone deciding"}),
     "limit": ("Limit", {
         "timelock": "a TIMELOCK — the clock is the antagonist; events race "
                     "a deadline",

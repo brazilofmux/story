@@ -55,6 +55,7 @@ from story_engine.encodings.pride_and_prejudice_dramatic import (
 from story_engine.core.dramatica_template import (
     Domain, DSPAxis, QuadPosition,
     Resolve, Growth, Approach, Limit, Outcome, Judgment,
+    Driver, ProblemSolvingStyle,
     MotivationElement,
     DomainAssignment, DynamicStoryPoint, Signpost,
     QuadPick, ThematicPicks,
@@ -196,6 +197,16 @@ DYNAMIC_STORY_POINTS = (
     DynamicStoryPoint(
         id="DSP_judgment", axis=DSPAxis.JUDGMENT,
         choice=Judgment.GOOD.value, story_id=STORY.id,
+    ),
+    # Driver DECISION = the act turns are precipitated by choices, not events.
+    DynamicStoryPoint(
+        id="DSP_driver", axis=DSPAxis.DRIVER,
+        choice=Driver.DECISION.value, story_id=STORY.id,
+    ),
+    # PSS HOLISTIC = the MC solves by feel/relationship, not calculation.
+    DynamicStoryPoint(
+        id="DSP_pss", axis=DSPAxis.PROBLEM_SOLVING_STYLE,
+        choice=ProblemSolvingStyle.HOLISTIC.value, story_id=STORY.id,
     ),
 )
 

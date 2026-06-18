@@ -42,6 +42,7 @@ from story_engine.encodings.oedipus_dramatic import (
 from story_engine.core.dramatica_template import (
     Domain, DSPAxis, QuadPosition,
     Resolve, Growth, Approach, Limit, Outcome, Judgment,
+    Driver, ProblemSolvingStyle,
     MotivationElement,
     DomainAssignment, DynamicStoryPoint, Signpost,
     QuadPick, ThematicPicks,
@@ -141,6 +142,16 @@ DYNAMIC_STORY_POINTS = (
     DynamicStoryPoint(
         id="DSP_judgment", axis=DSPAxis.JUDGMENT,
         choice=Judgment.BAD.value, story_id=STORY.id,
+    ),
+    # Driver ACTION = external events precipitate each act turn.
+    DynamicStoryPoint(
+        id="DSP_driver", axis=DSPAxis.DRIVER,
+        choice=Driver.ACTION.value, story_id=STORY.id,
+    ),
+    # PSS LINEAR = the MC solves step-by-step, cause-and-effect.
+    DynamicStoryPoint(
+        id="DSP_pss", axis=DSPAxis.PROBLEM_SOLVING_STYLE,
+        choice=ProblemSolvingStyle.LINEAR.value, story_id=STORY.id,
     ),
 )
 

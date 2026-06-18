@@ -96,7 +96,7 @@ def _make_domain_assignments(throughlines=None):
 
 
 def _make_dsps():
-    """Clean six-DSP set."""
+    """Clean eight-DSP set (the canonical essentials)."""
     return (
         DynamicStoryPoint(id="DSP_1", axis=DSPAxis.RESOLVE,
                           choice="change", story_id="S"),
@@ -110,6 +110,10 @@ def _make_dsps():
                           choice="success", story_id="S"),
         DynamicStoryPoint(id="DSP_6", axis=DSPAxis.JUDGMENT,
                           choice="bad", story_id="S"),
+        DynamicStoryPoint(id="DSP_7", axis=DSPAxis.DRIVER,
+                          choice="action", story_id="S"),
+        DynamicStoryPoint(id="DSP_8", axis=DSPAxis.PROBLEM_SOLVING_STYLE,
+                          choice="linear", story_id="S"),
     )
 
 
@@ -451,7 +455,7 @@ def test_domain_missing_assignment_flagged():
 # ============================================================================
 
 
-def test_dsp_all_six_passes():
+def test_dsp_all_eight_passes():
     tls, das, dsps, sps = _full_clean_encoding()
     obs = verify_dramatica_complete(
         throughlines=tls, domain_assignments=das,
@@ -1370,8 +1374,9 @@ def test_template_coupling_field_lookup_falls_back_to_record_level():
     )
 
 
-def test_dsp_coupling_map_covers_all_six_axes():
+def test_dsp_coupling_map_covers_all_eight_axes():
     assert set(DSP_COUPLING_KIND_BY_AXIS.keys()) == set(DSPAxis)
+    assert len(DSPAxis) == 8
 
 
 # ============================================================================
@@ -1415,7 +1420,7 @@ TESTS = [
     test_domain_duplicate_flagged,
     test_domain_missing_assignment_flagged,
     # DSP validation
-    test_dsp_all_six_passes,
+    test_dsp_all_eight_passes,
     test_dsp_missing_axis_flagged,
     test_dsp_duplicate_axis_flagged,
     # Signpost validation
@@ -1482,7 +1487,7 @@ TESTS = [
     test_dsp_coupling_kind_dispatches_per_axis,
     test_template_coupling_kind_for_story_goal_returns_trajectory,
     test_template_coupling_field_lookup_falls_back_to_record_level,
-    test_dsp_coupling_map_covers_all_six_axes,
+    test_dsp_coupling_map_covers_all_eight_axes,
 ]
 
 

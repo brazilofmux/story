@@ -24,10 +24,14 @@ Record types added (all per dramatica-template-sketch-01):
   total, non-duplicative — Dramatica's hardest structural rule at
   this level.
 
-- **DynamicStoryPoint** — six binary-choice records at Story level:
-  Resolve (Change/Steadfast), Growth (Start/Stop), Approach
-  (Do-er/Be-er), Limit (Timelock/Optionlock), Outcome (Success/
-  Failure), Judgment (Good/Bad).
+- **DynamicStoryPoint** — the EIGHT essential dynamic axes at Story
+  level: Resolve (Change/Steadfast), Growth (Start/Stop), Approach
+  (Do-er/Be-er), Problem-Solving Style (Linear/Holistic), Driver
+  (Action/Decision), Limit (Timelock/Optionlock), Outcome (Success/
+  Failure), Judgment (Good/Bad). (Problem-Solving Style and Driver
+  completed the canonical eight in the completeness pass; PSS is the
+  most-disputed axis and a dual-value candidate.) A choice may be an
+  `AmbiguousChoice` when the story genuinely spans both poles.
 
 - **Signpost** — four per Throughline, representing act-progression
   moments. Each names which Concern from the Throughline's Domain
@@ -43,7 +47,7 @@ Internal rules ("nope, you can't do that"):
 
 - Domain assignments must cover all 4 Domains exactly once across
   the 4 Throughlines. No duplicates.
-- Six DynamicStoryPoints must be present, one per axis, each with a
+- Eight DynamicStoryPoints must be present, one per axis, each with a
   valid choice.
 - Signposts: 4 per Throughline, positions 1-4 distinct, elements
   drawn from the Throughline's assigned Domain's Concern quad.
@@ -77,10 +81,15 @@ class Domain(str, Enum):
 
 
 class DSPAxis(str, Enum):
-    """The six Dynamic Story Point axes."""
+    """The eight essential Dynamic Story Point axes — Dramatica's canonical
+    set that, with the throughline/domain/concern/issue/problem assignments,
+    determines a storyform. (Driver and Problem-Solving Style were added in
+    the dramatica-completeness pass; see dramatica-template-sketch-02.)"""
     RESOLVE = "resolve"
     GROWTH = "growth"
     APPROACH = "approach"
+    PROBLEM_SOLVING_STYLE = "problem-solving-style"
+    DRIVER = "driver"
     LIMIT = "limit"
     OUTCOME = "outcome"
     JUDGMENT = "judgment"
@@ -116,10 +125,36 @@ class Judgment(str, Enum):
     BAD = "bad"
 
 
+class Driver(str, Enum):
+    """The Story Driver: does each major turn (the act / Signpost
+    transitions) come from an ACTION or from a DECISION? Set once for the
+    whole story — action-driven stories have events force the choices;
+    decision-driven stories have choices precipitate the events."""
+    ACTION = "action"
+    DECISION = "decision"
+
+
+class ProblemSolvingStyle(str, Enum):
+    """The Main Character's Problem-Solving Style (formerly 'Mental Sex'):
+    LINEAR (cause-and-effect, step-by-step, goal-first) vs HOLISTIC
+    (balance/relationship-first, intuitive leaps).
+
+    NOTE: this is the single most-disputed appreciation in Dramatica — the
+    theory's own rename from 'Mental Sex' signals the trouble. It is a prime
+    candidate for an AmbiguousChoice (`Dual({linear, holistic})`) when a
+    story does not clearly commit; forcing the binary here is exactly the
+    over-claimed precision `dramatica-precision-limit` warns against."""
+    LINEAR = "linear"
+    HOLISTIC = "holistic"
+
+
 DSP_VALID_CHOICES = {
     DSPAxis.RESOLVE: {Resolve.CHANGE, Resolve.STEADFAST},
     DSPAxis.GROWTH: {Growth.START, Growth.STOP},
     DSPAxis.APPROACH: {Approach.DO_ER, Approach.BE_ER},
+    DSPAxis.PROBLEM_SOLVING_STYLE: {ProblemSolvingStyle.LINEAR,
+                                    ProblemSolvingStyle.HOLISTIC},
+    DSPAxis.DRIVER: {Driver.ACTION, Driver.DECISION},
     DSPAxis.LIMIT: {Limit.TIMELOCK, Limit.OPTIONLOCK},
     DSPAxis.OUTCOME: {Outcome.SUCCESS, Outcome.FAILURE},
     DSPAxis.JUDGMENT: {Judgment.GOOD, Judgment.BAD},
@@ -784,7 +819,7 @@ def _check_domain_assignments(
 
 
 def _check_dynamic_story_points(dsps: tuple) -> list:
-    """Six DynamicStoryPoints, one per axis."""
+    """Eight DynamicStoryPoints, one per axis (the canonical essentials)."""
     out = []
     axes_found = {dsp.axis for dsp in dsps}
     all_axes = {a for a in DSPAxis}
@@ -796,7 +831,7 @@ def _check_dynamic_story_points(dsps: tuple) -> list:
             target_id="story",
             message=(f"Missing DynamicStoryPoint axes: "
                      f"{sorted(a.value for a in missing)}. "
-                     f"Dramatica expects all six."),
+                     f"Dramatica expects all eight."),
         ))
     # Check for duplicates.
     if len(dsps) > len(axes_found):
@@ -1885,6 +1920,8 @@ DSP_COUPLING_KIND_BY_AXIS = {
     DSPAxis.RESOLVE:   COUPLING_CLAIM_TRAJECTORY,  # MC changes vs. not across arc
     DSPAxis.GROWTH:    COUPLING_CLAIM_TRAJECTORY,  # MC adopts/stops a trait across arc
     DSPAxis.APPROACH:  COUPLING_CHARACTERIZATION,  # substrate events classify as Do-er/Be-er
+    DSPAxis.PROBLEM_SOLVING_STYLE: COUPLING_CHARACTERIZATION,  # MC's solving manner classifies
+    DSPAxis.DRIVER:    COUPLING_CHARACTERIZATION,  # act-boundary events classify as action/decision
     DSPAxis.LIMIT:     COUPLING_CHARACTERIZATION,  # substrate pressure shape classifies
     DSPAxis.OUTCOME:   COUPLING_CLAIM_MOMENT,      # at τ_s end: goal achieved or not
     DSPAxis.JUDGMENT:  COUPLING_CLAIM_TRAJECTORY,  # MC's internal resolution across arc
