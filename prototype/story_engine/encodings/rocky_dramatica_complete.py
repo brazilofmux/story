@@ -53,6 +53,7 @@ from story_engine.encodings.rocky_dramatic import (
 from story_engine.core.dramatica_template import (
     Domain, DSPAxis, QuadPosition,
     Resolve, Growth, Approach, Limit, Outcome, Judgment,
+    Dual,
     MotivationElement,
     DomainAssignment, DynamicStoryPoint, Signpost,
     QuadPick, ThematicPicks,
@@ -150,18 +151,29 @@ DOMAIN_ASSIGNMENTS = (
 #   camp is set, Rocky's camp is set, the card will go off at its
 #   time — ready or not.
 #
-# - Outcome: Failure. FIRST IN CORPUS. The OS goal — a clean
-#   bicentennial publicity-stunt win that extends Apollo's title
-#   on script — is not achieved. Apollo wins the scorecard but
-#   the stunt has been contaminated by what actually happened in
-#   the ring; 'ain't gonna be no rematch' is the IC conceding
-#   what the scorecards don't.
+# - Outcome: DUAL — Failure AND Success (ambiguity-honest; see
+#   memory `dramatica-precision-limit`). Dramatica insists the OS
+#   goal resolves to one pole "by definition," but Rocky genuinely
+#   spans both and the prose proved it: the blind evaluator flips
+#   failure↔success run-to-run (commit 7165324) because the story
+#   IS both. On the scoreboard the clean bicentennial publicity
+#   win is NOT achieved (Apollo keeps the belt) — Failure. Yet the
+#   stunt is contaminated by what happened in the ring; 'ain't
+#   gonna be no rematch' concedes what the scorecards don't, and
+#   Rocky's going-the-distance reads as the objective win the OS
+#   was really about — Success. Leans Failure (the literal verdict),
+#   but neither pole is the whole truth. Forcing one was the
+#   formalism defending itself; this declares the contest honestly.
 #
-# - Judgment: Good. Rocky's internal resolution is positive — he
-#   has gone the distance, he has Adrian, he has his self-respect.
-#   The film closes on Good even as the belt goes to Apollo.
+# - Judgment: Good (binary — unambiguous). Rocky's internal
+#   resolution is positive — he has gone the distance, he has
+#   Adrian, he has his self-respect. The film closes on Good even
+#   as the belt goes to Apollo. (Kept strict on purpose: it is the
+#   control axis — a flip to Bad must still score as drift.)
 #
-# Outcome × Judgment = Failure × Good = "Personal Triumph"
+# Outcome × Judgment = {Failure, Success} × Good
+#   = "personal-triumph / triumph" — a triumph either way Rocky is
+#   read; only the scoreboard is contested.
 # Third of four canonical endings now exercised (personal-tragedy
 # × 3 in Oedipus/Macbeth/Ackroyd, triumph × 1 in Pride and
 # Prejudice, personal-triumph × 1 in Rocky). Tragedy (Failure × Bad)
@@ -186,7 +198,9 @@ DYNAMIC_STORY_POINTS = (
     ),
     DynamicStoryPoint(
         id="DSP_outcome", axis=DSPAxis.OUTCOME,
-        choice=Outcome.FAILURE.value, story_id=STORY.id,
+        choice=Dual({Outcome.FAILURE, Outcome.SUCCESS},
+                    leans=Outcome.FAILURE.value),
+        story_id=STORY.id,
     ),
     DynamicStoryPoint(
         id="DSP_judgment", axis=DSPAxis.JUDGMENT,
@@ -195,11 +209,12 @@ DYNAMIC_STORY_POINTS = (
 )
 
 CANONICAL_ENDING = canonical_ending(
-    Outcome.FAILURE.value, Judgment.GOOD.value,
+    Dual({Outcome.FAILURE, Outcome.SUCCESS}, leans=Outcome.FAILURE.value),
+    Judgment.GOOD.value,
 )
-assert CANONICAL_ENDING == "personal-triumph", (
-    f"expected 'personal-triumph' canonical ending for "
-    f"Failure × Good; got {CANONICAL_ENDING!r}"
+assert CANONICAL_ENDING == "personal-triumph / triumph", (
+    f"expected the contested 'personal-triumph / triumph' ending for "
+    f"the DUAL Outcome {{Failure, Success}} × Good; got {CANONICAL_ENDING!r}"
 )
 
 

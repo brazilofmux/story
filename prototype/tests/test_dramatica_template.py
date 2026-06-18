@@ -21,6 +21,7 @@ from story_engine.core.dramatica_template import (
     # Enums
     Domain, DSPAxis, QuadPosition,
     Resolve, Growth, Approach, Limit, Outcome, Judgment,
+    AmbiguousChoice, Dual,
     MotivationElement, MethodologyElement,
     EvaluationElement, PurposeElement,
     DSP_VALID_CHOICES,
@@ -268,6 +269,74 @@ def test_dsp_all_axes_have_exactly_two_valid_choices():
         assert len(choices) == 2, (
             f"axis {axis.value} should have 2 choices; got {len(choices)}"
         )
+
+
+# ============================================================================
+# Ambiguity-honest DSP values (dramatica-precision-limit)
+# ============================================================================
+
+
+def test_single_pole_dsp_reports_singleton_span():
+    """A plain binary DSP exposes a one-element pole span and itself as the
+    lean — the substrate stays unchanged for non-ambiguous axes."""
+    dsp = DynamicStoryPoint(id="d", axis=DSPAxis.OUTCOME,
+                            choice="failure", story_id="S")
+    assert dsp.is_dual is False
+    assert dsp.poles == frozenset({"failure"})
+    assert dsp.leans == "failure"
+
+
+def test_dual_dsp_spans_both_poles_with_lean():
+    """An author can declare an axis genuinely dual; it spans both poles and
+    carries a representative lean for display."""
+    dsp = DynamicStoryPoint(
+        id="d", axis=DSPAxis.OUTCOME,
+        choice=Dual({Outcome.FAILURE, Outcome.SUCCESS}, leans="failure"),
+        story_id="S")
+    assert dsp.is_dual is True
+    assert dsp.poles == frozenset({"failure", "success"})
+    assert dsp.leans == "failure"
+
+
+def test_dual_with_invalid_pole_rejected():
+    """A dual value is still validated against the axis's pole set."""
+    try:
+        DynamicStoryPoint(id="d", axis=DSPAxis.OUTCOME,
+                          choice=Dual({"failure", "maybe"}), story_id="S")
+        assert False, "invalid pole in a dual should raise"
+    except ValueError:
+        pass
+
+
+def test_ambiguous_choice_requires_two_poles():
+    """'Ambiguous' over a single pole is a contradiction — use a string."""
+    try:
+        AmbiguousChoice(poles=frozenset({"failure"}))
+        assert False, "a single-pole AmbiguousChoice should raise"
+    except ValueError:
+        pass
+
+
+def test_ambiguous_lean_must_be_a_spanned_pole():
+    try:
+        Dual({"failure", "success"}, leans="bad")
+        assert False, "a lean outside the span should raise"
+    except ValueError:
+        pass
+
+
+def test_canonical_ending_dual_outcome_is_contested():
+    """A dual Outcome × Good judgment collapses to the contested ending —
+    both 'personal-triumph' and 'triumph', joined honestly."""
+    ending = canonical_ending(
+        Dual({Outcome.FAILURE, Outcome.SUCCESS}), Judgment.GOOD.value)
+    assert ending == "personal-triumph / triumph"
+
+
+def test_canonical_ending_binary_unchanged():
+    """The binary path is byte-identical to before — no regression."""
+    assert canonical_ending("failure", "good") == "personal-triumph"
+    assert canonical_ending("success", "bad") == "personal-tragedy"
 
 
 # ============================================================================
@@ -1327,6 +1396,13 @@ TESTS = [
     test_dsp_valid_choice_accepted,
     test_dsp_invalid_choice_rejected,
     test_dsp_all_axes_have_exactly_two_valid_choices,
+    test_single_pole_dsp_reports_singleton_span,
+    test_dual_dsp_spans_both_poles_with_lean,
+    test_dual_with_invalid_pole_rejected,
+    test_ambiguous_choice_requires_two_poles,
+    test_ambiguous_lean_must_be_a_spanned_pole,
+    test_canonical_ending_dual_outcome_is_contested,
+    test_canonical_ending_binary_unchanged,
     # Signpost construction (Q7)
     test_signpost_valid_position_accepted,
     test_signpost_invalid_position_rejected,

@@ -44,7 +44,11 @@ def test_bible_surfaces_storyform_not_tragedy():
     bible = "\n".join(frame.bible_sections(name_map={}))
     # Dramatica vocabulary present
     assert "personal-triumph" in bible
-    assert "Outcome = FAILURE" in bible and "Judgment = GOOD" in bible
+    # Outcome is authored DUAL ({Failure, Success}) — the bible frames it as
+    # genuinely contested rather than a flat single pole; Judgment stays a
+    # plain binary. (Ambiguity-honest substrate — dramatica-precision-limit.)
+    assert "BOTH FAILURE and SUCCESS" in bible and "CONTESTED" in bible
+    assert "Judgment = GOOD" in bible
     assert "four throughlines" in bible
     assert "Main Character" in bible and "Influence Character" in bible
     assert "STEADFAST" in bible and "TIMELOCK" in bible

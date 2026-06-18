@@ -163,7 +163,27 @@ class DramaticaFrame(DialectFrame):
             key=lambda da: order.get(_perspective_of(da.throughline_id), 9),
         )
         self._dyn = {d.axis.value if hasattr(d.axis, "value") else d.axis:
-                     d.choice for d in storyform.dynamics}
+                     d.leans for d in storyform.dynamics}
+        # Axes the author declared as genuinely dual (span >1 pole) — the
+        # bible frames these as contested rather than flat, so the prose can
+        # carry the ambiguity instead of being pushed to one binary pole.
+        self._dual = {d.axis.value if hasattr(d.axis, "value") else d.axis:
+                      sorted(d.poles) for d in storyform.dynamics
+                      if getattr(d, "is_dual", False)}
+
+    def _axis_phrase(self, axis: str, lean: str) -> str:
+        """Render one ending axis for the bible. A single-pole axis reads
+        flat ('FAILURE: …'). A DUAL axis is framed as genuinely contested —
+        the prose should carry BOTH poles at once, not resolve to one."""
+        gloss = _DSP_GLOSS.get(axis, ("", {}))[1]
+        dual = self._dual.get(axis)
+        if dual:
+            both = " and ".join(p.upper() for p in dual)
+            reads = "; ".join(f"{p.upper()} ({gloss.get(p, '')})" for p in dual)
+            return (f"genuinely BOTH {both} — this axis is CONTESTED, not "
+                    f"resolved to one pole. Hold both true at once: {reads}. "
+                    f"Render the ambiguity; do not collapse it to a binary.")
+        return f"{lean.upper()}: {gloss.get(lean, '')}"
 
     # -- bible -------------------------------------------------------------
 
@@ -179,10 +199,8 @@ class DramaticaFrame(DialectFrame):
         if sf.canonical_ending or (outcome and judgment):
             lines.append(
                 f"\n## Ending shape — {sf.canonical_ending or '(derived)'}\n"
-                f"- Outcome = {outcome.upper()}: "
-                f"{_DSP_GLOSS['outcome'][1].get(outcome, '')}\n"
-                f"- Judgment = {judgment.upper()}: "
-                f"{_DSP_GLOSS['judgment'][1].get(judgment, '')}\n"
+                f"- Outcome = {self._axis_phrase('outcome', outcome)}\n"
+                f"- Judgment = {self._axis_phrase('judgment', judgment)}\n"
                 f"Render to THIS shape — do not force a tragic catastrophe if "
                 f"the judgment is Good, and do not force a happy ending if the "
                 f"outcome is Failure. The two axes are independent.")

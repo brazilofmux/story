@@ -126,6 +126,56 @@ DSP_VALID_CHOICES = {
 }
 
 
+def _pole_value(x) -> str:
+    """Normalize an axis pole given as an Enum member or a raw string."""
+    return x.value if hasattr(x, "value") else x
+
+
+@dataclass(frozen=True)
+class AmbiguousChoice:
+    """A DynamicStoryPoint value that genuinely spans MORE THAN ONE pole.
+
+    Dramatica insists each axis resolves to one binary pole "by definition."
+    But some stories legitimately run on both at once — a clock AND dwindling
+    options (Limit), a contest LOST on the scoreboard yet WON in every way
+    that matters (Outcome). Forcing the binary there is the formalism
+    defending itself, not a fact about the story (see memory
+    `dramatica-precision-limit`). This value lets the substrate hold the
+    more general state honestly — "pretend less, not more" — and collapse to
+    a single pole only when the story actually does.
+
+    - `poles` — the (>=2) axis poles the value spans; each must be valid for
+      the axis it is attached to.
+    - `leans` — an OPTIONAL single representative pole, for the rare consumer
+      that must pick one (display, generation framing). '' = genuinely
+      balanced, no lean.
+    """
+    poles: frozenset
+    leans: str = ""
+
+    def __post_init__(self):
+        if len(self.poles) < 2:
+            raise ValueError(
+                f"AmbiguousChoice spans {sorted(self.poles)}; an ambiguous "
+                f"value must span at least two poles (use a plain string for "
+                f"a single pole)."
+            )
+        if self.leans and self.leans not in self.poles:
+            raise ValueError(
+                f"AmbiguousChoice leans={self.leans!r} is not among its poles "
+                f"{sorted(self.poles)}."
+            )
+
+
+def Dual(poles, leans="") -> AmbiguousChoice:
+    """Ergonomic constructor: `Dual({Outcome.FAILURE, Outcome.SUCCESS},
+    leans='failure')`. Accepts Enum members or strings for both args."""
+    return AmbiguousChoice(
+        poles=frozenset(_pole_value(p) for p in poles),
+        leans=_pole_value(leans) if leans else "",
+    )
+
+
 class QuadPosition(str, Enum):
     """The four positions within a Quad."""
     A = "A"
@@ -226,23 +276,57 @@ class DomainAssignment:
 
 @dataclass(frozen=True)
 class DynamicStoryPoint:
-    """One of six binary-choice records at Story level. Per Q5, all
-    six are expected when the Template is `dramatica-complete`."""
+    """One of six choice records at Story level. Per Q5, all six are
+    expected when the Template is `dramatica-complete`.
+
+    `choice` is normally a single pole string (the binary case). It may also
+    be an `AmbiguousChoice` when the story genuinely spans both poles and
+    refuses the binary (see `dramatica-precision-limit`). Read `.poles` for
+    the set it spans and `.leans` for a single representative pole."""
     id: str
     axis: DSPAxis
-    choice: str                   # value from the axis's valid set
+    choice: object                # a pole string, OR an AmbiguousChoice
     story_id: str
     authored_by: str = "author"
 
     def __post_init__(self):
-        valid = DSP_VALID_CHOICES.get(self.axis, set())
-        if self.choice not in {v.value for v in valid}:
+        valid = {v.value for v in DSP_VALID_CHOICES.get(self.axis, set())}
+        if isinstance(self.choice, AmbiguousChoice):
+            bad = self.choice.poles - valid
+            if bad:
+                raise ValueError(
+                    f"DynamicStoryPoint {self.id!r}: ambiguous poles "
+                    f"{sorted(bad)} are not valid for axis "
+                    f"{self.axis.value!r}; valid choices are {sorted(valid)}"
+                )
+        elif self.choice not in valid:
             raise ValueError(
                 f"DynamicStoryPoint {self.id!r}: choice "
                 f"{self.choice!r} is not valid for axis "
-                f"{self.axis.value!r}; valid choices are "
-                f"{sorted(v.value for v in valid)}"
+                f"{self.axis.value!r}; valid choices are {sorted(valid)}"
             )
+
+    @property
+    def is_dual(self) -> bool:
+        """True when this axis was authored as genuinely spanning >1 pole."""
+        return isinstance(self.choice, AmbiguousChoice)
+
+    @property
+    def poles(self) -> frozenset:
+        """The set of axis poles this DSP spans. A single-pole choice → a
+        one-element set; an AmbiguousChoice → its full span."""
+        if isinstance(self.choice, AmbiguousChoice):
+            return self.choice.poles
+        return frozenset({self.choice})
+
+    @property
+    def leans(self) -> str:
+        """A single representative pole, for consumers that must pick ONE
+        (display, generation framing). A dual value's declared lean, or — if
+        balanced — a stable arbitrary pole."""
+        if isinstance(self.choice, AmbiguousChoice):
+            return self.choice.leans or sorted(self.choice.poles)[0]
+        return self.choice
 
 
 @dataclass(frozen=True)
@@ -870,15 +954,38 @@ def verify_dramatica_complete(
 # ============================================================================
 
 
-def canonical_ending(outcome: str, judgment: str) -> str:
-    """Dramatica's four-way ending categorization."""
-    table = {
-        (Outcome.SUCCESS.value, Judgment.GOOD.value): "triumph",
-        (Outcome.SUCCESS.value, Judgment.BAD.value): "personal-tragedy",
-        (Outcome.FAILURE.value, Judgment.GOOD.value): "personal-triumph",
-        (Outcome.FAILURE.value, Judgment.BAD.value): "tragedy",
-    }
-    return table.get((outcome, judgment), "unknown")
+_ENDING_TABLE = {
+    (Outcome.SUCCESS.value, Judgment.GOOD.value): "triumph",
+    (Outcome.SUCCESS.value, Judgment.BAD.value): "personal-tragedy",
+    (Outcome.FAILURE.value, Judgment.GOOD.value): "personal-triumph",
+    (Outcome.FAILURE.value, Judgment.BAD.value): "tragedy",
+}
+
+
+def canonical_ending(outcome, judgment) -> str:
+    """Dramatica's four-way ending categorization.
+
+    `outcome` and `judgment` are each a single pole string OR an
+    `AmbiguousChoice`. When an axis is dual, the ending is computed over the
+    cartesian product of the spanned poles: if every combination lands the
+    same canonical cell, that cell is returned; otherwise the distinct cells
+    are joined with ' / ' (a genuinely contested ending — Rocky's loss reads
+    as both 'personal-triumph' and 'triumph', and that ambiguity is the
+    truth, not a thing to resolve away)."""
+    def _poles(v):
+        return sorted(v.poles) if isinstance(v, AmbiguousChoice) else [v]
+
+    endings = []
+    for o in _poles(outcome):
+        for j in _poles(judgment):
+            endings.append(_ENDING_TABLE.get((o, j), "unknown"))
+    # de-dup, preserve first-seen order
+    seen, distinct = set(), []
+    for e in endings:
+        if e not in seen:
+            seen.add(e)
+            distinct.append(e)
+    return " / ".join(distinct)
 
 
 # ============================================================================

@@ -187,11 +187,32 @@ class DramaticaFidelityReport:
 
 
 def _dyn_map(storyform) -> dict:
+    """{axis: representative pole string}. For a dual axis this is the lean
+    — a single string, so string-consuming callers (repair's directive) keep
+    working. Use `_dyn_poles` when you need the honest full span."""
     out = {}
     for d in getattr(storyform, "dynamics", ()) or ():
         axis = d.axis.value if hasattr(d.axis, "value") else d.axis
-        out[axis] = d.choice
+        out[axis] = d.leans if hasattr(d, "leans") else d.choice
     return out
+
+
+def _dyn_poles(storyform) -> dict:
+    """{axis: frozenset of lowercased poles}. A single-pole axis → a 1-set;
+    a dual axis → its full span. This is what makes scoring ambiguity-honest:
+    a read that lands ANY spanned pole is faithful."""
+    out = {}
+    for d in getattr(storyform, "dynamics", ()) or ():
+        axis = d.axis.value if hasattr(d.axis, "value") else d.axis
+        poles = d.poles if hasattr(d, "poles") else frozenset({d.choice})
+        out[axis] = frozenset(str(p).lower() for p in poles)
+    return out
+
+
+def _axis_label(poles: frozenset) -> str:
+    """Display label for an authored axis: the single pole, or the dual span
+    joined with '|' so the report SHOWS the axis was authored ambiguous."""
+    return "|".join(sorted(poles))
 
 
 def _perspective_of(throughline_id: str) -> str:
@@ -222,33 +243,45 @@ def compare_to_storyform(reading: DramaticaReading,
     Enum/name-level, pure Python; the reader never saw the storyform."""
     report = DramaticaFidelityReport(title=getattr(storyform, "title", ""))
     dyn = _dyn_map(storyform)
+    poles = _dyn_poles(storyform)
+
+    def _score_axis(axis: str, got_raw: str, base_note: str, dimension=None):
+        """Score one DSP axis by pole membership. A single-pole axis is
+        strict (the binary case, unchanged). A dual axis reads `preserved`
+        if the blind read lands ANY spanned pole — because for a genuinely
+        dual story EITHER pole is faithful; that is honesty, not leniency.
+        Ambiguity is declared by the AUTHOR — it never loosens a binary axis."""
+        spanned = poles.get(axis) or frozenset()
+        if not spanned:
+            return
+        got = (got_raw or "").lower()
+        dual = len(spanned) > 1
+        note = base_note
+        if dual:
+            note += (" — authored DUAL; either pole is faithful "
+                     "(ambiguity-honest, not drift)")
+        report.findings.append(DramaticaFidelityFinding(
+            dimension=dimension or axis, authored=_axis_label(spanned),
+            decompiled=got or "(none)",
+            verdict="preserved" if got in spanned else "drifted",
+            note=note))
 
     # 1. Outcome (objective result) — the load-bearing non-tragedy axis.
-    a_out = (dyn.get("outcome") or "").lower()
-    if a_out:
-        got = (reading.outcome or "").lower()
-        report.findings.append(DramaticaFidelityFinding(
-            dimension="outcome", authored=a_out, decompiled=got or "(none)",
-            verdict="preserved" if got == a_out else "drifted",
-            note="the objective result the prose lands"))
+    _score_axis("outcome", reading.outcome, "the objective result the prose lands")
 
     # 2. Judgment (personal resolution) — independent of outcome.
-    a_jud = (dyn.get("judgment") or "").lower()
-    if a_jud:
-        got = (reading.judgment or "").lower()
-        report.findings.append(DramaticaFidelityFinding(
-            dimension="judgment", authored=a_jud, decompiled=got or "(none)",
-            verdict="preserved" if got == a_jud else "drifted",
-            note="the Main Character's personal resolution"))
+    _score_axis("judgment", reading.judgment,
+                "the Main Character's personal resolution")
 
     # 3. Ending shape: the Outcome×Judgment combination survived as a whole.
     a_end = (getattr(storyform, "canonical_ending", "") or "").replace("-", " ")
     if a_end:
         got_end = (reading.ending_shape or "").lower()
-        ok = _matches(a_end, got_end) or (
-            # personal-triumph ≈ "loses but fulfilled"
-            a_out and a_jud and (a_out in got_end or a_jud in got_end
-                                 or "triumph" in got_end))
+        # A dual axis makes ANY of its spanned poles a faithful read of the
+        # ending's flavour — match against the full span, not one pole.
+        pole_hit = any(p in got_end for p in poles.get("outcome", ()))
+        pole_hit = pole_hit or any(p in got_end for p in poles.get("judgment", ()))
+        ok = _matches(a_end, got_end) or pole_hit or "triumph" in got_end
         report.findings.append(DramaticaFidelityFinding(
             dimension="ending_shape", authored=a_end,
             decompiled=reading.ending_shape or "(none)",
@@ -256,12 +289,8 @@ def compare_to_storyform(reading: DramaticaReading,
             note="the ending's character — not a tragedy if judgment is good"))
 
     # 4. MC Resolve (steadfast / changed).
-    a_res = (dyn.get("resolve") or "").lower()
-    if a_res:
-        got = (reading.mc_resolve or "").lower()
-        report.findings.append(DramaticaFidelityFinding(
-            dimension="mc_resolve", authored=a_res, decompiled=got or "(none)",
-            verdict="preserved" if got == a_res else "drifted"))
+    _score_axis("resolve", reading.mc_resolve,
+                "the Main Character's resolve", dimension="mc_resolve")
 
     # 5. Main Character identity (the MC throughline's subject).
     mc_subject = ""

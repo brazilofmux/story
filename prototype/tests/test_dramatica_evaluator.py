@@ -71,12 +71,14 @@ def test_faithful_read_scores_high():
 
 
 def test_outcome_and_judgment_are_independent_axes():
-    """The headline: a faithful Rocky read is Outcome=Failure AND
-    Judgment=Good — the two are scored separately, both preserved."""
+    """The headline: a faithful Rocky read scores Outcome and Judgment
+    separately, both preserved. Outcome is authored DUAL ({failure,
+    success}); a 'failure' read lands a spanned pole, so it is preserved.
+    Judgment is a plain binary 'good'."""
     report = compare_to_storyform(_faithful_read(), _storyform())
     by_dim = {f.dimension: f for f in report.findings}
-    assert by_dim["outcome"].authored == "failure"
-    assert by_dim["outcome"].verdict == "preserved"
+    assert by_dim["outcome"].authored == "failure|success"   # dual span shown
+    assert by_dim["outcome"].verdict == "preserved"          # failure ∈ span
     assert by_dim["judgment"].authored == "good"
     assert by_dim["judgment"].verdict == "preserved"
 
@@ -100,6 +102,49 @@ def test_outcome_preserved_even_in_drift():
     assert by_dim["outcome"].verdict == "preserved"     # failure == failure
 
 
+def _triumphant_success_read():
+    """A blind read where the prose's triumphant framing led the reader to
+    score the OUTCOME as 'success' — the documented run-to-run flip
+    (commit 7165324). Judgment is still 'good'. For Rocky's DUAL outcome
+    this read is FAITHFUL, not drift: the story genuinely is both."""
+    return DramaticaReading(
+        story_goal="prove he could go the distance with the champion",
+        outcome="success", judgment="good", ending_shape="triumph",
+        main_character="Rocky", mc_resolve="steadfast",
+        influence_character="Apollo", relationship="Rocky and Adrian",
+        throughlines_present=["overall", "main character",
+                              "influence character", "relationship"],
+        overall_read="he goes the distance and wins what the fight was about.",
+    )
+
+
+def test_dual_outcome_either_pole_is_faithful():
+    """The ambiguity-honest payoff: Rocky's Outcome is authored DUAL
+    ({failure, success}). A read of EITHER pole is preserved — the
+    run-to-run flip that used to score as drift is now read as the real
+    ambiguity it is (dramatica-precision-limit), not a fidelity loss."""
+    fail = compare_to_storyform(_faithful_read(), _storyform())
+    succ = compare_to_storyform(_triumphant_success_read(), _storyform())
+    fdim = {f.dimension: f for f in fail.findings}
+    sdim = {f.dimension: f for f in succ.findings}
+    assert fdim["outcome"].verdict == "preserved"   # read 'failure'
+    assert sdim["outcome"].verdict == "preserved"   # read 'success'
+    # the finding discloses the duality rather than hiding it behind one pole
+    assert "DUAL" in sdim["outcome"].note
+    assert sdim["outcome"].authored == "failure|success"
+
+
+def test_binary_judgment_stays_strict_under_dual_outcome():
+    """The integrity guard: making OUTCOME dual must NOT loosen the binary
+    JUDGMENT axis. A read that flips Judgment good→bad is still drift — a
+    genuine tragedy collapse is still caught. Ambiguity is declared per
+    axis by the author; it is not a blanket forgiveness."""
+    report = compare_to_storyform(_tragic_drift_read(), _storyform())
+    by_dim = {f.dimension: f for f in report.findings}
+    assert by_dim["outcome"].verdict == "preserved"   # failure ∈ dual span
+    assert by_dim["judgment"].verdict == "drifted"    # good→bad, STRICT
+
+
 def test_throughline_coverage():
     report = compare_to_storyform(_faithful_read(), _storyform())
     tl = [f for f in report.findings if f.dimension == "throughline"]
@@ -118,6 +163,8 @@ TESTS = [
     test_outcome_and_judgment_are_independent_axes,
     test_tragic_drift_is_caught,
     test_outcome_preserved_even_in_drift,
+    test_dual_outcome_either_pole_is_faithful,
+    test_binary_judgment_stays_strict_under_dual_outcome,
     test_throughline_coverage,
 ]
 

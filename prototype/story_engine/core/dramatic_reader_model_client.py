@@ -423,13 +423,18 @@ def _domain_assignment_to_dict(da) -> dict:
 
 
 def _dynamic_story_point_to_dict(dsp) -> dict:
-    return {
+    out = {
         "kind": "DynamicStoryPoint",
         "id": dsp.id,
         "axis": dsp.axis.value if hasattr(dsp.axis, "value") else dsp.axis,
-        "choice": dsp.choice,
+        # A dual axis serializes to its representative pole here, with the
+        # full span exposed alongside so the read stays ambiguity-honest.
+        "choice": dsp.leans if hasattr(dsp, "leans") else dsp.choice,
         "story_id": dsp.story_id,
     }
+    if getattr(dsp, "is_dual", False):
+        out["choice_poles"] = sorted(dsp.poles)
+    return out
 
 
 def _signpost_to_dict(sp) -> dict:
