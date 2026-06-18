@@ -79,6 +79,17 @@ names that dialect's vocabulary.
   "author by interview" is ✅ across all four).
 - **The extraction is LLM-shaped and self-graded**, the same named caveat. The
   spine is where the correctness lives, and it is model-free.
+- **Two extraction transports, by schema size.** The structured-output grammar
+  compiler (`messages.parse`) has a complexity ceiling: the Aristotelian and
+  Save-the-Cat schemas compile under it, but the larger Dramatica / Dramatic
+  schemas do not (the API returns "Schema is too complex" / "Grammar
+  compilation timed out"). Those two dialects extract via plain **JSON mode**
+  instead — ask for a JSON object, validate with the same pydantic schema in
+  Python — which has no schema-size limit. A per-dialect `constrained` flag on
+  the `Dialect` record selects the transport. *Verified live:* a sparse
+  Dramatica brief ("a data-only climate scientist vs. her brother of pure
+  faith") converged in two rounds to a complete storyform — four throughlines
+  in four distinct domains, all eight dynamics, goal + consequence, 0 gaps.
 
 ## Why this is the right shape
 

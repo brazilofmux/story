@@ -314,11 +314,12 @@ DRAMATICA_DYNAMICS = {
 
 
 def _normalize_dynamics(raw) -> dict:
-    """Accept dynamics as a dict {axis: pole} or a list [{axis, choice}], and
-    normalize to {axis: pole-or-tuple}. A list/tuple choice is a genuinely-dual
-    (ambiguous) axis — honored, not flattened (see `dramatica-precision-limit`):
-    forcing a binary the story doesn't commit to is exactly the over-claim the
-    substrate refuses."""
+    """Accept dynamics as a dict {axis: pole} (the extraction schema's flat
+    shape, with underscore or hyphen keys) or a list [{axis, choice}], and
+    normalize to {axis: pole-or-tuple} keyed by the canonical hyphen axis names.
+    A list/tuple choice is a genuinely-dual (ambiguous) axis — honored, not
+    flattened (see `dramatica-precision-limit`): forcing a binary the story
+    doesn't commit to is exactly the over-claim the substrate refuses."""
     out: dict = {}
     items = []
     if isinstance(raw, dict):
@@ -328,13 +329,17 @@ def _normalize_dynamics(raw) -> dict:
             if isinstance(d, dict):
                 items.append((d.get("axis"), d.get("choice", d.get("pole"))))
     for axis, choice in items:
-        a = str(axis or "").strip().lower()
+        a = str(axis or "").strip().lower().replace("_", "-")
         if not a:
             continue
         if isinstance(choice, (list, tuple)):
-            out[a] = tuple(str(c).strip().lower() for c in choice if str(c).strip())
+            poles = tuple(str(c).strip().lower() for c in choice if str(c).strip())
+            if poles:                       # an empty list is an unset axis
+                out[a] = poles
         else:
-            out[a] = str(choice or "").strip().lower()
+            pole = str(choice or "").strip().lower()
+            if pole:                        # an empty string is an unset axis
+                out[a] = pole
     return out
 
 
@@ -468,12 +473,21 @@ def _dramatic_overlay(doc: dict) -> list:
 class Dialect:
     """A pluggable overlay: how the interview gap-checks and extracts a story
     in one dialect's vocabulary. `overlay_gaps` is the deterministic spine
-    half; `system_prompt` / `build_schema` are the LLM extraction half."""
+    half; `system_prompt` / `build_schema` are the LLM extraction half.
+
+    `constrained` selects the extraction transport. The structured-output
+    grammar compiler (`messages.parse`) has a schema-complexity ceiling — the
+    Aristotelian and Save-the-Cat schemas compile under it, but the larger
+    Dramatica / Dramatic schemas do not (the server returns "Schema is too
+    complex" / "Grammar compilation timed out"). Those dialects extract via
+    plain JSON mode instead (ask for JSON, validate with pydantic in Python),
+    which has no schema-size limit. See `extract_story_draft`."""
     name: str
     overlay_gaps: Callable[[dict], list]
     system_prompt: str
     build_schema: Callable[[], type]
     postprocess: Optional[Callable[[dict], dict]] = None
+    constrained: bool = True
 
 
 # ---- extraction: shared base + per-dialect schemas (pydantic, lazy) --------
@@ -587,21 +601,25 @@ def _dramatica_schema():
         when: Optional[int] = Field(default=None)
         who: list[str] = Field(default_factory=list)
         summary: str = ""
-        focalizer: str = ""
 
     class ThroughlineDraft(BaseModel):
-        role: str = Field(description="overall-story | main-character | "
-                                      "impact-character | relationship")
-        domain: str = Field(default="",
-                            description="activity | situation | manipulation | "
-                                        "fixed-attitude")
+        role: str = Field(description="one of the four throughline roles")
+        domain: str = Field(default="", description="one of the four domains")
         owner: str = Field(default="", description="character id, if any")
 
-    class DynamicDraft(BaseModel):
-        axis: str = Field(description="resolve | growth | approach | "
-                                      "problem-solving-style | driver | limit | "
-                                      "outcome | judgment")
-        choice: str = Field(default="", description="the chosen pole")
+    # The eight dynamics as one flat object (each a single pole). Kept flat —
+    # not a list of {axis, choice} — to stay under the structured-output schema
+    # complexity ceiling. `_normalize_dynamics` maps these to the canonical
+    # hyphenated axis names.
+    class DynamicsDraft(BaseModel):
+        resolve: str = ""
+        growth: str = ""
+        approach: str = ""
+        problem_solving_style: str = ""
+        driver: str = ""
+        limit: str = ""
+        outcome: str = ""
+        judgment: str = ""
 
     class PhasesDraft(BaseModel):
         beginning: list[str] = Field(default_factory=list)
@@ -617,7 +635,7 @@ def _dramatica_schema():
         characters: list[CharacterDraft] = Field(default_factory=list)
         events: list[EventDraft] = Field(default_factory=list)
         throughlines: list[ThroughlineDraft] = Field(default_factory=list)
-        dynamics: list[DynamicDraft] = Field(default_factory=list)
+        dynamics: DynamicsDraft = Field(default_factory=DynamicsDraft)
         phases: PhasesDraft = Field(default_factory=PhasesDraft)
 
     return StoryDraft
@@ -786,10 +804,10 @@ DIALECTS: dict = {
         _save_the_cat_schema, _postprocess_save_the_cat),
     "dramatica": Dialect(
         "dramatica", _dramatica_overlay, _DRAMATICA_PROMPT,
-        _dramatica_schema, _postprocess_generic),
+        _dramatica_schema, _postprocess_generic, constrained=False),
     "dramatic": Dialect(
         "dramatic", _dramatic_overlay, _DRAMATIC_PROMPT,
-        _dramatic_schema, _postprocess_generic),
+        _dramatic_schema, _postprocess_generic, constrained=False),
 }
 
 DEFAULT_DIALECT = "aristotelian"
@@ -932,6 +950,42 @@ def run_interview(
 # The LLM half — extract / merge the authoring dict from natural input
 # ============================================================================
 
+def _extract_via_json(*, system_prompt, user_prompt, output_format, model,
+                      effort, max_tokens, dry_run, client):
+    """Extraction without the structured-output grammar compiler: ask for a
+    JSON object, parse it, and validate with the pydantic schema in Python.
+    Used for dialects whose schema exceeds the `messages.parse` complexity
+    ceiling. Returns the validated model instance, or None on dry_run."""
+    import json
+    schema_hint = json.dumps(output_format.model_json_schema())
+    sys_prompt = (system_prompt + "\n\nReturn your answer as a single JSON "
+                  "object conforming to this JSON Schema (no prose, no code "
+                  "fence):\n" + schema_hint)
+    full_user = user_prompt + "\n\nReturn ONLY the JSON object."
+    if dry_run:
+        return None
+
+    import anthropic
+    client = client or anthropic.Anthropic()
+    response = client.messages.create(
+        model=model, max_tokens=max_tokens, thinking={"type": "adaptive"},
+        output_config={"effort": effort},
+        system=[{"type": "text", "text": sys_prompt,
+                 "cache_control": {"type": "ephemeral"}}],
+        messages=[{"role": "user", "content": full_user}],
+    )
+    text = "".join(b.text for b in response.content if b.type == "text").strip()
+    # tolerate a stray code fence or surrounding prose
+    if "```" in text:
+        text = text.split("```", 2)[1]
+        if text.startswith("json"):
+            text = text[4:]
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end != -1:
+        text = text[start:end + 1]
+    return output_format.model_validate(json.loads(text))
+
+
 def extract_story_draft(
     brief: str,
     *,
@@ -949,11 +1003,12 @@ def extract_story_draft(
     on dry_run.
 
     The schema and system prompt come from the dialect registry, so the model
-    fills the right overlay's fields. Pydantic is imported in the schema
+    fills the right overlay's fields. Dialects flagged `constrained` extract
+    via the structured-output grammar (`messages.parse`); the rest extract via
+    plain JSON mode (`_extract_via_json`) because their schema exceeds the
+    grammar compiler's complexity ceiling. Pydantic is imported in the schema
     builders, lazily, so `interview_gaps` and the rest of the spine stay
     standard-library and offline-testable."""
-    from story_engine.core.reader_model_client_base import invoke_parse_helper
-
     d = _dialect(dialect)
     output_format = d.build_schema()
 
@@ -967,11 +1022,19 @@ def extract_story_draft(
     parts.append("Produce the complete, updated authoring record.")
     user_prompt = "\n\n".join(parts)
 
-    draft = invoke_parse_helper(
-        system_prompt=d.system_prompt, user_prompt=user_prompt,
-        output_format=output_format, model=model, max_tokens=max_tokens,
-        effort=effort, dry_run=dry_run, client=client,
-    )
+    if d.constrained:
+        from story_engine.core.reader_model_client_base import invoke_parse_helper
+        draft = invoke_parse_helper(
+            system_prompt=d.system_prompt, user_prompt=user_prompt,
+            output_format=output_format, model=model, max_tokens=max_tokens,
+            effort=effort, dry_run=dry_run, client=client,
+        )
+    else:
+        draft = _extract_via_json(
+            system_prompt=d.system_prompt, user_prompt=user_prompt,
+            output_format=output_format, model=model, max_tokens=max_tokens,
+            effort=effort, dry_run=dry_run, client=client,
+        )
     if draft is None:
         return None
     doc = draft.model_dump()

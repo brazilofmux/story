@@ -64,7 +64,7 @@ def _simulated_author(premise, effort):
             user_prompt=f"Your story premise:\n{premise}\n\nThe interviewer "
                         f"asks:\n{q}\n\nAnswer each, briefly.",
             output_format=Answers, model="claude-opus-4-6",
-            max_tokens=1500, effort=effort,
+            max_tokens=1500, effort=effort, dry_run=False,
         )
         return out.answers if out else ""
     return answer_fn
