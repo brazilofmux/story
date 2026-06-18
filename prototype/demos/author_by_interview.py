@@ -31,8 +31,41 @@ import sys
 
 from story_engine.core.authoring_interview import (
     interview_gaps, blocking_gaps, is_compilable, extract_story_draft,
+    run_interview,
 )
 from story_engine.core.authoring import compile_story, verify_compiled
+
+
+_SPARSE_BRIEF = "A lighthouse keeper's pride costs a ship. It ends badly."
+
+
+def _simulated_author(premise, effort):
+    """An answer_fn backed by an LLM playing the AUTHOR: it answers the
+    interviewer's questions from the premise, inventing consistent specifics
+    a writer would — so the multi-round loop runs autonomously."""
+    from pydantic import BaseModel, Field
+    from story_engine.core.reader_model_client_base import invoke_parse_helper
+
+    class Answers(BaseModel):
+        answers: str = Field(description="concise, concrete answers to the "
+                             "interviewer's questions")
+
+    def answer_fn(questions, _doc):
+        if not questions:
+            return ""
+        q = "\n".join(f"- {x}" for x in questions)
+        out = invoke_parse_helper(
+            system_prompt="You are the AUTHOR of a story being interviewed by "
+                          "a story-structure engine. Answer concretely and "
+                          "consistently, committing to specifics a writer "
+                          "would choose. Keep it brief.",
+            user_prompt=f"Your story premise:\n{premise}\n\nThe interviewer "
+                        f"asks:\n{q}\n\nAnswer each, briefly.",
+            output_format=Answers, model="claude-opus-4-6",
+            max_tokens=1500, effort=effort,
+        )
+        return out.answers if out else ""
+    return answer_fn
 
 
 _SAMPLE_BRIEF = (
@@ -85,6 +118,9 @@ def _cli():
                    help="The author's answers to a prior round of questions.")
     p.add_argument("--dry-run", action="store_true",
                    help="Show the spine on a built-in partial story (no API).")
+    p.add_argument("--interview", action="store_true",
+                   help="Run the multi-round loop from a SPARSE brief with an "
+                        "AI-simulated author answering each round (autonomous).")
     p.add_argument("--generate", action="store_true",
                    help="If the draft compiles clean, render the first scene.")
     p.add_argument("--effort", default="high",
@@ -109,6 +145,40 @@ def main() -> int:
         print("ERROR: ANTHROPIC_API_KEY not set (or pass --dry-run).",
               file=sys.stderr)
         return 1
+
+    if args.interview:
+        brief = args.brief if args.brief != _SAMPLE_BRIEF else _SPARSE_BRIEF
+        print("=" * 72)
+        print("MULTI-ROUND INTERVIEW (AI-simulated author)")
+        print("=" * 72)
+        print(f"\nSparse brief: {brief}\n")
+
+        def on_round(rec, blocking, structural):
+            print(f"  [round {rec.round}] {rec.n_blocking} blocking, "
+                  f"{rec.n_structural} structural"
+                  + (f" — STOP: {rec.stopped}" if rec.stopped else ""))
+            for g in (blocking + structural)[:3]:
+                print(f"      ? {g.question}")
+            if rec.answers:
+                print(f"      ↳ author: {rec.answers[:160].strip()}…")
+
+        run = run_interview(
+            brief=brief,
+            extract_fn=lambda b, prior, ans: extract_story_draft(
+                b, prior=prior, answers=ans, effort=args.effort),
+            answer_fn=_simulated_author(brief, args.effort),
+            max_rounds=6, on_round=on_round,
+        )
+        print(f"\n{'complete' if run.complete else 'stopped: ' + run.rounds[-1].stopped}"
+              f" after {len(run.rounds)} round(s); "
+              f"compilable: {run.compilable}")
+        if run.compilable:
+            compiled = compile_story(run.final_doc)
+            obs = verify_compiled(compiled)
+            print(f"compiled: {len(compiled.fabula)} events, "
+                  f"{len(compiled.entities)} entities; "
+                  f"verifier observations: {len(obs)}")
+        return 0
 
     print("=" * 72)
     print("INTERVIEW — brief → draft → questions")

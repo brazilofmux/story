@@ -32,7 +32,7 @@ extract again → until no blocking gaps remain → `compile_story` →
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -207,6 +207,94 @@ def next_questions(doc: dict, *, n: int = 3, include_structural: bool = True):
     if include_structural:
         gaps = gaps + structural_gaps(doc)
     return [g.question for g in gaps[:n]]
+
+
+# ============================================================================
+# The loop controller — pure, with injected extract_fn / answer_fn
+# ============================================================================
+
+@dataclass
+class InterviewRound:
+    round: int
+    n_blocking: int
+    n_structural: int
+    questions: list = field(default_factory=list)
+    answers: str = ""
+    stopped: str = ""          # reason this was the last round, if so
+
+
+@dataclass
+class InterviewRun:
+    rounds: list = field(default_factory=list)
+    final_doc: dict = field(default_factory=dict)
+
+    @property
+    def complete(self) -> bool:
+        return bool(self.rounds) and self.rounds[-1].stopped == "complete"
+
+    @property
+    def compilable(self) -> bool:
+        return is_compilable(self.final_doc)
+
+
+def run_interview(
+    *,
+    brief: str,
+    extract_fn,
+    answer_fn,
+    max_rounds: int = 6,
+    ask_structural: bool = True,
+    on_round=None,
+) -> InterviewRun:
+    """Drive the interview to a well-formed authoring dict.
+
+    `extract_fn(brief, prior, answers) -> dict` turns the brief + the prior
+    draft + the author's latest answers into the authoring dict (the LLM half,
+    or a fake in tests). `answer_fn(questions, doc) -> str` supplies the
+    author's answers to the round's questions (interactive stdin, an
+    AI-simulated author, a scripted list, or a fake) — an empty answer ends the
+    interview.
+
+    The loop is pure given those two; it mirrors `draft_convergence.converge`:
+    extract → gaps-as-questions → answer → re-extract, stopping when no gaps
+    remain ('complete'), when answers stop reducing the gap count ('stalled'),
+    when the author finishes, or at `max_rounds`."""
+    run = InterviewRun()
+    doc = extract_fn(brief, None, None) or {}
+    prev_metric = None
+
+    for i in range(max_rounds):
+        blocking = blocking_gaps(doc)
+        structural = structural_gaps(doc) if ask_structural else []
+        active = blocking + structural
+        rec = InterviewRound(
+            round=i, n_blocking=len(blocking), n_structural=len(structural),
+            questions=[g.question for g in active],
+        )
+        run.rounds.append(rec)
+        if on_round:
+            on_round(rec, blocking, structural)
+
+        if not active:
+            rec.stopped = "complete"
+            break
+        if prev_metric is not None and len(active) >= prev_metric:
+            rec.stopped = "stalled (answers stopped reducing gaps)"
+            break
+        if i == max_rounds - 1:
+            rec.stopped = "max rounds reached"
+            break
+
+        prev_metric = len(active)
+        answers = answer_fn(rec.questions, doc) or ""
+        rec.answers = answers
+        if not answers.strip():
+            rec.stopped = "author finished"
+            break
+        doc = extract_fn(brief, doc, answers) or doc
+
+    run.final_doc = doc
+    return run
 
 
 # ============================================================================

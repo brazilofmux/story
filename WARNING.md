@@ -4,7 +4,7 @@ I am not Joseph Goebbels. But I think I have built something he would have
 recognized.
 
 I spent twenty years trying to crack the deep structural grammar of story.
-Five months ago, the core of it finally worked.
+After five months of work this year, the core of it finally worked.
 
 I want to be precise about what that means, because precision is the whole
 point. This is not a machine that reads any text and tells you its secrets.

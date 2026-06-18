@@ -15,7 +15,7 @@ import traceback
 
 from story_engine.core.authoring_interview import (
     interview_gaps, blocking_gaps, structural_gaps, is_compilable,
-    next_questions,
+    next_questions, run_interview,
 )
 from story_engine.core.authoring import compile_story, verify_compiled
 
@@ -134,6 +134,66 @@ def test_next_questions_puts_blocking_first():
     assert "title" in qs[0].lower()           # blocking gap leads
 
 
+# ---- the multi-round loop controller (pure, injected extract/answer) ----
+
+def _scripted_extract(docs):
+    """extract_fn returning the next scripted draft each call (initial call +
+    one per answered round)."""
+    box = {"i": 0}
+
+    def ex(_brief, _prior, _answers):
+        d = docs[min(box["i"], len(docs) - 1)]
+        box["i"] += 1
+        return d
+    return ex
+
+
+def _always(answer):
+    return lambda _questions, _doc: answer
+
+
+def test_interview_converges_to_complete():
+    # sparse -> partial -> complete over three drafts
+    partial = _complete_doc()
+    partial["events"][1].pop("when")          # one blocking gap left
+    run = run_interview(
+        brief="x",
+        extract_fn=_scripted_extract([{}, partial, _complete_doc()]),
+        answer_fn=_always("here are the answers"), max_rounds=6,
+    )
+    assert run.complete
+    assert run.compilable
+    assert len(run.rounds) == 3
+
+
+def test_interview_stalls_when_answers_dont_help():
+    stuck = _complete_doc()
+    stuck["events"][1].pop("when")            # a gap the answers never fix
+    run = run_interview(
+        brief="x", extract_fn=_scripted_extract([stuck]),
+        answer_fn=_always("unhelpful"), max_rounds=6,
+    )
+    assert run.rounds[-1].stopped.startswith("stalled")
+    assert not run.compilable
+
+
+def test_interview_stops_when_author_finishes():
+    run = run_interview(
+        brief="x", extract_fn=_scripted_extract([{}]),
+        answer_fn=_always(""),                # author gives nothing
+        max_rounds=6,
+    )
+    assert run.rounds[-1].stopped == "author finished"
+
+
+def test_interview_respects_max_rounds():
+    run = run_interview(
+        brief="x", extract_fn=_scripted_extract([{}]),
+        answer_fn=_always("more"), max_rounds=1,
+    )
+    assert run.rounds[-1].stopped == "max rounds reached"
+
+
 TESTS = [
     test_empty_doc_blocks_on_the_basics,
     test_event_without_when_blocks,
@@ -147,6 +207,10 @@ TESTS = [
     test_missing_pathos_is_structural,
     test_complete_doc_has_no_gaps_and_compiles,
     test_next_questions_puts_blocking_first,
+    test_interview_converges_to_complete,
+    test_interview_stalls_when_answers_dont_help,
+    test_interview_stops_when_author_finishes,
+    test_interview_respects_max_rounds,
 ]
 
 
