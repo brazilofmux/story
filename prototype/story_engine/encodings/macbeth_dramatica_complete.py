@@ -75,6 +75,7 @@ from story_engine.core.dramatica_template import (
     verify_thematic_picks,
     canonical_ending,
     register_element_quad,
+    CANONICAL_ELEMENT_QUADS,
     Quad,
 )
 
@@ -407,21 +408,19 @@ MC_ISSUE_PICK = QuadPick(
     attached_to_id="T_mc_macbeth",
 )
 
-ELEMENT_QUAD_SKILL = Quad(
-    id="element_skill",
-    kind="element-quad",
-    element_A="pursue",
-    element_B="consider",
-    element_C="avoid",
-    element_D="reconsider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("skill", ELEMENT_QUAD_SKILL)
+# Canonical element quad for Variation "skill" (Doing > Skill):
+# effect/trust/cause/test (Evaluation).
+register_element_quad("skill", CANONICAL_ELEMENT_QUADS["skill"])
 
+# Problem: Macbeth's MC Problem is Effect — he wields his warrior
+# skill for the Effect (the crown, the result) and is blind to the
+# Cause (whether the deed is justified). The Solution he never
+# reaches, Cause (the dynamic pair), is attending to the moral root
+# rather than the prize.
 MC_PROBLEM_PICK = QuadPick(
     id="PP_mc_macbeth",
-    quad_id=ELEMENT_QUAD_SKILL.id,
-    chosen_position=QuadPosition.A,  # "pursue"
+    quad_id=CANONICAL_ELEMENT_QUADS["skill"].id,
+    chosen_position=QuadPosition.A,  # "effect"
     attached_to_kind="throughline",
     attached_to_id="T_mc_macbeth",
 )
@@ -431,7 +430,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=MC_CONCERN_PICK,
     issue_pick=MC_ISSUE_PICK,
     problem_pick=MC_PROBLEM_PICK,
-    solution_override="avoid",  # dynamic pair of "pursue"
+    solution_override="cause",  # dynamic pair of "effect"
 )
 
 # -- OS (Scotland's crisis) in Situation Domain --
@@ -459,21 +458,18 @@ OS_ISSUE_PICK = QuadPick(
     attached_to_id="T_overall_scotland",
 )
 
-ELEMENT_QUAD_THREAT = Quad(
-    id="element_threat",
-    kind="element-quad",
-    element_A="faith",
-    element_B="support",
-    element_C="disbelief",
-    element_D="oppose",
-    authored_by="dramatica-theory",
-)
-register_element_quad("threat", ELEMENT_QUAD_THREAT)
+# Canonical element quad for Variation "threat" (How Things Are
+# Changing > Threat): theory/expectation/hunch/determination (Evaluation).
+register_element_quad("threat", CANONICAL_ELEMENT_QUADS["threat"])
 
+# Problem: the OS Problem is Expectation — Scotland's crisis runs on
+# prophetic expectation (who will be king, Banquo's line to come).
+# Order is restored only by Determination (the dynamic pair): the
+# resolved counter-action of Malcolm and Macduff's army.
 OS_PROBLEM_PICK = QuadPick(
     id="PP_os_scotland",
-    quad_id=ELEMENT_QUAD_THREAT.id,
-    chosen_position=QuadPosition.C,  # "disbelief"
+    quad_id=CANONICAL_ELEMENT_QUADS["threat"].id,
+    chosen_position=QuadPosition.B,  # "expectation"
     attached_to_kind="throughline",
     attached_to_id="T_overall_scotland",
 )
@@ -483,7 +479,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=OS_CONCERN_PICK,
     issue_pick=OS_ISSUE_PICK,
     problem_pick=OS_PROBLEM_PICK,
-    solution_override="faith",  # dynamic pair of "disbelief"
+    solution_override="determination",  # dynamic pair of "expectation"
 )
 
 # -- IC Lady Macbeth in Fixed Attitude Domain --
@@ -513,21 +509,19 @@ IC_ISSUE_PICK = QuadPick(
     attached_to_id="T_impact_lady_macbeth",
 )
 
-ELEMENT_QUAD_HOPE = Quad(
-    id="element_hope",
-    kind="element-quad",
-    element_A="temptation",
-    element_B="hinder",
-    element_C="conscience",
-    element_D="help",
-    authored_by="dramatica-theory",
-)
-register_element_quad("hope", ELEMENT_QUAD_HOPE)
+# Canonical element quad for Variation "hope" (Innermost Desires >
+# Hope): logic/control/feeling/uncontrolled (Motivation).
+register_element_quad("hope", CANONICAL_ELEMENT_QUADS["hope"])
 
+# Problem: Lady Macbeth's IC Problem is Control — her whole influence
+# is control ("unsex me here," steel his nerve, "look like the
+# innocent flower"). Her undoing is the Uncontrolled (the dynamic
+# pair): the sleepwalking, the blood that will not wash, control
+# collapsing into compulsion.
 IC_PROBLEM_PICK = QuadPick(
     id="PP_ic_ladymacbeth",
-    quad_id=ELEMENT_QUAD_HOPE.id,
-    chosen_position=QuadPosition.A,  # "temptation"
+    quad_id=CANONICAL_ELEMENT_QUADS["hope"].id,
+    chosen_position=QuadPosition.B,  # "control"
     attached_to_kind="throughline",
     attached_to_id="T_impact_lady_macbeth",
 )
@@ -537,7 +531,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=IC_CONCERN_PICK,
     issue_pick=IC_ISSUE_PICK,
     problem_pick=IC_PROBLEM_PICK,
-    solution_override="conscience",  # dynamic pair of "temptation"
+    solution_override="uncontrolled",  # dynamic pair of "control"
 )
 
 # -- RS (the Macbeths' marriage) in Manipulation Domain --
@@ -567,21 +561,18 @@ RS_ISSUE_PICK = QuadPick(
     attached_to_id="T_relationship_macbeths",
 )
 
-ELEMENT_QUAD_COMMITMENT = Quad(
-    id="element_commitment",
-    kind="element-quad",
-    element_A="logic",
-    element_B="control",
-    element_C="feeling",
-    element_D="uncontrolled",
-    authored_by="dramatica-theory",
-)
-register_element_quad("commitment", ELEMENT_QUAD_COMMITMENT)
+# Canonical element quad for Variation "commitment" (Changing One's
+# Nature > Commitment): pursue/faith/avoid/disbelief (Motivation).
+register_element_quad("commitment", CANONICAL_ELEMENT_QUADS["commitment"])
 
+# Problem: the marriage's RS Problem is Faith — it runs on shared
+# faith ("my dearest partner of greatness"), faith in the plan and in
+# each other. It unravels into Disbelief (the dynamic pair) —
+# estrangement and disillusion as the cost of the deed lands.
 RS_PROBLEM_PICK = QuadPick(
     id="PP_rs_macbeths",
-    quad_id=ELEMENT_QUAD_COMMITMENT.id,
-    chosen_position=QuadPosition.C,  # "feeling"
+    quad_id=CANONICAL_ELEMENT_QUADS["commitment"].id,
+    chosen_position=QuadPosition.B,  # "faith"
     attached_to_kind="throughline",
     attached_to_id="T_relationship_macbeths",
 )
@@ -591,7 +582,7 @@ RS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=RS_CONCERN_PICK,
     issue_pick=RS_ISSUE_PICK,
     problem_pick=RS_PROBLEM_PICK,
-    solution_override="logic",  # dynamic pair of "feeling"
+    solution_override="disbelief",  # dynamic pair of "faith"
 )
 
 ALL_THEMATIC_PICKS = (
