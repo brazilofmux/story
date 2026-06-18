@@ -21,13 +21,14 @@ from story_engine.encodings.rocky import FABULA, SJUZHET, ENTITIES, DESCRIPTIONS
 from story_engine.encodings import rocky_dramatica_complete as RD
 
 
-def _sf():
+def _sf(authored_acts=True):
     return DramaticaStoryform(
         title="Rocky", action_summary="a club fighter goes the distance",
         domain_assignments=RD.DOMAIN_ASSIGNMENTS, signposts=RD.ALL_SIGNPOSTS,
         dynamics=RD.DYNAMIC_STORY_POINTS, story_goal=RD.STORY_GOAL,
         story_consequence=RD.STORY_CONSEQUENCE,
         canonical_ending=RD.CANONICAL_ENDING,
+        act_event_ids=(RD.ACT_EVENT_IDS if authored_acts else {}),
     )
 
 
@@ -91,6 +92,44 @@ def test_generator_routes_the_adapter_dry_run():
     assert len(result.scenes) == len(SJUZHET)
 
 
+def test_authored_acts_beat_the_positional_heuristic():
+    """The #1 integrity fix: when act boundaries are AUTHORED, boundary
+    beats land in their true act — the bell opens act 4, Green's injury
+    opens act 2 — where the positional quartile split misplaces them."""
+    authored = DramaticaFrame(_sf(authored_acts=True), SJUZHET)
+    heuristic = DramaticaFrame(_sf(authored_acts=False), SJUZHET)
+    assert authored._acts_authored is True
+    assert heuristic._acts_authored is False
+    # the bell is the start of the climax — act 4, not act 3
+    assert authored._act_of["E_fight_bell"] == 4
+    assert heuristic._act_of["E_fight_bell"] == 3      # the heuristic's error
+    # Green's injury opens the changing-situation act — act 2, not act 1
+    assert authored._act_of["E_mac_injured"] == 2
+    assert heuristic._act_of["E_mac_injured"] == 1     # the heuristic's error
+
+
+def test_authored_acts_cover_every_staged_event_once():
+    """No cheating: the authored act map must place every staged event,
+    with nothing left to the positional fallback."""
+    frame = DramaticaFrame(_sf(authored_acts=True), SJUZHET)
+    staged = {s.event_id for s in SJUZHET}
+    assert staged <= set(frame._act_of)
+    assert frame._unplaced == []
+
+
+def test_bible_is_honest_about_act_source():
+    """Authored → the bible says so; inferred → the bible flags the acts
+    as APPROXIMATE rather than passing a guess off as fact."""
+    authored = "\n".join(
+        DramaticaFrame(_sf(authored_acts=True), SJUZHET).bible_sections(
+            name_map={}))
+    inferred = "\n".join(
+        DramaticaFrame(_sf(authored_acts=False), SJUZHET).bible_sections(
+            name_map={}))
+    assert "AUTHORED" in authored and "APPROXIMATE" not in authored
+    assert "APPROXIMATE" in inferred
+
+
 def test_base_frame_is_abstract_no_dialect_privileged():
     """Asymmetry #1 fix: the base DialectFrame holds NO dialect logic —
     both dialects are explicit peer frames, neither is the default."""
@@ -132,6 +171,9 @@ TESTS = [
     test_scene_marks_map_to_acts,
     test_acts_cover_one_to_four,
     test_generator_routes_the_adapter_dry_run,
+    test_authored_acts_beat_the_positional_heuristic,
+    test_authored_acts_cover_every_staged_event_once,
+    test_bible_is_honest_about_act_source,
     test_base_frame_is_abstract_no_dialect_privileged,
     test_default_frame_still_aristotelian,
 ]

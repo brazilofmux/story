@@ -22,7 +22,7 @@ renderer writes a man who loses the fight and wins everything else.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from story_engine.core.draft_generator import DialectFrame
 
@@ -44,6 +44,11 @@ class DramaticaStoryform:
     story_goal: str
     story_consequence: str
     canonical_ending: str = ""
+    # Authored act structure: {act_position (1..4): (event_id, ...)}. When
+    # provided, the frame reads the TRUE act boundaries instead of guessing
+    # them from sjuzhet position. Empty = no authoring; the frame falls back
+    # to a positional split AND says so in the bible (no silent heuristic).
+    act_event_ids: dict = field(default_factory=dict)
 
 
 # Renderer-facing glosses for the Dramatica vocabulary (theory labels →
@@ -120,12 +125,32 @@ class DramaticaFrame(DialectFrame):
     def __init__(self, storyform: DramaticaStoryform, sjuzhet):
         self.overlay = storyform
         self.sf = storyform
-        # event → act (1..4) by sjuzhet quartile
+        # event → act (1..4). Prefer the AUTHORED act structure; fall back
+        # to a positional sjuzhet-quartile split only when none is given —
+        # and remember which, so the bible can be honest about it.
+        self._acts_authored = bool(storyform.act_event_ids)
+        self._act_of: dict = {}
+        self._unplaced: list = []
+        if self._acts_authored:
+            for act, event_ids in storyform.act_event_ids.items():
+                for eid in event_ids:
+                    self._act_of[eid] = int(act)
         ordered = sorted(sjuzhet, key=lambda s: s.τ_d)
-        n = max(1, len(ordered))
-        self._act_of = {
-            e.event_id: min(4, i * 4 // n + 1) for i, e in enumerate(ordered)
-        }
+        if not self._acts_authored:
+            n = max(1, len(ordered))
+            self._act_of = {
+                e.event_id: min(4, i * 4 // n + 1)
+                for i, e in enumerate(ordered)
+            }
+        else:
+            # Any staged event the author did not place falls back
+            # positionally, and is recorded so the bible can flag it.
+            n = max(1, len(ordered))
+            self._unplaced = [
+                e.event_id for e in ordered if e.event_id not in self._act_of
+            ]
+            for i, e in enumerate(ordered):
+                self._act_of.setdefault(e.event_id, min(4, i * 4 // n + 1))
         # (throughline_id, position) → signpost element
         self._sp = {
             (sp.throughline_id, sp.signpost_position): sp.signpost_element
@@ -192,8 +217,18 @@ class DramaticaFrame(DialectFrame):
                              f"{glosses.get(choice, '')}")
 
         # The signpost act-progression per throughline.
-        lines.append("\n## Signpost progression (each throughline moves "
-                     "through four acts)")
+        if self._acts_authored and not self._unplaced:
+            src = "the four-act boundaries below are AUTHORED"
+        elif self._acts_authored:
+            src = (f"act boundaries are authored, except "
+                   f"{len(self._unplaced)} unplaced scene(s) approximated by "
+                   f"position")
+        else:
+            src = ("NOTE: act boundaries are APPROXIMATE — inferred from "
+                   "scene position, not authored; treat the act of a "
+                   "boundary scene as a hint, not a fact")
+        lines.append(f"\n## Signpost progression (each throughline moves "
+                     f"through four acts; {src})")
         for da in self._throughlines:
             label = _PERSPECTIVE[_perspective_of(da.throughline_id)][0]
             steps = [self._sp.get((da.throughline_id, pos), "?")

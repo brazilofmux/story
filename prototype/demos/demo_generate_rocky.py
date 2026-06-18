@@ -63,6 +63,7 @@ def _storyform():
         story_goal=RD.STORY_GOAL,
         story_consequence=RD.STORY_CONSEQUENCE,
         canonical_ending=RD.CANONICAL_ENDING,
+        act_event_ids=RD.ACT_EVENT_IDS,
     )
 
 

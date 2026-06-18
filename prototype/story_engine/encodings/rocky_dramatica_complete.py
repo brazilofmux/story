@@ -312,6 +312,40 @@ RS_SIGNPOSTS = (
 )
 
 ALL_SIGNPOSTS = MC_SIGNPOSTS + OS_SIGNPOSTS + IC_SIGNPOSTS + RS_SIGNPOSTS
+
+
+# ============================================================================
+# Act structure — which substrate events fall in each of the four acts.
+# ============================================================================
+#
+# AUTHORED, not inferred. The four acts are defined by the Overall Story
+# signpost progression (the-present → how-things-are-changing → the-past
+# → the-future); the other throughlines' signposts give each act its
+# per-perspective concern. Read off the signpost comments above. The act
+# boundaries fall on the OS Story-Driver beats — Green's injury OPENS act 2
+# (the situation begins to change); the bell OPENS act 4 (the fight is the
+# situation's future) — both of which a positional 4-quartile split of the
+# 20 staged scenes misplaces by one beat. This is the authored truth a
+# generation frame should read instead of guessing.
+
+ACT_EVENT_IDS = {
+    1: (  # the-present / learning / innermost-desires / conceiving-an-idea
+        "E_club_fight_spider", "E_mickey_clears_locker",
+        "E_gazzo_assignment", "E_pet_store_courtship",
+    ),
+    2: (  # how-things-are-changing / understanding / impulsive / developing
+        "E_mac_injured", "E_apollo_selects_rocky", "E_jergens_offers_fight",
+        "E_mickey_offers_to_manage", "E_thanksgiving_turkey", "E_first_kiss",
+    ),
+    3: (  # the-past / doing / contemplation / playing-a-role
+        "E_training_begins", "E_meat_locker_session", "E_stairs_run",
+        "E_night_before_fight",
+    ),
+    4: (  # the-future / obtaining / memories / changing-one's-nature
+        "E_fight_bell", "E_round_one_knockdown", "E_rocky_gets_up",
+        "E_fight_ends", "E_adrian_called", "E_no_rematch",
+    ),
+}
 assert len(ALL_SIGNPOSTS) == 16
 
 
