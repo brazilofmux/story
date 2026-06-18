@@ -55,27 +55,26 @@ don't perfect"):
 | generate · evaluate · repair | ✅ | ✅ | ✅ | ✅ |
 | converge (iterate to a fidelity ceiling) | ✅ | ✅\* | ✅\* | ✅\* |
 | author by interview (structural homework) | ✅ | ✅ | ✅ | ✅ |
-| compile plain text → substrate | ✅ | – | ✅ | ✅ |
+| compile plain text → substrate | ✅ | ✅ | ✅ | ✅ |
 
 \* The convergence loop is dialect-agnostic; all four dialects' evaluate +
 repair-planner compose into it (integration-tested offline). The *live*
 recovery has been demonstrated on Aristotelian so far (Malfi, 89% → 100% after
 an injected regression).
 
-The interview front-end now elicits and gap-checks all four dialects' structural
-homework (each overlay mirrors its dialect verifier's vocabulary — Save-the-Cat's
-fifteen beats and genre, Dramatica's four throughlines and eight dynamics,
-Dramatic's arguments and stakes). The plain-text *compiler* — turning that
-record into the verified substrate — now lands for **three** dialects:
-Aristotelian, Save-the-Cat, and Dramatic (each proven live end-to-end — e.g. a
-whistleblower brief interviewed → compiled to a Dramatic `Story` → generated a
-Hero-vs-Obstacle confrontation scene that puts its argument on trial). Only
-Dramatica remains interviewed-but-not-yet-compiled (verifier-ready in its
-encodings); its TOML→overlay compiler is the last remaining, named seam.
+The whole chain — **interview → compile → generate** — now lands for **all four
+dialects**. A natural-language brief is interviewed against the dialect's
+structural homework, compiled to the verified substrate + that dialect's overlay,
+and generated, each proven live end-to-end: a boxing brief → a Save-the-Cat
+Opening Image that *is* the beat; a whistleblower brief → a Dramatic
+Hero-vs-Obstacle confrontation that puts its argument on trial; a bridge-safety
+brief → a Dramatica scene rendered in its main character's fixed-attitude domain
+under steadfast/optionlock dynamics. (No `.story.toml`, no hand-authoring.)
 
-So the true claim: **four story theories, each able to generate a draft, read
-it back blind, repair the drift, iterate to a fidelity ceiling, and be authored
-by interview** — with the plain-text compiler proven on one so far.
+So the true claim: **four story theories, each able to be authored by interview,
+compiled to a verified substrate, generated into a draft, read back blind,
+repaired, and iterated to a fidelity ceiling** — the full loop, uniform across
+all four.
 
 ## What to expect (and what not to)
 

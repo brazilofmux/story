@@ -82,6 +82,10 @@ from story_engine.core.dramatic import (
     THROUGHLINE_OWNER_RELATIONSHIP,
     verify as dramatic_verify,
 )
+from story_engine.core.dramatica_template import (
+    DomainAssignment, DynamicStoryPoint, Signpost, Domain, DSPAxis, Dual,
+    DSP_VALID_CHOICES, CONCERN_QUADS_BY_DOMAIN, verify_dramatica_complete,
+)
 
 
 class StoryFormatError(ValueError):
@@ -149,6 +153,33 @@ class CompiledDramaticOverlay:
         return dramatic_verify(
             self.story, arguments=self.arguments, throughlines=self.throughlines,
             characters=self.characters, stakes=self.stakes)
+
+
+@dataclass(frozen=True)
+class CompiledDramaticaOverlay:
+    """The Dramatica storyform a `.story.toml` compiles to: the four
+    Throughlines, their DomainAssignments, the eight DynamicStoryPoints, the
+    sixteen Signposts (synthesized from each domain's Concern quad), and the
+    story goal / consequence. The storyform is event-agnostic; the generator
+    only reads the sjuzhet to place act boundaries."""
+    title: str
+    throughlines: tuple = ()
+    domain_assignments: tuple = ()
+    dynamics: tuple = ()
+    signposts: tuple = ()
+    story_goal: str = ""
+    story_consequence: str = ""
+    action_summary: str = ""
+
+    def verify(self) -> list:
+        return verify_dramatica_complete(
+            throughlines=self.throughlines,
+            domain_assignments=self.domain_assignments,
+            dynamic_story_points=self.dynamics,
+            signposts=self.signposts,
+            story_goal=self.story_goal,
+            story_consequence=self.story_consequence,
+        )
 
 
 # ----------------------------------------------------------------------------
@@ -364,9 +395,18 @@ def compile_story(doc: dict, dialect: str = "aristotelian") -> CompiledStory:
             preplay_disclosures=sub.preplay, dialect="dramatic",
             overlay=overlay,
         )
+    if d == "dramatica":
+        overlay = _build_dramatica_overlay(doc, sub)
+        return CompiledStory(
+            title=sub.title, logline=sub.logline, entities=sub.entities,
+            fabula=sub.fabula, sjuzhet=sub.sjuzhet, descriptions=sub.descriptions,
+            preplay_disclosures=sub.preplay, dialect="dramatica",
+            overlay=overlay,
+        )
     raise StoryFormatError(
         f"compile_story has no overlay compiler for dialect {dialect!r} yet "
-        f"(Aristotelian, Save-the-Cat, and Dramatic are wired)")
+        f"(all four dialects are wired: aristotelian, save-the-cat, dramatic, "
+        f"dramatica)")
 
 
 # ----------------------------------------------------------------------------
@@ -714,6 +754,121 @@ def _build_dramatic_overlay(doc: dict, sub: _Substrate) -> CompiledDramaticOverl
     )
 
 
+# ----------------------------------------------------------------------------
+# Overlay: Dramatica
+# ----------------------------------------------------------------------------
+
+def _normalize_dynamics(raw) -> dict:
+    """The dynamics dict (axis → pole, underscore or hyphen keys) or a list of
+    {axis, choice}, normalized to {hyphen-axis: pole-or-tuple}. A 2-pole value
+    is a genuinely-dual axis (honored, not flattened — `dramatica-precision-limit`)."""
+    out: dict = {}
+    if isinstance(raw, dict):
+        items = list(raw.items())
+    elif isinstance(raw, list):
+        items = [(d.get("axis"), d.get("choice", d.get("pole")))
+                 for d in raw if isinstance(d, dict)]
+    else:
+        items = []
+    for axis, choice in items:
+        a = str(axis or "").strip().lower().replace("_", "-")
+        if not a:
+            continue
+        if isinstance(choice, (list, tuple)):
+            poles = tuple(str(c).strip().lower() for c in choice if str(c).strip())
+            if poles:
+                out[a] = poles
+        else:
+            pole = str(choice or "").strip().lower()
+            if pole:
+                out[a] = pole
+    return out
+
+
+def _build_dramatica_overlay(doc: dict, sub: _Substrate) -> CompiledDramaticaOverlay:
+    """Map the authoring dict's Dramatica fields onto the storyform: four
+    Throughlines, their DomainAssignments, the eight DynamicStoryPoints, and
+    sixteen Signposts synthesized from each domain's Concern quad.
+
+    The interview commits the four throughlines (role + domain + owner), the
+    eight dynamics (one pole each, or both for a genuinely-dual axis), and the
+    story goal / consequence — but not the per-act signpost ordering or the
+    concern/issue/problem pick-chain. We synthesize the four signposts of each
+    throughline from its domain's Concern quad (positions 1-4 in canonical
+    order); the pick-chain is left unauthored (the generator doesn't need it,
+    and the verifier only notes its absence). An invalid dynamic pole is
+    dropped rather than constructed (the DSP record rejects it), and surfaces
+    as the verifier's missing-axis note."""
+    raw_chars = sub.raw_chars
+    char_ids = {c.get("id") for c in raw_chars if c.get("id")}
+    tl_docs = doc.get("throughlines") or []
+    story_id = ("drm_" + sub.title.lower().replace(" ", "_"))[:28]
+
+    throughlines = []
+    domain_assignments = []
+    signposts = []
+    for t in tl_docs:
+        role = (t.get("role") or "").strip().lower()
+        if not role:
+            continue
+        tl_id = ("T_" + role).replace(" ", "_").replace("-", "_")
+        owner = (t.get("owner") or "").strip()
+        owners = (owner,) if owner in char_ids else ()
+        throughlines.append(Throughline(
+            id=tl_id, role_label=role, owners=owners,
+            subject=(t.get("subject") or role).strip()))
+
+        try:
+            domain = Domain((t.get("domain") or "").strip().lower())
+        except ValueError:
+            continue
+        domain_assignments.append(DomainAssignment(
+            id=("DA_" + role).replace("-", "_"), throughline_id=tl_id,
+            domain=domain))
+        quad = CONCERN_QUADS_BY_DOMAIN[domain]
+        for pos, elem in enumerate(
+                (quad.element_A, quad.element_B, quad.element_C, quad.element_D),
+                start=1):
+            signposts.append(Signpost(
+                id=("SP_" + role + f"_{pos}").replace("-", "_"),
+                throughline_id=tl_id, signpost_position=pos,
+                signpost_element=elem))
+
+    dynamics = []
+    for axis_str, pole in _normalize_dynamics(doc.get("dynamics")).items():
+        try:
+            axis = DSPAxis(axis_str)
+        except ValueError:
+            continue
+        valid = {v.value for v in DSP_VALID_CHOICES.get(axis, set())}
+        if isinstance(pole, tuple):
+            poles = [p for p in pole if p in valid]
+            if len(poles) >= 2:
+                choice = Dual(set(poles))
+            elif poles:
+                choice = poles[0]
+            else:
+                continue
+        else:
+            if pole not in valid:
+                continue
+            choice = pole
+        dynamics.append(DynamicStoryPoint(
+            id=("DSP_" + axis.value).replace("-", "_"), axis=axis,
+            choice=choice, story_id=story_id))
+
+    return CompiledDramaticaOverlay(
+        title=sub.title,
+        throughlines=tuple(throughlines),
+        domain_assignments=tuple(domain_assignments),
+        dynamics=tuple(dynamics),
+        signposts=tuple(signposts),
+        story_goal=(doc.get("story_goal") or "").strip(),
+        story_consequence=(doc.get("story_consequence") or "").strip(),
+        action_summary=sub.logline or doc.get("action_summary", ""),
+    )
+
+
 def load_story_file(path: str, dialect: str = "aristotelian") -> CompiledStory:
     """Parse and compile a .story.toml file."""
     import tomllib
@@ -725,7 +880,7 @@ def load_story_file(path: str, dialect: str = "aristotelian") -> CompiledStory:
 def verify_compiled(compiled: CompiledStory) -> list:
     """Run the compiled story's dialect self-verifier — the same structural
     feedback the Python encodings get."""
-    if compiled.dialect in ("save-the-cat", "dramatic"):
+    if compiled.dialect in ("save-the-cat", "dramatic", "dramatica"):
         return compiled.overlay.verify()
     return verify(
         compiled.mythos,

@@ -134,7 +134,7 @@ def _cli():
 
 
 # dialects whose overlay the TOML→substrate compiler can build today
-_COMPILABLE = ("aristotelian", "save-the-cat", "dramatic")
+_COMPILABLE = ("aristotelian", "save-the-cat", "dramatic", "dramatica")
 
 
 def _compile_or_note(doc, dialect):
@@ -259,6 +259,16 @@ def main() -> int:
                 arguments=ov.arguments, throughlines=ov.throughlines,
                 stakes=ov.stakes)
             gen_kw["adapter"] = DramaticFrame(story, compiled.fabula)
+        elif args.dialect == "dramatica":
+            from story_engine.core.dramatica_generation import (
+                DramaticaStoryform, DramaticaFrame)
+            ov = compiled.overlay
+            sf = DramaticaStoryform(
+                title=compiled.title, action_summary=ov.action_summary,
+                domain_assignments=ov.domain_assignments, signposts=ov.signposts,
+                dynamics=ov.dynamics, story_goal=ov.story_goal,
+                story_consequence=ov.story_consequence)
+            gen_kw["adapter"] = DramaticaFrame(sf, compiled.sjuzhet)
         else:
             gen_kw["mythos"] = compiled.mythos
         result = generate_draft(**gen_kw)

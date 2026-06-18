@@ -1,6 +1,6 @@
-# Authoring compile — sketch 01 (closing the loop: dialects compile to substrate)
+# Authoring compile — sketch 01 (closing the loop: all four dialects compile to substrate)
 
-**Status:** active; landed (Save-the-Cat + Dramatic overlay compilers, 17 authoring tests, both live end-to-end)
+**Status:** active; **full grid** — Save-the-Cat + Dramatic + Dramatica overlay compilers landed (21 authoring tests; all proven live end-to-end). Interview → compile → generate is now uniform across all four dialects.
 **Date:** 2026-06-18
 **Extends:** `authoring.py` (the `.story.toml` → substrate compiler) and
 [authoring-interview-sketch-02](authoring-interview-sketch-02.md) (the per-dialect interview).
@@ -96,13 +96,46 @@ worth any cost*, resolved COMPLICATE") was interviewed → compiled to a `Story`
 room confrontation that puts the argument on trial through the mentor/protégé
 collision.
 
+## Dramatica — the fourth dialect (landed; the grid is complete)
+
+The largest overlay, and — pleasingly — the cleanest compile. The interview
+commits the four throughlines (role + domain + owner), the eight dynamics, and
+the goal / consequence; `_build_dramatica_overlay` turns that into the full
+storyform the generator's `DramaticaStoryform` sheet wants:
+
+- four `Throughline`s + four `DomainAssignment`s (`Domain` enum from the doc's
+  domain word);
+- the eight `DynamicStoryPoint`s — each pole validated against
+  `DSP_VALID_CHOICES` *before* construction (the record raises on a bad pole),
+  an invalid pole dropped (and surfaced as the verifier's missing-axis note); a
+  two-pole value becomes `Dual({…})`, honoring a genuinely-undecided axis
+  (`dramatica-precision-limit`);
+- the sixteen `Signpost`s — **synthesized** four-per-throughline from the
+  domain's canonical Concern quad (`CONCERN_QUADS_BY_DOMAIN`, positions 1-4 in
+  A·B·C·D order). The interview doesn't elicit the per-act signpost ordering or
+  the concern/issue/problem pick-chain; the quad gives a faithful default and
+  the pick-chain is left unauthored (the generator doesn't need it).
+
+`verify_dramatica_complete` is advisory-only and, because all four pillars are
+present, returns **zero** observations on a complete interview record. The
+storyform is event-agnostic (no lowering); the generator reads the sjuzhet only
+to place act boundaries. *Live:* a bridge-safety brief ("a data-only engineer,
+steadfast, vs. her intuitive father; outcome failure, judgment bad") was
+interviewed → compiled to a 0-observation storyform → generated a scene rendered
+in the MC's fixed-attitude domain under the steadfast / do-er / linear /
+optionlock dynamics, the father's intuition set against her measurement.
+
 ## What's next on this thread
 
-- **Dramatica** overlay compiler — the last dialect and the largest mapping
-  (storyform → four throughlines × domains, the eight dynamics, element quads).
-  The showcase close.
-- Neither the STC overlay (archetype assignments, explicit strands) nor the
-  Dramatic overlay (scene/beat layer, argument_contributions) captures every
-  field its verifier notes as advisory; the interview elicits the load-bearing
-  ones and the rest surface as advisory notes. Deeper per-dialect interview
-  passes could elicit them; low priority.
+The interview → compile → generate chain is now **uniform across all four
+dialects** — the "full grid" milestone. Remaining polish, all low priority:
+
+- No overlay captures every field its verifier notes as advisory — STC's
+  archetype assignments / explicit strands, Dramatic's scene/beat layer and
+  `argument_contributions`, Dramatica's per-act signpost ordering and the
+  thematic pick-chain. The interview elicits the load-bearing commitments; the
+  rest surface as advisory notes (or, for Dramatica, are synthesized to a
+  canonical default). Deeper per-dialect interview passes could elicit them.
+- The distinctive **who-knows-what-when knowledge discipline** in the interview
+  spine remains the highest-value non-compile thread (the substrate's real
+  teeth, only lightly probed in v1).

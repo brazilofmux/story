@@ -286,8 +286,82 @@ def test_dramatic_tolerates_sparse_overlay():
     assert verify_compiled(s) is not None
 
 
+# ---- Dramatica overlay compile (the fourth wired dialect — full grid) -----
+
+def _dramatica_doc(**over):
+    """A minimal Dramatica doc: four throughlines in four distinct domains,
+    the eight dynamics, a goal and a consequence."""
+    doc = {
+        "title": "The Climb",
+        "logline": "a closed man learns to trust the rope",
+        "telling": "chronological",
+        "story_goal": "reach the summit before the storm",
+        "story_consequence": "the expedition is lost on the mountain",
+        "characters": [{"id": "ava", "name": "Ava"},
+                       {"id": "rao", "name": "Rao"}],
+        "events": [
+            {"id": "base", "when": 1, "who": ["ava"], "summary": "they set out"},
+            {"id": "ridge", "when": 2, "who": ["ava", "rao"],
+             "summary": "the ridge nearly kills them"},
+            {"id": "summit", "when": 3, "who": ["ava"], "summary": "the choice"},
+        ],
+        "throughlines": [
+            {"role": "overall-story", "domain": "activity"},
+            {"role": "main-character", "domain": "fixed-attitude", "owner": "ava"},
+            {"role": "impact-character", "domain": "manipulation", "owner": "rao"},
+            {"role": "relationship", "domain": "situation"},
+        ],
+        "dynamics": {"resolve": "change", "growth": "start", "approach": "do-er",
+                     "problem_solving_style": "linear", "driver": "action",
+                     "limit": "timelock", "outcome": "success",
+                     "judgment": "good"},
+        "phases": {"beginning": ["base"], "middle": ["ridge"], "end": ["summit"]},
+    }
+    doc.update(over)
+    return doc
+
+
+def test_dramatica_compiles_full_storyform():
+    s = compile_story(_dramatica_doc(), "dramatica")
+    assert s.dialect == "dramatica"
+    assert {e.id for e in s.entities} == {"ava", "rao"}
+    ov = s.overlay
+    assert len(ov.throughlines) == 4
+    # four distinct domains, all four covered
+    assert {d.domain.value for d in ov.domain_assignments} == {
+        "activity", "situation", "manipulation", "fixed-attitude"}
+    assert len(ov.dynamics) == 8
+    # 16 signposts: 4 per throughline, from the domain's Concern quad
+    assert len(ov.signposts) == 16
+    mc = sorted((sp.signpost_position, sp.signpost_element)
+                for sp in ov.signposts if sp.throughline_id == "T_main_character")
+    assert mc[0] == (1, "innermost-desires") and mc[3] == (4, "memories")
+    assert ov.story_goal and ov.story_consequence
+
+
+def test_dramatica_complete_storyform_verifies_clean():
+    # all four structural pillars present → the verifier passes with no notes
+    assert verify_compiled(compile_story(_dramatica_doc(), "dramatica")) == []
+
+
+def test_dramatica_dual_dynamic_honored():
+    doc = _dramatica_doc()
+    doc["dynamics"]["problem_solving_style"] = ["linear", "holistic"]
+    ov = compile_story(doc, "dramatica").overlay
+    pss = next(x for x in ov.dynamics if x.axis.value == "problem-solving-style")
+    assert pss.is_dual and pss.poles == frozenset({"linear", "holistic"})
+
+
+def test_dramatica_drops_invalid_pole_not_raises():
+    doc = _dramatica_doc()
+    doc["dynamics"]["resolve"] = "transform"   # not change|steadfast
+    ov = compile_story(doc, "dramatica").overlay   # must not raise
+    axes = {x.axis.value for x in ov.dynamics}
+    assert "resolve" not in axes and len(ov.dynamics) == 7
+
+
 def test_unknown_dialect_compile_raises():
-    _expect_error_dialect(_stc_doc(), "dramatica", "no overlay compiler")
+    _expect_error_dialect(_stc_doc(), "freytag", "no overlay compiler")
 
 
 def _expect_error_dialect(doc, dialect, fragment):
@@ -316,6 +390,10 @@ TESTS = [
     test_dramatic_compiles_substrate_and_overlay,
     test_dramatic_verifies_without_rejecting,
     test_dramatic_tolerates_sparse_overlay,
+    test_dramatica_compiles_full_storyform,
+    test_dramatica_complete_storyform_verifies_clean,
+    test_dramatica_dual_dynamic_honored,
+    test_dramatica_drops_invalid_pole_not_raises,
     test_unknown_dialect_compile_raises,
 ]
 
