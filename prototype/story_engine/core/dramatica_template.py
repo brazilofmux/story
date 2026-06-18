@@ -546,6 +546,17 @@ def verify_element_quads(quads_by_issue: dict = None) -> list:
                 target_id=getattr(quad, "id", issue),
                 message=(f"Element Quad for Variation {issue!r} is not four "
                          f"distinct elements: {els}.")))
+        canon = CANONICAL_ELEMENT_QUADS.get(issue)
+        if canon is not None and set(els) != set(_element_tuple(canon)):
+            out.append(DramaticaObservation(
+                severity=SEVERITY_ADVISES_REVIEW,
+                code="element_non_canonical_placement",
+                target_id=getattr(quad, "id", issue),
+                message=(f"Element Quad for Variation {issue!r} = "
+                         f"{sorted(set(els))} disagrees with the canonical "
+                         f"chart placement {sorted(set(_element_tuple(canon)))}"
+                         f". Re-author the encoding's element quad (and its "
+                         f"Problem pick) to the canonical elements.")))
     if quads_by_issue is None:
         for issue, seen in sorted(_ELEMENT_QUAD_REGISTRATIONS.items()):
             if len(seen) > 1:
@@ -1561,6 +1572,70 @@ assert len(CANONICAL_ELEMENTS) == 64, (
     f"the canonical Dramatica element vocabulary must be 64 distinct labels; "
     f"got {len(CANONICAL_ELEMENTS)}"
 )
+
+
+# The per-Variation element-quad placement map — the canonical bottom-level
+# quad beneath each Variation, TRANSCRIBED FROM the Dramatica Table of Story
+# Elements (Write Brothers structure chart), read off the chart directly.
+#
+# Element order is the chart's spatial reading (A=top-left, B=top-right,
+# C=bottom-left, D=bottom-right), matching the Issue Quad convention. NOTE:
+# whether this module's (A,C)/(B,D) dynamic-pair semantics line up with the
+# chart's diagonal-dynamic geometry is a SEPARATE, pre-existing convention
+# question (it affects every quad equally) — tracked, not resolved here. For
+# conflict detection what matters is the element SET, which is order-free.
+#
+# Only Variations sourced from the chart are listed; the map fills in as more
+# are read. `verify_element_quads` flags any REGISTERED element quad whose
+# element SET disagrees with the canonical placement here.
+CANONICAL_ELEMENT_QUADS: dict = {
+    # -- the four resolved conflicts (dramatica-template-sketch-02) --
+    # Understanding > Interpretation  (Purpose elements)
+    "interpretation": Quad(
+        id="canon_element_interpretation", kind="element-quad",
+        element_A="order", element_B="equity",
+        element_C="inequity", element_D="chaos",
+        authored_by="dramatica-theory"),
+    # Contemplation > Doubt  (Methodology elements)
+    "doubt": Quad(
+        id="canon_element_doubt", kind="element-quad",
+        element_A="reduction", element_B="evaluation",
+        element_C="re-evaluation", element_D="production",
+        authored_by="dramatica-theory"),
+    # Playing a Role > Desire  (Evaluation elements)
+    "desire": Quad(
+        id="canon_element_desire", kind="element-quad",
+        element_A="trust", element_B="expectation",
+        element_C="determination", element_D="test",
+        authored_by="dramatica-theory"),
+    # Changing One's Nature > Commitment  (Motivation elements)
+    "commitment": Quad(
+        id="canon_element_commitment", kind="element-quad",
+        element_A="pursue", element_B="faith",
+        element_C="disbelief", element_D="avoid",
+        authored_by="dramatica-theory"),
+    # -- Situation > Past row (checksum; 'fate'/'destiny' are corpus-used) --
+    "fate": Quad(
+        id="canon_element_fate", kind="element-quad",
+        element_A="knowledge", element_B="order",
+        element_C="chaos", element_D="thought",
+        authored_by="dramatica-theory"),
+    "prediction": Quad(
+        id="canon_element_prediction", kind="element-quad",
+        element_A="actuality", element_B="inertia",
+        element_C="change", element_D="perception",
+        authored_by="dramatica-theory"),
+    "interdiction": Quad(
+        id="canon_element_interdiction", kind="element-quad",
+        element_A="ability", element_B="equity",
+        element_C="inequity", element_D="desire",
+        authored_by="dramatica-theory"),
+    "destiny": Quad(
+        id="canon_element_destiny", kind="element-quad",
+        element_A="aware", element_B="projection",
+        element_C="speculation", element_D="self-aware",
+        authored_by="dramatica-theory"),
+}
 
 
 @dataclass(frozen=True)

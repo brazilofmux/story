@@ -38,7 +38,7 @@ from story_engine.core.dramatica_template import (
     ISSUE_QUADS_BY_CONCERN, ELEMENT_QUADS_BY_ISSUE,
     ISSUE_QUAD_UNDERSTANDING,
     register_issue_quad, register_element_quad,
-    CANONICAL_ELEMENTS, verify_element_quads,
+    CANONICAL_ELEMENTS, verify_element_quads, CANONICAL_ELEMENT_QUADS,
     # Observation types
     DramaticaObservation, SEVERITY_NOTED, SEVERITY_ADVISES_REVIEW,
     # Verifier
@@ -1449,6 +1449,31 @@ def test_verify_element_quads_reports_coverage():
     assert len(cov) == 1 and "/64" in cov[0].message
 
 
+def test_canonical_element_placements_are_canonical():
+    """The chart-sourced placements draw only from the canonical 64 and are
+    well-formed four-element quads."""
+    assert "interpretation" in CANONICAL_ELEMENT_QUADS
+    for issue, q in CANONICAL_ELEMENT_QUADS.items():
+        els = (q.element_A, q.element_B, q.element_C, q.element_D)
+        assert len(set(els)) == 4, f"{issue} not 4 distinct"
+        for e in els:
+            assert e in CANONICAL_ELEMENTS, f"{issue}: {e} not canonical"
+
+
+def test_verify_detects_non_canonical_placement():
+    """A registered element quad whose SET disagrees with the chart placement
+    is flagged (the systematic-corpus-drift guard)."""
+    # 'interpretation' is canonical {order,equity,inequity,chaos}; register a
+    # Motivation quad for it (the corpus's old, wrong choice).
+    register_element_quad("interpretation",
+                          _elq("wrongi", "faith", "support",
+                               "disbelief", "oppose"))
+    dev = [o for o in verify_element_quads()
+           if o.code == "element_non_canonical_placement"
+           and o.target_id in ("wrongi", "interpretation")]
+    assert len(dev) >= 1
+
+
 # ============================================================================
 # Runner
 # ============================================================================
@@ -1564,6 +1589,8 @@ TESTS = [
     test_register_element_quad_idempotent_same_quad,
     test_verify_element_quads_detects_conflict,
     test_verify_element_quads_reports_coverage,
+    test_canonical_element_placements_are_canonical,
+    test_verify_detects_non_canonical_placement,
 ]
 
 
