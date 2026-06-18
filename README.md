@@ -53,13 +53,18 @@ don't perfect"):
 | | Aristotelian | Dramatica | Save the Cat | Dramatic |
 |---|---|---|---|---|
 | generate · evaluate · repair | ✅ | ✅ | ✅ | ✅ |
-| converge (iterate to a fidelity ceiling) | ✅ | – | – | – |
+| converge (iterate to a fidelity ceiling) | ✅ | ✅\* | ✅\* | ✅\* |
 | author in plain text (front-end) | ✅ | – | – | – |
 
+\* The convergence loop is dialect-agnostic; all four dialects' evaluate +
+repair-planner compose into it (integration-tested offline). The *live*
+recovery has been demonstrated on Aristotelian so far (Malfi, 89% → 100% after
+an injected regression).
+
 So the true claim: **four story theories, each able to generate a draft, read
-it back blind, and repair the drift**, with the full end-to-end polish (the
-convergence loop and a plain-text authoring front-end) proven on one so far.
-Filling that bottom row for the other three is the active coverage work.
+it back blind, repair the drift, and iterate to a fidelity ceiling**, with a
+plain-text authoring front-end proven on one so far. That front-end row is the
+active coverage work.
 
 ## What to expect (and what not to)
 
