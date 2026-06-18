@@ -64,6 +64,7 @@ from story_engine.core.dramatica_template import (
     canonical_ending,
     ISSUE_QUADS_BY_CONCERN,
     register_element_quad,
+    CANONICAL_ELEMENT_QUADS,
     Quad,
 )
 
@@ -376,26 +377,19 @@ MC_ISSUE_PICK = QuadPick(
     attached_to_id="T_mc_oedipus",
 )
 
-# Problem: Oedipus's Problem is Pursuit — he cannot stop pursuing.
-# The Solution (Avoid) is the thing he cannot do.
-#
-# Note: Element Quad labels at this level need canonical Dramatica
-# verification. The structural machinery works regardless.
-ELEMENT_QUAD_INTERPRETATION = Quad(
-    id="element_interpretation",
-    kind="element-quad",
-    element_A="pursue",
-    element_B="consider",
-    element_C="avoid",
-    element_D="reconsider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("interpretation", ELEMENT_QUAD_INTERPRETATION)
+# Canonical element quad for Variation "interpretation" (Understanding
+# > Interpretation): order/equity/chaos/inequity (Purpose).
+register_element_quad("interpretation", CANONICAL_ELEMENT_QUADS["interpretation"])
 
+# Problem: Oedipus's Problem is Order — his personal drive is to
+# impose order: solve the riddle, end the plague, fix every meaning.
+# He cannot stop ordering, and the truth he uncovers is pure Chaos
+# (the dynamic-pair Solution). A Change MC, his arc is the collapse
+# of order into the chaos he could not leave alone.
 MC_PROBLEM_PICK = QuadPick(
     id="PP_mc_oedipus",
-    quad_id=ELEMENT_QUAD_INTERPRETATION.id,
-    chosen_position=QuadPosition.A,  # "pursue"
+    quad_id=CANONICAL_ELEMENT_QUADS["interpretation"].id,
+    chosen_position=QuadPosition.A,  # "order"
     attached_to_kind="throughline",
     attached_to_id="T_mc_oedipus",
 )
@@ -405,7 +399,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=MC_CONCERN_PICK,
     issue_pick=MC_ISSUE_PICK,
     problem_pick=MC_PROBLEM_PICK,
-    solution_override="avoid",  # dynamic pair of "pursue"
+    solution_override="chaos",  # dynamic pair of "order"
 )
 
 # -- OS (plague investigation) in Situation Domain --
@@ -433,25 +427,19 @@ OS_ISSUE_PICK = QuadPick(
     attached_to_id="T_overall_plague",
 )
 
-# Problem: placeholder Element Quad — the OS Problem is not yet
-# assigned a canonical Element Quad (would require one of the
-# 256 Element Quads under "fate"). Use a structural placeholder
-# that exercises the pick-chain machinery.
-ELEMENT_QUAD_FATE = Quad(
-    id="element_fate",
-    kind="element-quad",
-    element_A="faith",
-    element_B="support",
-    element_C="disbelief",
-    element_D="oppose",
-    authored_by="dramatica-theory",
-)
-register_element_quad("fate", ELEMENT_QUAD_FATE)
+# Canonical element quad for Variation "fate" (The Past > Fate):
+# knowledge/order/thought/chaos (Purpose).
+register_element_quad("fate", CANONICAL_ELEMENT_QUADS["fate"])
 
+# Problem: the OS Problem is Knowledge — the objective story is the
+# demand to KNOW: uncover Laius's killer, the oracle's history, the
+# infant's fate. The drive for knowledge is the engine and the
+# catastrophe; the Solution (Thought, the dynamic pair) is
+# contemplation in place of relentless knowing.
 OS_PROBLEM_PICK = QuadPick(
     id="PP_os_plague",
-    quad_id=ELEMENT_QUAD_FATE.id,
-    chosen_position=QuadPosition.A,  # "faith"
+    quad_id=CANONICAL_ELEMENT_QUADS["fate"].id,
+    chosen_position=QuadPosition.A,  # "knowledge"
     attached_to_kind="throughline",
     attached_to_id="T_overall_plague",
 )
@@ -461,7 +449,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=OS_CONCERN_PICK,
     issue_pick=OS_ISSUE_PICK,
     problem_pick=OS_PROBLEM_PICK,
-    solution_override="disbelief",  # dynamic pair of "faith"
+    solution_override="thought",  # dynamic pair of "knowledge"
 )
 
 # -- IC Jocasta in Fixed Attitude Domain --
@@ -490,21 +478,19 @@ IC_ISSUE_PICK = QuadPick(
     attached_to_id="T_impact_jocasta",
 )
 
-ELEMENT_QUAD_DOUBT = Quad(
-    id="element_doubt",
-    kind="element-quad",
-    element_A="temptation",
-    element_B="hinder",
-    element_C="conscience",
-    element_D="help",
-    authored_by="dramatica-theory",
-)
-register_element_quad("doubt", ELEMENT_QUAD_DOUBT)
+# Canonical element quad for Variation "doubt" (Contemplation >
+# Doubt): reduction/evaluation/production/re-evaluation (Methodology).
+register_element_quad("doubt", CANONICAL_ELEMENT_QUADS["doubt"])
 
+# Problem: Jocasta's IC Problem is Evaluation — her influence is a
+# settled evaluation that dismisses the oracles ("prophecy is
+# worthless; here is proof"). The Solution she is forced into,
+# Re-evaluation (the dynamic pair), is the unbearable reconsideration
+# that drives her to the noose.
 IC_PROBLEM_PICK = QuadPick(
     id="PP_ic_jocasta",
-    quad_id=ELEMENT_QUAD_DOUBT.id,
-    chosen_position=QuadPosition.A,  # "temptation"
+    quad_id=CANONICAL_ELEMENT_QUADS["doubt"].id,
+    chosen_position=QuadPosition.B,  # "evaluation"
     attached_to_kind="throughline",
     attached_to_id="T_impact_jocasta",
 )
@@ -514,7 +500,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=IC_CONCERN_PICK,
     issue_pick=IC_ISSUE_PICK,
     problem_pick=IC_PROBLEM_PICK,
-    solution_override="conscience",  # dynamic pair of "temptation"
+    solution_override="re-evaluation",  # dynamic pair of "evaluation"
 )
 
 # -- RS (Oedipus-Jocasta marriage) in Manipulation Domain --
@@ -544,21 +530,19 @@ RS_ISSUE_PICK = QuadPick(
     attached_to_id="T_relationship_oj",
 )
 
-ELEMENT_QUAD_DESIRE = Quad(
-    id="element_desire",
-    kind="element-quad",
-    element_A="logic",
-    element_B="control",
-    element_C="feeling",
-    element_D="uncontrolled",
-    authored_by="dramatica-theory",
-)
-register_element_quad("desire", ELEMENT_QUAD_DESIRE)
+# Canonical element quad for Variation "desire" (Playing a Role >
+# Desire): trust/expectation/test/determination (Evaluation).
+register_element_quad("desire", CANONICAL_ELEMENT_QUADS["desire"])
 
+# Problem: the marriage's RS Problem is Trust — it runs on unexamined
+# trust in the roles (do not look too closely at husband and wife).
+# Its undoing is the Test (the dynamic-pair Solution): the
+# investigation that proves what the trust depended on never being
+# proven.
 RS_PROBLEM_PICK = QuadPick(
     id="PP_rs_oj",
-    quad_id=ELEMENT_QUAD_DESIRE.id,
-    chosen_position=QuadPosition.C,  # "feeling"
+    quad_id=CANONICAL_ELEMENT_QUADS["desire"].id,
+    chosen_position=QuadPosition.A,  # "trust"
     attached_to_kind="throughline",
     attached_to_id="T_relationship_oj",
 )
@@ -568,7 +552,7 @@ RS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=RS_CONCERN_PICK,
     issue_pick=RS_ISSUE_PICK,
     problem_pick=RS_PROBLEM_PICK,
-    solution_override="logic",  # dynamic pair of "feeling"
+    solution_override="test",  # dynamic pair of "trust"
 )
 
 ALL_THEMATIC_PICKS = (
