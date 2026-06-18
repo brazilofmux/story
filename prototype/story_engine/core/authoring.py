@@ -209,6 +209,20 @@ def _ar_id(char_id: str) -> str:
     return f"ar_{char_id}"
 
 
+# how a character came to know something (`learns.via`) → the substrate's
+# Diegetic update operator
+_LEARN_VIA = {
+    "observation": Diegetic.OBSERVATION, "observed": Diegetic.OBSERVATION,
+    "witnessed": Diegetic.OBSERVATION,
+    "told": Diegetic.UTTERANCE_HEARD, "heard": Diegetic.UTTERANCE_HEARD,
+    "inference": Diegetic.INFERENCE, "inferred": Diegetic.INFERENCE,
+    "deduced": Diegetic.INFERENCE,
+    "realization": Diegetic.REALIZATION, "realized": Diegetic.REALIZATION,
+    "deception": Diegetic.DECEPTION, "deceived": Diegetic.DECEPTION,
+    "lied": Diegetic.DECEPTION,
+}
+
+
 # ----------------------------------------------------------------------------
 # Compile — a dialect-neutral substrate build, then a per-dialect overlay
 # ----------------------------------------------------------------------------
@@ -295,6 +309,27 @@ def _build_substrate(doc: dict) -> _Substrate:
                           confidence=Confidence.CERTAIN,
                           via=Diegetic.OBSERVATION.value,
                           provenance=(f"focalized @ τ_s={when}",)),
+            ))
+        # Authored who-knows-what-when: each `learns` becomes a real
+        # KnowledgeEffect (the interview's knowledge discipline, realized in the
+        # substrate). `via` picks the Diegetic operator; a deception is held as
+        # BELIEVED, not KNOWN (a false belief, the seed of dramatic irony).
+        for lr in ev.get("learns", []):
+            lk_who = (lr.get("who") or "").strip()
+            lk_fact = (lr.get("fact") or "").strip()
+            if lk_who not in valid_ids or not lk_fact:
+                continue
+            diegetic = _LEARN_VIA.get((lr.get("via") or "").strip().lower()) or (
+                Diegetic.OBSERVATION if lk_who in who else Diegetic.UTTERANCE_HEARD)
+            deceived = diegetic == Diegetic.DECEPTION
+            effects.append(KnowledgeEffect(
+                agent_id=lk_who,
+                held=Held(prop=_parse_prop(lk_fact),
+                          slot=Slot.BELIEVED if deceived else Slot.KNOWN,
+                          confidence=Confidence.BELIEVED if deceived
+                          else Confidence.CERTAIN,
+                          via=diegetic.value,
+                          provenance=(f"learned @ τ_s={when}",)),
             ))
 
         fabula.append(Event(

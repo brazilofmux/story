@@ -172,6 +172,116 @@ def _skeleton_gaps(doc: dict) -> list:
 
 
 # ============================================================================
+# The knowledge discipline — who-knows-what-when (the substrate's real teeth)
+#
+# Dialect-agnostic: knowledge lives *below* the dialect. An author asserts what
+# a character `knows` (a claim of epistemic state) and, on a beat, what someone
+# `learns` (the acquiring event: who comes to know which fact, and how — `via`
+# observation / told / inference / realization / deception). These rules check
+# that every assertion has a source and that acquisition is coherent in time —
+# the homework that makes dramatic irony, secrets, and recognition land. The
+# substrate has no such verifier; this is net-new discipline, turned to face
+# the author. Knowledge facts are written as predicate(args), like `establishes`.
+# ============================================================================
+
+_LEARN_VIA = ("observation", "told", "inference", "realization", "deception")
+
+
+def _is_predicate(s: str) -> bool:
+    s = (s or "").strip()
+    return "(" in s and s.endswith(")")
+
+
+def _established_when(events: list) -> dict:
+    """fact → earliest story-time `when` at which a beat establishes it true."""
+    est: dict = {}
+    for ev in events:
+        w = ev.get("when")
+        if w is None:
+            continue
+        for fact in ev.get("establishes") or []:
+            f = (fact or "").strip()
+            if f:
+                est[f] = min(est[f], w) if f in est else w
+    return est
+
+
+def _knowledge_gaps(doc: dict) -> list:
+    """The who-knows-what-when homework. Silent when the author asserts no
+    knowledge (no `learns`, no `knows`) — it only speaks once a story commits
+    to who knows what."""
+    gaps: list = []
+    chars = doc.get("characters") or []
+    events = doc.get("events") or []
+    valid_ids = _valid_ids(doc)
+    preplay = {(p or "").strip() for p in (doc.get("preplay") or [])}
+    est_when = _established_when(events)
+
+    learned: dict = {}        # (who, fact) → earliest `when` it is acquired
+    for ev in events:
+        w = ev.get("when")
+        present = set(ev.get("who") or [])
+        label = _label(ev)
+        for lr in ev.get("learns") or []:
+            who = (lr.get("who") or "").strip()
+            fact = (lr.get("fact") or "").strip()
+            via = (lr.get("via") or "").strip().lower()
+            if who and who not in valid_ids:
+                gaps.append(Gap("blocking", "learns_unknown_who",
+                                f"At \"{label}\", '{who}' comes to know "
+                                f"something, but no such character is declared.",
+                                ev.get("id", "")))
+            if fact and not _is_predicate(fact):
+                gaps.append(Gap("blocking", "learns_bad_fact",
+                                f"The knowledge '{fact}' at \"{label}\" must be "
+                                f"written as predicate(arg) — e.g. "
+                                f"flaw_known(ana).", ev.get("id", "")))
+            if not (who and fact):
+                continue
+            if w is not None:
+                key = (who, fact)
+                learned[key] = min(learned[key], w) if key in learned else w
+            if via in ("", "observation") and who not in present:
+                gaps.append(Gap("structural", "learns_offstage",
+                                f"{who} learns '{fact}' by observation at "
+                                f"\"{label}\", but isn't present in the beat — "
+                                f"were they told instead (set via='told')?",
+                                ev.get("id", "")))
+            if via and via not in _LEARN_VIA:
+                gaps.append(Gap("structural", "learns_bad_via",
+                                f"'{via}' isn't a way of coming to know — use "
+                                f"one of: {', '.join(_LEARN_VIA)}.",
+                                ev.get("id", "")))
+            if fact in est_when and w is not None and w < est_when[fact]:
+                gaps.append(Gap("structural", "learns_before_established",
+                                f"{who} learns '{fact}' at \"{label}\" "
+                                f"(when={w}), but no beat makes it true until "
+                                f"when={est_when[fact]} — should the learning "
+                                f"come later, or is this a false belief "
+                                f"(via='deception')?", ev.get("id", "")))
+
+    # an asserted `knows` needs a source: a beat that teaches it, preplay, or
+    # an establishing beat the character is present for.
+    for c in chars:
+        cid = (c.get("id") or "").strip()
+        for fact in c.get("knows") or []:
+            f = (fact or "").strip()
+            if not f or (cid, f) in learned or f in preplay:
+                continue
+            witnessed = any(
+                cid in set(ev.get("who") or [])
+                and f in {(x or "").strip() for x in (ev.get("establishes") or [])}
+                for ev in events)
+            if witnessed:
+                continue
+            gaps.append(Gap("structural", "knows_no_source",
+                            f"{c.get('name', cid)} is said to know '{f}', but no "
+                            f"beat establishes it for them — which beat do they "
+                            f"learn it, and how?", cid))
+    return gaps
+
+
+# ============================================================================
 # Dialect overlays — each dialect's structural homework, as gap rules
 #
 # The vocabularies below mirror the dialect verifiers (`aristotelian.verify`,
@@ -212,6 +322,19 @@ def _aristotelian_overlay(doc: dict) -> list:
             gaps.append(Gap("structural", "anag_no_recognizer",
                             f"At the recognition \"{_label(ev)}\", who comes to "
                             f"the knowledge?", ev.get("id", "")))
+        # the recognition is a knowledge event: the recognizer should LEARN
+        # something here, so the anagnorisis lands in the substrate.
+        rec = (ev.get("recognizer") or "").strip()
+        if ev.get("mark") == "anagnorisis" and rec:
+            learns_here = {(l.get("who") or "").strip()
+                           for l in (ev.get("learns") or [])}
+            if rec not in learns_here:
+                gaps.append(Gap("structural", "anag_recognizer_learns_nothing",
+                                f"At the recognition \"{_label(ev)}\", {rec} "
+                                f"should come to KNOW something — add what they "
+                                f"learn (a `learns` entry) so the recognition is "
+                                f"real in the substrate, not just labelled.",
+                                ev.get("id", "")))
 
     roles = [(c.get("role") or "figure").strip().lower() for c in chars]
     if chars and "tragic-hero" not in roles:
@@ -477,11 +600,12 @@ class Dialect:
 
     `constrained` selects the extraction transport. The structured-output
     grammar compiler (`messages.parse`) has a low schema-complexity ceiling —
-    only the smallest schema (Aristotelian) reliably compiles under it; the
-    others (Save-the-Cat, Dramatica, Dramatic) return "Schema is too complex" /
-    "Grammar compilation timed out". Those dialects extract via plain JSON mode
-    instead (ask for JSON, validate with pydantic in Python), which has no
-    schema-size limit. See `extract_story_draft`."""
+    "Schema is too complex" / "Grammar compilation timed out" — and once the
+    knowledge fields (nested `learns`) were added, every dialect's schema
+    (Aristotelian included) exceeds it. So all four now extract via plain JSON
+    mode (ask for JSON, validate with pydantic in Python), which has no
+    schema-size limit. The flag is retained for a future small-schema dialect
+    that could use the grammar path. See `extract_story_draft`."""
     name: str
     overlay_gaps: Callable[[dict], list]
     system_prompt: str
@@ -501,14 +625,38 @@ The record's shared skeleton (every dialect):
 - phases: which event ids are in the beginning, the middle, the end (every event
   in exactly one).
 
+Knowledge — who knows what, when (the substrate's teeth; capture it whenever the
+story turns on a secret, a reveal, dramatic irony, or a recognition):
+- on a beat, `learns` lists who comes to know which `fact` and how (`via`:
+  observation if they're present, told, inference, realization, deception). A
+  fact is written as a predicate, e.g. flaw_known(ana) or identity(oedipus, son).
+- a character may carry `knows`: facts they hold — every such claim needs a beat
+  that establishes it (a `learns`, an `establishes` they witness, or `preplay`).
+- `establishes` on a beat: world facts made true there. `preplay`: facts the
+  AUDIENCE knows entering (the ground of dramatic irony).
+
 Commit to ids that are short lowercase handles, integer `when` values to fix
 story-time order. If the author has not supplied something, leave it absent
 rather than fabricating — the interview will ask for it next. Carry forward
 everything already established in the prior record."""
 
 
+def _learn_draft(BaseModel, Field):
+    """A `learns` entry — who comes to know which fact at a beat, and how.
+    Built from the caller's pydantic BaseModel/Field so the spine stays
+    pydantic-free."""
+    class LearnDraft(BaseModel):
+        who: str = Field(default="", description="character id who comes to know")
+        fact: str = Field(default="", description="predicate(args), e.g. "
+                                                  "flaw_known(ana)")
+        via: str = Field(default="", description="observation | told | inference "
+                                                 "| realization | deception")
+    return LearnDraft
+
+
 def _aristotelian_schema():
     from pydantic import BaseModel, Field
+    LearnDraft = _learn_draft(BaseModel, Field)
 
     class CharacterDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
@@ -516,6 +664,9 @@ def _aristotelian_schema():
         role: str = Field(default="figure",
                           description="tragic-hero | pathos-centre | figure")
         hamartia: str = ""
+        knows: list[str] = Field(default_factory=list,
+                                 description="facts this character knows, as "
+                                             "predicate(args)")
 
     class EventDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
@@ -529,6 +680,12 @@ def _aristotelian_schema():
         recognizer: str = Field(default="",
                                 description="character id, on an anagnorisis")
         focalizer: str = ""
+        establishes: list[str] = Field(default_factory=list,
+                                        description="world facts made true here, "
+                                                    "as predicate(args)")
+        learns: list[LearnDraft] = Field(default_factory=list,
+                                         description="who comes to know which "
+                                                     "fact at this beat")
 
     class PhasesDraft(BaseModel):
         beginning: list[str] = Field(default_factory=list)
@@ -541,6 +698,9 @@ def _aristotelian_schema():
         telling: str = "chronological"
         characters: list[CharacterDraft] = Field(default_factory=list)
         events: list[EventDraft] = Field(default_factory=list)
+        preplay: list[str] = Field(default_factory=list,
+                                   description="facts the audience knows "
+                                               "entering, as predicate(args)")
         phases: PhasesDraft = Field(default_factory=PhasesDraft)
 
     return StoryDraft
@@ -548,6 +708,7 @@ def _aristotelian_schema():
 
 def _save_the_cat_schema():
     from pydantic import BaseModel, Field
+    LearnDraft = _learn_draft(BaseModel, Field)
 
     class CharacterDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
@@ -555,6 +716,9 @@ def _save_the_cat_schema():
         role: str = Field(default="",
                           description="protagonist | antagonist | love-interest "
                                       "| mentor | … (Save-the-Cat role label)")
+        knows: list[str] = Field(default_factory=list,
+                                 description="facts this character knows, as "
+                                             "predicate(args)")
 
     class EventDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
@@ -566,6 +730,11 @@ def _save_the_cat_schema():
                           description="the canonical beat this event realizes, "
                                       "e.g. 'Catalyst', 'Midpoint', 'Finale'")
         focalizer: str = ""
+        establishes: list[str] = Field(default_factory=list,
+                                        description="world facts made true here")
+        learns: list[LearnDraft] = Field(default_factory=list,
+                                         description="who comes to know which "
+                                                     "fact at this beat")
 
     class PhasesDraft(BaseModel):
         beginning: list[str] = Field(default_factory=list)
@@ -583,6 +752,8 @@ def _save_the_cat_schema():
                                        "'dude-with-a-problem'")
         characters: list[CharacterDraft] = Field(default_factory=list)
         events: list[EventDraft] = Field(default_factory=list)
+        preplay: list[str] = Field(default_factory=list,
+                                   description="facts the audience knows entering")
         phases: PhasesDraft = Field(default_factory=PhasesDraft)
 
     return StoryDraft
@@ -590,17 +761,26 @@ def _save_the_cat_schema():
 
 def _dramatica_schema():
     from pydantic import BaseModel, Field
+    LearnDraft = _learn_draft(BaseModel, Field)
 
     class CharacterDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
         name: str = ""
         role: str = ""
+        knows: list[str] = Field(default_factory=list,
+                                 description="facts this character knows, as "
+                                             "predicate(args)")
 
     class EventDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
         when: Optional[int] = Field(default=None)
         who: list[str] = Field(default_factory=list)
         summary: str = ""
+        establishes: list[str] = Field(default_factory=list,
+                                        description="world facts made true here")
+        learns: list[LearnDraft] = Field(default_factory=list,
+                                         description="who comes to know which "
+                                                     "fact at this beat")
 
     class ThroughlineDraft(BaseModel):
         role: str = Field(description="one of the four throughline roles")
@@ -636,6 +816,8 @@ def _dramatica_schema():
         events: list[EventDraft] = Field(default_factory=list)
         throughlines: list[ThroughlineDraft] = Field(default_factory=list)
         dynamics: DynamicsDraft = Field(default_factory=DynamicsDraft)
+        preplay: list[str] = Field(default_factory=list,
+                                   description="facts the audience knows entering")
         phases: PhasesDraft = Field(default_factory=PhasesDraft)
 
     return StoryDraft
@@ -643,11 +825,15 @@ def _dramatica_schema():
 
 def _dramatic_schema():
     from pydantic import BaseModel, Field
+    LearnDraft = _learn_draft(BaseModel, Field)
 
     class CharacterDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
         name: str = ""
         role: str = ""
+        knows: list[str] = Field(default_factory=list,
+                                 description="facts this character knows, as "
+                                             "predicate(args)")
 
     class EventDraft(BaseModel):
         id: str = Field(description="short lowercase handle")
@@ -655,6 +841,11 @@ def _dramatic_schema():
         who: list[str] = Field(default_factory=list)
         summary: str = ""
         focalizer: str = ""
+        establishes: list[str] = Field(default_factory=list,
+                                        description="world facts made true here")
+        learns: list[LearnDraft] = Field(default_factory=list,
+                                         description="who comes to know which "
+                                                     "fact at this beat")
 
     class ArgumentDraft(BaseModel):
         premise: str = Field(description="the thematic claim the story tests")
@@ -686,6 +877,8 @@ def _dramatic_schema():
         events: list[EventDraft] = Field(default_factory=list)
         arguments: list[ArgumentDraft] = Field(default_factory=list)
         throughlines: list[ThroughlineDraft] = Field(default_factory=list)
+        preplay: list[str] = Field(default_factory=list,
+                                   description="facts the audience knows entering")
         phases: PhasesDraft = Field(default_factory=PhasesDraft)
 
     return StoryDraft
@@ -766,6 +959,28 @@ Beyond the shared skeleton:
 {_SHARED_RECORD}"""
 
 
+def _prune_knowledge(doc: dict) -> None:
+    """Drop the empty knowledge optionals every dialect shares, so the dict
+    reads like a hand-authored .story.toml and the gap rules see real absence."""
+    for c in doc.get("characters", []):
+        if not c.get("knows"):
+            c.pop("knows", None)
+    for ev in doc.get("events", []):
+        if not ev.get("establishes"):
+            ev.pop("establishes", None)
+        learns = [lr for lr in (ev.get("learns") or [])
+                  if (lr.get("who") or "").strip() and (lr.get("fact") or "").strip()]
+        for lr in learns:
+            if not (lr.get("via") or "").strip():
+                lr.pop("via", None)
+        if learns:
+            ev["learns"] = learns
+        else:
+            ev.pop("learns", None)
+    if not doc.get("preplay"):
+        doc.pop("preplay", None)
+
+
 def _postprocess_aristotelian(doc: dict) -> dict:
     for c in doc.get("characters", []):
         if not c.get("hamartia"):
@@ -774,6 +989,7 @@ def _postprocess_aristotelian(doc: dict) -> dict:
         for k in ("mark", "recognizer", "focalizer"):
             if not ev.get(k):
                 ev.pop(k, None)
+    _prune_knowledge(doc)
     return doc
 
 
@@ -785,6 +1001,7 @@ def _postprocess_save_the_cat(doc: dict) -> dict:
     for k in ("theme_statement", "genre"):
         if not (doc.get(k) or "").strip():
             doc.pop(k, None)
+    _prune_knowledge(doc)
     return doc
 
 
@@ -792,13 +1009,14 @@ def _postprocess_generic(doc: dict) -> dict:
     for ev in doc.get("events", []):
         if not ev.get("focalizer"):
             ev.pop("focalizer", None)
+    _prune_knowledge(doc)
     return doc
 
 
 DIALECTS: dict = {
     "aristotelian": Dialect(
         "aristotelian", _aristotelian_overlay, _ARISTOTELIAN_PROMPT,
-        _aristotelian_schema, _postprocess_aristotelian),
+        _aristotelian_schema, _postprocess_aristotelian, constrained=False),
     "save-the-cat": Dialect(
         "save-the-cat", _save_the_cat_overlay, _SAVE_THE_CAT_PROMPT,
         _save_the_cat_schema, _postprocess_save_the_cat, constrained=False),
@@ -828,8 +1046,10 @@ def _dialect(dialect: str) -> Dialect:
 def interview_gaps(doc: dict, dialect: str = DEFAULT_DIALECT) -> list:
     """Enumerate the authoring dict's gaps as questions, blocking first.
     Pure — the dialect-agnostic skeleton `authoring.compile_story` enforces,
-    plus the chosen dialect's structural homework, turned to face the author."""
-    return _skeleton_gaps(doc) + _dialect(dialect).overlay_gaps(doc)
+    the shared who-knows-what-when knowledge discipline, plus the chosen
+    dialect's structural homework, all turned to face the author."""
+    return (_skeleton_gaps(doc) + _knowledge_gaps(doc)
+            + _dialect(dialect).overlay_gaps(doc))
 
 
 def blocking_gaps(doc: dict, dialect: str = DEFAULT_DIALECT) -> list:

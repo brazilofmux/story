@@ -71,6 +71,14 @@ Hero-vs-Obstacle confrontation that puts its argument on trial; a bridge-safety
 brief → a Dramatica scene rendered in its main character's fixed-attitude domain
 under steadfast/optionlock dynamics. (No `.story.toml`, no hand-authoring.)
 
+Beneath the dialects, the interview also enforces the substrate's deepest
+discipline — **who knows what, when**. An author asserts what a character
+`knows` and, on a beat, what someone `learns` (and how: observed, told,
+inferred, realized, deceived); the spine checks every claim has a source and is
+coherent in time, and compiles it to real knowledge records (a deception is held
+as a false belief — the seed of dramatic irony). Authored once, it lands for all
+four dialects.
+
 So the true claim: **four story theories, each able to be authored by interview,
 compiled to a verified substrate, generated into a draft, read back blind,
 repaired, and iterated to a fidelity ceiling** — the full loop, uniform across

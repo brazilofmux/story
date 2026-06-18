@@ -360,6 +360,31 @@ def test_dramatica_drops_invalid_pole_not_raises():
     assert "resolve" not in axes and len(ov.dynamics) == 7
 
 
+# ---- knowledge discipline: authored `learns` → KnowledgeEffects -----------
+
+def test_learns_compile_to_knowledge_effects():
+    from story_engine.core.substrate import KnowledgeEffect, Slot
+    doc = _min_doc()
+    # at the recognition, the hero comes to KNOW (observation); a figure is
+    # deceived into a false BELIEF.
+    doc["events"][3]["learns"] = [
+        {"who": "hero", "fact": "truth_seen(hero)", "via": "realization"}]
+    doc["events"][1]["learns"] = [
+        {"who": "victim", "fact": "rescue_coming(victim)", "via": "deception"}]
+    s = compile_story(doc)   # dialect-agnostic — runs in the substrate build
+    held = {}
+    for ev in s.fabula:
+        for e in ev.effects:
+            if isinstance(e, KnowledgeEffect):
+                held[(ev.id, e.agent_id)] = e.held
+    see = held[("see", "hero")]
+    assert see.slot == Slot.KNOWN and see.via == "realization"
+    assert see.prop.predicate == "truth_seen"
+    # a deception is held as a false BELIEF, not knowledge (dramatic-irony seed)
+    turn = held[("turn", "victim")]
+    assert turn.slot == Slot.BELIEVED and turn.via == "deception"
+
+
 def test_unknown_dialect_compile_raises():
     _expect_error_dialect(_stc_doc(), "freytag", "no overlay compiler")
 
@@ -394,6 +419,7 @@ TESTS = [
     test_dramatica_complete_storyform_verifies_clean,
     test_dramatica_dual_dynamic_honored,
     test_dramatica_drops_invalid_pole_not_raises,
+    test_learns_compile_to_knowledge_effects,
     test_unknown_dialect_compile_raises,
 ]
 

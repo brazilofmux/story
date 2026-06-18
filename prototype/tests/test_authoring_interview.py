@@ -42,7 +42,9 @@ def _complete_doc():
              "mark": "peripeteia"},
             {"id": "wreck", "when": 9, "who": ["halvard"],
              "summary": "Halvard sees what his pride has cost.",
-             "mark": "anagnorisis", "recognizer": "halvard"},
+             "mark": "anagnorisis", "recognizer": "halvard",
+             "learns": [{"who": "halvard", "fact": "cost_of_pride(halvard)",
+                         "via": "realization"}]},
         ],
         "phases": {"beginning": ["calm"], "middle": ["storm"], "end": ["wreck"]},
     }
@@ -310,6 +312,96 @@ def test_dramatic_bad_resolution_flagged():
     assert "dramatic_bad_resolution" in _codes(structural_gaps(doc, "dramatic"))
 
 
+# ---- the knowledge discipline (who-knows-what-when; dialect-agnostic) ------
+
+def _knows_doc():
+    """A doc that commits knowledge: a flaw is established at beat 'audit', and
+    two characters come to know it different ways."""
+    return {
+        "title": "The Span", "telling": "chronological",
+        "characters": [{"id": "mei", "name": "Mei"}, {"id": "sun", "name": "Sun"}],
+        "events": [
+            {"id": "audit", "when": 1, "who": ["mei"],
+             "summary": "Mei's audit turns up the flaw.",
+             "establishes": ["flaw_known(mei)"],
+             "learns": [{"who": "mei", "fact": "flaw_known(mei)",
+                         "via": "observation"}]},
+            {"id": "tell", "when": 2, "who": ["mei", "sun"],
+             "summary": "Mei tells Sun.",
+             "learns": [{"who": "sun", "fact": "flaw_known(mei)",
+                         "via": "told"}]},
+        ],
+        "phases": {"beginning": ["audit"], "middle": ["tell"], "end": ["tell"]},
+    }
+
+
+def test_knowledge_silent_when_no_knowledge_asserted():
+    # a story that commits no knowledge surfaces no knowledge gaps
+    doc = {
+        "title": "Plain", "telling": "chronological",
+        "characters": [{"id": "a", "name": "A"}],
+        "events": [{"id": "e1", "when": 1, "who": ["a"], "summary": "a acts"},
+                   {"id": "e2", "when": 2, "who": ["a"], "summary": "a acts again"}],
+        "phases": {"beginning": ["e1"], "middle": ["e2"], "end": ["e2"]},
+    }
+    from story_engine.core.authoring_interview import _knowledge_gaps
+    assert _knowledge_gaps(doc) == []
+
+
+def test_well_formed_knowledge_has_no_gaps():
+    from story_engine.core.authoring_interview import _knowledge_gaps
+    assert _knowledge_gaps(_knows_doc()) == []
+
+
+def test_learns_unknown_who_blocks():
+    doc = _knows_doc()
+    doc["events"][1]["learns"][0]["who"] = "ghost"
+    assert "learns_unknown_who" in _codes(blocking_gaps(doc))
+
+
+def test_learns_offstage_is_structural():
+    doc = _knows_doc()
+    # sun learns by observation but isn't present at the 'audit' beat
+    doc["events"][0]["learns"].append(
+        {"who": "sun", "fact": "flaw_known(mei)", "via": "observation"})
+    assert "learns_offstage" in _codes(structural_gaps(doc))
+
+
+def test_learns_before_established_is_structural():
+    doc = _knows_doc()
+    # sun "knows" the flaw at when=2, but move the establishing audit to when=5
+    doc["events"][0]["when"] = 5
+    doc["phases"] = {"beginning": ["tell"], "middle": ["audit"], "end": ["audit"]}
+    g = [x for x in structural_gaps(doc) if x.code == "learns_before_established"]
+    assert g and "flaw_known(mei)" in g[0].question
+
+
+def test_knows_with_no_source_surfaces():
+    doc = _knows_doc()
+    doc["characters"][1]["knows"] = ["secret_motive(sun)"]   # never established
+    assert "knows_no_source" in _codes(structural_gaps(doc))
+
+
+def test_knows_satisfied_by_a_learns():
+    doc = _knows_doc()
+    doc["characters"][1]["knows"] = ["flaw_known(mei)"]      # sun is told it
+    assert "knows_no_source" not in _codes(structural_gaps(doc))
+
+
+def test_knowledge_discipline_is_dialect_agnostic():
+    # the same knowledge gap fires regardless of dialect overlay
+    doc = _knows_doc()
+    doc["characters"][1]["knows"] = ["secret_motive(sun)"]
+    for d in DIALECTS:
+        assert "knows_no_source" in _codes(structural_gaps(doc, d))
+
+
+def test_anagnorisis_recognizer_must_learn():
+    doc = _complete_doc()
+    doc["events"][2].pop("learns")          # recognition that teaches nothing
+    assert "anag_recognizer_learns_nothing" in _codes(structural_gaps(doc))
+
+
 # ---- cross-dialect invariants ----------------------------------------------
 
 def test_skeleton_blocking_is_dialect_agnostic():
@@ -420,6 +512,15 @@ TESTS = [
     test_dramatic_complete_doc_has_no_gaps,
     test_dramatic_missing_argument_mc_and_stakes_surface,
     test_dramatic_bad_resolution_flagged,
+    test_knowledge_silent_when_no_knowledge_asserted,
+    test_well_formed_knowledge_has_no_gaps,
+    test_learns_unknown_who_blocks,
+    test_learns_offstage_is_structural,
+    test_learns_before_established_is_structural,
+    test_knows_with_no_source_surfaces,
+    test_knows_satisfied_by_a_learns,
+    test_knowledge_discipline_is_dialect_agnostic,
+    test_anagnorisis_recognizer_must_learn,
     test_skeleton_blocking_is_dialect_agnostic,
     test_unknown_dialect_raises,
     test_aristotelian_is_the_default_dialect,

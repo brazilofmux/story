@@ -131,10 +131,15 @@ baseline). No regressions through the Dramatica recompletion or the front-end.
 
 ## What's next (deferred, none urgent)
 
-1. **Interview, deeper homework** — the who-knows-what-when knowledge
-   discipline (the substrate's real teeth) is only lightly probed in v1; the
-   next gap-rule pass checks that an asserted "X knows Y" has an establishing
-   event.
+1. ~~**Interview, deeper homework** — the who-knows-what-when knowledge
+   discipline~~ — **LANDED.** A shared (dialect-agnostic) knowledge gap-spine:
+   an asserted `knows` needs a source; a beat's `learns` (who comes to know
+   which fact, `via` observation/told/inference/realization/deception) is
+   checked for presence and timeline; an anagnorisis must teach its recognizer.
+   `learns` compiles to real `KnowledgeEffect`s (deception → a false `BELIEVED`).
+   Live: a dramatic-irony brief surfaced two `knows_no_source` questions, then
+   generated a scene built on the irony. Design:
+   [authoring-interview-knowledge-sketch-01](authoring-interview-knowledge-sketch-01.md).
 2. ~~**Generalize the interview past Aristotelian**~~ — **LANDED.** Each dialect
    now has its own structural-gap overlay + extraction schema; the skeleton
    stays one shared, dialect-agnostic thing (proven identical across all four).
