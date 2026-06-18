@@ -76,6 +76,7 @@ from story_engine.core.dramatica_template import (
     verify_thematic_picks,
     canonical_ending,
     register_element_quad,
+    CANONICAL_ELEMENT_QUADS,
     Quad,
 )
 
@@ -469,21 +470,19 @@ MC_ISSUE_PICK = QuadPick(
     attached_to_id="T_mc_elizabeth",
 )
 
-ELEMENT_QUAD_DOUBT_PNP = Quad(
-    id="element_doubt_pnp",
-    kind="element-quad",
-    element_A="disbelief",
-    element_B="oppose",
-    element_C="faith",
-    element_D="support",
-    authored_by="dramatica-theory",
-)
-register_element_quad("doubt", ELEMENT_QUAD_DOUBT_PNP)
+# Canonical element quad for Variation "doubt" (Contemplation >
+# Doubt): reduction/evaluation/production/re-evaluation (Methodology).
+register_element_quad("doubt", CANONICAL_ELEMENT_QUADS["doubt"])
 
+# Problem: Elizabeth's MC Problem is Evaluation — her "prejudice" is
+# premature evaluation, the snap judgments of Darcy and Wickham. The
+# Solution (Re-evaluation, the dynamic pair) is the novel's spine:
+# Darcy's letter forces the corrective re-reading of everyone she
+# thought she had measured.
 MC_PROBLEM_PICK = QuadPick(
     id="PP_mc_elizabeth",
-    quad_id=ELEMENT_QUAD_DOUBT_PNP.id,
-    chosen_position=QuadPosition.A,  # "disbelief"
+    quad_id=CANONICAL_ELEMENT_QUADS["doubt"].id,
+    chosen_position=QuadPosition.B,  # "evaluation"
     attached_to_kind="throughline",
     attached_to_id="T_mc_elizabeth",
 )
@@ -493,7 +492,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=MC_CONCERN_PICK,
     issue_pick=MC_ISSUE_PICK,
     problem_pick=MC_PROBLEM_PICK,
-    solution_override="faith",  # dynamic pair of "disbelief"
+    solution_override="re-evaluation",  # dynamic pair of "evaluation"
 )
 
 # -- OS (Bennet family situation) in Situation Domain --
@@ -523,26 +522,20 @@ OS_ISSUE_PICK = QuadPick(
     attached_to_id="T_overall_bennets",
 )
 
-ELEMENT_QUAD_PRECONCEPTION = Quad(
-    id="element_preconception",
-    kind="element-quad",
-    element_A="logic",
-    element_B="control",
-    element_C="feeling",
-    element_D="uncontrolled",
-    authored_by="dramatica-theory",
-)
-register_element_quad("preconception", ELEMENT_QUAD_PRECONCEPTION)
+# Canonical element quad for Variation "preconception" (The Future >
+# Preconception): control/help/uncontrolled/hinder (Motivation).
+register_element_quad("preconception", CANONICAL_ELEMENT_QUADS["preconception"])
 
+# Problem: the OS Problem is Control — the controlling marriage-
+# arithmetic that governs the Bennets' future (Mrs. Bennet's
+# pragmatism, Charlotte's calculus, Lady Catherine's command, the
+# entail). The Solution (Uncontrolled, the dynamic pair) is genuine
+# affection that will not be controlled by the arithmetic. (Carries
+# the author's original logic->feeling read into canonical Motivation.)
 OS_PROBLEM_PICK = QuadPick(
     id="PP_os_bennets",
-    quad_id=ELEMENT_QUAD_PRECONCEPTION.id,
-    chosen_position=QuadPosition.A,  # "logic"
-    # The overall story's Problem is Logic — specifically the
-    # marriage-arithmetic logic (Mrs. Bennet's pragmatism,
-    # Charlotte's calculus) that reduces daughters to incomes.
-    # The Solution is Feeling — matches that rest on affection
-    # between people who see each other truly.
+    quad_id=CANONICAL_ELEMENT_QUADS["preconception"].id,
+    chosen_position=QuadPosition.A,  # "control"
     attached_to_kind="throughline",
     attached_to_id="T_overall_bennets",
 )
@@ -552,7 +545,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=OS_CONCERN_PICK,
     issue_pick=OS_ISSUE_PICK,
     problem_pick=OS_PROBLEM_PICK,
-    solution_override="feeling",  # dynamic pair of "logic"
+    solution_override="uncontrolled",  # dynamic pair of "control"
 )
 
 # -- IC Darcy in Manipulation Domain --
@@ -582,21 +575,21 @@ IC_ISSUE_PICK = QuadPick(
     attached_to_id="T_ic_darcy",
 )
 
-ELEMENT_QUAD_COMMITMENT_PNP = Quad(
-    id="element_commitment_pnp",
-    kind="element-quad",
-    element_A="conscience",
-    element_B="help",
-    element_C="temptation",
-    element_D="hinder",
-    authored_by="dramatica-theory",
-)
-register_element_quad("commitment", ELEMENT_QUAD_COMMITMENT_PNP)
+# Canonical element quad for Variation "commitment" (Changing One's
+# Nature > Commitment): pursue/faith/avoid/disbelief (Motivation).
+register_element_quad("commitment", CANONICAL_ELEMENT_QUADS["commitment"])
 
+# Problem: Darcy's IC Problem is Pursue — his influence on Elizabeth
+# is his constancy of pursuit (the first proposal, the persistence
+# through rejection, the Wickham intervention, the second proposal).
+# The Solution (Avoid, the dynamic pair) is the restraint he learns —
+# to stop pressing and let her come to him. (commitment yields
+# Pursue->Avoid here vs Avoid->Pursue in Rocky, Faith->Disbelief in
+# Macbeth — same Variation, three throughline problems.)
 IC_PROBLEM_PICK = QuadPick(
     id="PP_ic_darcy",
-    quad_id=ELEMENT_QUAD_COMMITMENT_PNP.id,
-    chosen_position=QuadPosition.A,  # "conscience"
+    quad_id=CANONICAL_ELEMENT_QUADS["commitment"].id,
+    chosen_position=QuadPosition.A,  # "pursue"
     attached_to_kind="throughline",
     attached_to_id="T_ic_darcy",
 )
@@ -606,7 +599,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=IC_CONCERN_PICK,
     issue_pick=IC_ISSUE_PICK,
     problem_pick=IC_PROBLEM_PICK,
-    solution_override="temptation",  # dynamic pair of "conscience"
+    solution_override="avoid",  # dynamic pair of "pursue"
 )
 
 # -- RS (Elizabeth-Darcy courtship) in Activity Domain --
@@ -636,26 +629,20 @@ RS_ISSUE_PICK = QuadPick(
     attached_to_id="T_rel_elizabeth_darcy",
 )
 
-ELEMENT_QUAD_SKILL_PNP = Quad(
-    id="element_skill_pnp",
-    kind="element-quad",
-    element_A="pursue",
-    element_B="consider",
-    element_C="avoid",
-    element_D="reconsider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("skill", ELEMENT_QUAD_SKILL_PNP)
+# Canonical element quad for Variation "skill" (Doing > Skill):
+# effect/trust/cause/test (Evaluation).
+register_element_quad("skill", CANONICAL_ELEMENT_QUADS["skill"])
 
+# Problem: the RS Problem is Effect — the courtship's skill of
+# "reading another person" keeps failing on surface Effect (Darcy's
+# proud manner, Wickham's easy charm — the impressions). The Solution
+# (Cause, the dynamic pair) is reading the true character beneath:
+# the Pemberley housekeeper, the letter, the Lydia rescue reveal the
+# Cause behind the manner.
 RS_PROBLEM_PICK = QuadPick(
     id="PP_rs_ed",
-    quad_id=ELEMENT_QUAD_SKILL_PNP.id,
-    chosen_position=QuadPosition.D,  # "reconsider"
-    # The RS's Problem is Reconsider — the relationship is stuck
-    # in a mode of reconsideration (of first impressions, of the
-    # other's remarks, of each other's letters) until Consider
-    # (the genuine article — fresh, forward-looking attention)
-    # replaces it.
+    quad_id=CANONICAL_ELEMENT_QUADS["skill"].id,
+    chosen_position=QuadPosition.A,  # "effect"
     attached_to_kind="throughline",
     attached_to_id="T_rel_elizabeth_darcy",
 )
@@ -665,7 +652,7 @@ RS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=RS_CONCERN_PICK,
     issue_pick=RS_ISSUE_PICK,
     problem_pick=RS_PROBLEM_PICK,
-    solution_override="consider",  # dynamic pair of "reconsider"
+    solution_override="cause",  # dynamic pair of "effect"
 )
 
 ALL_THEMATIC_PICKS = (
