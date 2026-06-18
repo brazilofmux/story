@@ -476,12 +476,12 @@ class Dialect:
     half; `system_prompt` / `build_schema` are the LLM extraction half.
 
     `constrained` selects the extraction transport. The structured-output
-    grammar compiler (`messages.parse`) has a schema-complexity ceiling — the
-    Aristotelian and Save-the-Cat schemas compile under it, but the larger
-    Dramatica / Dramatic schemas do not (the server returns "Schema is too
-    complex" / "Grammar compilation timed out"). Those dialects extract via
-    plain JSON mode instead (ask for JSON, validate with pydantic in Python),
-    which has no schema-size limit. See `extract_story_draft`."""
+    grammar compiler (`messages.parse`) has a low schema-complexity ceiling —
+    only the smallest schema (Aristotelian) reliably compiles under it; the
+    others (Save-the-Cat, Dramatica, Dramatic) return "Schema is too complex" /
+    "Grammar compilation timed out". Those dialects extract via plain JSON mode
+    instead (ask for JSON, validate with pydantic in Python), which has no
+    schema-size limit. See `extract_story_draft`."""
     name: str
     overlay_gaps: Callable[[dict], list]
     system_prompt: str
@@ -801,7 +801,7 @@ DIALECTS: dict = {
         _aristotelian_schema, _postprocess_aristotelian),
     "save-the-cat": Dialect(
         "save-the-cat", _save_the_cat_overlay, _SAVE_THE_CAT_PROMPT,
-        _save_the_cat_schema, _postprocess_save_the_cat),
+        _save_the_cat_schema, _postprocess_save_the_cat, constrained=False),
     "dramatica": Dialect(
         "dramatica", _dramatica_overlay, _DRAMATICA_PROMPT,
         _dramatica_schema, _postprocess_generic, constrained=False),

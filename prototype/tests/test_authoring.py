@@ -143,6 +143,83 @@ def test_loads_real_sample_file():
     assert verify_compiled(s) == []
 
 
+# ---- Save-the-Cat overlay compile (the second wired dialect) --------------
+
+def _stc_doc(**over):
+    """A minimal Save-the-Cat doc: theme, genre, a protagonist, and events on
+    the load-bearing beats (Catalyst → Finale)."""
+    beats = ["Catalyst", "Break Into Two", "Midpoint", "All Is Lost",
+             "Break Into Three", "Finale"]
+    doc = {
+        "title": "The Heist",
+        "logline": "a crew's loyalty is tested by greed",
+        "telling": "chronological",
+        "theme_statement": "loyalty outlasts greed",
+        "genre": "golden-fleece",
+        "characters": [
+            {"id": "nick", "name": "Nick", "role": "protagonist"},
+            {"id": "sal", "name": "Sal", "role": "antagonist"},
+        ],
+        "events": [
+            {"id": f"e{i}", "when": i + 1,
+             "who": ["nick"] if i % 2 else ["nick", "sal"],
+             "summary": f"the {b} beat", "beat": b}
+            for i, b in enumerate(beats)
+        ],
+        "phases": {"beginning": ["e0", "e1"], "middle": ["e2", "e3"],
+                   "end": ["e4", "e5"]},
+    }
+    doc.update(over)
+    return doc
+
+
+def test_stc_compiles_substrate_and_overlay():
+    s = compile_story(_stc_doc(), "save-the-cat")
+    assert s.dialect == "save-the-cat"
+    assert {e.id for e in s.entities} == {"nick", "sal"}   # shared substrate
+    assert len(s.fabula) == 6 and len(s.sjuzhet) == 6
+    ov = s.overlay
+    assert ov.story.title == "The Heist"
+    assert ov.story.theme_statement == "loyalty outlasts greed"
+    assert ov.story.stc_genre_id == "golden-fleece"
+    assert len(ov.beats) == 6
+    # beats group onto the canonical slots (Catalyst=4 … Finale=14)
+    assert {b.slot for b in ov.beats} == {4, 6, 9, 11, 13, 14}
+    assert ov.beat_event_ids[4] == ("e0",)
+    assert {st.kind.value for st in ov.strands} == {"a-story", "b-story"}
+    nick = next(c for c in ov.characters if c.id == "nick")
+    assert nick.role_labels == ("protagonist",)
+
+
+def test_stc_verifies_without_rejecting():
+    # the STC verifier never rejects — all findings are advisory (noted /
+    # advises-review), never blocking. A complete doc still surfaces only those.
+    obs = verify_compiled(compile_story(_stc_doc(), "save-the-cat"))
+    assert all(o.severity in ("noted", "advises-review") for o in obs)
+
+
+def test_stc_tolerates_unbeated_events():
+    doc = _stc_doc()
+    for ev in doc["events"]:
+        ev.pop("beat", None)                 # author declined the beat homework
+    s = compile_story(doc, "save-the-cat")   # still compiles
+    assert s.overlay.beats == () and s.overlay.beat_event_ids == {}
+    assert verify_compiled(s) is not None    # verifier runs, doesn't raise
+
+
+def test_unknown_dialect_compile_raises():
+    _expect_error_dialect(_stc_doc(), "dramatica", "no overlay compiler")
+
+
+def _expect_error_dialect(doc, dialect, fragment):
+    try:
+        compile_story(doc, dialect)
+    except StoryFormatError as e:
+        assert fragment in str(e), f"{fragment!r} not in {e!r}"
+    else:
+        raise AssertionError(f"expected StoryFormatError for dialect {dialect}")
+
+
 TESTS = [
     test_compiles_to_objects,
     test_compiled_story_verifies_clean,
@@ -154,6 +231,10 @@ TESTS = [
     test_parse_prop,
     test_friendly_errors,
     test_loads_real_sample_file,
+    test_stc_compiles_substrate_and_overlay,
+    test_stc_verifies_without_rejecting,
+    test_stc_tolerates_unbeated_events,
+    test_unknown_dialect_compile_raises,
 ]
 
 

@@ -133,23 +133,28 @@ def _cli():
     return p.parse_args()
 
 
+# dialects whose overlay the TOML→substrate compiler can build today
+_COMPILABLE = ("aristotelian", "save-the-cat")
+
+
 def _compile_or_note(doc, dialect):
-    """Compile the well-formed draft. The live TOML→substrate compiler lands
-    the skeleton + the Aristotelian overlay; the other dialects' structural
-    homework is fully elicited and gap-checked here, and their record is
-    verified by the existing per-dialect encodings — the TOML→overlay compiler
-    for them is the remaining, named seam. Returns the CompiledStory, or None."""
-    if dialect != "aristotelian":
+    """Compile the well-formed draft. Aristotelian and Save-the-Cat have live
+    overlay compilers; the other dialects' structural homework is fully
+    elicited and gap-checked, and their record is verifier-ready in the Python
+    encodings — the TOML→overlay compiler for them is the remaining, named
+    seam. Returns the CompiledStory, or None when uncompiled."""
+    if dialect not in _COMPILABLE:
         print(f"\nNo blocking gaps — the {dialect} record is well-formed and "
               f"its structural homework is complete.\n[Note: the live "
-              f"TOML→substrate compiler targets the Aristotelian overlay; the "
-              f"{dialect} overlay compiler is not yet wired (see the coverage "
-              f"grid). The record is verifier-ready in the {dialect} encodings.]")
+              f"TOML→substrate compiler builds the {', '.join(_COMPILABLE)} "
+              f"overlays; the {dialect} overlay compiler is not yet wired (see "
+              f"the coverage grid). The record is verifier-ready in the "
+              f"{dialect} encodings.]")
         return None
     print("\nNo blocking gaps — compiling to the verified substrate...")
-    compiled = compile_story(doc)
+    compiled = compile_story(doc, dialect)
     obs = verify_compiled(compiled)
-    print(f"  compiled: {len(compiled.fabula)} events, "
+    print(f"  compiled ({dialect}): {len(compiled.fabula)} events, "
           f"{len(compiled.entities)} entities; "
           f"verifier observations: {len(obs)}")
     return compiled
@@ -227,14 +232,26 @@ def main() -> int:
     if compiled is not None and args.generate:
         from story_engine.core.draft_generator import generate_draft
         print("\nGenerating the first scene...")
-        result = generate_draft(
+        gen_kw = dict(
             title=compiled.title, sjuzhet=compiled.sjuzhet[:1],
             fabula=compiled.fabula, entities=compiled.entities,
-            descriptions=compiled.descriptions, mythos=compiled.mythos,
+            descriptions=compiled.descriptions,
             preplay_disclosures=compiled.preplay_disclosures,
             dialect_note=f"{args.dialect} story authored by interview.",
             effort="medium", max_tokens=2000,
         )
+        if args.dialect == "save-the-cat":
+            from story_engine.core.save_the_cat_generation import (
+                StcStorySheet, StcFrame)
+            ov = compiled.overlay
+            sheet = StcStorySheet(
+                title=compiled.title, action_summary=ov.action_summary,
+                beats=ov.beats, strands=ov.strands, characters=ov.characters,
+                beat_event_ids=ov.beat_event_ids)
+            gen_kw["adapter"] = StcFrame(sheet, compiled.sjuzhet)
+        else:
+            gen_kw["mythos"] = compiled.mythos
+        result = generate_draft(**gen_kw)
         print("\n" + (result.draft or "(no prose)"))
     return 0
 

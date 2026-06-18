@@ -107,7 +107,7 @@ model-free:
 | generate · evaluate · repair | ✅ | ✅ | ✅ | ✅ |
 | converge | ✅ | ✅\* | ✅\* | ✅\* |
 | interview (structural homework) | ✅ | ✅ | ✅ | ✅ |
-| compile (TOML → substrate) | ✅ | – | – | – |
+| compile (TOML → substrate) | ✅ | – | ✅ | – |
 
 \* converge composed + integration-tested for all four; live recovery
 demonstrated on Aristotelian.
