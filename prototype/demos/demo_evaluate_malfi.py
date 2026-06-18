@@ -93,8 +93,7 @@ def main() -> int:
 
     decompiled = decompile_draft(
         prose,
-        title="The Duchess of Malfi",
-        dialect_note="Aristotelian tragedy (complex plot, distributed fall).",
+        title="The Duchess of Malfi",  # genre-only note (blind)
         effort=args.effort,
         max_tokens=args.max_tokens,
         dry_run=args.dry_run,

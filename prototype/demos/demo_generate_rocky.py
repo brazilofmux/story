@@ -139,7 +139,7 @@ def main() -> int:
         print("DRAMATICA FIDELITY — decompile blind, score vs the storyform")
         print("=" * 72)
         reading = decompile_dramatica(
-            result.draft, title="Rocky", dialect_note=_DIALECT_NOTE,
+            result.draft, title="Rocky",  # genre-only note (blind)
             effort="high", max_tokens=6000,
         )
         report = compare_to_storyform(reading, _storyform())

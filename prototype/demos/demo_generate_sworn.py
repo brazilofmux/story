@@ -110,7 +110,7 @@ def main() -> int:
         print("EVALUATION — decompile blind: structural fidelity + telling order")
         print("=" * 72)
         decompiled = decompile_draft(
-            result.draft, title="Sworn", dialect_note=_DIALECT_NOTE,
+            result.draft, title="Sworn",  # genre-only note (blind)
             effort="high", max_tokens=8000,
         )
         report = compare_to_mythos(decompiled, AR_SWORN_MYTHOS)

@@ -47,7 +47,8 @@ class DramaticaReading(BaseModel):
     outcome: str = Field(
         description="Is the overall-story goal achieved by the end? "
                     "'success' if achieved, 'failure' if not, '' if unclear. "
-                    "Judge the OBJECTIVE result only, not how anyone feels.")
+                    "Judge the OBJECTIVE result only (the scoreboard / verdict "
+                    "/ who took the prize), not how anyone feels.")
     judgment: str = Field(
         description="Does the MAIN CHARACTER end personally resolved and "
                     "fulfilled, or in anguish? 'good' if fulfilled/at peace, "
@@ -106,11 +107,24 @@ Produce the typed structure. Prose belongs only inside the fields.
 """
 
 
+# Genre-only framing for the blind reader — never the specific storyform
+# (which outcome, which judgment). Passing the generation note here LEADS
+# the read. Names the task, not the answer.
+GENRE_NOTE = (
+    "The draft is a complete story (a Dramatica storyform underlies it). "
+    "Reconstruct its structure — the four throughlines, the story goal, the "
+    "two INDEPENDENT ending axes (Outcome: was the objective goal achieved? "
+    "Judgment: does the Main Character end fulfilled or in anguish?), the MC "
+    "resolve — from the PROSE ALONE. You are NOT told the storyform; work it "
+    "out from the text, and do not collapse Outcome and Judgment together."
+)
+
+
 def decompile_dramatica(
     draft_text: str,
     *,
     title: str = "",
-    dialect_note: str = "",
+    dialect_note: str = GENRE_NOTE,
     model: str = "claude-opus-4-6",
     effort: str = "high",
     max_tokens: int = 6000,
@@ -118,7 +132,11 @@ def decompile_dramatica(
     client=None,
 ) -> Optional[DramaticaReading]:
     """Read the draft prose blind and return the Dramatica structure it
-    supports. Returns None on dry_run."""
+    supports. Returns None on dry_run.
+
+    `dialect_note` MUST be genre-only (defaults to GENRE_NOTE). Do NOT pass
+    the generation note — naming the intended outcome/judgment leads the
+    read and it is no longer blind."""
     header = []
     if title:
         header.append(f"Draft title: {title}")

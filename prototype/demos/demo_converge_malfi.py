@@ -141,7 +141,7 @@ def main() -> int:
     # Wire the real evaluate / repair functions into the controller.
     def evaluate_fn(text):
         decompiled = decompile_draft(
-            text, title="The Duchess of Malfi", dialect_note=_DIALECT_NOTE,
+            text, title="The Duchess of Malfi",  # genre-only note (blind)
             effort=args.eval_effort, max_tokens=8000,
         )
         return compare_to_mythos(decompiled, AR_MALFI_MYTHOS)

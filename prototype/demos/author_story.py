@@ -136,7 +136,7 @@ def main() -> int:
         print("STRUCTURAL FIDELITY — decompile blind, score vs the authored substrate")
         print("=" * 72)
         decompiled = decompile_draft(
-            result.draft, title=story.title, dialect_note=dialect_note,
+            result.draft, title=story.title,  # genre-only note (blind)
             effort="high", max_tokens=8000,
         )
         report = compare_to_mythos(decompiled, story.mythos)

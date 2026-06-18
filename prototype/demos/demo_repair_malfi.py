@@ -57,8 +57,7 @@ def _verify_repair(directive, after_prose: str, *, effort, client=None) -> tuple
     structure now reads. Returns (ok: bool, evidence: str)."""
     scene_struct = decompile_draft(
         after_prose, title="The Duchess of Malfi (repaired scene)",
-        dialect_note=_DIALECT_NOTE, effort=effort, max_tokens=4000,
-        client=client,
+        effort=effort, max_tokens=4000, client=client,  # genre-only (blind)
     )
     if directive.dimension == "anti_recognition":
         who = directive.authored.split(" (")[0]
@@ -110,7 +109,7 @@ def main() -> int:
     # 1. EVALUATE
     print("[1/4] EVALUATE — decompiling the draft blind...")
     decompiled = decompile_draft(
-        prose, title="The Duchess of Malfi", dialect_note=_DIALECT_NOTE,
+        prose, title="The Duchess of Malfi",  # genre-only note (blind)
         effort=args.effort, max_tokens=args.max_tokens,
     )
     report = compare_to_mythos(decompiled, AR_MALFI_MYTHOS)

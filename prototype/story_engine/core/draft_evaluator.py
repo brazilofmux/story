@@ -167,11 +167,24 @@ Produce the typed structure. Prose belongs only inside the fields.
 """
 
 
+# The ONLY framing the blind reader gets: the GENRE, never the specific
+# structure. Passing the generation note here (which names which event is
+# the peripeteia, which character the pathos-centre) LEADS the read — it
+# hands the reader the answer key. The note below names the task, not the
+# answer; the schema field descriptions do the rest.
+GENRE_NOTE = (
+    "The draft is an Aristotelian tragedy. Reconstruct its structure — "
+    "peripeteia, anagnorisis, pathos-centre, tragic hero(es), any anti-"
+    "recognitions — from the PROSE ALONE. You are NOT told which events or "
+    "characters fill these roles; work them out from the text."
+)
+
+
 def decompile_draft(
     draft_text: str,
     *,
     title: str = "",
-    dialect_note: str = "",
+    dialect_note: str = GENRE_NOTE,
     model: str = "claude-opus-4-6",
     effort: str = "high",
     max_tokens: int = 8000,
@@ -179,7 +192,11 @@ def decompile_draft(
     client=None,
 ) -> Optional[DecompiledStructure]:
     """Read the draft prose blind and return the Aristotelian structure
-    the prose supports. Returns None on dry_run (prints the prompt)."""
+    the prose supports. Returns None on dry_run (prints the prompt).
+
+    `dialect_note` MUST be genre-only (it defaults to GENRE_NOTE). Do NOT
+    pass the generation note — naming the specific structure leads the
+    read and the result is no longer blind."""
     header = []
     if title:
         header.append(f"Draft title: {title}")
