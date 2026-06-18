@@ -79,6 +79,7 @@ from story_engine.core.dramatica_template import (
     verify_thematic_picks,
     canonical_ending,
     register_element_quad,
+    CANONICAL_ELEMENT_QUADS,
     Quad,
 )
 
@@ -454,21 +455,19 @@ MC_ISSUE_PICK = QuadPick(
     attached_to_id="T_mc_sheppard",
 )
 
-ELEMENT_QUAD_DESIRE = Quad(
-    id="element_desire",
-    kind="element-quad",
-    element_A="avoid",
-    element_B="reconsider",
-    element_C="pursue",
-    element_D="consider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("desire", ELEMENT_QUAD_DESIRE)
+# Canonical element quad for Variation "desire" (Playing a Role >
+# Desire): trust/expectation/test/determination (Evaluation).
+register_element_quad("desire", CANONICAL_ELEMENT_QUADS["desire"])
 
+# Problem: Sheppard's MC Problem is Determination — his fixed
+# determination to conceal the murder (Steadfast Be-er: he holds it
+# through the whole narration). The Solution (Expectation, the
+# dynamic pair) is Poirot's correct anticipation of the narrator's
+# guilt — the counter Sheppard cannot prevent.
 MC_PROBLEM_PICK = QuadPick(
     id="PP_mc_sheppard",
-    quad_id=ELEMENT_QUAD_DESIRE.id,
-    chosen_position=QuadPosition.A,  # "avoid"
+    quad_id=CANONICAL_ELEMENT_QUADS["desire"].id,
+    chosen_position=QuadPosition.D,  # "determination"
     attached_to_kind="throughline",
     attached_to_id="T_mc_sheppard",
 )
@@ -478,7 +477,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=MC_CONCERN_PICK,
     issue_pick=MC_ISSUE_PICK,
     problem_pick=MC_PROBLEM_PICK,
-    solution_override="pursue",  # dynamic pair of "avoid"
+    solution_override="expectation",  # dynamic pair of "determination"
 )
 
 # -- OS (the investigation) in Activity Domain --
@@ -508,21 +507,20 @@ OS_ISSUE_PICK = QuadPick(
     attached_to_id="T_overall_case",
 )
 
-ELEMENT_QUAD_INTERPRETATION = Quad(
-    id="element_interpretation_ackroyd",
-    kind="element-quad",
-    element_A="faith",
-    element_B="support",
-    element_C="disbelief",
-    element_D="oppose",
-    authored_by="dramatica-theory",
-)
-register_element_quad("interpretation", ELEMENT_QUAD_INTERPRETATION)
+# Canonical element quad for Variation "interpretation" (Understanding
+# > Interpretation): order/equity/chaos/inequity (Purpose).
+register_element_quad("interpretation", CANONICAL_ELEMENT_QUADS["interpretation"])
 
+# Problem: the OS Problem is Chaos — a whodunnit whose objective story
+# SUCCEEDS: the murder is disordered Chaos that the investigation must
+# resolve. The Solution (Order, the dynamic pair) is Poirot's final
+# reconstruction. (Same Issue as Oedipus's/Chinatown's MC, but the
+# reverse direction — there ordering fails into chaos; here chaos is
+# ordered.)
 OS_PROBLEM_PICK = QuadPick(
     id="PP_os_case",
-    quad_id=ELEMENT_QUAD_INTERPRETATION.id,
-    chosen_position=QuadPosition.A,  # "faith"
+    quad_id=CANONICAL_ELEMENT_QUADS["interpretation"].id,
+    chosen_position=QuadPosition.C,  # "chaos"
     attached_to_kind="throughline",
     attached_to_id="T_overall_case",
 )
@@ -532,7 +530,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=OS_CONCERN_PICK,
     issue_pick=OS_ISSUE_PICK,
     problem_pick=OS_PROBLEM_PICK,
-    solution_override="disbelief",  # dynamic pair of "faith"
+    solution_override="order",  # dynamic pair of "chaos"
 )
 
 # -- IC Poirot in Situation Domain --
@@ -561,21 +559,18 @@ IC_ISSUE_PICK = QuadPick(
     attached_to_id="T_ic_poirot",
 )
 
-ELEMENT_QUAD_WORK = Quad(
-    id="element_work",
-    kind="element-quad",
-    element_A="logic",
-    element_B="control",
-    element_C="feeling",
-    element_D="uncontrolled",
-    authored_by="dramatica-theory",
-)
-register_element_quad("work", ELEMENT_QUAD_WORK)
+# Canonical element quad for Variation "work" (The Present > Work):
+# certainty/deduction/potentiality/induction (Methodology).
+register_element_quad("work", CANONICAL_ELEMENT_QUADS["work"])
 
+# Problem: Poirot's IC Problem is Deduction — his whole influence is
+# his method, the patient "little grey cells" Deduction that corners
+# Sheppard. The Solution (Induction, the dynamic pair) is the
+# bottom-up assembling of particulars the case also turns on.
 IC_PROBLEM_PICK = QuadPick(
     id="PP_ic_poirot",
-    quad_id=ELEMENT_QUAD_WORK.id,
-    chosen_position=QuadPosition.A,  # "logic"
+    quad_id=CANONICAL_ELEMENT_QUADS["work"].id,
+    chosen_position=QuadPosition.B,  # "deduction"
     attached_to_kind="throughline",
     attached_to_id="T_ic_poirot",
 )
@@ -585,7 +580,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=IC_CONCERN_PICK,
     issue_pick=IC_ISSUE_PICK,
     problem_pick=IC_PROBLEM_PICK,
-    solution_override="feeling",  # dynamic pair of "logic"
+    solution_override="induction",  # dynamic pair of "deduction"
 )
 
 # -- RS (Sheppard-Poirot collaboration) in Fixed Attitude Domain --
@@ -614,21 +609,19 @@ RS_ISSUE_PICK = QuadPick(
     attached_to_id="T_rel_sheppard_poirot",
 )
 
-ELEMENT_QUAD_DOUBT = Quad(
-    id="element_doubt_ackroyd",
-    kind="element-quad",
-    element_A="conscience",
-    element_B="help",
-    element_C="temptation",
-    element_D="hinder",
-    authored_by="dramatica-theory",
-)
-register_element_quad("doubt", ELEMENT_QUAD_DOUBT)
+# Canonical element quad for Variation "doubt" (Contemplation >
+# Doubt): reduction/evaluation/production/re-evaluation (Methodology).
+register_element_quad("doubt", CANONICAL_ELEMENT_QUADS["doubt"])
 
+# Problem: the RS Problem is Evaluation — the collaboration runs on
+# each party's continual evaluation of the other (Poirot sizing up
+# the narrator's reliability; Sheppard gauging Poirot's progress).
+# The Solution (Re-evaluation, the dynamic pair) is the corrective
+# re-reading of the trusted narrator that the whole novel turns on.
 RS_PROBLEM_PICK = QuadPick(
     id="PP_rs_sp",
-    quad_id=ELEMENT_QUAD_DOUBT.id,
-    chosen_position=QuadPosition.C,  # "temptation"
+    quad_id=CANONICAL_ELEMENT_QUADS["doubt"].id,
+    chosen_position=QuadPosition.B,  # "evaluation"
     attached_to_kind="throughline",
     attached_to_id="T_rel_sheppard_poirot",
 )
@@ -638,7 +631,7 @@ RS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=RS_CONCERN_PICK,
     issue_pick=RS_ISSUE_PICK,
     problem_pick=RS_PROBLEM_PICK,
-    solution_override="conscience",  # dynamic pair of "temptation"
+    solution_override="re-evaluation",  # dynamic pair of "evaluation"
 )
 
 ALL_THEMATIC_PICKS = (
