@@ -15,7 +15,7 @@ import traceback
 
 from story_engine.core.authoring_interview import (
     interview_gaps, blocking_gaps, structural_gaps, is_compilable,
-    next_questions, run_interview,
+    next_questions, run_interview, DIALECTS,
 )
 from story_engine.core.authoring import compile_story, verify_compiled
 
@@ -134,6 +134,208 @@ def test_next_questions_puts_blocking_first():
     assert "title" in qs[0].lower()           # blocking gap leads
 
 
+# ---- the dialect overlays: each dialect's structural homework -------------
+#
+# The skeleton (title/characters/events/when/who/phases) is dialect-agnostic;
+# the structural gaps are per-dialect. These pin each overlay against its
+# dialect verifier's vocabulary, the way the Aristotelian tests above do.
+
+
+def _stc_complete_doc():
+    """A well-formed Save-the-Cat draft: theme, genre, a protagonist, and an
+    event on each load-bearing beat (Catalyst → Finale)."""
+    beats = ["Catalyst", "Break Into Two", "Midpoint", "All Is Lost",
+             "Break Into Three", "Finale"]
+    events = [
+        {"id": f"e{i}", "when": i + 1, "who": ["nick"],
+         "summary": f"beat {b}", "beat": b}
+        for i, b in enumerate(beats)
+    ]
+    return {
+        "title": "The Heist",
+        "telling": "chronological",
+        "theme_statement": "loyalty outlasts greed",
+        "genre": "golden-fleece",
+        "characters": [{"id": "nick", "name": "Nick", "role": "protagonist"}],
+        "events": events,
+        "phases": {"beginning": ["e0", "e1"], "middle": ["e2", "e3"],
+                   "end": ["e4", "e5"]},
+    }
+
+
+def test_stc_complete_doc_has_no_gaps():
+    doc = _stc_complete_doc()
+    assert interview_gaps(doc, "save-the-cat") == []
+    assert is_compilable(doc, "save-the-cat")
+
+
+def test_stc_missing_theme_genre_protagonist_surface():
+    doc = _stc_complete_doc()
+    doc.pop("theme_statement")
+    doc.pop("genre")
+    doc["characters"][0]["role"] = "ally"
+    codes = _codes(structural_gaps(doc, "save-the-cat"))
+    assert {"stc_no_theme", "stc_no_genre", "stc_no_protagonist"} <= codes
+
+
+def test_stc_unfilled_load_bearing_beats_surface():
+    doc = _stc_complete_doc()
+    for ev in doc["events"]:               # strip every beat assignment
+        ev.pop("beat", None)
+    g = [x for x in structural_gaps(doc, "save-the-cat")
+         if x.code == "stc_unfilled_beats"]
+    assert len(g) == 1 and "Catalyst" in g[0].question and "Finale" in g[0].question
+
+
+def test_stc_unknown_beat_and_genre_flagged():
+    doc = _stc_complete_doc()
+    doc["events"][0]["beat"] = "Plot Point One"   # not a Save-the-Cat beat
+    doc["genre"] = "neo-noir"                      # not one of the ten
+    codes = _codes(structural_gaps(doc, "save-the-cat"))
+    assert {"stc_unknown_beat", "stc_unknown_genre"} <= codes
+
+
+def _dramatica_complete_doc():
+    """A well-formed Dramatica draft: four throughlines in four distinct
+    domains, the eight dynamics, a goal and a consequence."""
+    return {
+        "title": "The Climb",
+        "telling": "chronological",
+        "story_goal": "reach the summit before the storm",
+        "story_consequence": "the expedition is lost",
+        "characters": [{"id": "ava", "name": "Ava"},
+                       {"id": "rao", "name": "Rao"}],
+        "events": [
+            {"id": "base", "when": 1, "who": ["ava"], "summary": "they set out"},
+            {"id": "ridge", "when": 2, "who": ["ava", "rao"],
+             "summary": "the ridge nearly kills them"},
+            {"id": "summit", "when": 3, "who": ["ava"], "summary": "the choice"},
+        ],
+        "throughlines": [
+            {"role": "overall-story", "domain": "activity"},
+            {"role": "main-character", "domain": "fixed-attitude", "owner": "ava"},
+            {"role": "impact-character", "domain": "manipulation", "owner": "rao"},
+            {"role": "relationship", "domain": "situation"},
+        ],
+        "dynamics": [
+            {"axis": "resolve", "choice": "change"},
+            {"axis": "growth", "choice": "start"},
+            {"axis": "approach", "choice": "do-er"},
+            {"axis": "problem-solving-style", "choice": "linear"},
+            {"axis": "driver", "choice": "action"},
+            {"axis": "limit", "choice": "timelock"},
+            {"axis": "outcome", "choice": "success"},
+            {"axis": "judgment", "choice": "good"},
+        ],
+        "phases": {"beginning": ["base"], "middle": ["ridge"], "end": ["summit"]},
+    }
+
+
+def test_dramatica_complete_doc_has_no_gaps():
+    doc = _dramatica_complete_doc()
+    assert interview_gaps(doc, "dramatica") == []
+    assert is_compilable(doc, "dramatica")
+
+
+def test_dramatica_missing_throughlines_domains_dynamics_surface():
+    doc = _dramatica_complete_doc()
+    doc["throughlines"] = doc["throughlines"][:2]   # drop two roles + domains
+    doc["dynamics"] = doc["dynamics"][:5]           # drop three axes
+    doc.pop("story_goal")
+    codes = _codes(structural_gaps(doc, "dramatica"))
+    assert {"dram_missing_throughlines", "dram_missing_dynamics",
+            "dram_no_goal"} <= codes
+
+
+def test_dramatica_domain_collision_and_bad_pole():
+    doc = _dramatica_complete_doc()
+    doc["throughlines"][1]["domain"] = "activity"   # collides with overall-story
+    doc["dynamics"][0]["choice"] = "transform"      # not change|steadfast
+    codes = _codes(structural_gaps(doc, "dramatica"))
+    assert {"dram_domain_collision", "dram_bad_dynamic"} <= codes
+
+
+def test_dramatica_dual_dynamic_is_honored():
+    # a genuinely-undecided axis given BOTH poles is well-formed, not an error
+    # (the ambiguity-honest substrate — see dramatica-precision-limit).
+    doc = _dramatica_complete_doc()
+    doc["dynamics"][3]["choice"] = ["linear", "holistic"]
+    assert "dram_bad_dynamic" not in _codes(structural_gaps(doc, "dramatica"))
+    assert interview_gaps(doc, "dramatica") == []
+
+
+def _dramatic_complete_doc():
+    """A well-formed Dramatic draft: an argument with a resolution, a
+    main-character throughline, and stakes on each throughline."""
+    return {
+        "title": "The Verdict",
+        "telling": "chronological",
+        "characters": [{"id": "dana", "name": "Dana"}],
+        "events": [
+            {"id": "charge", "when": 1, "who": ["dana"], "summary": "the charge"},
+            {"id": "trial", "when": 2, "who": ["dana"], "summary": "the trial"},
+            {"id": "verdict", "when": 3, "who": ["dana"], "summary": "the verdict"},
+        ],
+        "arguments": [
+            {"premise": "the law can be just", "resolution": "complicate"},
+        ],
+        "throughlines": [
+            {"role": "overall-story", "owner": "situation",
+             "stakes": {"at_risk": "the town's trust", "to_gain": "justice"}},
+            {"role": "main-character", "owner": "dana",
+             "stakes": {"at_risk": "her career", "to_gain": "her conscience"}},
+        ],
+        "phases": {"beginning": ["charge"], "middle": ["trial"], "end": ["verdict"]},
+    }
+
+
+def test_dramatic_complete_doc_has_no_gaps():
+    doc = _dramatic_complete_doc()
+    assert interview_gaps(doc, "dramatic") == []
+    assert is_compilable(doc, "dramatic")
+
+
+def test_dramatic_missing_argument_mc_and_stakes_surface():
+    doc = _dramatic_complete_doc()
+    doc.pop("arguments")
+    doc["throughlines"] = [{"role": "overall-story", "owner": "situation"}]
+    codes = _codes(structural_gaps(doc, "dramatic"))
+    assert {"dramatic_no_argument", "dramatic_no_main_character",
+            "dramatic_throughline_no_stakes"} <= codes
+
+
+def test_dramatic_bad_resolution_flagged():
+    doc = _dramatic_complete_doc()
+    doc["arguments"][0]["resolution"] = "maybe"
+    assert "dramatic_bad_resolution" in _codes(structural_gaps(doc, "dramatic"))
+
+
+# ---- cross-dialect invariants ----------------------------------------------
+
+def test_skeleton_blocking_is_dialect_agnostic():
+    # the same broken skeleton blocks identically in every dialect
+    broken = {"events": [{"id": "x", "who": ["ghost"]}]}   # no title, no chars …
+    base = _codes(blocking_gaps(broken, "aristotelian"))
+    assert {"no_title", "no_characters", "event_no_when",
+            "event_unknown_who", "no_phases"} <= base
+    for d in DIALECTS:
+        assert _codes(blocking_gaps(broken, d)) == base
+
+
+def test_unknown_dialect_raises():
+    try:
+        interview_gaps(_complete_doc(), "freytag")
+    except ValueError as e:
+        assert "freytag" in str(e)
+    else:
+        raise AssertionError("expected ValueError for unknown dialect")
+
+
+def test_aristotelian_is_the_default_dialect():
+    doc = _complete_doc()
+    assert interview_gaps(doc) == interview_gaps(doc, "aristotelian")
+
+
 # ---- the multi-round loop controller (pure, injected extract/answer) ----
 
 def _scripted_extract(docs):
@@ -207,6 +409,20 @@ TESTS = [
     test_missing_pathos_is_structural,
     test_complete_doc_has_no_gaps_and_compiles,
     test_next_questions_puts_blocking_first,
+    test_stc_complete_doc_has_no_gaps,
+    test_stc_missing_theme_genre_protagonist_surface,
+    test_stc_unfilled_load_bearing_beats_surface,
+    test_stc_unknown_beat_and_genre_flagged,
+    test_dramatica_complete_doc_has_no_gaps,
+    test_dramatica_missing_throughlines_domains_dynamics_surface,
+    test_dramatica_domain_collision_and_bad_pole,
+    test_dramatica_dual_dynamic_is_honored,
+    test_dramatic_complete_doc_has_no_gaps,
+    test_dramatic_missing_argument_mc_and_stakes_surface,
+    test_dramatic_bad_resolution_flagged,
+    test_skeleton_blocking_is_dialect_agnostic,
+    test_unknown_dialect_raises,
+    test_aristotelian_is_the_default_dialect,
     test_interview_converges_to_complete,
     test_interview_stalls_when_answers_dont_help,
     test_interview_stops_when_author_finishes,

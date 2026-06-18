@@ -10,8 +10,10 @@ Usage:
     cd prototype
 
     # No API: show the SPINE — a deliberately-partial story, and the exact
-    # questions the interviewer would ask, in priority order.
+    # questions the interviewer would ask, in priority order. The skeleton (●)
+    # is dialect-agnostic; the structural homework (○) is per-dialect:
     PYTHONPATH=. python3 -m demos.author_by_interview --dry-run
+    PYTHONPATH=. python3 -m demos.author_by_interview --dry-run --dialect dramatica
 
     # Live: extract a draft from a brief and show what it still needs.
     export ANTHROPIC_API_KEY=...
@@ -31,7 +33,7 @@ import sys
 
 from story_engine.core.authoring_interview import (
     interview_gaps, blocking_gaps, is_compilable, extract_story_draft,
-    run_interview,
+    run_interview, DIALECTS,
 )
 from story_engine.core.authoring import compile_story, verify_compiled
 
@@ -96,12 +98,12 @@ _PARTIAL_DOC = {
 }
 
 
-def _show_questions(doc):
-    gaps = interview_gaps(doc)
+def _show_questions(doc, dialect="aristotelian"):
+    gaps = interview_gaps(doc, dialect)
     blk = [g for g in gaps if g.severity == "blocking"]
     stc = [g for g in gaps if g.severity == "structural"]
     print(f"\nThe interview would ask ({len(blk)} blocking, "
-          f"{len(stc)} structural):")
+          f"{len(stc)} structural; dialect: {dialect}):")
     for g in blk:
         print(f"  ● [{g.code}] {g.question}")
     for g in stc:
@@ -123,9 +125,34 @@ def _cli():
                         "AI-simulated author answering each round (autonomous).")
     p.add_argument("--generate", action="store_true",
                    help="If the draft compiles clean, render the first scene.")
+    p.add_argument("--dialect", default="aristotelian",
+                   choices=sorted(DIALECTS),
+                   help="Which dialect's structural homework to elicit.")
     p.add_argument("--effort", default="high",
                    choices=["low", "medium", "high", "max"])
     return p.parse_args()
+
+
+def _compile_or_note(doc, dialect):
+    """Compile the well-formed draft. The live TOML→substrate compiler lands
+    the skeleton + the Aristotelian overlay; the other dialects' structural
+    homework is fully elicited and gap-checked here, and their record is
+    verified by the existing per-dialect encodings — the TOML→overlay compiler
+    for them is the remaining, named seam. Returns the CompiledStory, or None."""
+    if dialect != "aristotelian":
+        print(f"\nNo blocking gaps — the {dialect} record is well-formed and "
+              f"its structural homework is complete.\n[Note: the live "
+              f"TOML→substrate compiler targets the Aristotelian overlay; the "
+              f"{dialect} overlay compiler is not yet wired (see the coverage "
+              f"grid). The record is verifier-ready in the {dialect} encodings.]")
+        return None
+    print("\nNo blocking gaps — compiling to the verified substrate...")
+    compiled = compile_story(doc)
+    obs = verify_compiled(compiled)
+    print(f"  compiled: {len(compiled.fabula)} events, "
+          f"{len(compiled.entities)} entities; "
+          f"verifier observations: {len(obs)}")
+    return compiled
 
 
 def main() -> int:
@@ -136,9 +163,11 @@ def main() -> int:
         print("SPINE DEMO (no API) — the substrate's homework as questions")
         print("=" * 72)
         print(f"\nPartial draft:\n{json.dumps(_PARTIAL_DOC, indent=1)}")
-        _show_questions(_PARTIAL_DOC)
-        print("\n[dry run — each ● must be answered before it compiles; each ○ "
-              "is Aristotelian polish the author may decline.]")
+        _show_questions(_PARTIAL_DOC, args.dialect)
+        print(f"\n[dry run — each ● must be answered before it compiles; each ○ "
+              f"is {args.dialect} polish the author may decline. The skeleton "
+              f"(●) is the same in every dialect; the homework (○) is not — "
+              f"try --dialect save-the-cat / dramatica / dramatic.]")
         return 0
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -163,9 +192,10 @@ def main() -> int:
                 print(f"      ↳ author: {rec.answers[:160].strip()}…")
 
         run = run_interview(
-            brief=brief,
+            brief=brief, dialect=args.dialect,
             extract_fn=lambda b, prior, ans: extract_story_draft(
-                b, prior=prior, answers=ans, effort=args.effort),
+                b, dialect=args.dialect, prior=prior, answers=ans,
+                effort=args.effort),
             answer_fn=_simulated_author(brief, args.effort),
             max_rounds=6, on_round=on_round,
         )
@@ -173,11 +203,7 @@ def main() -> int:
               f" after {len(run.rounds)} round(s); "
               f"compilable: {run.compilable}")
         if run.compilable:
-            compiled = compile_story(run.final_doc)
-            obs = verify_compiled(compiled)
-            print(f"compiled: {len(compiled.fabula)} events, "
-                  f"{len(compiled.entities)} entities; "
-                  f"verifier observations: {len(obs)}")
+            _compile_or_note(run.final_doc, args.dialect)
         return 0
 
     print("=" * 72)
@@ -185,25 +211,20 @@ def main() -> int:
     print("=" * 72)
     print(f"\nBrief: {args.brief}\n")
 
-    doc = extract_story_draft(args.brief, answers=args.answers or None,
-                              effort=args.effort)
+    doc = extract_story_draft(args.brief, dialect=args.dialect,
+                              answers=args.answers or None, effort=args.effort)
     print("Extracted authoring draft:")
     print(json.dumps(doc, indent=1))
-    blk = _show_questions(doc)
+    blk = _show_questions(doc, args.dialect)
 
-    if not is_compilable(doc):
+    if not is_compilable(doc, args.dialect):
         print(f"\n[{len(blk)} blocking question(s) remain — answer them and "
               f"re-run with --answers to continue the interview.]")
         return 0
 
-    print("\nNo blocking gaps — compiling to the verified substrate...")
-    compiled = compile_story(doc)
-    obs = verify_compiled(compiled)
-    print(f"  compiled: {len(compiled.fabula)} events, "
-          f"{len(compiled.entities)} entities; "
-          f"verifier observations: {len(obs)}")
+    compiled = _compile_or_note(doc, args.dialect)
 
-    if args.generate:
+    if compiled is not None and args.generate:
         from story_engine.core.draft_generator import generate_draft
         print("\nGenerating the first scene...")
         result = generate_draft(
@@ -211,7 +232,7 @@ def main() -> int:
             fabula=compiled.fabula, entities=compiled.entities,
             descriptions=compiled.descriptions, mythos=compiled.mythos,
             preplay_disclosures=compiled.preplay_disclosures,
-            dialect_note="Aristotelian tragedy authored by interview.",
+            dialect_note=f"{args.dialect} story authored by interview.",
             effort="medium", max_tokens=2000,
         )
         print("\n" + (result.draft or "(no prose)"))

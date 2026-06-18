@@ -106,7 +106,8 @@ model-free:
 |---|---|---|---|---|
 | generate · evaluate · repair | ✅ | ✅ | ✅ | ✅ |
 | converge | ✅ | ✅\* | ✅\* | ✅\* |
-| front-end (TOML + interview) | ✅ | – | – | – |
+| interview (structural homework) | ✅ | ✅ | ✅ | ✅ |
+| compile (TOML → substrate) | ✅ | – | – | – |
 
 \* converge composed + integration-tested for all four; live recovery
 demonstrated on Aristotelian.
@@ -134,8 +135,11 @@ baseline). No regressions through the Dramatica recompletion or the front-end.
    discipline (the substrate's real teeth) is only lightly probed in v1; the
    next gap-rule pass checks that an asserted "X knows Y" has an establishing
    event.
-2. **Generalize the interview past Aristotelian** — each dialect's overlay gets
-   its own gap rules + extraction schema, the way the rest of the stack widened.
+2. ~~**Generalize the interview past Aristotelian**~~ — **LANDED.** Each dialect
+   now has its own structural-gap overlay + extraction schema; the skeleton
+   stays one shared, dialect-agnostic thing (proven identical across all four).
+   30 offline tests (was 16); `compile_story` still Aristotelian-only (named
+   seam). Design: [authoring-interview-sketch-02](authoring-interview-sketch-02.md).
 3. **Live convergence demos per dialect** — the offline composition is proven;
    three `demo_converge_*` mirrors of the Malfi one would close the live
    symmetry (lower value than 1–2).
