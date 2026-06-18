@@ -75,6 +75,7 @@ from story_engine.core.dramatica_template import (
     verify_thematic_picks,
     canonical_ending,
     register_element_quad,
+    CANONICAL_ELEMENT_QUADS,
     Quad,
 )
 
@@ -506,30 +507,21 @@ MC_ISSUE_PICK = QuadPick(
     attached_to_id="T_mc_rocky",
 )
 
-ELEMENT_QUAD_SKILL_ROCKY = Quad(
-    id="element_skill_rocky",
-    kind="element-quad",
-    element_A="pursue",
-    element_B="consider",
-    element_C="avoid",
-    element_D="reconsider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("skill", ELEMENT_QUAD_SKILL_ROCKY)
+# Canonical element quad for Variation "skill" (Doing > Skill) from
+# the Dramatica Table: effect/trust/cause/test (Evaluation).
+register_element_quad("skill", CANONICAL_ELEMENT_QUADS["skill"])
 
 MC_PROBLEM_PICK = QuadPick(
     id="PP_mc_rocky",
-    quad_id=ELEMENT_QUAD_SKILL_ROCKY.id,
-    chosen_position=QuadPosition.B,  # "consider"
-    # Rocky's Problem is Consider — specifically his habitual
-    # self-consideration as a bum, a palooka, a club fighter.
-    # This consideration persists even at the end ('I just want
-    # to go the distance' is the articulated form of the
-    # Problem). For Steadfast MCs, the Problem is held, not
-    # resolved — the Solution (Reconsider) manifests through the
-    # world rather than the MC's change: Adrian, the crowd,
-    # Apollo's 'no rematch' all reconsider Rocky even as Rocky
-    # does not quite reconsider himself.
+    quad_id=CANONICAL_ELEMENT_QUADS["skill"].id,
+    chosen_position=QuadPosition.D,  # "test"
+    # Rocky's Problem is Test — his personal throughline is the
+    # drive to put himself to the proof: "I just want to go the
+    # distance" is the test of whether he is just another bum from
+    # the neighborhood. Steadfast — he holds the need to be tested;
+    # the Solution (Trust, the dynamic pair) arrives through the
+    # world rather than his own change: Adrian's faith, the crowd,
+    # and the self-trust earned by lasting fifteen rounds.
     attached_to_kind="throughline",
     attached_to_id="T_mc_rocky",
 )
@@ -539,7 +531,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=MC_CONCERN_PICK,
     issue_pick=MC_ISSUE_PICK,
     problem_pick=MC_PROBLEM_PICK,
-    solution_override="reconsider",  # dynamic pair of "consider"
+    solution_override="trust",  # dynamic pair of "test"
 )
 
 # -- OS (the title fight) in Situation Domain --
@@ -569,27 +561,20 @@ OS_ISSUE_PICK = QuadPick(
     attached_to_id="T_overall_fight",
 )
 
-ELEMENT_QUAD_ATTEMPT = Quad(
-    id="element_attempt",
-    kind="element-quad",
-    element_A="faith",
-    element_B="support",
-    element_C="disbelief",
-    element_D="oppose",
-    authored_by="dramatica-theory",
-)
-register_element_quad("attempt", ELEMENT_QUAD_ATTEMPT)
+# Canonical element quad for Variation "attempt" (The Present >
+# Attempt): inaction/evaluation/protection/re-evaluation (Methodology).
+register_element_quad("attempt", CANONICAL_ELEMENT_QUADS["attempt"])
 
 OS_PROBLEM_PICK = QuadPick(
     id="PP_os_fight",
-    quad_id=ELEMENT_QUAD_ATTEMPT.id,
-    chosen_position=QuadPosition.C,  # "disbelief"
-    # The OS's Problem is Disbelief — nobody in the machinery of
-    # the fight (Apollo, Jergens, the press, even Rocky at the
-    # start) actually believes the card is a real contest. That
-    # disbelief IS the problem; its dissolution (Faith, the
-    # dynamic pair) would solve the OS — and partially does, by
-    # the final round's evidence.
+    quad_id=CANONICAL_ELEMENT_QUADS["attempt"].id,
+    chosen_position=QuadPosition.B,  # "evaluation"
+    # The OS's Problem is Evaluation — the whole objective story
+    # runs on a fixed, dismissive evaluation of Rocky: a sure-loss
+    # publicity stunt, a bum picked to fall on cue. That settled
+    # judgment IS the problem; the Solution (Re-evaluation, the
+    # dynamic pair) is what the fifteen rounds force — the card,
+    # the crowd, and Apollo's "no rematch" all re-evaluate Rocky.
     attached_to_kind="throughline",
     attached_to_id="T_overall_fight",
 )
@@ -599,7 +584,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=OS_CONCERN_PICK,
     issue_pick=OS_ISSUE_PICK,
     problem_pick=OS_PROBLEM_PICK,
-    solution_override="faith",  # dynamic pair of "disbelief"
+    solution_override="re-evaluation",  # dynamic pair of "evaluation"
 )
 
 # -- IC Apollo in Fixed Attitude Domain --
@@ -629,28 +614,21 @@ IC_ISSUE_PICK = QuadPick(
     attached_to_id="T_ic_apollo",
 )
 
-ELEMENT_QUAD_CONFIDENCE = Quad(
-    id="element_confidence",
-    kind="element-quad",
-    element_A="avoid",
-    element_B="reconsider",
-    element_C="pursue",
-    element_D="consider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("confidence", ELEMENT_QUAD_CONFIDENCE)
+# Canonical element quad for Variation "confidence" (Impulsive
+# Responses > Confidence): theory/trust/hunch/test (Evaluation).
+register_element_quad("confidence", CANONICAL_ELEMENT_QUADS["confidence"])
 
 IC_PROBLEM_PICK = QuadPick(
     id="PP_ic_apollo",
-    quad_id=ELEMENT_QUAD_CONFIDENCE.id,
-    chosen_position=QuadPosition.A,  # "avoid"
-    # Apollo's Problem is Avoid — he avoids taking Rocky
-    # seriously as a competitive question (picks him precisely
-    # because he doesn't look like a competitive question). The
-    # Solution is Pursue — if he'd pursued real preparation the
-    # ribs would have held up; but his fixed attitude has him
-    # avoiding the question until round five makes avoidance
-    # impossible.
+    quad_id=CANONICAL_ELEMENT_QUADS["confidence"].id,
+    chosen_position=QuadPosition.B,  # "trust"
+    # Apollo's Problem is Trust — his confidence is an unfounded
+    # trust in his own superiority, accepted without proof; he
+    # trusts that the stunt is a stunt and never checks. The
+    # Solution (Test, the dynamic pair) is what he refuses: had he
+    # tested Rocky with real preparation the ribs would have held.
+    # His fixed attitude trusts until round five makes the test
+    # unavoidable.
     attached_to_kind="throughline",
     attached_to_id="T_ic_apollo",
 )
@@ -660,7 +638,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=IC_CONCERN_PICK,
     issue_pick=IC_ISSUE_PICK,
     problem_pick=IC_PROBLEM_PICK,
-    solution_override="pursue",  # dynamic pair of "avoid"
+    solution_override="test",  # dynamic pair of "trust"
 )
 
 # -- RS (Rocky + Adrian) in Manipulation Domain --
@@ -690,27 +668,21 @@ RS_ISSUE_PICK = QuadPick(
     attached_to_id="T_rel_rocky_adrian",
 )
 
-ELEMENT_QUAD_COMMITMENT_ROCKY = Quad(
-    id="element_commitment_rocky",
-    kind="element-quad",
-    element_A="conscience",
-    element_B="help",
-    element_C="temptation",
-    element_D="hinder",
-    authored_by="dramatica-theory",
-)
-register_element_quad("commitment", ELEMENT_QUAD_COMMITMENT_ROCKY)
+# Canonical element quad for Variation "commitment" (Changing One's
+# Nature > Commitment): pursue/faith/avoid/disbelief (Motivation).
+register_element_quad("commitment", CANONICAL_ELEMENT_QUADS["commitment"])
 
 RS_PROBLEM_PICK = QuadPick(
     id="PP_rs_ra",
-    quad_id=ELEMENT_QUAD_COMMITMENT_ROCKY.id,
-    chosen_position=QuadPosition.D,  # "hinder"
-    # The RS's Problem is Hinder — concretely, Paulie's
-    # Contagonist force hindering the relationship (his drunken
-    # rage, his jealousy, his throwing Adrian at Rocky). The
-    # Solution is Help (dynamic pair) — Rocky and Adrian each
-    # help the other emerge from their long-standing solitude;
-    # the helping IS the relationship.
+    quad_id=CANONICAL_ELEMENT_QUADS["commitment"].id,
+    chosen_position=QuadPosition.C,  # "avoid"
+    # The RS's Problem is Avoid — Rocky and Adrian each avoid
+    # connection out of long-standing solitude (her shell, his
+    # loneliness); the relationship's trouble is mutual avoidance.
+    # The Solution (Pursue, the dynamic pair) is the shy courtship
+    # itself — each gently pursuing the other until the avoidance
+    # gives way. (Pursue/Avoid here, not the old hinder/help, which
+    # was not even a Motivation element under this Variation.)
     attached_to_kind="throughline",
     attached_to_id="T_rel_rocky_adrian",
 )
@@ -720,7 +692,7 @@ RS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=RS_CONCERN_PICK,
     issue_pick=RS_ISSUE_PICK,
     problem_pick=RS_PROBLEM_PICK,
-    solution_override="help",  # dynamic pair of "hinder"
+    solution_override="pursue",  # dynamic pair of "avoid"
 )
 
 ALL_THEMATIC_PICKS = (
