@@ -1,6 +1,6 @@
 # Ambiguity-honest substrate — sketch 01 (dual DSP values; either pole is faithful)
 
-**Status:** landed; offline-proven on Rocky's Outcome (1216 tests green)
+**Status:** landed; offline-proven (1216 tests green) AND live-confirmed (OQ-AMB-1, 11 blind reads)
 **Date:** 2026-06-18
 **Supersedes:** nothing (new topic)
 **Extends:** the Dramatica Template — adds `AmbiguousChoice` to the DSP value space; no prior commitment retracted.
@@ -92,15 +92,37 @@ representative string, so no string-consumer broke.)
   substrate verification re-ran APPROVED — the Outcome=Failure trajectory the
   substrate supports is still confirmed; `failure` is simply no longer the
   *whole* truth.
+- `demos/demo_evaluate_rocky.py` — live OQ-AMB-1 confirmation (see below): 11
+  blind reads, both poles surfaced, all preserved, binary control held.
+
+## Live confirmation — OQ-AMB-1 (CLOSED, 2026-06-18)
+
+`demos/demo_evaluate_rocky.py` decompiles `rocky_first_draft.md` BLIND
+(genre-only note) and scores each read against the dual storyform.
+**11 reads, claude-opus-4-6, effort=high**, across two independent batches:
+
+| Outcome read | count | verdict | Judgment (control) |
+|---|---|---|---|
+| `success` | 9 | preserved (success ∈ span) | `good` — preserved, all 11 |
+| `failure` | 2 | preserved (failure ∈ span) | `good` — preserved, all 11 |
+
+Both poles surfaced; **every read scored `preserved`**; the binary Judgment
+axis stayed stably good/preserved every run (the dual on Outcome did not
+loosen it — the integrity guard held live, not just in tests). The run-to-run
+flip the old schema scored as drift is now read as the real ambiguity it is.
+
+**The honest asymmetry worth noting:** the blind reader leans `success` (9:2),
+not `failure` — the *opposite* of the authored literal pole. The draft, as
+written, lands Rocky's "go the distance" as an objective WIN; a blind reader
+identifies *that* as the story goal and reads success, where the authored
+storyform names Apollo's publicity stunt as the OS goal (which fails). So the
+ambiguity has a deeper root: it is partly an ambiguity about **whose goal is
+the story goal.** Under the OLD strict schema (authored single pole =
+`failure`) this faithful triumphant reading would have scored the Outcome axis
+as DRIFT on 9 of 11 runs — the dual is load-bearing in *both* directions, not
+only when the reader flips.
 
 ## Open questions (first-class)
-
-- **OQ-AMB-1 — live multi-read confirmation.** The offline tests encode the
-  *already-observed* flip (`7165324`) as faithful; they do not re-run the live
-  blind reader. A clean next drop: run `decompile_dramatica` on
-  `rocky_first_draft.md` a handful of times and show the Outcome reads scatter
-  across `{failure, success}` while every read now scores `preserved`. Needs an
-  API key; deferred, not load-bearing (the typed-read logic is deterministic).
 - **OQ-AMB-2 — dual Limit (TimeLock ∧ OptionLock).** The memory's *other*
   canonical example. The substrate now admits it (`Dual({TIMELOCK,
   OPTIONLOCK})` validates), but the **Limit verifier**
