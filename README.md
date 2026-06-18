@@ -147,6 +147,8 @@ PYTHONPATH=. .venv/bin/python3 -m demos.demo_generate_oedipus --dry-run
 
 MIT — see [`LICENSE`](LICENSE). Copyright (c) 2026 Stephen Dennis.
 
+On what this is and why it's released open: [`WARNING.md`](WARNING.md).
+
 The author is [@brazilofmux](https://github.com/brazilofmux). The LLM
 collaborator on most sessions is Claude (model and session noted in commit
 co-authorship).
