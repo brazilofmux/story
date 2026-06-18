@@ -130,10 +130,16 @@ non-Aristotelian dialects:
 2. **Front-ends.** `.story.toml` authoring exists only for the Aristotelian
    path (`authoring.py`). StC / Dramatica / Dramatic surfaces are a larger,
    separate build.
-3. **Dramatica completeness review** (Stephen's next ask, 2026-06-18): is our
-   Dramatica Template actually complete vs. the Grand Argument Story theory,
-   and what minor/necessary extensions are warranted? This is a dialect-depth
-   pass, distinct from the breadth parity above.
+3. **Dramatica completeness review** — DONE (2026-06-18,
+   [dramatica-template-sketch-02](dramatica-template-sketch-02.md), commit
+   `a06e0e8`). Verdict: complete on the hard structure; the gap was the
+   dynamics — sketch-01 modeled SIX, the canonical storyform needs EIGHT.
+   Added Driver (action/decision) + Problem-Solving Style (linear/holistic),
+   authored across the 7 real encodings, with PSS held `Dual` where the binary
+   isn't honest (Ackroyd, Rashomon). Still NOT modeled (correctly deferred):
+   Journeys/PSR, and the six other OS plot appreciations (Requirements,
+   Forewarnings, Costs, Dividends, Prerequisites, Preconditions) — the next
+   Dramatica depth target if plot-level fidelity is ever wanted.
 4. **The standing self-grading circularity** — named, not fixed (see above).
    Revisit only with multi-API wiring or a model-agnostic structural check.
 
