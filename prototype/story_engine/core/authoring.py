@@ -75,6 +75,13 @@ from story_engine.core.save_the_cat import (
     CANONICAL_BEATS, CANONICAL_BEAT_BY_SLOT, GENRE_BY_ID,
     verify as stc_verify,
 )
+from story_engine.core.dramatic import (
+    Story as DrStory, Argument, Throughline, Character as DrCharacter,
+    Stakes, StakesOwner, StakesOwnerKind, ResolutionDirection,
+    THROUGHLINE_OWNER_NONE, THROUGHLINE_OWNER_SITUATION,
+    THROUGHLINE_OWNER_RELATIONSHIP,
+    verify as dramatic_verify,
+)
 
 
 class StoryFormatError(ValueError):
@@ -121,6 +128,27 @@ class CompiledStcOverlay:
     def verify(self) -> list:
         return stc_verify(self.story, beats=self.beats, strands=self.strands,
                           characters=self.characters)
+
+
+@dataclass(frozen=True)
+class CompiledDramaticOverlay:
+    """The Dramatic overlay a `.story.toml` compiles to: the canonical `Story`
+    plus the Argument / Throughline / Character / Stakes records. No scene or
+    beat layer is synthesized — the Dramatic generator drives off the substrate
+    event sequence and each character's `function_labels`, so those (and the
+    template) are what the overlay must carry."""
+    story: object                # dramatic.Story
+    characters: tuple = ()
+    arguments: tuple = ()
+    throughlines: tuple = ()
+    stakes: tuple = ()
+    template_id: str = "three-actor"
+    action_summary: str = ""
+
+    def verify(self) -> list:
+        return dramatic_verify(
+            self.story, arguments=self.arguments, throughlines=self.throughlines,
+            characters=self.characters, stakes=self.stakes)
 
 
 # ----------------------------------------------------------------------------
@@ -328,9 +356,17 @@ def compile_story(doc: dict, dialect: str = "aristotelian") -> CompiledStory:
             preplay_disclosures=sub.preplay, dialect="save-the-cat",
             overlay=overlay,
         )
+    if d == "dramatic":
+        overlay = _build_dramatic_overlay(doc, sub)
+        return CompiledStory(
+            title=sub.title, logline=sub.logline, entities=sub.entities,
+            fabula=sub.fabula, sjuzhet=sub.sjuzhet, descriptions=sub.descriptions,
+            preplay_disclosures=sub.preplay, dialect="dramatic",
+            overlay=overlay,
+        )
     raise StoryFormatError(
         f"compile_story has no overlay compiler for dialect {dialect!r} yet "
-        f"(Aristotelian and Save-the-Cat are wired)")
+        f"(Aristotelian, Save-the-Cat, and Dramatic are wired)")
 
 
 # ----------------------------------------------------------------------------
@@ -541,6 +577,143 @@ def _build_stc_overlay(doc: dict, sub: _Substrate) -> CompiledStcOverlay:
     )
 
 
+# ----------------------------------------------------------------------------
+# Overlay: Dramatic
+# ----------------------------------------------------------------------------
+
+# interview owner words → the dialect's owner sentinels
+_DRAMATIC_OWNER_SENTINEL = {
+    "none": THROUGHLINE_OWNER_NONE,
+    "situation": THROUGHLINE_OWNER_SITUATION,
+    "the-situation": THROUGHLINE_OWNER_SITUATION,
+    "relationship": THROUGHLINE_OWNER_RELATIONSHIP,
+    "the-relationship": THROUGHLINE_OWNER_RELATIONSHIP,
+}
+# role → the owner sentinel to default to when no owner is named
+_DRAMATIC_DEFAULT_OWNER = {
+    "overall-story": THROUGHLINE_OWNER_NONE,
+    "relationship": THROUGHLINE_OWNER_RELATIONSHIP,
+}
+
+
+def _resolution(s) -> ResolutionDirection:
+    try:
+        return ResolutionDirection((s or "").strip().lower())
+    except ValueError:
+        return ResolutionDirection.UNRESOLVED
+
+
+def _build_dramatic_overlay(doc: dict, sub: _Substrate) -> CompiledDramaticOverlay:
+    """Map the authoring dict's Dramatic fields onto the canonical `Story` +
+    Argument / Throughline / Character / Stakes records.
+
+    The generator is character-function-driven (it labels each event's
+    participants Hero / Obstacle / Helper and lets the Hero and Obstacle
+    collide), so the load-bearing synthesis is the function assignment: the
+    owner of the main-character throughline becomes the Hero, the
+    impact-character owner the Obstacle, everyone else a Helper — under the
+    three-actor template. Arguments carry their resolution direction; each
+    throughline's stakes become a Stakes record. No scene/beat layer is built —
+    the Dramatic dialect ties scenes to events in a separate lowering pass."""
+    raw_chars = sub.raw_chars
+    char_ids = {c.get("id") for c in raw_chars if c.get("id")}
+    tl_docs = doc.get("throughlines") or []
+    arg_docs = doc.get("arguments") or []
+
+    def _owner_of(role: str):
+        for t in tl_docs:
+            if (t.get("role") or "").strip().lower() == role:
+                o = (t.get("owner") or "").strip()
+                return o if o in char_ids else None
+        return None
+
+    def _by_role_word(*words):
+        for c in raw_chars:
+            r = (c.get("role") or "").lower()
+            if any(w in r for w in words):
+                return c["id"]
+        return None
+
+    hero_id = _owner_of("main-character") or _by_role_word("protag", "hero")
+    obstacle_id = _owner_of("impact-character")
+    if obstacle_id is None:
+        for c in raw_chars:
+            r = (c.get("role") or "").lower()
+            if c["id"] != hero_id and ("antag" in r or "obstacle" in r):
+                obstacle_id = c["id"]
+                break
+
+    def _funcs(cid):
+        if cid == hero_id:
+            return ("Hero",)
+        if cid == obstacle_id:
+            return ("Obstacle",)
+        return ("Helper",)
+
+    characters = tuple(
+        DrCharacter(id=c["id"], name=c.get("name", c["id"]),
+                    function_labels=_funcs(c["id"]))
+        for c in raw_chars
+    )
+
+    arguments = []
+    for i, a in enumerate(arg_docs, start=1):
+        premise = (a.get("premise") or "").strip()
+        if not premise:
+            continue
+        arguments.append(Argument(
+            id=f"arg{i}", premise=premise,
+            resolution_direction=_resolution(
+                a.get("resolution") or a.get("resolution_direction")),
+        ))
+    arguments = tuple(arguments)
+
+    throughlines = []
+    stakes = []
+    for i, t in enumerate(tl_docs, start=1):
+        role = (t.get("role") or "").strip().lower() or f"throughline-{i}"
+        tl_id = ("tl_" + role).replace(" ", "_").replace("-", "_")
+        owner_raw = (t.get("owner") or "").strip()
+        if owner_raw in char_ids:
+            owners = (owner_raw,)
+        elif owner_raw.lower() in _DRAMATIC_OWNER_SENTINEL:
+            owners = (_DRAMATIC_OWNER_SENTINEL[owner_raw.lower()],)
+        else:
+            owners = (_DRAMATIC_DEFAULT_OWNER.get(role, THROUGHLINE_OWNER_NONE),)
+
+        st = t.get("stakes") or {}
+        at_risk = (st.get("at_risk") or "").strip()
+        to_gain = (st.get("to_gain") or "").strip()
+        stakes_id = None
+        if at_risk or to_gain:
+            stakes_id = ("stk_" + role).replace(" ", "_").replace("-", "_")
+            stakes.append(Stakes(
+                id=stakes_id,
+                owner=StakesOwner(kind=StakesOwnerKind.THROUGHLINE, id=tl_id),
+                at_risk=at_risk, to_gain=to_gain))
+
+        throughlines.append(Throughline(
+            id=tl_id, role_label=role, owners=owners,
+            subject=(t.get("subject") or "").strip(), stakes_id=stakes_id))
+    throughlines = tuple(throughlines)
+    stakes = tuple(stakes)
+
+    template_id = "three-actor"
+    story = DrStory(
+        id=("dr_" + sub.title.lower().replace(" ", "_"))[:28], title=sub.title,
+        character_function_template_id=template_id,
+        argument_ids=tuple(a.id for a in arguments),
+        throughline_ids=tuple(t.id for t in throughlines),
+        character_ids=tuple(c.id for c in characters),
+        stakes_ids=tuple(s.id for s in stakes),
+    )
+    return CompiledDramaticOverlay(
+        story=story, characters=characters, arguments=arguments,
+        throughlines=throughlines, stakes=stakes, template_id=template_id,
+        action_summary=sub.logline or doc.get("action_summary", ""),
+    )
+
+
 def load_story_file(path: str, dialect: str = "aristotelian") -> CompiledStory:
     """Parse and compile a .story.toml file."""
     import tomllib
@@ -552,7 +725,7 @@ def load_story_file(path: str, dialect: str = "aristotelian") -> CompiledStory:
 def verify_compiled(compiled: CompiledStory) -> list:
     """Run the compiled story's dialect self-verifier — the same structural
     feedback the Python encodings get."""
-    if compiled.dialect == "save-the-cat":
+    if compiled.dialect in ("save-the-cat", "dramatic"):
         return compiled.overlay.verify()
     return verify(
         compiled.mythos,

@@ -207,6 +207,85 @@ def test_stc_tolerates_unbeated_events():
     assert verify_compiled(s) is not None    # verifier runs, doesn't raise
 
 
+# ---- Dramatic overlay compile (the third wired dialect) -------------------
+
+def _dramatic_doc(**over):
+    """A minimal Dramatic doc: an argument with a resolution, the four
+    throughlines (owners drive the Hero/Obstacle function labels), stakes."""
+    doc = {
+        "title": "The Verdict",
+        "logline": "a judge weighs mercy against the law",
+        "telling": "chronological",
+        "characters": [
+            {"id": "dana", "name": "Dana", "role": "protagonist"},
+            {"id": "cole", "name": "Cole", "role": "antagonist"},
+            {"id": "rae", "name": "Rae", "role": "clerk"},
+        ],
+        "events": [
+            {"id": "charge", "when": 1, "who": ["dana", "cole"],
+             "summary": "the charge is read"},
+            {"id": "trial", "when": 2, "who": ["dana", "cole", "rae"],
+             "summary": "the trial unfolds"},
+            {"id": "verdict", "when": 3, "who": ["dana"],
+             "summary": "the verdict lands"},
+        ],
+        "arguments": [{"premise": "the law can be just",
+                       "resolution": "complicate"}],
+        "throughlines": [
+            {"role": "overall-story", "owner": "situation",
+             "stakes": {"at_risk": "the town's trust", "to_gain": "justice"}},
+            {"role": "main-character", "owner": "dana",
+             "stakes": {"at_risk": "her career", "to_gain": "her conscience"}},
+            {"role": "impact-character", "owner": "cole",
+             "stakes": {"at_risk": "his freedom", "to_gain": "acquittal"}},
+            {"role": "relationship", "owner": "relationship", "stakes": {}},
+        ],
+        "phases": {"beginning": ["charge"], "middle": ["trial"],
+                   "end": ["verdict"]},
+    }
+    doc.update(over)
+    return doc
+
+
+def test_dramatic_compiles_substrate_and_overlay():
+    s = compile_story(_dramatic_doc(), "dramatic")
+    assert s.dialect == "dramatic"
+    assert {e.id for e in s.entities} == {"dana", "cole", "rae"}
+    assert len(s.fabula) == 3 and len(s.sjuzhet) == 3
+    ov = s.overlay
+    assert ov.template_id == "three-actor"
+    # ownership drives the function labels the generator renders from
+    funcs = {c.id: c.function_labels for c in ov.characters}
+    assert funcs["dana"] == ("Hero",)        # owns main-character throughline
+    assert funcs["cole"] == ("Obstacle",)    # owns impact-character throughline
+    assert funcs["rae"] == ("Helper",)
+    assert ov.arguments[0].resolution_direction.value == "complicate"
+    roles = {t.role_label: t.owners for t in ov.throughlines}
+    assert roles["main-character"] == ("dana",)
+    assert roles["overall-story"] == ("the-situation",)
+    assert roles["relationship"] == ("the-relationship",)
+    # three throughlines carry stakes; the relationship one (empty) does not
+    assert len(ov.stakes) == 3
+
+
+def test_dramatic_verifies_without_rejecting():
+    obs = verify_compiled(compile_story(_dramatic_doc(), "dramatic"))
+    assert all(o.severity in ("noted", "advises-review") for o in obs)
+
+
+def test_dramatic_tolerates_sparse_overlay():
+    doc = _dramatic_doc()
+    doc.pop("arguments")                     # author declined the argument
+    doc.pop("throughlines")                  # … and the throughlines
+    s = compile_story(doc, "dramatic")       # still compiles
+    assert s.overlay.arguments == () and s.overlay.throughlines == ()
+    # with no throughline owners, function labels fall back to the role field
+    funcs = {c.id: c.function_labels for c in s.overlay.characters}
+    assert funcs["dana"] == ("Hero",)        # role "protagonist" → Hero
+    assert funcs["cole"] == ("Obstacle",)    # role "antagonist" → Obstacle
+    assert verify_compiled(s) is not None
+
+
 def test_unknown_dialect_compile_raises():
     _expect_error_dialect(_stc_doc(), "dramatica", "no overlay compiler")
 
@@ -234,6 +313,9 @@ TESTS = [
     test_stc_compiles_substrate_and_overlay,
     test_stc_verifies_without_rejecting,
     test_stc_tolerates_unbeated_events,
+    test_dramatic_compiles_substrate_and_overlay,
+    test_dramatic_verifies_without_rejecting,
+    test_dramatic_tolerates_sparse_overlay,
     test_unknown_dialect_compile_raises,
 ]
 

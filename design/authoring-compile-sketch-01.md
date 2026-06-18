@@ -1,6 +1,6 @@
-# Authoring compile — sketch 01 (closing the loop: a second dialect compiles to substrate)
+# Authoring compile — sketch 01 (closing the loop: dialects compile to substrate)
 
-**Status:** active; landed (Save-the-Cat overlay compiler, 14 authoring tests, live end-to-end)
+**Status:** active; landed (Save-the-Cat + Dramatic overlay compilers, 17 authoring tests, both live end-to-end)
 **Date:** 2026-06-18
 **Extends:** `authoring.py` (the `.story.toml` → substrate compiler) and
 [authoring-interview-sketch-02](authoring-interview-sketch-02.md) (the per-dialect interview).
@@ -68,11 +68,41 @@ too complex" / "Grammar compilation timed out". So those three extract via plain
 Python), gated by a `constrained` flag on the `Dialect` record. No schema-size
 limit, and the spine's validation is unchanged.
 
+## Dramatic — the third dialect (landed)
+
+Same split, a different overlay. `_build_dramatic_overlay` maps the dict onto
+the canonical `Story` + `Argument` / `Throughline` / `Character` / `Stakes`
+records. The key discovery: the Dramatic generator is **character-function-
+driven** — `DramaticFrame` labels each event's participants Hero / Obstacle /
+Helper and, when the Hero and Obstacle share a beat, tells the renderer to make
+it a *confrontation* where the argument's two sides collide. It never reads
+Scenes or Beats. So the load-bearing synthesis is the **function assignment**,
+not a scene layer:
+
+- the owner of the **main-character** throughline becomes the **Hero**, the
+  **impact-character** owner the **Obstacle**, everyone else a **Helper**
+  (fallback: the character's `role` word), under the **three-actor** template;
+- arguments carry their `resolution_direction` (affirm/negate/complicate/
+  unresolved); each throughline's `{at_risk, to_gain}` becomes a `Stakes`
+  record; owners map to the dialect's sentinels (`the-situation`,
+  `the-relationship`, `none`) when not a declared character.
+
+No scene/beat layer is built — the Dramatic dialect ties scenes to events in a
+separate lowering pass, and the generator doesn't need it. `verify_compiled`
+dispatches to `dramatic.verify` (advisory-only). *Live:* a whistleblower brief
+("a safety engineer finds the bridge is flawed; argument *speaking the truth is
+worth any cost*, resolved COMPLICATE") was interviewed → compiled to a `Story`
+(5 events, 2 entities, 2 advisory notes) → generated a Hero-vs-Obstacle review-
+room confrontation that puts the argument on trial through the mentor/protégé
+collision.
+
 ## What's next on this thread
 
-- **Dramatic** then **Dramatica** overlay compilers — same shape, harder
-  overlays (arguments/throughlines/stakes; storyform → element quads). Dramatica
-  is the showcase and the largest mapping.
-- The STC overlay does not yet capture **archetype assignments** or explicit
-  **strands** from the interview (the verifier notes their absence as advisory).
-  A deeper STC interview pass could elicit them; low priority.
+- **Dramatica** overlay compiler — the last dialect and the largest mapping
+  (storyform → four throughlines × domains, the eight dynamics, element quads).
+  The showcase close.
+- Neither the STC overlay (archetype assignments, explicit strands) nor the
+  Dramatic overlay (scene/beat layer, argument_contributions) captures every
+  field its verifier notes as advisory; the interview elicits the load-bearing
+  ones and the rest surface as advisory notes. Deeper per-dialect interview
+  passes could elicit them; low priority.

@@ -55,7 +55,7 @@ don't perfect"):
 | generate · evaluate · repair | ✅ | ✅ | ✅ | ✅ |
 | converge (iterate to a fidelity ceiling) | ✅ | ✅\* | ✅\* | ✅\* |
 | author by interview (structural homework) | ✅ | ✅ | ✅ | ✅ |
-| compile plain text → substrate | ✅ | – | ✅ | – |
+| compile plain text → substrate | ✅ | – | ✅ | ✅ |
 
 \* The convergence loop is dialect-agnostic; all four dialects' evaluate +
 repair-planner compose into it (integration-tested offline). The *live*
@@ -66,11 +66,12 @@ The interview front-end now elicits and gap-checks all four dialects' structural
 homework (each overlay mirrors its dialect verifier's vocabulary — Save-the-Cat's
 fifteen beats and genre, Dramatica's four throughlines and eight dynamics,
 Dramatic's arguments and stakes). The plain-text *compiler* — turning that
-record into the verified substrate — now lands for **two** dialects: Aristotelian
-and Save-the-Cat (a sparse boxing brief was interviewed → compiled to a
-`StcStory` → generated an Opening Image scene that *is* the beat). Dramatica and
-Dramatic are interviewed and verifier-ready in their encodings; their
-TOML→overlay compilers are the remaining, named seam.
+record into the verified substrate — now lands for **three** dialects:
+Aristotelian, Save-the-Cat, and Dramatic (each proven live end-to-end — e.g. a
+whistleblower brief interviewed → compiled to a Dramatic `Story` → generated a
+Hero-vs-Obstacle confrontation scene that puts its argument on trial). Only
+Dramatica remains interviewed-but-not-yet-compiled (verifier-ready in its
+encodings); its TOML→overlay compiler is the last remaining, named seam.
 
 So the true claim: **four story theories, each able to generate a draft, read
 it back blind, repair the drift, iterate to a fidelity ceiling, and be authored
