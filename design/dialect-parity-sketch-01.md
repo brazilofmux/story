@@ -1,6 +1,6 @@
-# Dialect parity — sketch 01 (Save-the-Cat evaluate + repair; StC reaches Dramatica-parity)
+# Dialect parity — sketch 01 (Save-the-Cat AND Dramatic evaluate + repair; all four dialects reach gen·eval·repair)
 
-**Status:** landed; StC evaluate + repair built, 18/18 blind on Macbeth, +12 offline tests (1228 green)
+**Status:** landed; StC + Dramatic evaluate + repair built; 18/18 (Macbeth StC) and 6/6 (Rocky Dramatic) blind; +23 offline tests (1239 green)
 **Date:** 2026-06-18
 **Supersedes:** nothing (new topic)
 **Extends:** the evaluator/repair pattern set by `draft_evaluator.py`+`draft_repair.py` (Aristotelian) and `dramatica_evaluator.py`+`dramatica_repair.py` (Dramatica). No prior commitment retracted.
@@ -89,6 +89,34 @@ cannot place.
   live recovery the way Malfi's Aristotelian convergence was. A live StC
   repair/convergence demo awaits a draft that actually drops a beat.
 
+## Dramatic — the lean parent (added same session)
+
+`dramatic_evaluator.py` + `dramatic_repair.py` bring the FOURTH dialect to the
+same coverage. As predicted, the Dramatic target is SOFTER — there is no beat
+sheet to count, only an argument carried by functions. So the evaluator scores
+in two honest tiers:
+
+- **Crisp, name-level:** Hero, Obstacle, Helper(s) — who plays each function.
+- **The argument's resolution:** does the prose AFFIRM / NEGATE / COMPLICATE /
+  leave UNRESOLVED its premise? The dialect's own four-value axis already
+  admits a middle, so nothing is forced (contrast the dual-value work the
+  Dramatica Outcome needed).
+- **Fuzzy, content-level:** the claim and the stakes, scored by token overlap
+  and **labelled `FUZZY` in the finding** so a soft match is never mistaken
+  for a crisp one.
+
+Repair localizes ONLY the argument resolution (sealed at the ending, like a
+Dramatica ending-shape drift) to the final staged beat; the diffuse function /
+claim / stakes drifts are reported, not forced.
+
+**Evidence:** live **6/6 (100%) blind** on `rocky_dramatic_first_draft.md` —
+Hero (Rocky), Obstacle (Apollo), both Helpers (Mickey + Adrian), `affirm`
+resolution, and the fuzzy claim/stakes overlaps all preserved. +11 offline
+tests (`test_dramatic_evaluator` 7, `test_dramatic_repair` 4). Same caveats as
+StC apply, plus: with only 6 dimensions and two of them fuzzy, this score is a
+**weaker instrument** than StC's fifteen-beat coverage — it confirms the
+spine, not the texture.
+
 ## Open questions / what's next (the rest of the parity grid)
 
 | Dialect | gen | eval | repair | conv | front |
@@ -96,12 +124,12 @@ cannot place.
 | Aristotelian | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Dramatica | ✅ | ✅ | ✅ | · | · |
 | **Save-the-Cat** | ✅ | **✅** | **✅** | · | · |
-| Dramatic | ✅ | · | · | · | · |
+| **Dramatic** | ✅ | **✅** | **✅** | · | · |
 
-- **DP-OQ1 — the Dramatic dialect** (the lean parent: one argument,
-  Hero/Obstacle/Helper, stakes) is now the only generate-only dialect. It is
-  the vaguest to decompile crisply — worth doing, but expect a softer fidelity
-  target than StC's fifteen named beats.
+Every dialect now generates, evaluates, and repairs. The empty cells are
+uniform: convergence (DI-ready, demonstrated only for Aristotelian) and
+front-ends (a separate build).
+
 - **DP-OQ2 — convergence demos.** `draft_convergence.converge` is
   dependency-injected and dialect-agnostic; StC and Dramatica can both be
   wired into it with no new core code. Neither has a *demonstrated* live
