@@ -816,3 +816,32 @@ STORY = StcStory(
         ),
     ),
 )
+
+
+# ============================================================================
+# Beat → substrate-event mapping (for generation).
+# ============================================================================
+#
+# AUTHORED, not inferred from page position. Which substrate events realize
+# each Save-the-Cat beat (read off the beat descriptions above against the
+# macbeth.py sjuzhet). All 19 staged scenes realize a beat; the atmospheric
+# beats with no distinct substrate event — Opening Image (1), Theme Stated
+# (2), B Story (7, the marriage, woven through), Dark Night of the Soul (12,
+# the 'tomorrow' speech inside Lady Macbeth's death) — carry no events and
+# appear in the bible only. A generation frame reads this instead of guessing
+# the beat of a scene from its proportional page.
+
+BEAT_EVENT_IDS = {
+    3:  ("E_macbeth_defends_scotland", "E_thane_of_cawdor_awarded"),  # Set-Up
+    4:  ("E_prophecy_first",),                                        # Catalyst
+    5:  ("E_letter_to_lady_macbeth",),                                # Debate
+    6:  ("E_duncan_visits",),                                         # Break Into Two
+    8:  ("E_duncan_killed", "E_duncan_discovered"),                   # Fun and Games
+    9:  ("E_macbeth_crowned",),                                       # Midpoint
+    10: ("E_banquo_killed", "E_banquet_ghost", "E_prophecy_second",   # Bad Guys Close In
+         "E_macduff_flees", "E_macduff_family_killed"),
+    11: ("E_sleepwalking", "E_lady_macbeth_dies"),                    # All Is Lost
+    13: ("E_birnam_moves",),                                          # Break Into Three
+    14: ("E_macduff_reveals_birth", "E_macbeth_killed"),              # Finale
+    15: ("E_malcolm_crowned",),                                       # Final Image
+}

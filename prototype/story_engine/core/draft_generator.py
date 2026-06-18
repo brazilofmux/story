@@ -112,6 +112,15 @@ def _nm(name_map, eid) -> str:
     return str(name_map.get(eid, eid))
 
 
+def _render_participant(name_map, eid) -> str:
+    """A participant role's value may be a single entity id OR a list/tuple
+    of them (Macbeth uses list-valued roles — multiple murderers, the
+    several thanes). Render either shape; never key a dict with a list."""
+    if isinstance(eid, (list, tuple)):
+        return "[" + ", ".join(_nm(name_map, e) for e in eid) + "]"
+    return _nm(name_map, eid)
+
+
 def _char_name(ref_id: str, mythos, name_map: dict) -> str:
     """Resolve a character reference (an ArCharacter id like 'ar_duchess',
     or a substrate-entity id) to a readable name. Prefers the ArCharacter
@@ -397,7 +406,7 @@ def build_scene_brief(
         lines.append(f"Event type: {event.type}")
         if event.participants:
             parts = ", ".join(
-                f"{role}={_nm(name_map, eid)}"
+                f"{role}={_render_participant(name_map, eid)}"
                 for role, eid in event.participants.items()
             )
             lines.append(f"Participants: {parts}")
@@ -436,7 +445,8 @@ def _scene_synopsis(entry, fabula_by_id: dict, name_map: dict) -> str:
     if event is None:
         return entry.event_id
     parts = " / ".join(
-        _nm(name_map, eid) for eid in event.participants.values()
+        _render_participant(name_map, eid)
+        for eid in event.participants.values()
     )
     return f"{event.type}: {parts}".strip(" :/")
 
