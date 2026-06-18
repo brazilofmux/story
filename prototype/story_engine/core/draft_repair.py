@@ -150,6 +150,7 @@ def repair_scene(
     entities,
     descriptions=(),
     mythos=None,
+    adapter=None,
     preplay_disclosures=(),
     title: str = "",
     dialect_note: str = "",
@@ -161,7 +162,9 @@ def repair_scene(
 ) -> Optional[RepairResult]:
     """Re-render the scene a directive targets, with the corrective
     directive appended. Returns a RepairResult (before/after), or None
-    if the directive's event is not in the sjuzhet."""
+    if the directive's event is not in the sjuzhet. Dialect-agnostic:
+    pass `mythos` (Aristotelian) OR `adapter` (any DialectFrame, e.g.
+    Dramatica) — whichever the draft was generated with."""
     entry = next(
         (e for e in sjuzhet if e.event_id == directive.event_id), None
     )
@@ -177,6 +180,7 @@ def repair_scene(
         entities=entities,
         descriptions=descriptions,
         mythos=mythos,
+        adapter=adapter,
         preplay_disclosures=preplay_disclosures,
         title=title,
         dialect_note=dialect_note,
