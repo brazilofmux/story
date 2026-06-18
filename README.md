@@ -1,268 +1,147 @@
 # story
 
-A long-horizon research project to build a story-telling engine. The
-narrow goal is to **force humans or LLMs to do their homework on the
-structural layer of a story** — who knows what when, what claim the
-story is arguing, whether the dialect-chosen shape (Dramatica's,
-Save the Cat's, Aristotle's) actually fits the substrate's events.
+A self-correcting, multi-dialect **story engine**: it generates a draft to a
+chosen structural theory, reads its own prose back **blind**, scores how
+faithfully the draft carries the intended structure, and repairs the places
+where it drifted — across four different theories of story, on one shared
+substrate.
 
-This is a research and design notebook with a working Python
-prototype. Not a product. Not seeking contributors. The repository is
-organized as an editorial archive: sketches accumulate, old work
-stays visible, and the design's reasoning-over-time is preserved.
+This is a research prototype and design notebook, not a product. But the core
+loop works, end to end, and the repository is organized as an editorial
+archive: design sketches accumulate, superseded work stays visible, and the
+reasoning-over-time is preserved.
 
-## What the engine is, structurally
+## What it does
 
-The engine is a stack of upper dialects over a single substrate, with
-connective machinery between them.
+The engine is a small compiler with a neutral middle and pluggable front/back:
 
-- **Substrate.** Event-primary, tri-temporal (story-time τ_s,
-  discourse-time τ_d, authored-time τ_a), branch-aware. Computes
-  per-agent knowledge projections by fold. Represents ambiguity as
-  first-class branch structure rather than reader-side
-  misunderstanding. A small inference layer (Horn-clause rules,
-  bounded depth, proof-carrying derivation) composes with
-  identity-substitution to handle anagnorisis cleanly. Current
-  statement: [`design/substrate-sketch-05.md`](design/substrate-sketch-05.md).
-- **Dialects.** Author-facing vocabularies that sit above the
-  substrate. Three exist today: **Dramatic** (role-driven,
-  parameterized), **Save the Cat** (beat-driven, prescriptive), and
-  the **dramatica-complete** Template atop Dramatic (the full
-  Dramatica Grand Argument Story theory as theory data). Each has a
-  self-verifier that speaks only that dialect's vocabulary.
-- **Lowering and verification.** Cross-boundary machinery binding
-  upper-dialect records to substrate facts. Four coupling kinds
-  identified by design: **Realization** (upper made true by lower,
-  carried by Lowering records), **Characterization** (upper
-  classifies a substrate pattern), **Claim** (upper asserts
-  substrate state at a moment or across a trajectory), **Flavor**
-  (free-form metadata). Three verifier primitives implement the
-  middle three. Observations flow through the proposal queue —
-  partner, never gate.
-- **Reader-model probe.** Optional LLM-in-the-loop component that
-  reads the substrate's description surface and proposes reviews,
-  answer proposals, and edit proposals. Substrate-native record
-  types on both input and output; the substrate owns all state
-  transitions. Built against Claude Opus 4.6 via the Anthropic SDK.
+1. **A neutral substrate.** Event-primary, tri-temporal (story-time, discourse-
+   time, authored-time), branch-aware. It computes per-agent knowledge by fold
+   (who knows what, when) and represents ambiguity as first-class branch
+   structure rather than reader confusion. The substrate is the single source
+   of truth; everything else is a lens over it.
 
-See [`design/README.md`](design/README.md) for the sketch list,
-architectural frames, and open questions.
+2. **Plural dialect overlays.** Four theories of story sit above the substrate,
+   each in its own vocabulary, none privileged:
+   - **Aristotelian** — peripeteia, anagnorisis, the pathos-centre, recognition.
+   - **Dramatica** — the full Grand Argument Story theory: four throughlines,
+     the eight essential dynamics, and the complete Table of Story Elements
+     (4 Classes → 16 Types → 64 Variations → the 256-cell / 64-element bottom).
+   - **Save the Cat** — the fifteen-beat sheet, A/B strands.
+   - **Dramatic** — the lean parent dialect: one argument, Hero/Obstacle/Helper,
+     stakes.
 
-## Why this way
+3. **A self-correcting generation loop.** The generator imports *zero* dialect
+   code — it defines only a neutral seam each dialect plugs into. The loop:
+   - **generate** a verified substrate → first-draft prose, in the dialect's frame;
+   - **evaluate** by decompiling the prose **blind** (the reader is given the
+     genre, never the answer key) → a typed reading → a fidelity score;
+   - **repair** each drift by re-rendering the scene that carries it;
+   - **converge** by splicing repairs back and re-scoring the whole draft.
 
-Two load-bearing design choices, named early so later decisions stay
-coherent:
+It also **verifies** an encoded story against its own substrate — surfacing
+where a story's claimed structure isn't actually supported by its events. (That
+check recently caught the project's own Dramatica encodings misciting their
+bottom-level elements, and we corrected them against the real chart — the
+system flagging where the corpus was lying to itself.)
 
-- **Grid-snap architecture.** The substrate grid-snaps structural
-  facts (who kills whom, who knows what, what branches exist). The
-  author (or an LLM) carries the affective / interpretive / tonal
-  load via descriptions. If an attentive human or LLM reading the
-  prose could reliably catch drift in some content, that content
-  belongs in descriptions — not in a typed projection. This is
-  commitment A3 in [`design/architecture-sketch-01.md`](design/architecture-sketch-01.md).
-- **Ambiguity-load-bearing texts are a design decision, not a
-  limitation.** The engine commits to factual commitment — Save the
-  Cat and Dramatica both implicitly require it — so Borges, late
-  James, and Kafka are outside the supported story forms *by
-  design*. The system has an opinion about what constitutes
-  well-formed story structure. See the Turn of the Screw
-  infeasibility probe ([`design/turn-of-the-screw-infeasibility-probe-sketch-01.md`](design/turn-of-the-screw-infeasibility-probe-sketch-01.md)).
+## Coverage, honestly
+
+Support is uniform at the core and uneven at the edges — by design ("widen,
+don't perfect"):
+
+| | Aristotelian | Dramatica | Save the Cat | Dramatic |
+|---|---|---|---|---|
+| generate · evaluate · repair | ✅ | ✅ | ✅ | ✅ |
+| converge (iterate to a fidelity ceiling) | ✅ | – | – | – |
+| author in plain text (front-end) | ✅ | – | – | – |
+
+So the true claim: **four story theories, each able to generate a draft, read
+it back blind, and repair the drift**, with the full end-to-end polish (the
+convergence loop and a plain-text authoring front-end) proven on one so far.
+Filling that bottom row for the other three is the active coverage work.
+
+## What to expect (and what not to)
+
+- **It works on stories expressed in its terms** — authored into a substrate,
+  or ones it generated. There is not yet a "paste an arbitrary screenplay and
+  get an analysis" path.
+- **Originals, not just classics.** Two original tragedies (*The Vantage Light*;
+  *Sworn*, told in strict reverse chronology) were authored as substrates the
+  model had never seen as finished works, then generated and scored at 100%
+  blind structural fidelity. The reverse-told one is the sharpest result: the
+  substrate's order overrode the model's forward-causality instinct, and a
+  blind reader independently read the prose as reverse-told.
+- **The self-grading caveat is named, not hidden.** Every fidelity number is
+  graded by the same model family that generated the prose. A genuine
+  cross-family check is future work; the score means "this model reads this
+  draft as structurally faithful," no more.
+- **Some texts are out of scope by design.** The engine commits to factual
+  commitment, so deliberately ambiguity-load-bearing works (Borges, late James,
+  *The Turn of the Screw*) are outside the supported forms on purpose.
 
 ## Status
 
-Working prototype, closed-corpus encodings, extensive test surface:
+Working prototype, closed-corpus encodings, large test surface:
 
-- **62 active design sketches** across substrate, dialects,
-  identity, focalization, inference, lowering, verification,
-  production-format and referential-integrity work, event-kind and
-  pressure-shape taxonomies, Aristotelian and Save the Cat tracks,
-  and cross-dialect comparisons. Status, supersession, and open
-  questions tracked per sketch.
-- **Seven encoded stories** exercising the substrate and dialects:
-  *Oedipus Rex*, *Macbeth*, *The Murder of Roger Ackroyd*,
-  *Rashomon*, *Pride and Prejudice*, *Rocky*, *Chinatown*. Together
-  they close the canonical Outcome × Judgment matrix across all
-  four corners (personal-tragedy ×3, triumph, personal-triumph,
-  tragedy) and exercise every DSP axis direction at least once.
-  Four have full substrate encodings (Oedipus, Macbeth, Ackroyd,
-  Rocky); three are dialect-layer-only pending substrate
-  authoring (P&P, Chinatown, Rashomon — Rashomon exercises its
-  own branch-contested slice).
-- **Four cross-boundary verifiers** at the dramatica-complete →
-  substrate coupling: Macbeth, Oedipus, Ackroyd, Rocky. Nine
-  checks per encoding. DA_mc spectrum: APPROVED 0.77 (Oedipus) /
-  PARTIAL 0.69 (Macbeth) / PARTIAL 0.54 (Ackroyd) / APPROVED 0.72
-  (Rocky) — a real four-point spread measuring encoding/taxonomy
-  match honestly. DSP_limit four-point spectrum post-LT9:
-  **all APPROVED** — 0.67 ×3 (Oedipus / Macbeth / Ackroyd, all
-  Optionlock, three different signal compositions) + **1.00**
-  (Rocky, Timelock-strong via LT9 — two distinct scheduling
-  predicates + zero middle-arc LT2 signals; pressure-shape-
-  taxonomy-sketch-02 adopts the probe's concrete signature proposal
-  and closes the prior sketch-01 NEEDS_WORK 0.33 verdict).
-- **Cross-boundary reader-model probe at the dramatica-complete
-  surface** — four live probe runs against Rocky / Macbeth /
-  Oedipus / Ackroyd. Each reads the Template records, the Lowerings,
-  the substrate context, and the verifier's 9-check output, then
-  emits annotation reviews on the Lowerings and commentaries on the
-  verifier's verdicts. Full spectrum: 96 annotations (90 approved +
-  6 needs-work) + 36 commentaries (27 endorses + 7 qualifies + 2
-  dissents) across the four encodings; zero dropped. Rocky's dissent
-  on DSP_limit NEEDS_WORK 0.33 drove pressure-shape-taxonomy-sketch-02
-  (LT7–LT11) — adopted the probe's scheduling-endpoint signature;
-  DSP_limit shifted to APPROVED 1.00 same day. Oedipus's DSP_growth
-  dissent and three other qualification-level signature proposals
-  (agentive-pursuit vs. reactive/consequential events; manipulation
-  via participant-role; beat_type-weighted domain signals;
-  recognition-structure premise-order inversion) — the first
-  all four landed same day as sketches — Oedipus DSP_growth
-  (AG5), Oedipus Story_goal (IG2), Ackroyd DA_mc (MN4), Macbeth
-  DA_mc (BW4). Verdict shifts: Oedipus DSP_growth PARTIAL 0.5 →
-  APPROVED 1.0; Oedipus Story_goal PARTIAL 0.7 → APPROVED 1.0;
-  Ackroyd DA_mc PARTIAL 0.54 → APPROVED 0.85; Macbeth DA_mc
-  PARTIAL 0.69 → PARTIAL 0.65 (first landed proposal where verdict
-  polarity does not change — strength honestly calibrated below
-  the unweighted raw ratio per the probe's prediction). The probe
-  acts as a steady signature-proposal engine — not a verdict-
-  opposition machine — with consistent ~7 endorse + 2 qualify +
-  0-1 dissent baseline per 9-check run. **All five probe-proposed
-  signatures have now landed as sketches** (LT9 scheduling,
-  AG5 agency, IG2 identification-goal, MN4 concealment-
-  manipulation, BW4 beat-type-weighting) — the probe/verifier
-  loop replicates reliably, five cycles in two days, every banked
-  proposal closed. **Second probe pass (v2)** against the refactored
-  verifiers: **zero dissents across all 4 encodings** (was 2 in v1)
-  — the loop converges on previously-dissented dimensions without
-  over-correcting. New coherent finding in v2: all four DSP_resolve
-  checks draw qualifications along the same axis (current substrate
-  proxies don't measure Dramatica's IC-relational shape) — banked
-  as the next forcing function — **landed same day as
-  resolve-relational-sketch-01 (RR1–RR6)**, the first cross-corpus
-  probe-driven sketch: all four encodings' DSP_resolve checks now
-  carry an additive IC-throughline temporal-correlation signal.
-  Sixth probe → sketch cycle; second landing where verdict
-  polarity doesn't change (honesty about MC↔IC relational signal
-  is the deliverable). **Seventh cycle** landed same day:
-  resolve-endpoint-sketch-01 (RE1–RE5) closes v3's second
-  cross-corpus DSP_resolve finding — end-state behavioral-shift
-  for Change encodings (Oedipus: 90%→33%; Macbeth: no shift,
-  surfacing "I will not yield" as Steadfast-shaped at the
-  behavioral layer) and core-drive-persistence for Steadfast
-  (Rocky's τ_s=45 state-addition vs. Ackroyd's pre-arc trait).
-  The DSP_resolve axis has now produced three successive
-  probe-surfaced layers across three passes (AG5 → RR3 → RE).
-  **Fourth probe pass (v4)** is a stable plateau — commentary
-  distribution 29E/7Q/0D matches v3 identically. The
-  architectural-depth of the loop appears to have plateaued at
-  ~3 passes; v4 surfaces implementation-refinement observations
-  and a new cross-sketch-composition pattern (use MN2
-  concealment-asymmetry as secondary Be-er signal on Ackroyd
-  DSP_approach — signals from one sketch should compose across
-  axes, not be siloed).
-- **Two Save the Cat encodings** (Macbeth, Ackroyd) with
-  StcCharacter amendment landed. Sheppard carries
-  `role_labels=("protagonist", "antagonist", "narrator")` — the
-  novel's structural overlap now expressible at the dialect layer.
-- **822 tests** across 16 test files. The current split is
-  **673 standard-library tests** plus **149 venv-backed tests** for
-  reader-model clients, schema conformance, and dependency-scoped
-  surfaces declared in `prototype/requirements.txt`.
-- **Survey** of prior narrative theories (3-act, 5-act, Propp,
-  Campbell, Dramatica, Story Grid, Truby, McKee, Save the Cat,
-  Freytag) and computational systems (TALE-SPIN, MINSTREL, Mexica,
-  Scheherazade, Façade, Brutus, LLM-era work) in `research/`.
+- **Four dialects**, one dialect-agnostic generator + repair seam.
+- **105 design sketches** across the substrate, the four dialects, identity,
+  focalization, inference, lowering/verification, the generation and
+  self-correction layer, and the ambiguity-honest substrate; status and open
+  questions tracked per sketch. Current state: [`design/state-of-play-19.md`](design/state-of-play-19.md).
+- **~1,248 tests** across 33 test files (standard-library core plus
+  venv-backed tests for the LLM-in-the-loop reader/evaluator surfaces).
+- **Generated draft artifacts** under `prototype/*_first_draft.md` — Oedipus,
+  Malfi, Rocky (from two different dialects), Macbeth (Save the Cat), and the
+  originals (Vantage, Sworn, Quarter) — the evidence the loop runs.
+- **Survey** of prior narrative theories and computational story systems in
+  `research/`.
 
-## Where to start
-
-- **New human reader:** [`design/README.md`](design/README.md) first
-  (sketch list + active frames), then
-  [`prototype/README.md`](prototype/README.md) (module catalog,
-  runnable demos), then the Oedipus demo.
-- **AI assistant:** [`AGENTS.md`](AGENTS.md) (Codex),
-  [`GEMINI.md`](GEMINI.md) (Gemini). Both point back here.
-
-Minimal test subset to confirm the prototype builds and runs:
+## Quickstart
 
 ```sh
 cd prototype
-python3 -m tests.test_substrate       # 45 tests — core substrate invariants
-python3 -m tests.test_inference       # 28 tests — Horn-clause rules + proof-carrying derivation
-python3 -m tests.test_dramatic        # 39 tests — Dramatic dialect and M8 verifier
-python3 -m tests.test_verification    # 193 tests — verifier primitives + coverage/orchestration
-python3 -m tests.test_save_the_cat    # 60 tests — Save the Cat dialect S1–S13
-```
+# Standard-library core (no dependencies):
+PYTHONPATH=. python3 tests/test_substrate.py
+PYTHONPATH=. python3 tests/test_dramatica_template.py
+PYTHONPATH=. python3 tests/test_verification.py
 
-The demos are narrative — they print per-turn reports rather than
-assertions:
+# The generation / evaluation / repair layer needs the venv (anthropic, pydantic):
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+PYTHONPATH=. .venv/bin/python3 tests/test_save_the_cat_evaluator.py
 
-```sh
-python3 -m demos.demo           # Oedipus Rex: reader / character / Jocasta states through anagnorisis
-python3 -m demos.demo_rashomon  # Rashomon: four contested branches side-by-side
+# Live demos require an ANTHROPIC_API_KEY; --dry-run prints the prompt only:
+PYTHONPATH=. .venv/bin/python3 -m demos.demo_generate_oedipus --dry-run
 ```
 
 ## Repository layout
 
-- [`design/`](design/) — architectural sketches (`{topic}-sketch-NN.md`).
-  Self-contained within a topic. Old sketches kept as historical
-  record of the design's evolution.
-- [`prototype/`](prototype/) — Python 3.12 reference implementation.
-  Written as an executable specification for portability — explicit
-  dataclasses, avoided metaclasses and decorators, no framework
-  dependencies in the core.
-- [`research/`](research/) — two parallel tracks: `theories/` (narrative
-  theories of story structure) and `systems/` (computational
-  narrative systems, past and present). Long-form survey notes
-  deepened over time.
-- [`REVIEW.md`](REVIEW.md) — April 2026 editorial review of the
-  repository's state, with findings and a plan. Several items have
-  since landed; the file remains as a historical reference.
-- [`AGENTS.md`](AGENTS.md), [`GEMINI.md`](GEMINI.md) — agent-facing
-  guidance for Codex and Gemini respectively. Both are short and
-  point here for the overview.
+- [`design/`](design/) — architectural sketches (`{topic}-sketch-NN.md`),
+  self-contained per topic; superseded sketches kept as historical record.
+  Start at [`design/README.md`](design/README.md) and the latest
+  `state-of-play-NN`.
+- [`prototype/`](prototype/) — Python 3.12 reference implementation, written as
+  an executable specification (explicit dataclasses, no framework dependencies
+  in the core). Module catalog in [`prototype/README.md`](prototype/README.md).
+- [`research/`](research/) — surveys of narrative theories (`theories/`) and
+  computational story systems (`systems/`).
+- [`AGENTS.md`](AGENTS.md), [`GEMINI.md`](GEMINI.md) — agent-facing guidance.
 
-## Development conventions
+## Conventions
 
-- **Design first.** Non-trivial architectural change gets a
-  Markdown sketch in `design/` before code lands. See
-  [`design/README.md`](design/README.md) for the sketch template
-  and numbering convention.
-- **Sketch immutability.** Superseded sketches stay in place with
-  `Status: superseded` and a link to the successor. The design's
-  reasoning-over-time is part of the record.
-- **Python is a specification language.** The prototype favors
-  clarity and portability (dataclasses, tagged unions, plain
-  functions) over Python-specific cleverness. The engine may be
-  ported later — don't write code a C#/Rust/Go reader would have
-  to guess at.
-- **Tests are plain `assert`.** No framework. Each test file is a
-  list of test functions with a minimal runner. The test surface
-  pins sketch commitments — test names reference the sketch they
-  protect (e.g., `test_ek2_command_shape_is_external`).
-- **Minimal untyped abstractions.** When a refactor becomes
-  pressing (e.g., duplicated verifier helpers across three
-  encodings), extract the shared piece once there are at least
-  two clients. No speculative generalization.
-- **Editorial review over toolchain.** No CI, no linters, no
-  formatters. Quality control is editorial and visible at commit
-  time.
+- **Design first** — non-trivial change gets a sketch in `design/` before code.
+- **Sketch immutability** — superseded sketches stay, marked and linked.
+- **Python is a specification language** — clarity and portability over
+  cleverness; the engine may be ported later.
+- **Tests are plain `assert`** with a minimal runner; test names pin the sketch
+  commitment they protect.
+- **Report the honest number** — evaluate blind; when a score drops, say so;
+  name limitations rather than papering over them.
 
-## Commit and PR style
+## License
 
-Recent history uses short imperative subjects, with body bullets
-explaining the why. Implementation commits often pair with a
-follow-on `README:` commit that documents the finding. See
-[`git log`](https://github.com/brazilofmux/story/commits/main).
+MIT — see [`LICENSE`](LICENSE). Copyright (c) 2026 Stephen Dennis.
 
-## Context
-
-This project began 2026-04-13 from an empty repository. It is
-expected to be a ~20-year personal effort. Early decisions are
-valued for their durability; the repository is deliberately
-organized as an archive rather than a moving target. Incidents
-in the design's history — a finding that flipped a commitment, a
-probe that closed an infeasibility question, a refactor that
-earned an abstraction — are first-class and preserved.
-
-The author is [@brazilofmux](https://github.com/brazilofmux). The
-LLM collaborator on most sessions is Claude (model and session
-noted in commit co-authorship).
+The author is [@brazilofmux](https://github.com/brazilofmux). The LLM
+collaborator on most sessions is Claude (model and session noted in commit
+co-authorship).
