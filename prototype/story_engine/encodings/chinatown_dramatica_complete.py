@@ -71,6 +71,7 @@ from story_engine.core.dramatica_template import (
     verify_thematic_picks,
     canonical_ending,
     register_element_quad,
+    CANONICAL_ELEMENT_QUADS,
     Quad,
 )
 
@@ -462,27 +463,21 @@ MC_ISSUE_PICK = QuadPick(
     attached_to_id="T_mc_jake",
 )
 
-ELEMENT_QUAD_INTERPRETATION_CT = Quad(
-    id="element_interpretation_chinatown",
-    kind="element-quad",
-    element_A="pursue",
-    element_B="consider",
-    element_C="avoid",
-    element_D="reconsider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("interpretation", ELEMENT_QUAD_INTERPRETATION_CT)
+# Canonical element quad for Variation "interpretation" (Understanding
+# > Interpretation): order/equity/chaos/inequity (Purpose).
+register_element_quad("interpretation", CANONICAL_ELEMENT_QUADS["interpretation"])
 
+# Problem: Jake's MC Problem is Order — he compulsively imposes order
+# and meaning on the evidence, needing every clue to resolve. The
+# Solution (Chaos, the dynamic pair) is what Chinatown is: an
+# irreducible disorder no investigation can set right. "Forget it,
+# Jake. It's Chinatown" is the late, ruinous acceptance of Chaos.
+# (Same Issue as Oedipus's MC — the detective undone by ordering a
+# world that is chaos.)
 MC_PROBLEM_PICK = QuadPick(
     id="PP_mc_jake",
-    quad_id=ELEMENT_QUAD_INTERPRETATION_CT.id,
-    chosen_position=QuadPosition.A,  # "pursue"
-    # Jake's Problem is Pursue — he pursues the case even when
-    # the Chinatown wound is warning him. For a Change MC, the
-    # Problem is held until the climactic change adopts the
-    # Solution (Avoid). 'Forget it, Jake. It's Chinatown.' IS
-    # the adoption of Avoid — but adopted too late, after the
-    # losses the pursuit produced.
+    quad_id=CANONICAL_ELEMENT_QUADS["interpretation"].id,
+    chosen_position=QuadPosition.A,  # "order"
     attached_to_kind="throughline",
     attached_to_id="T_mc_jake",
 )
@@ -492,7 +487,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=MC_CONCERN_PICK,
     issue_pick=MC_ISSUE_PICK,
     problem_pick=MC_PROBLEM_PICK,
-    solution_override="avoid",  # dynamic pair of "pursue"
+    solution_override="chaos",  # dynamic pair of "order"
 )
 
 # -- OS (the water scheme) in Situation Domain --
@@ -522,26 +517,19 @@ OS_ISSUE_PICK = QuadPick(
     attached_to_id="T_overall_water",
 )
 
-ELEMENT_QUAD_DESTINY = Quad(
-    id="element_destiny",
-    kind="element-quad",
-    element_A="avoid",
-    element_B="reconsider",
-    element_C="pursue",
-    element_D="consider",
-    authored_by="dramatica-theory",
-)
-register_element_quad("destiny", ELEMENT_QUAD_DESTINY)
+# Canonical element quad for Variation "destiny" (The Past >
+# Destiny): aware/projection/self-aware/speculation (Purpose).
+register_element_quad("destiny", CANONICAL_ELEMENT_QUADS["destiny"])
 
+# Problem: the OS Problem is Speculation — the water scheme is
+# literally land Speculation, Cross betting on the engineered future
+# value of the drained valley. The Solution (Projection, the dynamic
+# pair) — sound public projection/planning of the city's water — is
+# the future the scheme forecloses.
 OS_PROBLEM_PICK = QuadPick(
     id="PP_os_water",
-    quad_id=ELEMENT_QUAD_DESTINY.id,
-    chosen_position=QuadPosition.A,  # "avoid"
-    # The OS's Problem is Avoid — the city's apparatus (police,
-    # press, water department) avoids confronting Cross's power.
-    # The Solution is Pursue — a sustained public pursuit would
-    # break the scheme. The story makes the Argument that the
-    # Solution is unavailable to these institutions.
+    quad_id=CANONICAL_ELEMENT_QUADS["destiny"].id,
+    chosen_position=QuadPosition.D,  # "speculation"
     attached_to_kind="throughline",
     attached_to_id="T_overall_water",
 )
@@ -551,7 +539,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=OS_CONCERN_PICK,
     issue_pick=OS_ISSUE_PICK,
     problem_pick=OS_PROBLEM_PICK,
-    solution_override="pursue",  # dynamic pair of "avoid"
+    solution_override="projection",  # dynamic pair of "speculation"
 )
 
 # -- IC Evelyn in Fixed Attitude Domain --
@@ -581,28 +569,19 @@ IC_ISSUE_PICK = QuadPick(
     attached_to_id="T_ic_evelyn",
 )
 
-ELEMENT_QUAD_FALSEHOOD = Quad(
-    id="element_falsehood",
-    kind="element-quad",
-    element_A="temptation",
-    element_B="hinder",
-    element_C="conscience",
-    element_D="help",
-    authored_by="dramatica-theory",
-)
-register_element_quad("falsehood", ELEMENT_QUAD_FALSEHOOD)
+# Canonical element quad for Variation "falsehood" (Memories >
+# Falsehood): equity/projection/inequity/speculation (Purpose).
+register_element_quad("falsehood", CANONICAL_ELEMENT_QUADS["falsehood"])
 
+# Problem: Evelyn's IC Problem is Inequity — she is the locus of the
+# story's deepest injustice (the incest/abuse done to her), hidden
+# behind the falsehood of Katherine's parentage. The Solution
+# (Equity, the dynamic pair) is the justice that Chinatown structurally
+# denies — no setting-right is available to her.
 IC_PROBLEM_PICK = QuadPick(
     id="PP_ic_evelyn",
-    quad_id=ELEMENT_QUAD_FALSEHOOD.id,
-    chosen_position=QuadPosition.B,  # "hinder"
-    # Evelyn's Problem is Hinder — her falsehood hinders Jake's
-    # investigation, hinders her own disclosure, hinders any
-    # alternative future for Katherine. The Solution is Help
-    # (dynamic pair) — but her fixed attitude is constructed
-    # specifically to avoid 'helping' reveal what cannot be
-    # revealed safely. The Solution is unavailable to her
-    # character.
+    quad_id=CANONICAL_ELEMENT_QUADS["falsehood"].id,
+    chosen_position=QuadPosition.C,  # "inequity"
     attached_to_kind="throughline",
     attached_to_id="T_ic_evelyn",
 )
@@ -612,7 +591,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
     concern_pick=IC_CONCERN_PICK,
     issue_pick=IC_ISSUE_PICK,
     problem_pick=IC_PROBLEM_PICK,
-    solution_override="help",  # dynamic pair of "hinder"
+    solution_override="equity",  # dynamic pair of "inequity"
 )
 
 # -- RS (Jake-Evelyn) in Manipulation Domain --
@@ -643,27 +622,20 @@ RS_ISSUE_PICK = QuadPick(
     attached_to_id="T_rel_jake_evelyn",
 )
 
-ELEMENT_QUAD_KNOWLEDGE = Quad(
-    id="element_knowledge",
-    kind="element-quad",
-    element_A="logic",
-    element_B="control",
-    element_C="feeling",
-    element_D="uncontrolled",
-    authored_by="dramatica-theory",
-)
-register_element_quad("knowledge", ELEMENT_QUAD_KNOWLEDGE)
+# Canonical element quad for Variation "knowledge" (Playing a Role >
+# Knowledge): proven/result/unproven/process (Evaluation).
+register_element_quad("knowledge", CANONICAL_ELEMENT_QUADS["knowledge"])
 
+# Problem: the RS Problem is Unproven — the relationship is poisoned
+# by what stays unproven between them: Jake cannot verify Evelyn and
+# wrongly suspects her ("she's my sister AND my daughter"). The
+# Solution (Proven, the dynamic pair) — the truth finally proven —
+# arrives only in the slap-confession, too late, and is immediately
+# followed by Chinatown.
 RS_PROBLEM_PICK = QuadPick(
     id="PP_rs_je",
-    quad_id=ELEMENT_QUAD_KNOWLEDGE.id,
-    chosen_position=QuadPosition.B,  # "control"
-    # The RS's Problem is Control — each party tries to control
-    # what the other knows, when the other knows it, how it
-    # enters the relationship. The Solution is Uncontrolled
-    # (dynamic pair) — which arrives in the slap-confession
-    # scene (Evelyn finally uncontrolled) and is immediately
-    # followed by Chinatown.
+    quad_id=CANONICAL_ELEMENT_QUADS["knowledge"].id,
+    chosen_position=QuadPosition.C,  # "unproven"
     attached_to_kind="throughline",
     attached_to_id="T_rel_jake_evelyn",
 )
@@ -673,7 +645,7 @@ RS_THEMATIC_PICKS = ThematicPicks(
     concern_pick=RS_CONCERN_PICK,
     issue_pick=RS_ISSUE_PICK,
     problem_pick=RS_PROBLEM_PICK,
-    solution_override="uncontrolled",  # dynamic pair of "control"
+    solution_override="proven",  # dynamic pair of "unproven"
 )
 
 ALL_THEMATIC_PICKS = (
