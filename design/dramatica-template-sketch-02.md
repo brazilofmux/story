@@ -79,6 +79,56 @@ brought to eight; the versions stay partial, and their `dsp_missing` advisory
 is *correct*, not a defect. "Complete" is per-Story, and some stories rightly
 refuse it.
 
+## Level-4 elements: ship the canonical 64, verify by consistency
+
+The quad hierarchy reaches level 4 (a throughline's Problem is a bottom-level
+Element, with Solution/Symptom/Response derived), but until now the level-4
+DATA was unshipped: encodings registered their own element quads via
+`register_element_quad`, which silently overwrote — so a Variation could be
+given two different quads by two encodings with nothing to catch it.
+
+**What "256 elements" actually is.** The table's leaf level has 256 cells, but
+they are filled by only **64 distinct element labels** — element quads recur
+across the table in a pattern that is *not* Type-aligned (verified
+empirically: `attempt`/`work` share a Type but differ; `attempt`/`fate`
+differ in Type but share a quad). Those 64 are exactly the union of the four
+character-element quad sets (Motivation/Methodology/Evaluation/Purpose),
+already in the template and verified canonical. So the shippable canonical
+*data* is the **64-element vocabulary** + the per-Variation placement map; the
+geometry is 256, the vocabulary is 64 (the research doc's figure was right).
+
+**What we shipped (no fabrication):**
+- `CANONICAL_ELEMENTS` — the frozenset of 64, built from the four
+  character-element enums. The authoritative bottom-level vocabulary.
+- `register_element_quad` now HARD-validates the two unambiguous properties:
+  every element ∈ the canonical 64, and a quad is four distinct elements.
+  (All 15 existing element quads pass.)
+- `verify_element_quads` — the consistency-based verifier: it surfaces
+  `element_quad_conflict` (a Variation registered with >1 distinct quad),
+  re-confirms vocabulary/well-formedness, and reports coverage (15/64
+  Variations placed so far).
+
+**What we did NOT ship:** the full 64-Variation → element-quad placement map.
+That recurrence pattern is not derivable from the 64 vocabulary alone and needs
+the Dramatica Table source. Per the chosen strategy, it fills in incrementally;
+the verifier guards consistency in the meantime.
+
+**The verifier earned its keep immediately** — it surfaced four REAL conflicts
+in the existing corpus, where encodings disagree on a Variation's canonical
+element quad (the 64 Variation labels are all distinct and each conflicted one
+lives under a single Type, so these are genuine drift, not a keying artifact):
+
+| Variation | conflicting registrations |
+|---|---|
+| `commitment` | `(conscience,help,temptation,hinder)` vs `(logic,control,feeling,uncontrolled)` |
+| `desire` | `(avoid,reconsider,pursue,consider)` vs `(logic,control,feeling,uncontrolled)` |
+| `doubt` | three variants (incl. a position-rotation of one) |
+| `interpretation` | `(faith,support,disbelief,oppose)` vs `(pursue,consider,avoid,reconsider)` |
+
+These are left FLAGGED, not resolved — which quad is canonical needs the
+Dramatica Table source. (DP-OQ: resolve the four against the source when it is
+available, then the verifier's conflict count should drop to zero.)
+
 ## What is still NOT modeled (correctly scoped, not flaws)
 
 These are sketch-01's explicit deferrals, reaffirmed — the *mechanism* exists

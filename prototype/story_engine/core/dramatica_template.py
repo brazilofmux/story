@@ -468,9 +468,108 @@ def register_issue_quad(concern_label: str, quad: Quad) -> None:
 ELEMENT_QUADS_BY_ISSUE: dict = {}
 
 
+def _element_tuple(quad: Quad) -> tuple:
+    return (quad.element_A, quad.element_B, quad.element_C, quad.element_D)
+
+
+# Every distinct element quad seen per Variation across ALL registrations in
+# this process — the substrate for the verifier's conflict check. A Variation
+# has ONE canonical element quad; two encodings disagreeing is a drift to
+# surface (not crash on — we cannot pick the canonical winner without the
+# Dramatica Table source).
+_ELEMENT_QUAD_REGISTRATIONS: dict = {}
+
+
 def register_element_quad(issue_label: str, quad: Quad) -> None:
-    """Register an Element Quad for a specific Issue label."""
+    """Register a canonical Element Quad for a specific Issue (Variation).
+
+    HARD-validates (raises) the two unambiguous properties, against verified
+    in-code data — no fabricated placement map needed:
+    - **vocabulary**: every element is one of the canonical 64
+      (`CANONICAL_ELEMENTS`) — catches typos and non-canonical labels;
+    - **well-formedness**: a quad is four DISTINCT elements.
+
+    Does NOT raise on a CONFLICT (a Variation registered with a different quad
+    by another encoding): which quad is canonical needs the Dramatica Table
+    source, so the conflict is RECORDED here and surfaced by
+    `verify_element_quads` as an observation rather than crashing co-loading.
+    `ELEMENT_QUADS_BY_ISSUE` keeps last-wins semantics (unchanged).
+
+    `CANONICAL_ELEMENTS` is defined later in this module; resolved at call
+    time (encodings register only after the template has fully loaded)."""
+    els = _element_tuple(quad)
+    bad = [e for e in els if e not in CANONICAL_ELEMENTS]
+    if bad:
+        raise ValueError(
+            f"register_element_quad({issue_label!r}): elements {bad} are not "
+            f"in the canonical 64-element vocabulary (CANONICAL_ELEMENTS)."
+        )
+    if len(set(els)) != 4:
+        raise ValueError(
+            f"register_element_quad({issue_label!r}): an element quad must be "
+            f"four DISTINCT elements; got {els}."
+        )
+    _ELEMENT_QUAD_REGISTRATIONS.setdefault(issue_label, set()).add(els)
     ELEMENT_QUADS_BY_ISSUE[issue_label] = quad
+
+
+def verify_element_quads(quads_by_issue: dict = None) -> list:
+    """Audit the registered Element Quads (level 4) — the consistency-based,
+    non-raising verifier. Returns observations:
+
+    - `element_quad_conflict` — a Variation registered with >1 distinct
+      element quad across encodings (the drift guard; the canonical winner
+      needs the Dramatica Table source);
+    - `element_non_canonical` / `element_quad_malformed` — redundant with the
+      registration-time hard checks, re-confirmed across the whole registry
+      (useful when auditing an externally-supplied `quads_by_issue`);
+    - `element_quad_coverage` — informational: how many of the 64 canonical
+      Variations have a placement yet (partial is expected, not an error).
+
+    Pass `quads_by_issue` to audit a specific map; default audits the global
+    registry. Conflicts are read from `_ELEMENT_QUAD_REGISTRATIONS`."""
+    registry = (ELEMENT_QUADS_BY_ISSUE if quads_by_issue is None
+                else quads_by_issue)
+    out = []
+    for issue, quad in registry.items():
+        els = _element_tuple(quad)
+        bad = [e for e in els if e not in CANONICAL_ELEMENTS]
+        if bad:
+            out.append(DramaticaObservation(
+                severity=SEVERITY_ADVISES_REVIEW, code="element_non_canonical",
+                target_id=getattr(quad, "id", issue),
+                message=(f"Element Quad for Variation {issue!r} uses "
+                         f"non-canonical elements {bad}.")))
+        if len(set(els)) != 4:
+            out.append(DramaticaObservation(
+                severity=SEVERITY_ADVISES_REVIEW, code="element_quad_malformed",
+                target_id=getattr(quad, "id", issue),
+                message=(f"Element Quad for Variation {issue!r} is not four "
+                         f"distinct elements: {els}.")))
+    if quads_by_issue is None:
+        for issue, seen in sorted(_ELEMENT_QUAD_REGISTRATIONS.items()):
+            if len(seen) > 1:
+                out.append(DramaticaObservation(
+                    severity=SEVERITY_ADVISES_REVIEW,
+                    code="element_quad_conflict", target_id=issue,
+                    message=(f"Variation {issue!r} registered with "
+                             f"{len(seen)} DIFFERENT element quads "
+                             f"{sorted(seen)} — a Variation has one canonical "
+                             f"element quad; resolve against the Dramatica "
+                             f"Table.")))
+    all_variations = {
+        v for q in ISSUE_QUADS_BY_CONCERN.values()
+        for v in _element_tuple(q)
+    }
+    mapped = set(registry) & all_variations
+    out.append(DramaticaObservation(
+        severity=SEVERITY_NOTED, code="element_quad_coverage",
+        target_id="story",
+        message=(f"Element-quad placement map covers {len(mapped)}/"
+                 f"{len(all_variations)} canonical Variations "
+                 f"(the rest fill in from the Dramatica Table as encodings "
+                 f"register them).")))
+    return out
 
 
 # ============================================================================
@@ -1428,6 +1527,39 @@ ALL_PURPOSE_QUADS = (
     PURPOSE_QUAD_ABILITY,
     PURPOSE_QUAD_ORDER,
     PURPOSE_QUAD_EQUITY,
+)
+
+
+# ============================================================================
+# The canonical 64 Elements — the bottom level of the Dramatica table
+# ============================================================================
+#
+# Dramatica's leaf level has 256 cells (4 Classes × 4 Types × 4 Variations ×
+# 4 Elements), but they are filled by only 64 DISTINCT element labels — the
+# same element quads recur across the table in a pattern that is NOT
+# Type-aligned (empirically: 'attempt' and 'work' sit under the same Type yet
+# carry different element quads; 'attempt' and 'fate' sit under different
+# Types yet share one). So the canonical *data* is these 64 distinct elements
+# plus the per-Variation placement of element quads.
+#
+# We ship the 64-element VOCABULARY here (the union of the four character-
+# element quad sets — Motivation, Methodology, Evaluation, Purpose — which is
+# exactly the canonical 64, verified). What we do NOT yet ship is the full
+# 64-Variation → element-quad placement map; that requires the Dramatica
+# Table source and is filled incrementally as encodings register quads
+# (`register_element_quad`). The verifier below enforces what we CAN check
+# without that map: every registered element quad draws from these 64, is
+# well-formed, and no Variation is given two conflicting quads.
+
+CANONICAL_ELEMENTS: frozenset = frozenset(
+    e.value
+    for enum in (MotivationElement, MethodologyElement,
+                 EvaluationElement, PurposeElement)
+    for e in enum
+)
+assert len(CANONICAL_ELEMENTS) == 64, (
+    f"the canonical Dramatica element vocabulary must be 64 distinct labels; "
+    f"got {len(CANONICAL_ELEMENTS)}"
 )
 
 

@@ -38,6 +38,7 @@ from story_engine.core.dramatica_template import (
     ISSUE_QUADS_BY_CONCERN, ELEMENT_QUADS_BY_ISSUE,
     ISSUE_QUAD_UNDERSTANDING,
     register_issue_quad, register_element_quad,
+    CANONICAL_ELEMENTS, verify_element_quads,
     # Observation types
     DramaticaObservation, SEVERITY_NOTED, SEVERITY_ADVISES_REVIEW,
     # Verifier
@@ -1380,6 +1381,75 @@ def test_dsp_coupling_map_covers_all_eight_axes():
 
 
 # ============================================================================
+# Canonical level-4 Elements: the 64-element vocabulary + the verifier
+# ============================================================================
+
+
+def _elq(id_, a, b, c, d):
+    return Quad(id=id_, kind="element-quad",
+               element_A=a, element_B=b, element_C=c, element_D=d)
+
+
+def test_canonical_elements_is_sixty_four():
+    """The bottom-level vocabulary is the canonical 64 distinct elements."""
+    assert len(CANONICAL_ELEMENTS) == 64
+    # spot-check real Dramatica elements are present
+    for e in ("pursue", "faith", "conscience", "logic", "proaction",
+              "effect", "knowledge"):
+        assert e in CANONICAL_ELEMENTS
+
+
+def test_register_element_quad_rejects_non_canonical_element():
+    try:
+        register_element_quad("_t_bad_vocab",
+                              _elq("q", "zzz", "support", "disbelief", "oppose"))
+        assert False, "non-canonical element should raise"
+    except ValueError:
+        pass
+
+
+def test_register_element_quad_rejects_malformed_quad():
+    """A quad must be four DISTINCT elements."""
+    try:
+        register_element_quad("_t_dupes",
+                              _elq("q", "pursue", "pursue", "avoid", "consider"))
+        assert False, "non-distinct element quad should raise"
+    except ValueError:
+        pass
+
+
+def test_register_element_quad_idempotent_same_quad():
+    """Re-registering the SAME Variation with the SAME elements is fine."""
+    q = _elq("q1", "pursue", "consider", "avoid", "reconsider")
+    register_element_quad("_t_idem", q)
+    register_element_quad("_t_idem", _elq("q2", "pursue", "consider",
+                                          "avoid", "reconsider"))
+    # no conflict raised; and verify reports none for this label
+    conflicts = [o for o in verify_element_quads()
+                 if o.code == "element_quad_conflict" and o.target_id == "_t_idem"]
+    assert conflicts == []
+
+
+def test_verify_element_quads_detects_conflict():
+    """Two DIFFERENT canonical quads for one Variation = a surfaced conflict
+    (the drift guard — the canonical winner needs the Dramatica Table)."""
+    register_element_quad("_t_conflict",
+                          _elq("qa", "pursue", "consider", "avoid", "reconsider"))
+    register_element_quad("_t_conflict",
+                          _elq("qb", "logic", "control", "feeling", "uncontrolled"))
+    conflicts = [o for o in verify_element_quads()
+                 if o.code == "element_quad_conflict"
+                 and o.target_id == "_t_conflict"]
+    assert len(conflicts) == 1
+
+
+def test_verify_element_quads_reports_coverage():
+    obs = verify_element_quads()
+    cov = [o for o in obs if o.code == "element_quad_coverage"]
+    assert len(cov) == 1 and "/64" in cov[0].message
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -1488,6 +1558,12 @@ TESTS = [
     test_template_coupling_kind_for_story_goal_returns_trajectory,
     test_template_coupling_field_lookup_falls_back_to_record_level,
     test_dsp_coupling_map_covers_all_eight_axes,
+    test_canonical_elements_is_sixty_four,
+    test_register_element_quad_rejects_non_canonical_element,
+    test_register_element_quad_rejects_malformed_quad,
+    test_register_element_quad_idempotent_same_quad,
+    test_verify_element_quads_detects_conflict,
+    test_verify_element_quads_reports_coverage,
 ]
 
 
