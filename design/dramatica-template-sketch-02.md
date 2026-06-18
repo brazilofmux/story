@@ -108,26 +108,35 @@ geometry is 256, the vocabulary is 64 (the research doc's figure was right).
   re-confirms vocabulary/well-formedness, and reports coverage (15/64
   Variations placed so far).
 
-**What we did NOT ship:** the full 64-Variation → element-quad placement map.
-That recurrence pattern is not derivable from the 64 vocabulary alone and needs
-the Dramatica Table source. Per the chosen strategy, it fills in incrementally;
-the verifier guards consistency in the meantime.
+**The full table — now shipped (transcribed from the chart).** Stephen read
+all four Classes of the Dramatica Table off the structure-chart PDF (the
+copy/paste scrambles; decoded via the fixed 2-line TL/TR/BL/BR quad layout and
+cross-checked — typed and pasted Situation agreed exactly). `CANONICAL_ELEMENT_QUADS`
+now holds all **64** Variation → element-quad placements, stored reading-driven
+(A=e1,B=e2,C=e4,D=e3) so the dynamic pairs land at (A,C)/(B,D) and the
+Solution/Symptom/Response derivation is canonically correct (geometry
+confirmed: dynamic pairs are the chart diagonals). Invariants pinned: 256
+cells, 64 distinct elements each appearing exactly 4× ("chess set"), each
+Type's 16 = exactly one character-element category.
 
-**The verifier earned its keep immediately** — it surfaced four REAL conflicts
-in the existing corpus, where encodings disagree on a Variation's canonical
-element quad (the 64 Variation labels are all distinct and each conflicted one
-lives under a single Type, so these are genuine drift, not a keying artifact):
+**The verifier earned its keep immediately** — on first run it surfaced four
+REAL conflicts (commitment, desire, doubt, interpretation) and, once the full
+table was shipped, **15 deviations across all 15 corpus-used Variations**:
+*every* element quad the corpus had authored was non-canonical — the prior
+session defaulted Problem quads to Motivation-family elements without the chart.
+The conflicts were just the cases where two encodings defaulted differently.
 
-| Variation | conflicting registrations |
-|---|---|
-| `commitment` | `(conscience,help,temptation,hinder)` vs `(logic,control,feeling,uncontrolled)` |
-| `desire` | `(avoid,reconsider,pursue,consider)` vs `(logic,control,feeling,uncontrolled)` |
-| `doubt` | three variants (incl. a position-rotation of one) |
-| `interpretation` | `(faith,support,disbelief,oppose)` vs `(pursue,consider,avoid,reconsider)` |
-
-These are left FLAGGED, not resolved — which quad is canonical needs the
-Dramatica Table source. (DP-OQ: resolve the four against the source when it is
-available, then the verifier's conflict count should drop to zero.)
+**Resolved — all 24 throughline Problem picks re-authored (drift fix 1–6/6).**
+Because the corpus's element quads were not just mis-arranged but drew from the
+wrong element *category*, each encoding's Problem pick named an element invalid
+for its Variation — so the fix was a genuine per-throughline thematic re-pick
+from the canonical quad (storyform-changing), done story by story with Stephen's
+sign-off, not a mechanical relabel. Each encoding now references
+`CANONICAL_ELEMENT_QUADS` and picks its Problem within the correct quad; the
+old local element-quad definitions are gone. **All six dramatica-complete
+encodings co-loaded now report 0 deviations, 0 conflicts.** (Selected re-picks:
+Rocky MC Test→Trust; Lady Macbeth IC Control→Uncontrolled; Chinatown IC
+Inequity→Equity; Elizabeth MC Evaluation→Re-evaluation.)
 
 ## What is still NOT modeled (correctly scoped, not flaws)
 
