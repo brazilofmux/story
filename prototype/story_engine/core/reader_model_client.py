@@ -38,6 +38,8 @@ import json
 from dataclasses import dataclass
 from typing import Literal, Optional
 
+from story_engine.core.llm import DEFAULT_MODEL
+
 from pydantic import BaseModel, Field
 
 try:
@@ -760,7 +762,7 @@ def invoke_reader_model(
     reviews_for: Optional[list[str]] = None,
     answers_for: Optional[list[str]] = None,
     edits_for: Optional[list[str]] = None,
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
     reviewer_id: Optional[str] = None,
     effort: str = "high",
     max_tokens: int = 16_000,

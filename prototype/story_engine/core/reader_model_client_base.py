@@ -46,14 +46,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
-try:
-    import anthropic
-except ImportError as exc:
-    raise ImportError(
-        "The reader-model client base requires the anthropic SDK. "
-        "Install dependencies via "
-        "`pip install -r prototype/requirements.txt`."
-    ) from exc
+# The actual API call lives in `llm.py`, which imports the right SDK
+# lazily per provider. We keep `anthropic` as an optional import only for
+# the `Optional["anthropic.Anthropic"]` annotation below (a string, so it
+# resolves fine even when the SDK is absent — e.g. a Grok-only install).
+try:  # pragma: no cover - import convenience only
+    import anthropic  # noqa: F401
+except ImportError:
+    anthropic = None  # type: ignore
 
 
 @dataclass(frozen=True)
@@ -120,35 +120,21 @@ def invoke_parse_helper(
     The directive goes on the system block to cache the frozen
     system prompt across calls per the claude-api skill's silent-
     invalidator audit.
+
+    Provider-agnostic since the xAI/Grok backend landed: the actual
+    request shape now lives in `llm.parse`, which routes on the model
+    name (`claude-*` → Anthropic, `grok-*` → xAI). This wrapper is kept
+    so the three reader clients and the constrained-interview path can
+    keep importing one stable name; its signature is unchanged.
     """
-    if dry_run:
-        print("=" * 76)
-        print("SYSTEM PROMPT")
-        print("=" * 76)
-        print(system_prompt)
-        print()
-        print("=" * 76)
-        print("USER PROMPT")
-        print("=" * 76)
-        print(user_prompt)
-        return None
-
-    if client is None:
-        client = anthropic.Anthropic()
-
-    response = client.messages.parse(
+    from story_engine.core import llm
+    return llm.parse(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        output_format=output_format,
         model=model,
         max_tokens=max_tokens,
-        thinking={"type": "adaptive"},
-        output_config={"effort": effort},
-        system=[
-            {
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": user_prompt}],
-        output_format=output_format,
+        effort=effort,
+        dry_run=dry_run,
+        client=client,
     )
-    return response.parsed_output

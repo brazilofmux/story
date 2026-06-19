@@ -26,6 +26,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from story_engine.core.llm import DEFAULT_MODEL
+
 try:
     from pydantic import BaseModel, Field
 except ImportError as exc:  # pragma: no cover
@@ -125,7 +127,7 @@ def decompile_dramatica(
     *,
     title: str = "",
     dialect_note: str = GENRE_NOTE,
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
     effort: str = "high",
     max_tokens: int = 6000,
     dry_run: bool = False,

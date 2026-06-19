@@ -51,6 +51,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Literal, Optional
 
+from story_engine.core.llm import DEFAULT_MODEL
+
 from pydantic import BaseModel, Field
 
 try:
@@ -949,7 +951,7 @@ def invoke_dramatic_reader_model(
     purpose_element_assignments: tuple = (),
     story_goal: Optional[str] = None,
     story_consequence: Optional[str] = None,
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
     reviewer_id: Optional[str] = None,
     effort: str = "high",
     max_tokens: int = 16_000,

@@ -25,6 +25,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from story_engine.core.llm import DEFAULT_MODEL
+
 from story_engine.core.draft_generator import (
     render_scene_prose, _scene_synopsis, _name_map,
 )
@@ -155,7 +157,7 @@ def repair_scene(
     title: str = "",
     dialect_note: str = "",
     before: str = "",
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
     effort: str = "medium",
     max_tokens: int = 4000,
     client=None,

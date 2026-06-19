@@ -48,6 +48,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
+from story_engine.core.llm import DEFAULT_MODEL
+
 
 # ============================================================================
 # The spine — deterministic gap analysis (no API, no dependencies)
@@ -1185,16 +1187,15 @@ def _extract_via_json(*, system_prompt, user_prompt, output_format, model,
     if dry_run:
         return None
 
-    import anthropic
-    client = client or anthropic.Anthropic()
-    response = client.messages.create(
-        model=model, max_tokens=max_tokens, thinking={"type": "adaptive"},
-        output_config={"effort": effort},
-        system=[{"type": "text", "text": sys_prompt,
-                 "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": full_user}],
-    )
-    text = "".join(b.text for b in response.content if b.type == "text").strip()
+    # Provider-agnostic: ask for raw text (the schema hint is in the system
+    # prompt) and parse the JSON ourselves below. Routes on `model`, so
+    # `grok-*` schemas that exceed Anthropic's grammar ceiling go through
+    # xAI's JSON-mode path here just the same.
+    from story_engine.core import llm
+    text = llm.generate(
+        system_prompt=sys_prompt, user_prompt=full_user,
+        model=model, max_tokens=max_tokens, effort=effort, client=client,
+    ).strip()
     # tolerate a stray code fence or surrounding prose
     if "```" in text:
         text = text.split("```", 2)[1]
@@ -1212,7 +1213,7 @@ def extract_story_draft(
     dialect: str = DEFAULT_DIALECT,
     prior: Optional[dict] = None,
     answers: Optional[str] = None,
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
     effort: str = "high",
     max_tokens: int = 6000,
     dry_run: bool = False,

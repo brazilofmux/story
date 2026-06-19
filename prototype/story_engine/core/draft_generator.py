@@ -43,13 +43,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-try:
-    import anthropic
-except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "The draft generator requires the anthropic SDK. Install via "
-        "`pip install -r prototype/requirements.txt`."
-    ) from exc
+from story_engine.core.llm import DEFAULT_MODEL
+
+# Model calls go through `llm.py`, which loads the right SDK lazily per
+# provider. `anthropic` is imported best-effort only for the
+# `Optional["anthropic.Anthropic"]` annotations (string literals, so they
+# resolve even on a Grok-only install where the SDK is absent).
+try:  # pragma: no cover - import convenience only
+    import anthropic  # noqa: F401
+except ImportError:
+    anthropic = None  # type: ignore
 
 
 # ============================================================================
@@ -473,7 +476,7 @@ def render_scene_prose(
     dialect_note: str = "",
     story_so_far: str = "",
     extra_directive: str = "",
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
     effort: str = "medium",
     max_tokens: int = 4000,
     client: Optional["anthropic.Anthropic"] = None,
@@ -522,20 +525,11 @@ def render_scene_prose(
         f"{sof}\n\nRender the scene now, from this brief:\n\n{brief}"
     )
 
-    if client is None:
-        client = anthropic.Anthropic()
-    response = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        thinking={"type": "adaptive"},
-        output_config={"effort": effort},
-        system=[{
-            "type": "text", "text": system_prompt,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{"role": "user", "content": user_prompt}],
+    from story_engine.core import llm
+    return llm.generate(
+        system_prompt=system_prompt, user_prompt=user_prompt,
+        model=model, max_tokens=max_tokens, effort=effort, client=client,
     )
-    return _extract_text(response)
 
 
 def generate_draft(
@@ -549,7 +543,7 @@ def generate_draft(
     adapter=None,
     preplay_disclosures=(),
     dialect_note: str = "",
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
     effort: str = "medium",
     max_tokens: int = 4000,
     dry_run: bool = False,
@@ -591,8 +585,9 @@ def generate_draft(
     ordered = sorted(sjuzhet, key=lambda e: e.τ_d)
     synopsis_so_far: list = []
 
-    if client is None and not dry_run:
-        client = anthropic.Anthropic()
+    # The model client is built lazily, per provider, inside `llm.generate`
+    # (routing on `model`). `client`, if the caller passed one, is forwarded.
+    from story_engine.core import llm
 
     for entry in ordered:
         brief = build_scene_brief(
@@ -632,18 +627,10 @@ def generate_draft(
             f"Render the next scene now, from this brief:\n\n{brief}"
         )
 
-        response = client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            thinking={"type": "adaptive"},
-            output_config={"effort": effort},
-            system=[{
-                "type": "text", "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{"role": "user", "content": user_prompt}],
+        prose = llm.generate(
+            system_prompt=system_prompt, user_prompt=user_prompt,
+            model=model, max_tokens=max_tokens, effort=effort, client=client,
         )
-        prose = _extract_text(response)
         scene = SceneDraft(
             τ_d=entry.τ_d, event_id=entry.event_id,
             focalizer=foc_name, brief=brief, prose=prose,

@@ -74,8 +74,25 @@ for t in \
 ```
 
 Venv-backed path: requires local venv + `requirements.txt`
-(`anthropic`, `pydantic`, `jsonschema`) and, for live API calls,
-`ANTHROPIC_API_KEY`.
+(`anthropic`, `openai`, `pydantic`, `jsonschema`) and, for live API
+calls, `ANTHROPIC_API_KEY`.
+
+**Model provider is chosen by the model name** (`story_engine/core/llm.py`).
+Every call — interview extraction, authoring compile, draft generation,
+repair, reader-model probes, and the blind evaluators — routes through one
+seam and picks its backend from the `model=` argument: `claude-*` →
+Anthropic, `grok-*` → xAI (needs `XAI_API_KEY`; `gpt-*`/`gemini-*` are
+reserved). Pass `model="grok-4.3"` to any of them, or set
+`STORY_LLM_MODEL=grok-4.3` to flip the whole engine's default in one place
+(an explicit `model=` always wins). This is what lets a draft be
+**cross-checked across model families** — Claude and Grok read the same
+prose blind and their agreement (not a single model's self-grade) is the
+fidelity signal:
+
+```sh
+.venv/bin/python3 -m demos.demo_crosscheck_malfi              # Claude vs Grok
+.venv/bin/python3 -m demos.demo_crosscheck_malfi --models grok-4.3,claude-opus-4-6
+```
 
 ```sh
 cd prototype
