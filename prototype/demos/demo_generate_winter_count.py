@@ -73,7 +73,9 @@ _DIALECT_NOTE = (
     "sentences should be the ones doing sums. Do NOT sand the edges: "
     "the vote must be reasonable, the child must die off no one's "
     "villainy, the ending must refuse consolation. The final scene "
-    "closes the loop of the first: a woman at a table, counting.\n\n"
+    "closes the loop of the first: a woman at a table, counting. "
+    "Scenes are LEAN: 700-1200 words each — the spare register is the "
+    "point; a scene that sprawls has already failed it.\n\n"
     "=== SIGNPOST TERRITORY (the exact structural ground of each act) ===\n"
     + "\n".join(
         f"- {sp_id}: {detail}" for sp_id, detail in WD.SIGNPOST_DETAILS.items()
@@ -100,7 +102,10 @@ def _cli():
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--effort", default="high",
                    choices=["low", "medium", "high", "max"])
-    p.add_argument("--max-tokens", type=int, default=6000)
+    # Adaptive thinking shares this budget with the prose; high effort on
+    # a dense brief needs real headroom or the scene truncates (and the
+    # fail-loud seam aborts the run rather than splice a cut scene).
+    p.add_argument("--max-tokens", type=int, default=12000)
     p.add_argument("--save-md", metavar="PATH")
     p.add_argument("--save-json", default="winter_count_draft.json",
                    help="Structured draft artifact (default: "
