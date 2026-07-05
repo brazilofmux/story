@@ -403,14 +403,21 @@ DOMAIN_QUAD = Quad(
 
 # Concern Quads — one per Domain. Each Domain has four Types (Concerns)
 # that describe the specific nature of conflict within that Domain.
+#
+# Storage order is A,B,D,C relative to the chart's spatial reading
+# (A=top-left, B=top-right, C=bottom-RIGHT, D=bottom-LEFT) — the same
+# compensation `_canon_element_quad` applies: the chart's dynamic pairs are
+# the DIAGONAL cells, so storing the bottom row swapped lands them on this
+# module's (A,C)/(B,D) `dynamic_pairs` convention (e.g. the Situation quad
+# pairs past↔present and how-things-are-changing↔future).
 
 CONCERN_ACTIVITY_QUAD = Quad(
     id="concern_activity_quad",
     kind="concern-quad",
     element_A="understanding",
     element_B="doing",
-    element_C="obtaining",
-    element_D="learning",
+    element_C="learning",
+    element_D="obtaining",
 )
 
 CONCERN_SITUATION_QUAD = Quad(
@@ -418,8 +425,8 @@ CONCERN_SITUATION_QUAD = Quad(
     kind="concern-quad",
     element_A="the-past",
     element_B="how-things-are-changing",
-    element_C="the-future",
-    element_D="the-present",
+    element_C="the-present",
+    element_D="the-future",
 )
 
 CONCERN_MANIPULATION_QUAD = Quad(
@@ -427,8 +434,8 @@ CONCERN_MANIPULATION_QUAD = Quad(
     kind="concern-quad",
     element_A="developing-a-plan",
     element_B="playing-a-role",
-    element_C="changing-one's-nature",
-    element_D="conceiving-an-idea",
+    element_C="conceiving-an-idea",
+    element_D="changing-one's-nature",
 )
 
 CONCERN_FIXED_ATTITUDE_QUAD = Quad(
@@ -436,8 +443,8 @@ CONCERN_FIXED_ATTITUDE_QUAD = Quad(
     kind="concern-quad",
     element_A="innermost-desires",
     element_B="impulsive-responses",
-    element_C="contemplation",
-    element_D="memories",
+    element_C="memories",
+    element_D="contemplation",
 )
 
 CONCERN_QUADS_BY_DOMAIN = {
@@ -591,9 +598,11 @@ def verify_element_quads(quads_by_issue: dict = None) -> list:
 # in each Domain. 4 Domains × 4 Concerns × 4 Variations = 64 total.
 #
 # Source: Dramatica Table of Story Elements (Screenplay Systems,
-# 1995/1999). Quad position assignments (A/B/C/D) follow the chart's
-# spatial layout: A=top-left, B=top-right, C=bottom-left,
-# D=bottom-right.
+# 1995/1999). Storage order is A,B,D,C relative to the chart's spatial
+# layout (A=top-left, B=top-right, C=bottom-RIGHT, D=bottom-LEFT) — the
+# same compensation `_canon_element_quad` applies, so the chart's diagonal
+# dynamic pairs land on this module's (A,C)/(B,D) `dynamic_pairs`
+# convention.
 
 # -- Activity (Physics) Domain --
 
@@ -602,8 +611,8 @@ ISSUE_QUAD_UNDERSTANDING = Quad(
     kind="issue-quad",
     element_A="instinct",
     element_B="senses",
-    element_C="interpretation",
-    element_D="conditioning",
+    element_C="conditioning",
+    element_D="interpretation",
     authored_by="dramatica-theory",
 )
 
@@ -612,8 +621,8 @@ ISSUE_QUAD_DOING = Quad(
     kind="issue-quad",
     element_A="wisdom",
     element_B="skill",
-    element_C="enlightenment",
-    element_D="experience",
+    element_C="experience",
+    element_D="enlightenment",
     authored_by="dramatica-theory",
 )
 
@@ -622,8 +631,8 @@ ISSUE_QUAD_OBTAINING = Quad(
     kind="issue-quad",
     element_A="approach",
     element_B="self-interest",
-    element_C="morality",
-    element_D="attitude",
+    element_C="attitude",
+    element_D="morality",
     authored_by="dramatica-theory",
 )
 
@@ -632,8 +641,8 @@ ISSUE_QUAD_LEARNING = Quad(
     kind="issue-quad",
     element_A="prerequisites",
     element_B="strategy",
-    element_C="analysis",
-    element_D="preconditions",
+    element_C="preconditions",
+    element_D="analysis",
     authored_by="dramatica-theory",
 )
 
@@ -644,8 +653,8 @@ ISSUE_QUAD_THE_PAST = Quad(
     kind="issue-quad",
     element_A="fate",
     element_B="prediction",
-    element_C="interdiction",
-    element_D="destiny",
+    element_C="destiny",
+    element_D="interdiction",
     authored_by="dramatica-theory",
 )
 
@@ -654,8 +663,8 @@ ISSUE_QUAD_HOW_THINGS_ARE_CHANGING = Quad(
     kind="issue-quad",
     element_A="fact",
     element_B="security",
-    element_C="threat",
-    element_D="fantasy",
+    element_C="fantasy",
+    element_D="threat",
     authored_by="dramatica-theory",
 )
 
@@ -664,8 +673,8 @@ ISSUE_QUAD_THE_FUTURE = Quad(
     kind="issue-quad",
     element_A="openness",
     element_B="delay",
-    element_C="choice",
-    element_D="preconception",
+    element_C="preconception",
+    element_D="choice",
     authored_by="dramatica-theory",
 )
 
@@ -674,8 +683,8 @@ ISSUE_QUAD_THE_PRESENT = Quad(
     kind="issue-quad",
     element_A="work",
     element_B="attract",
-    element_C="repel",
-    element_D="attempt",
+    element_C="attempt",
+    element_D="repel",
     authored_by="dramatica-theory",
 )
 
@@ -686,8 +695,8 @@ ISSUE_QUAD_DEVELOPING_A_PLAN = Quad(
     kind="issue-quad",
     element_A="state-of-being",
     element_B="situation",
-    element_C="circumstances",
-    element_D="sense-of-self",
+    element_C="sense-of-self",
+    element_D="circumstances",
     authored_by="dramatica-theory",
 )
 
@@ -696,8 +705,8 @@ ISSUE_QUAD_PLAYING_A_ROLE = Quad(
     kind="issue-quad",
     element_A="knowledge",
     element_B="ability",
-    element_C="desire",
-    element_D="thought",
+    element_C="thought",
+    element_D="desire",
     authored_by="dramatica-theory",
 )
 
@@ -706,8 +715,8 @@ ISSUE_QUAD_CHANGING_ONES_NATURE = Quad(
     kind="issue-quad",
     element_A="rationalization",
     element_B="obligation",
-    element_C="commitment",
-    element_D="responsibility",
+    element_C="responsibility",
+    element_D="commitment",
     authored_by="dramatica-theory",
 )
 
@@ -716,8 +725,8 @@ ISSUE_QUAD_CONCEIVING_AN_IDEA = Quad(
     kind="issue-quad",
     element_A="permission",
     element_B="need",
-    element_C="expediency",
-    element_D="deficiency",
+    element_C="deficiency",
+    element_D="expediency",
     authored_by="dramatica-theory",
 )
 
@@ -728,8 +737,8 @@ ISSUE_QUAD_MEMORIES = Quad(
     kind="issue-quad",
     element_A="truth",
     element_B="evidence",
-    element_C="suspicion",
-    element_D="falsehood",
+    element_C="falsehood",
+    element_D="suspicion",
     authored_by="dramatica-theory",
 )
 
@@ -738,8 +747,8 @@ ISSUE_QUAD_IMPULSIVE_RESPONSES = Quad(
     kind="issue-quad",
     element_A="value",
     element_B="confidence",
-    element_C="worry",
-    element_D="worth",
+    element_C="worth",
+    element_D="worry",
     authored_by="dramatica-theory",
 )
 
@@ -748,8 +757,8 @@ ISSUE_QUAD_INNERMOST_DESIRES = Quad(
     kind="issue-quad",
     element_A="closure",
     element_B="hope",
-    element_C="dream",
-    element_D="denial",
+    element_C="denial",
+    element_D="dream",
     authored_by="dramatica-theory",
 )
 
@@ -758,42 +767,46 @@ ISSUE_QUAD_CONTEMPLATION = Quad(
     kind="issue-quad",
     element_A="investigation",
     element_B="appraisal",
-    element_C="reappraisal",
-    element_D="doubt",
+    element_C="doubt",
+    element_D="reappraisal",
     authored_by="dramatica-theory",
 )
 
 # -- Register all Issue Quads --
+# Each tuple lists the Issue Quads in its Concern Quad's A,B,C,D storage
+# order (storage swaps the chart's bottom row — see the concern-quad note).
 
 _ALL_ISSUE_QUADS = (
-    # Activity
+    # Activity (A=understanding, B=doing, C=learning, D=obtaining)
     (CONCERN_ACTIVITY_QUAD, (
         ISSUE_QUAD_UNDERSTANDING,
         ISSUE_QUAD_DOING,
-        ISSUE_QUAD_OBTAINING,
         ISSUE_QUAD_LEARNING,
+        ISSUE_QUAD_OBTAINING,
     )),
-    # Situation
+    # Situation (A=the-past, B=how-things-are-changing,
+    #            C=the-present, D=the-future)
     (CONCERN_SITUATION_QUAD, (
         ISSUE_QUAD_THE_PAST,
         ISSUE_QUAD_HOW_THINGS_ARE_CHANGING,
-        ISSUE_QUAD_THE_FUTURE,
         ISSUE_QUAD_THE_PRESENT,
+        ISSUE_QUAD_THE_FUTURE,
     )),
-    # Manipulation
+    # Manipulation (A=developing-a-plan, B=playing-a-role,
+    #               C=conceiving-an-idea, D=changing-one's-nature)
     (CONCERN_MANIPULATION_QUAD, (
         ISSUE_QUAD_DEVELOPING_A_PLAN,
         ISSUE_QUAD_PLAYING_A_ROLE,
-        ISSUE_QUAD_CHANGING_ONES_NATURE,
         ISSUE_QUAD_CONCEIVING_AN_IDEA,
+        ISSUE_QUAD_CHANGING_ONES_NATURE,
     )),
     # Fixed Attitude (A=innermost-desires, B=impulsive-responses,
-    #                  C=contemplation, D=memories)
+    #                 C=memories, D=contemplation)
     (CONCERN_FIXED_ATTITUDE_QUAD, (
         ISSUE_QUAD_INNERMOST_DESIRES,
         ISSUE_QUAD_IMPULSIVE_RESPONSES,
-        ISSUE_QUAD_CONTEMPLATION,
         ISSUE_QUAD_MEMORIES,
+        ISSUE_QUAD_CONTEMPLATION,
     )),
 )
 

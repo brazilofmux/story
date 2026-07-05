@@ -138,6 +138,22 @@ def _skeleton_gaps(doc: dict) -> list:
         if not (ev.get("summary") or "").strip():
             gaps.append(Gap("structural", "event_no_summary",
                             f"What actually happens in the beat '{eid}'?", eid))
+        # the compiler parses each `establishes` fact as predicate(args)
+        for fact in ev.get("establishes") or []:
+            f = (fact or "").strip()
+            if not _is_predicate(f):
+                gaps.append(Gap("blocking", "establishes_bad_fact",
+                                f"The fact '{f}' established at "
+                                f"\"{_label(ev)}\" must be written as "
+                                f"predicate(arg) — e.g. lens_cracked(light).",
+                                eid))
+
+    for fact in doc.get("preplay") or []:
+        f = (fact or "").strip()
+        if not _is_predicate(f):
+            gaps.append(Gap("blocking", "preplay_bad_fact",
+                            f"The preplay fact '{f}' must be written as "
+                            f"predicate(arg) — e.g. war_declared()."))
 
     telling = (doc.get("telling") or "chronological").strip().lower()
     if telling not in _TELLINGS:
@@ -148,11 +164,30 @@ def _skeleton_gaps(doc: dict) -> list:
         gaps.append(Gap("blocking", "explicit_no_staging",
                         "You chose an explicit telling order — in what order "
                         "does the audience experience the beats?"))
+    elif telling == "explicit":
+        for eid in doc.get("staging") or []:
+            if eid not in seen_ids:
+                gaps.append(Gap("blocking", "staging_unknown_event",
+                                f"The staging order names '{eid}', but no beat "
+                                f"has that id — which beat did you mean?", eid))
 
     phases = doc.get("phases") or {}
     phased: set = set()
+    placed: dict = {}
     for key in ("beginning", "middle", "end"):
-        phased.update(phases.get(key) or [])
+        for eid in phases.get(key) or []:
+            if eid not in seen_ids:
+                gaps.append(Gap("blocking", "phase_unknown_event",
+                                f"The {key} phase names '{eid}', but no beat "
+                                f"has that id — which beat did you mean?", eid))
+            if eid in placed:
+                gaps.append(Gap("blocking", "event_in_two_phases",
+                                f"The beat '{eid}' is placed twice "
+                                f"({placed[eid]} and {key}) — a beat lives in "
+                                f"exactly one phase. Which is it?", eid))
+            else:
+                placed[eid] = key
+            phased.add(eid)
     if not phased:
         gaps.append(Gap("blocking", "no_phases",
                         "How do the beats fall into a beginning, a middle, and "
@@ -438,13 +473,31 @@ DRAMATICA_DYNAMICS = {
 }
 
 
+def _split_dual_pole(pole: str):
+    """The poles of a multi-pole string ('success|failure', 'success / failure',
+    'success or failure', 'both success and failure'), or None for a single
+    pole. The extraction schema's dynamics fields are plain strings, so a
+    compliant dual answer arrives as one string; no pole name contains a
+    space, '|', or '/', so these separators are unambiguous."""
+    s = pole.strip().lower()
+    if s.startswith("both "):
+        s = s[5:]
+    for sep in ("|", "/", " or ", " and "):
+        if sep in s:
+            parts = tuple(p.strip() for p in s.split(sep) if p.strip())
+            if len(parts) > 1:
+                return parts
+    return None
+
+
 def _normalize_dynamics(raw) -> dict:
     """Accept dynamics as a dict {axis: pole} (the extraction schema's flat
     shape, with underscore or hyphen keys) or a list [{axis, choice}], and
     normalize to {axis: pole-or-tuple} keyed by the canonical hyphen axis names.
-    A list/tuple choice is a genuinely-dual (ambiguous) axis — honored, not
-    flattened (see `dramatica-precision-limit`): forcing a binary the story
-    doesn't commit to is exactly the over-claim the substrate refuses."""
+    A list/tuple choice — or a multi-pole string like 'success|failure' — is a
+    genuinely-dual (ambiguous) axis — honored, not flattened (see
+    `dramatica-precision-limit`): forcing a binary the story doesn't commit to
+    is exactly the over-claim the substrate refuses."""
     out: dict = {}
     items = []
     if isinstance(raw, dict):
@@ -464,7 +517,7 @@ def _normalize_dynamics(raw) -> dict:
         else:
             pole = str(choice or "").strip().lower()
             if pole:                        # an empty string is an unset axis
-                out[a] = pole
+                out[a] = _split_dual_pole(pole) or pole
     return out
 
 

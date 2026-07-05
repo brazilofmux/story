@@ -334,9 +334,32 @@ def test_dramatica_compiles_full_storyform():
     # 16 signposts: 4 per throughline, from the domain's Concern quad
     assert len(ov.signposts) == 16
     mc = sorted((sp.signpost_position, sp.signpost_element)
-                for sp in ov.signposts if sp.throughline_id == "T_main_character")
-    assert mc[0] == (1, "innermost-desires") and mc[3] == (4, "memories")
+                for sp in ov.signposts if sp.throughline_id == "T_mc_ava")
+    assert mc[0] == (1, "innermost-desires") and mc[3] == (4, "contemplation")
     assert ov.story_goal and ov.story_consequence
+
+
+def test_dramatica_throughline_ids_follow_encoding_convention():
+    # the generator/evaluator classify perspective from the id shape
+    # (T_os / T_mc_* / T_ic_* / T_rel), not from role_label
+    ov = compile_story(_dramatica_doc(), "dramatica").overlay
+    ids = {t.role_label: t.id for t in ov.throughlines}
+    assert ids["overall-story"] == "T_os"
+    assert ids["main-character"] == "T_mc_ava"
+    assert ids["impact-character"] == "T_ic_rao"
+    assert ids["relationship"] == "T_rel"
+    # signposts and domain assignments reference the same ids
+    assert {sp.throughline_id for sp in ov.signposts} == set(ids.values())
+    assert {da.throughline_id for da in ov.domain_assignments} == set(ids.values())
+
+
+def test_dramatica_ownerless_mc_ic_ids():
+    doc = _dramatica_doc()
+    for t in doc["throughlines"]:
+        t.pop("owner", None)
+    ov = compile_story(doc, "dramatica").overlay
+    ids = {t.role_label: t.id for t in ov.throughlines}
+    assert ids["main-character"] == "T_mc" and ids["impact-character"] == "T_ic"
 
 
 def test_dramatica_complete_storyform_verifies_clean():
@@ -416,6 +439,8 @@ TESTS = [
     test_dramatic_verifies_without_rejecting,
     test_dramatic_tolerates_sparse_overlay,
     test_dramatica_compiles_full_storyform,
+    test_dramatica_throughline_ids_follow_encoding_convention,
+    test_dramatica_ownerless_mc_ic_ids,
     test_dramatica_complete_storyform_verifies_clean,
     test_dramatica_dual_dynamic_honored,
     test_dramatica_drops_invalid_pole_not_raises,

@@ -793,10 +793,51 @@ def _build_dramatic_overlay(doc: dict, sub: _Substrate) -> CompiledDramaticOverl
 # Overlay: Dramatica
 # ----------------------------------------------------------------------------
 
+# Throughline ids follow the encodings' convention (T_os, T_mc_<owner>,
+# T_ic_<owner>, T_rel): dramatica_generation and dramatica_evaluator classify
+# a throughline's perspective by these id shapes, so a compiled storyform must
+# mint them the same way or its MC/IC/relationship throughlines read as
+# "overall".
+_DRAMATICA_TL_STEM = {
+    "overall-story": "T_os",
+    "main-character": "T_mc",
+    "impact-character": "T_ic",
+    "influence-character": "T_ic",
+    "relationship": "T_rel",
+}
+
+
+def _dramatica_tl_id(role: str, owner: str) -> str:
+    stem = _DRAMATICA_TL_STEM.get(role)
+    if stem is None:
+        return ("T_" + role).replace(" ", "_").replace("-", "_")
+    if owner and stem in ("T_mc", "T_ic"):
+        return stem + "_" + owner.replace(" ", "_").replace("-", "_")
+    return stem
+
+
+def _split_dual_pole(pole: str):
+    """The poles of a multi-pole string ('success|failure', 'success / failure',
+    'success or failure', 'both success and failure'), or None for a single
+    pole. The interview's extraction schema carries each dynamic as one plain
+    string, so a compliant dual answer arrives in this shape; no pole name
+    contains a space, '|', or '/', so these separators are unambiguous."""
+    s = pole.strip().lower()
+    if s.startswith("both "):
+        s = s[5:]
+    for sep in ("|", "/", " or ", " and "):
+        if sep in s:
+            parts = tuple(p.strip() for p in s.split(sep) if p.strip())
+            if len(parts) > 1:
+                return parts
+    return None
+
+
 def _normalize_dynamics(raw) -> dict:
     """The dynamics dict (axis → pole, underscore or hyphen keys) or a list of
     {axis, choice}, normalized to {hyphen-axis: pole-or-tuple}. A 2-pole value
-    is a genuinely-dual axis (honored, not flattened — `dramatica-precision-limit`)."""
+    — a list, or a multi-pole string like 'success|failure' — is a
+    genuinely-dual axis (honored, not flattened — `dramatica-precision-limit`)."""
     out: dict = {}
     if isinstance(raw, dict):
         items = list(raw.items())
@@ -816,7 +857,7 @@ def _normalize_dynamics(raw) -> dict:
         else:
             pole = str(choice or "").strip().lower()
             if pole:
-                out[a] = pole
+                out[a] = _split_dual_pole(pole) or pole
     return out
 
 
@@ -846,9 +887,9 @@ def _build_dramatica_overlay(doc: dict, sub: _Substrate) -> CompiledDramaticaOve
         role = (t.get("role") or "").strip().lower()
         if not role:
             continue
-        tl_id = ("T_" + role).replace(" ", "_").replace("-", "_")
         owner = (t.get("owner") or "").strip()
         owners = (owner,) if owner in char_ids else ()
+        tl_id = _dramatica_tl_id(role, owners[0] if owners else "")
         throughlines.append(Throughline(
             id=tl_id, role_label=role, owners=owners,
             subject=(t.get("subject") or role).strip()))

@@ -87,6 +87,46 @@ def test_unknown_recognizer_blocks():
     assert "recognizer_unknown" in _codes(blocking_gaps(doc))
 
 
+def test_phase_naming_unknown_event_blocks():
+    doc = _complete_doc()
+    doc["phases"]["middle"] = ["squall"]            # no such beat
+    g = [x for x in blocking_gaps(doc) if x.code == "phase_unknown_event"]
+    assert len(g) == 1 and g[0].target == "squall"
+    # 'storm' is now unphased too — both facts surface
+    assert "unphased_events" in _codes(blocking_gaps(doc))
+
+
+def test_event_in_two_phases_blocks():
+    doc = _complete_doc()
+    doc["phases"]["end"] = ["storm", "wreck"]       # 'storm' also in middle
+    g = [x for x in blocking_gaps(doc) if x.code == "event_in_two_phases"]
+    assert len(g) == 1 and g[0].target == "storm"
+
+
+def test_staging_naming_unknown_event_blocks():
+    doc = _complete_doc()
+    doc["telling"] = "explicit"
+    doc["staging"] = ["wreck", "calm", "squall"]    # 'squall' is no beat
+    g = [x for x in blocking_gaps(doc) if x.code == "staging_unknown_event"]
+    assert len(g) == 1 and g[0].target == "squall"
+    # a staging of known beats passes
+    doc["staging"] = ["wreck", "calm", "storm"]
+    assert "staging_unknown_event" not in _codes(blocking_gaps(doc))
+
+
+def test_malformed_establishes_and_preplay_facts_block():
+    doc = _complete_doc()
+    doc["events"][0]["establishes"] = ["the lens is proud"]   # not predicate()
+    doc["preplay"] = ["storms happen"]
+    codes = _codes(blocking_gaps(doc))
+    assert {"establishes_bad_fact", "preplay_bad_fact"} <= codes
+    # well-formed facts pass
+    doc["events"][0]["establishes"] = ["lens_proud(halvard)"]
+    doc["preplay"] = ["storm_season()"]
+    assert not ({"establishes_bad_fact", "preplay_bad_fact"}
+                & _codes(blocking_gaps(doc)))
+
+
 def test_structural_marks_surface_when_absent():
     doc = _complete_doc()
     for ev in doc["events"]:
@@ -264,6 +304,30 @@ def test_dramatica_dual_dynamic_is_honored():
     doc["dynamics"][3]["choice"] = ["linear", "holistic"]
     assert "dram_bad_dynamic" not in _codes(structural_gaps(doc, "dramatica"))
     assert interview_gaps(doc, "dramatica") == []
+
+
+def test_dramatica_dual_pole_string_is_honored():
+    # the extraction schema carries each dynamic as one plain string, so a
+    # compliant dual answer arrives as 'success|failure' / 'both X and Y' —
+    # normalized to the dual representation, not flagged or dropped
+    from story_engine.core.authoring_interview import _normalize_dynamics
+    for spelled in ("success|failure", "success / failure",
+                    "success or failure", "both success and failure"):
+        doc = _dramatica_complete_doc()
+        doc["dynamics"][6]["choice"] = spelled
+        assert interview_gaps(doc, "dramatica") == [], spelled
+        dyn = _normalize_dynamics(doc["dynamics"])
+        assert dyn["outcome"] == ("success", "failure"), spelled
+    # a dual with an invalid pole still surfaces
+    doc = _dramatica_complete_doc()
+    doc["dynamics"][6]["choice"] = "success|glory"
+    assert "dram_bad_dynamic" in _codes(structural_gaps(doc, "dramatica"))
+    # a compiled dual-pole string reaches DynamicStoryPoint as a real dual
+    doc = _dramatica_complete_doc()
+    doc["dynamics"][6]["choice"] = "success|failure"
+    ov = compile_story(doc, "dramatica").overlay
+    outcome = next(d for d in ov.dynamics if d.axis.value == "outcome")
+    assert outcome.is_dual and outcome.poles == frozenset({"success", "failure"})
 
 
 def _dramatic_complete_doc():
@@ -494,6 +558,10 @@ TESTS = [
     test_unphased_event_blocks,
     test_unknown_participant_blocks,
     test_explicit_telling_requires_staging,
+    test_phase_naming_unknown_event_blocks,
+    test_event_in_two_phases_blocks,
+    test_staging_naming_unknown_event_blocks,
+    test_malformed_establishes_and_preplay_facts_block,
     test_unknown_recognizer_blocks,
     test_structural_marks_surface_when_absent,
     test_anagnorisis_without_recognizer_is_structural,
@@ -509,6 +577,7 @@ TESTS = [
     test_dramatica_missing_throughlines_domains_dynamics_surface,
     test_dramatica_domain_collision_and_bad_pole,
     test_dramatica_dual_dynamic_is_honored,
+    test_dramatica_dual_pole_string_is_honored,
     test_dramatic_complete_doc_has_no_gaps,
     test_dramatic_missing_argument_mc_and_stakes_surface,
     test_dramatic_bad_resolution_flagged,

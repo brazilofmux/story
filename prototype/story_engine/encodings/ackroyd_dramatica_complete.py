@@ -229,7 +229,7 @@ assert CANONICAL_ENDING == "personal-tragedy"
 _mc_cq = CONCERN_MANIPULATION_QUAD
 MC_SIGNPOSTS = (
     Signpost(id="SP_mc_1", throughline_id="T_mc_sheppard",
-             signpost_position=1, signpost_element=_mc_cq.element_D),
+             signpost_position=1, signpost_element=_mc_cq.element_C),
              # conceiving-an-idea — Sheppard conceives the murder
              # plan; the blackmail drives the conception
     Signpost(id="SP_mc_2", throughline_id="T_mc_sheppard",
@@ -243,7 +243,7 @@ MC_SIGNPOSTS = (
              # develops his plan for the manuscript; each interview
              # is shaped to conceal
     Signpost(id="SP_mc_4", throughline_id="T_mc_sheppard",
-             signpost_position=4, signpost_element=_mc_cq.element_C),
+             signpost_position=4, signpost_element=_mc_cq.element_D),
              # changing-one's-nature — the reveal; Sheppard's
              # nature as the killer is exposed; his performed
              # identity collapses
@@ -254,7 +254,7 @@ MC_SIGNPOSTS = (
 _os_cq = CONCERN_ACTIVITY_QUAD
 OS_SIGNPOSTS = (
     Signpost(id="SP_os_1", throughline_id="T_overall_case",
-             signpost_position=1, signpost_element=_os_cq.element_D),
+             signpost_position=1, signpost_element=_os_cq.element_C),
              # learning — the investigation begins; evidence
              # gathered; witnesses interviewed
     Signpost(id="SP_os_2", throughline_id="T_overall_case",
@@ -267,7 +267,7 @@ OS_SIGNPOSTS = (
              # suspects, Flora confesses her theft, Ursula's
              # marriage revealed
     Signpost(id="SP_os_4", throughline_id="T_overall_case",
-             signpost_position=4, signpost_element=_os_cq.element_C),
+             signpost_position=4, signpost_element=_os_cq.element_D),
              # obtaining — Poirot obtains the truth; the reveal
              # dinner; the killer named
 )
@@ -277,7 +277,7 @@ OS_SIGNPOSTS = (
 _ic_cq = CONCERN_SITUATION_QUAD
 IC_SIGNPOSTS = (
     Signpost(id="SP_ic_1", throughline_id="T_ic_poirot",
-             signpost_position=1, signpost_element=_ic_cq.element_D),
+             signpost_position=1, signpost_element=_ic_cq.element_C),
              # the-present — Poirot IS present; the retired
              # detective next door; his situation IS the impact
     Signpost(id="SP_ic_2", throughline_id="T_ic_poirot",
@@ -290,7 +290,7 @@ IC_SIGNPOSTS = (
              # greatest detective; his past methods bear on the
              # present case
     Signpost(id="SP_ic_4", throughline_id="T_ic_poirot",
-             signpost_position=4, signpost_element=_ic_cq.element_C),
+             signpost_position=4, signpost_element=_ic_cq.element_D),
              # the-future — Poirot shapes the future; the reveal
              # dinner determines what happens next for everyone
 )
@@ -300,7 +300,7 @@ IC_SIGNPOSTS = (
 _rs_cq = CONCERN_FIXED_ATTITUDE_QUAD
 RS_SIGNPOSTS = (
     Signpost(id="SP_rs_1", throughline_id="T_rel_sheppard_poirot",
-             signpost_position=1, signpost_element=_rs_cq.element_D),
+             signpost_position=1, signpost_element=_rs_cq.element_C),
              # memories — the collaboration forms around shared
              # memory of the evening; what Sheppard "remembers"
              # is curated
@@ -310,7 +310,7 @@ RS_SIGNPOSTS = (
              # Poirot desires truth; the relationship is the
              # tension between these hidden desires
     Signpost(id="SP_rs_3", throughline_id="T_rel_sheppard_poirot",
-             signpost_position=3, signpost_element=_rs_cq.element_C),
+             signpost_position=3, signpost_element=_rs_cq.element_D),
              # contemplation — the middle investigation period;
              # each contemplates the other; Sheppard wonders what
              # Poirot knows; Poirot contemplates the narrator's
@@ -450,7 +450,7 @@ MC_CONCERN_PICK = QuadPick(
 MC_ISSUE_PICK = QuadPick(
     id="IP_mc_sheppard",
     quad_id=ISSUE_QUAD_PLAYING_A_ROLE.id,
-    chosen_position=QuadPosition.C,  # "desire"
+    chosen_position=QuadPosition.D,  # "desire"
     attached_to_kind="throughline",
     attached_to_id="T_mc_sheppard",
 )
@@ -502,7 +502,7 @@ OS_CONCERN_PICK = QuadPick(
 OS_ISSUE_PICK = QuadPick(
     id="IP_os_case",
     quad_id=ISSUE_QUAD_UNDERSTANDING.id,
-    chosen_position=QuadPosition.C,  # "interpretation"
+    chosen_position=QuadPosition.D,  # "interpretation"
     attached_to_kind="throughline",
     attached_to_id="T_overall_case",
 )
@@ -543,7 +543,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
 IC_CONCERN_PICK = QuadPick(
     id="CP_ic_poirot",
     quad_id=CONCERN_SITUATION_QUAD.id,
-    chosen_position=QuadPosition.D,  # "the-present"
+    chosen_position=QuadPosition.C,  # "the-present"
     attached_to_kind="throughline",
     attached_to_id="T_ic_poirot",
 )
@@ -593,7 +593,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
 RS_CONCERN_PICK = QuadPick(
     id="CP_rs_sp",
     quad_id=CONCERN_FIXED_ATTITUDE_QUAD.id,
-    chosen_position=QuadPosition.C,  # "contemplation"
+    chosen_position=QuadPosition.D,  # "contemplation"
     attached_to_kind="throughline",
     attached_to_id="T_rel_sheppard_poirot",
 )
@@ -604,7 +604,7 @@ RS_CONCERN_PICK = QuadPick(
 RS_ISSUE_PICK = QuadPick(
     id="IP_rs_sp",
     quad_id=ISSUE_QUAD_CONTEMPLATION.id,
-    chosen_position=QuadPosition.D,  # "doubt"
+    chosen_position=QuadPosition.C,  # "doubt"
     attached_to_kind="throughline",
     attached_to_id="T_rel_sheppard_poirot",
 )

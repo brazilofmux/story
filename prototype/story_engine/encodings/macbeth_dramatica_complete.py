@@ -192,7 +192,7 @@ assert CANONICAL_ENDING == "personal-tragedy"
 _mc_cq = CONCERN_ACTIVITY_QUAD
 MC_SIGNPOSTS = (
     Signpost(id="SP_mc_1", throughline_id="T_mc_macbeth",
-             signpost_position=1, signpost_element=_mc_cq.element_D),
+             signpost_position=1, signpost_element=_mc_cq.element_C),
              # learning — hears the prophecy; gathers information
              # about what he might become
     Signpost(id="SP_mc_2", throughline_id="T_mc_macbeth",
@@ -204,7 +204,7 @@ MC_SIGNPOSTS = (
              # understanding — banquet ghost; the second prophecy;
              # he begins to understand what he has become
     Signpost(id="SP_mc_4", throughline_id="T_mc_macbeth",
-             signpost_position=4, signpost_element=_mc_cq.element_C),
+             signpost_position=4, signpost_element=_mc_cq.element_D),
              # obtaining — obtains the prophecy's true meaning
              # (Birnam Wood, Caesarean birth) and obtains death
 )
@@ -214,7 +214,7 @@ MC_SIGNPOSTS = (
 _os_cq = CONCERN_SITUATION_QUAD
 OS_SIGNPOSTS = (
     Signpost(id="SP_os_1", throughline_id="T_overall_scotland",
-             signpost_position=1, signpost_element=_os_cq.element_D),
+             signpost_position=1, signpost_element=_os_cq.element_C),
              # the-present — Scotland IS in a present state of
              # order under Duncan; the play opens here
     Signpost(id="SP_os_2", throughline_id="T_overall_scotland",
@@ -227,7 +227,7 @@ OS_SIGNPOSTS = (
              # the murdered king's legacy; the past crimes
              # compound into present instability
     Signpost(id="SP_os_4", throughline_id="T_overall_scotland",
-             signpost_position=4, signpost_element=_os_cq.element_C),
+             signpost_position=4, signpost_element=_os_cq.element_D),
              # the-future — Malcolm's army; the future of
              # Scotland being fought for; restoration
 )
@@ -246,11 +246,11 @@ IC_SIGNPOSTS = (
              # hesitation; handles the daggers; smears the grooms;
              # her impulsive force carries the regicide
     Signpost(id="SP_ic_3", throughline_id="T_impact_lady_macbeth",
-             signpost_position=3, signpost_element=_ic_cq.element_C),
+             signpost_position=3, signpost_element=_ic_cq.element_D),
              # contemplation — the banquet cover; she contemplates
              # what they have done; she can no longer reach him
     Signpost(id="SP_ic_4", throughline_id="T_impact_lady_macbeth",
-             signpost_position=4, signpost_element=_ic_cq.element_D),
+             signpost_position=4, signpost_element=_ic_cq.element_C),
              # memories — the sleepwalking; she cannot escape the
              # memory of the blood; "all the perfumes of Arabia"
 )
@@ -261,7 +261,7 @@ IC_SIGNPOSTS = (
 _rs_cq = CONCERN_MANIPULATION_QUAD
 RS_SIGNPOSTS = (
     Signpost(id="SP_rs_1", throughline_id="T_relationship_macbeths",
-             signpost_position=1, signpost_element=_rs_cq.element_D),
+             signpost_position=1, signpost_element=_rs_cq.element_C),
              # conceiving-an-idea — the letter; the marriage
              # conceives the shared project of regicide
     Signpost(id="SP_rs_2", throughline_id="T_relationship_macbeths",
@@ -274,7 +274,7 @@ RS_SIGNPOSTS = (
              # develops further plans; but Macbeth starts planning
              # alone (Banquo's killing)
     Signpost(id="SP_rs_4", throughline_id="T_relationship_macbeths",
-             signpost_position=4, signpost_element=_rs_cq.element_C),
+             signpost_position=4, signpost_element=_rs_cq.element_D),
              # changing-one's-nature — the marriage changes its
              # nature from conspiracy to isolation; both are
              # changed by what they have done
@@ -453,7 +453,7 @@ OS_CONCERN_PICK = QuadPick(
 OS_ISSUE_PICK = QuadPick(
     id="IP_os_scotland",
     quad_id=ISSUE_QUAD_HOW_THINGS_ARE_CHANGING.id,
-    chosen_position=QuadPosition.C,  # "threat"
+    chosen_position=QuadPosition.D,  # "threat"
     attached_to_kind="throughline",
     attached_to_id="T_overall_scotland",
 )
@@ -544,7 +544,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
 RS_CONCERN_PICK = QuadPick(
     id="CP_rs_macbeths",
     quad_id=CONCERN_MANIPULATION_QUAD.id,
-    chosen_position=QuadPosition.C,  # "changing-one's-nature"
+    chosen_position=QuadPosition.D,  # "changing-one's-nature"
     attached_to_kind="throughline",
     attached_to_id="T_relationship_macbeths",
 )
@@ -556,7 +556,7 @@ RS_CONCERN_PICK = QuadPick(
 RS_ISSUE_PICK = QuadPick(
     id="IP_rs_macbeths",
     quad_id=ISSUE_QUAD_CHANGING_ONES_NATURE.id,
-    chosen_position=QuadPosition.C,  # "commitment"
+    chosen_position=QuadPosition.D,  # "commitment"
     attached_to_kind="throughline",
     attached_to_id="T_relationship_macbeths",
 )

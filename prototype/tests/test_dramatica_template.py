@@ -225,6 +225,40 @@ def test_shipped_quads_total_five():
     assert len(ALL_SHIPPED_QUADS) == 5
 
 
+def test_concern_quad_dynamic_pairs_are_the_chart_diagonals():
+    """The chart's dynamic pairs are the DIAGONALS; storage order A,B,D,C
+    must land them on the module's (A,C)/(B,D) convention."""
+    def pairs(q):
+        return {frozenset(p) for p in q.dynamic_pairs}
+    assert pairs(CONCERN_SITUATION_QUAD) == {
+        frozenset({"the-past", "the-present"}),
+        frozenset({"how-things-are-changing", "the-future"})}
+    assert pairs(CONCERN_ACTIVITY_QUAD) == {
+        frozenset({"understanding", "learning"}),
+        frozenset({"doing", "obtaining"})}
+    assert pairs(CONCERN_MANIPULATION_QUAD) == {
+        frozenset({"developing-a-plan", "conceiving-an-idea"}),
+        frozenset({"playing-a-role", "changing-one's-nature"})}
+    assert pairs(CONCERN_FIXED_ATTITUDE_QUAD) == {
+        frozenset({"innermost-desires", "memories"}),
+        frozenset({"impulsive-responses", "contemplation"})}
+
+
+def test_issue_quad_dynamic_pairs_are_the_chart_diagonals():
+    # spot-checks against known Dramatica variation pairs
+    def pairs(label):
+        return {frozenset(p) for p in ISSUE_QUADS_BY_CONCERN[label].dynamic_pairs}
+    assert pairs("the-future") == {
+        frozenset({"openness", "preconception"}),
+        frozenset({"delay", "choice"})}
+    assert pairs("memories") == {
+        frozenset({"truth", "falsehood"}),
+        frozenset({"evidence", "suspicion"})}
+    assert pairs("the-past") == {
+        frozenset({"fate", "destiny"}),
+        frozenset({"prediction", "interdiction"})}
+
+
 def test_issue_quads_registered_for_all_sixteen_concerns():
     """Every Concern label across all 4 Domains should have an
     Issue Quad registered."""
@@ -1530,6 +1564,8 @@ TESTS = [
     test_concern_quads_cover_all_domains,
     test_each_concern_quad_has_four_distinct_elements,
     test_shipped_quads_total_five,
+    test_concern_quad_dynamic_pairs_are_the_chart_diagonals,
+    test_issue_quad_dynamic_pairs_are_the_chart_diagonals,
     test_issue_quads_registered_for_all_sixteen_concerns,
     # DSP construction (Q5)
     test_dsp_valid_choice_accepted,

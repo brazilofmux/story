@@ -176,7 +176,7 @@ assert CANONICAL_ENDING == "personal-tragedy"
 _mc_cq = CONCERN_ACTIVITY_QUAD
 MC_SIGNPOSTS = (
     Signpost(id="SP_mc_1", throughline_id="T_mc_oedipus",
-             signpost_position=1, signpost_element=_mc_cq.element_D),
+             signpost_position=1, signpost_element=_mc_cq.element_C),
              # learning — initial investigation
     Signpost(id="SP_mc_2", throughline_id="T_mc_oedipus",
              signpost_position=2, signpost_element=_mc_cq.element_A),
@@ -185,7 +185,7 @@ MC_SIGNPOSTS = (
              signpost_position=3, signpost_element=_mc_cq.element_B),
              # doing — sustained questioning (Jocasta, Messenger, Shepherd)
     Signpost(id="SP_mc_4", throughline_id="T_mc_oedipus",
-             signpost_position=4, signpost_element=_mc_cq.element_C),
+             signpost_position=4, signpost_element=_mc_cq.element_D),
              # obtaining — he obtains the truth (and is undone)
 )
 
@@ -194,7 +194,7 @@ MC_SIGNPOSTS = (
 _os_cq = CONCERN_SITUATION_QUAD
 OS_SIGNPOSTS = (
     Signpost(id="SP_os_1", throughline_id="T_overall_plague",
-             signpost_position=1, signpost_element=_os_cq.element_D),
+             signpost_position=1, signpost_element=_os_cq.element_C),
              # the-present — the plague IS the present situation
     Signpost(id="SP_os_2", throughline_id="T_overall_plague",
              signpost_position=2, signpost_element=_os_cq.element_B),
@@ -205,7 +205,7 @@ OS_SIGNPOSTS = (
              # the-past — the murder of Laius IS the past that must
              # be uncovered; the past takes over the investigation
     Signpost(id="SP_os_4", throughline_id="T_overall_plague",
-             signpost_position=4, signpost_element=_os_cq.element_C),
+             signpost_position=4, signpost_element=_os_cq.element_D),
              # the-future — the plague will end; the future is
              # purchased at the cost of Oedipus's self-destruction
 )
@@ -215,14 +215,14 @@ OS_SIGNPOSTS = (
 _ic_cq = CONCERN_FIXED_ATTITUDE_QUAD
 IC_SIGNPOSTS = (
     Signpost(id="SP_ic_1", throughline_id="T_impact_jocasta",
-             signpost_position=1, signpost_element=_ic_cq.element_D),
+             signpost_position=1, signpost_element=_ic_cq.element_C),
              # memories — Jocasta's memory of the oracle about her son
     Signpost(id="SP_ic_2", throughline_id="T_impact_jocasta",
              signpost_position=2, signpost_element=_ic_cq.element_A),
              # innermost-desires — her desire to protect the family
              # from what the investigation will find
     Signpost(id="SP_ic_3", throughline_id="T_impact_jocasta",
-             signpost_position=3, signpost_element=_ic_cq.element_C),
+             signpost_position=3, signpost_element=_ic_cq.element_D),
              # contemplation — "don't pursue this; let it go"
     Signpost(id="SP_ic_4", throughline_id="T_impact_jocasta",
              signpost_position=4, signpost_element=_ic_cq.element_B),
@@ -235,7 +235,7 @@ IC_SIGNPOSTS = (
 _rs_cq = CONCERN_MANIPULATION_QUAD
 RS_SIGNPOSTS = (
     Signpost(id="SP_rs_1", throughline_id="T_relationship_oj",
-             signpost_position=1, signpost_element=_rs_cq.element_D),
+             signpost_position=1, signpost_element=_rs_cq.element_C),
              # conceiving-an-idea — the marriage as a settled idea;
              # the relationship's premise
     Signpost(id="SP_rs_2", throughline_id="T_relationship_oj",
@@ -247,7 +247,7 @@ RS_SIGNPOSTS = (
              # playing-a-role — husband/wife as roles concealing
              # the son/mother reality
     Signpost(id="SP_rs_4", throughline_id="T_relationship_oj",
-             signpost_position=4, signpost_element=_rs_cq.element_C),
+             signpost_position=4, signpost_element=_rs_cq.element_D),
              # changing-one's-nature — the relationship can no longer
              # be what it was; both are changed
 )
@@ -372,7 +372,7 @@ MC_CONCERN_PICK = QuadPick(
 MC_ISSUE_PICK = QuadPick(
     id="IP_mc_oedipus",
     quad_id=ISSUE_QUAD_UNDERSTANDING.id,
-    chosen_position=QuadPosition.C,  # "interpretation"
+    chosen_position=QuadPosition.D,  # "interpretation"
     attached_to_kind="throughline",
     attached_to_id="T_mc_oedipus",
 )
@@ -462,7 +462,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
 IC_CONCERN_PICK = QuadPick(
     id="CP_ic_jocasta",
     quad_id=CONCERN_FIXED_ATTITUDE_QUAD.id,
-    chosen_position=QuadPosition.C,  # "contemplation"
+    chosen_position=QuadPosition.D,  # "contemplation"
     attached_to_kind="throughline",
     attached_to_id="T_impact_jocasta",
 )
@@ -473,7 +473,7 @@ IC_CONCERN_PICK = QuadPick(
 IC_ISSUE_PICK = QuadPick(
     id="IP_ic_jocasta",
     quad_id=ISSUE_QUAD_CONTEMPLATION.id,
-    chosen_position=QuadPosition.D,  # "doubt"
+    chosen_position=QuadPosition.C,  # "doubt"
     attached_to_kind="throughline",
     attached_to_id="T_impact_jocasta",
 )
@@ -525,7 +525,7 @@ RS_CONCERN_PICK = QuadPick(
 RS_ISSUE_PICK = QuadPick(
     id="IP_rs_oj",
     quad_id=ISSUE_QUAD_PLAYING_A_ROLE.id,
-    chosen_position=QuadPosition.C,  # "desire"
+    chosen_position=QuadPosition.D,  # "desire"
     attached_to_kind="throughline",
     attached_to_id="T_relationship_oj",
 )

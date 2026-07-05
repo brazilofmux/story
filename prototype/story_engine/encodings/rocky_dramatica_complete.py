@@ -239,7 +239,7 @@ assert CANONICAL_ENDING == "personal-triumph / triumph", (
 _mc_cq = CONCERN_ACTIVITY_QUAD
 MC_SIGNPOSTS = (
     Signpost(id="SP_mc_1", throughline_id="T_mc_rocky",
-             signpost_position=1, signpost_element=_mc_cq.element_D),
+             signpost_position=1, signpost_element=_mc_cq.element_C),
              # learning — the opening; club fights, loan-sharking,
              # the pet store; Rocky is learning nothing new,
              # repeating his existence
@@ -252,7 +252,7 @@ MC_SIGNPOSTS = (
              # doing — the training montage; the meat, the stairs,
              # the dawn runs; the Do-er's Do-ing at full scale
     Signpost(id="SP_mc_4", throughline_id="T_mc_rocky",
-             signpost_position=4, signpost_element=_mc_cq.element_C),
+             signpost_position=4, signpost_element=_mc_cq.element_D),
              # obtaining — Rocky obtains dignity through endurance;
              # he did not obtain the title, but he obtained the
              # private goal he named
@@ -263,7 +263,7 @@ MC_SIGNPOSTS = (
 _os_cq = CONCERN_SITUATION_QUAD
 OS_SIGNPOSTS = (
     Signpost(id="SP_os_1", throughline_id="T_overall_fight",
-             signpost_position=1, signpost_element=_os_cq.element_D),
+             signpost_position=1, signpost_element=_os_cq.element_C),
              # the-present — Apollo is champion; Philadelphia in
              # 1976; the bicentennial card is the present state
     Signpost(id="SP_os_2", throughline_id="T_overall_fight",
@@ -277,7 +277,7 @@ OS_SIGNPOSTS = (
              # record, the bicentennial frame, the 'give an unknown
              # a shot' rhetoric borrowed from American mythology
     Signpost(id="SP_os_4", throughline_id="T_overall_fight",
-             signpost_position=4, signpost_element=_os_cq.element_C),
+             signpost_position=4, signpost_element=_os_cq.element_D),
              # the-future — the fight itself is the situation's
              # future; the scorecards, the 'no rematch', the
              # shape of what the card actually was
@@ -299,12 +299,12 @@ IC_SIGNPOSTS = (
              # press response; his attitude speaks through
              # impulsive moves
     Signpost(id="SP_ic_3", throughline_id="T_ic_apollo",
-             signpost_position=3, signpost_element=_ic_cq.element_C),
+             signpost_position=3, signpost_element=_ic_cq.element_D),
              # contemplation — between rounds; the realization
              # Rocky is not falling down; the contemplative shift
              # from stunt to fight
     Signpost(id="SP_ic_4", throughline_id="T_ic_apollo",
-             signpost_position=4, signpost_element=_ic_cq.element_D),
+             signpost_position=4, signpost_element=_ic_cq.element_C),
              # memories — after; what Apollo will remember versus
              # what he planned to remember; 'no rematch' as the
              # closing of a memory he does not want to revisit
@@ -316,7 +316,7 @@ IC_SIGNPOSTS = (
 _rs_cq = CONCERN_MANIPULATION_QUAD
 RS_SIGNPOSTS = (
     Signpost(id="SP_rs_1", throughline_id="T_rel_rocky_adrian",
-             signpost_position=1, signpost_element=_rs_cq.element_D),
+             signpost_position=1, signpost_element=_rs_cq.element_C),
              # conceiving-an-idea — Rocky conceives the idea of
              # connecting with Adrian; the pet-store jokes are
              # the idea's first draft
@@ -331,7 +331,7 @@ RS_SIGNPOSTS = (
              # at training; Rocky protective; each performing the
              # partnership they are learning
     Signpost(id="SP_rs_4", throughline_id="T_rel_rocky_adrian",
-             signpost_position=4, signpost_element=_rs_cq.element_C),
+             signpost_position=4, signpost_element=_rs_cq.element_D),
              # changing-one's-nature — Adrian's nature changes;
              # the glasses come off; Rocky's emotional life
              # changes; the 'Adrian!' is the reached-for-person
@@ -544,7 +544,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
 OS_CONCERN_PICK = QuadPick(
     id="CP_os_fight",
     quad_id=CONCERN_SITUATION_QUAD.id,
-    chosen_position=QuadPosition.D,  # "the-present"
+    chosen_position=QuadPosition.C,  # "the-present"
     attached_to_kind="throughline",
     attached_to_id="T_overall_fight",
 )
@@ -556,7 +556,7 @@ OS_CONCERN_PICK = QuadPick(
 OS_ISSUE_PICK = QuadPick(
     id="IP_os_fight",
     quad_id=ISSUE_QUAD_THE_PRESENT.id,
-    chosen_position=QuadPosition.D,  # "attempt"
+    chosen_position=QuadPosition.C,  # "attempt"
     attached_to_kind="throughline",
     attached_to_id="T_overall_fight",
 )
@@ -651,7 +651,7 @@ IC_THEMATIC_PICKS = ThematicPicks(
 RS_CONCERN_PICK = QuadPick(
     id="CP_rs_ra",
     quad_id=CONCERN_MANIPULATION_QUAD.id,
-    chosen_position=QuadPosition.C,  # "changing-one's-nature"
+    chosen_position=QuadPosition.D,  # "changing-one's-nature"
     attached_to_kind="throughline",
     attached_to_id="T_rel_rocky_adrian",
 )
@@ -663,7 +663,7 @@ RS_CONCERN_PICK = QuadPick(
 RS_ISSUE_PICK = QuadPick(
     id="IP_rs_ra",
     quad_id=ISSUE_QUAD_CHANGING_ONES_NATURE.id,
-    chosen_position=QuadPosition.C,  # "commitment"
+    chosen_position=QuadPosition.D,  # "commitment"
     attached_to_kind="throughline",
     attached_to_id="T_rel_rocky_adrian",
 )

@@ -233,11 +233,11 @@ assert CANONICAL_ENDING == "triumph", (
 _mc_cq = CONCERN_FIXED_ATTITUDE_QUAD
 MC_SIGNPOSTS = (
     Signpost(id="SP_mc_1", throughline_id="T_mc_elizabeth",
-             signpost_position=1, signpost_element=_mc_cq.element_C),
+             signpost_position=1, signpost_element=_mc_cq.element_D),
              # contemplation — Elizabeth contemplates Darcy (badly,
              # at first); forms the fixed attitude
     Signpost(id="SP_mc_2", throughline_id="T_mc_elizabeth",
-             signpost_position=2, signpost_element=_mc_cq.element_D),
+             signpost_position=2, signpost_element=_mc_cq.element_C),
              # memories — after the letter she re-reads every memory
              # of Darcy and Wickham; the prejudice dissolves against
              # her own remembered evidence
@@ -258,7 +258,7 @@ MC_SIGNPOSTS = (
 _os_cq = CONCERN_SITUATION_QUAD
 OS_SIGNPOSTS = (
     Signpost(id="SP_os_1", throughline_id="T_overall_bennets",
-             signpost_position=1, signpost_element=_os_cq.element_D),
+             signpost_position=1, signpost_element=_os_cq.element_C),
              # the-present — the Bennet family's present situation:
              # five unmarried daughters, entailed estate, Bingley
              # arriving at Netherfield
@@ -273,7 +273,7 @@ OS_SIGNPOSTS = (
              # history, the entail's shadow) into the present; the
              # family's past conduct determines its present jeopardy
     Signpost(id="SP_os_4", throughline_id="T_overall_bennets",
-             signpost_position=4, signpost_element=_os_cq.element_C),
+             signpost_position=4, signpost_element=_os_cq.element_D),
              # the-future — three daughters' marriages secure the
              # family's future; the entail no longer threatens the
              # surviving sisters
@@ -285,7 +285,7 @@ OS_SIGNPOSTS = (
 _ic_cq = CONCERN_MANIPULATION_QUAD
 IC_SIGNPOSTS = (
     Signpost(id="SP_ic_1", throughline_id="T_ic_darcy",
-             signpost_position=1, signpost_element=_ic_cq.element_D),
+             signpost_position=1, signpost_element=_ic_cq.element_C),
              # conceiving-an-idea — Darcy conceives the idea of
              # separating Bingley from Jane; the wrong manipulation,
              # conceived on the same prejudicial grounds Elizabeth
@@ -301,7 +301,7 @@ IC_SIGNPOSTS = (
              # role of invisible benefactor, concealing his action
              # under the Gardiners' cover
     Signpost(id="SP_ic_4", throughline_id="T_ic_darcy",
-             signpost_position=4, signpost_element=_ic_cq.element_C),
+             signpost_position=4, signpost_element=_ic_cq.element_D),
              # changing-one's-nature — the second proposal; Darcy's
              # nature is changed, and he presents the change to
              # Elizabeth for her judgment
@@ -312,7 +312,7 @@ IC_SIGNPOSTS = (
 _rs_cq = CONCERN_ACTIVITY_QUAD
 RS_SIGNPOSTS = (
     Signpost(id="SP_rs_1", throughline_id="T_rel_elizabeth_darcy",
-             signpost_position=1, signpost_element=_rs_cq.element_D),
+             signpost_position=1, signpost_element=_rs_cq.element_C),
              # learning — first ball; each learns the other exists
              # (and dismisses)
     Signpost(id="SP_rs_2", throughline_id="T_rel_elizabeth_darcy",
@@ -327,7 +327,7 @@ RS_SIGNPOSTS = (
              # scandal's pressure, Elizabeth sees his discretion
              # and care
     Signpost(id="SP_rs_4", throughline_id="T_rel_elizabeth_darcy",
-             signpost_position=4, signpost_element=_rs_cq.element_C),
+             signpost_position=4, signpost_element=_rs_cq.element_D),
              # obtaining — second proposal walk; the relationship
              # obtains its settled form as marriage
 )
@@ -452,7 +452,7 @@ CHARACTER_ELEMENT_ASSIGNMENTS = (
 MC_CONCERN_PICK = QuadPick(
     id="CP_mc_elizabeth",
     quad_id=CONCERN_FIXED_ATTITUDE_QUAD.id,
-    chosen_position=QuadPosition.C,  # "contemplation"
+    chosen_position=QuadPosition.D,  # "contemplation"
     attached_to_kind="throughline",
     attached_to_id="T_mc_elizabeth",
 )
@@ -465,7 +465,7 @@ MC_CONCERN_PICK = QuadPick(
 MC_ISSUE_PICK = QuadPick(
     id="IP_mc_elizabeth",
     quad_id=ISSUE_QUAD_CONTEMPLATION.id,
-    chosen_position=QuadPosition.D,  # "doubt"
+    chosen_position=QuadPosition.C,  # "doubt"
     attached_to_kind="throughline",
     attached_to_id="T_mc_elizabeth",
 )
@@ -505,7 +505,7 @@ MC_THEMATIC_PICKS = ThematicPicks(
 OS_CONCERN_PICK = QuadPick(
     id="CP_os_bennets",
     quad_id=CONCERN_SITUATION_QUAD.id,
-    chosen_position=QuadPosition.C,  # "the-future"
+    chosen_position=QuadPosition.D,  # "the-future"
     attached_to_kind="throughline",
     attached_to_id="T_overall_bennets",
 )
@@ -517,7 +517,7 @@ OS_CONCERN_PICK = QuadPick(
 OS_ISSUE_PICK = QuadPick(
     id="IP_os_bennets",
     quad_id=ISSUE_QUAD_THE_FUTURE.id,
-    chosen_position=QuadPosition.D,  # "preconception"
+    chosen_position=QuadPosition.C,  # "preconception"
     attached_to_kind="throughline",
     attached_to_id="T_overall_bennets",
 )
@@ -558,7 +558,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
 IC_CONCERN_PICK = QuadPick(
     id="CP_ic_darcy",
     quad_id=CONCERN_MANIPULATION_QUAD.id,
-    chosen_position=QuadPosition.C,  # "changing-one's-nature"
+    chosen_position=QuadPosition.D,  # "changing-one's-nature"
     attached_to_kind="throughline",
     attached_to_id="T_ic_darcy",
 )
@@ -570,7 +570,7 @@ IC_CONCERN_PICK = QuadPick(
 IC_ISSUE_PICK = QuadPick(
     id="IP_ic_darcy",
     quad_id=ISSUE_QUAD_CHANGING_ONES_NATURE.id,
-    chosen_position=QuadPosition.C,  # "commitment"
+    chosen_position=QuadPosition.D,  # "commitment"
     attached_to_kind="throughline",
     attached_to_id="T_ic_darcy",
 )

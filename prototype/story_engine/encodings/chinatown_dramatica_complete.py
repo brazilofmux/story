@@ -220,7 +220,7 @@ assert CANONICAL_ENDING == "tragedy", (
 _mc_cq = CONCERN_ACTIVITY_QUAD
 MC_SIGNPOSTS = (
     Signpost(id="SP_mc_1", throughline_id="T_mc_jake",
-             signpost_position=1, signpost_element=_mc_cq.element_D),
+             signpost_position=1, signpost_element=_mc_cq.element_C),
              # learning — the fake-Evelyn hiring; Jake learning what
              # the new case is (or what it pretends to be)
     Signpost(id="SP_mc_2", throughline_id="T_mc_jake",
@@ -233,7 +233,7 @@ MC_SIGNPOSTS = (
              # doing — active investigation; the orange grove, the
              # orchard-dumping, the obituary lead, the archives
     Signpost(id="SP_mc_4", throughline_id="T_mc_jake",
-             signpost_position=4, signpost_element=_mc_cq.element_C),
+             signpost_position=4, signpost_element=_mc_cq.element_D),
              # obtaining — Jake obtains the truth (the sister/
              # daughter disclosure; Cross's scheme exposed); the
              # obtaining arrives too late to save anyone
@@ -244,7 +244,7 @@ MC_SIGNPOSTS = (
 _os_cq = CONCERN_SITUATION_QUAD
 OS_SIGNPOSTS = (
     Signpost(id="SP_os_1", throughline_id="T_overall_water",
-             signpost_position=1, signpost_element=_os_cq.element_D),
+             signpost_position=1, signpost_element=_os_cq.element_C),
              # the-present — the drought, the water department, the
              # appearance of normal public business
     Signpost(id="SP_os_2", throughline_id="T_overall_water",
@@ -258,7 +258,7 @@ OS_SIGNPOSTS = (
              # Evelyn fifteen years ago; Cross's earlier control
              # of the water department under his own name)
     Signpost(id="SP_os_4", throughline_id="T_overall_water",
-             signpost_position=4, signpost_element=_os_cq.element_C),
+             signpost_position=4, signpost_element=_os_cq.element_D),
              # the-future — the dam will be built; Katherine will
              # grow up in Cross's house; the future belongs to
              # Cross, not to the investigation
@@ -273,7 +273,7 @@ OS_SIGNPOSTS = (
 _ic_cq = CONCERN_FIXED_ATTITUDE_QUAD
 IC_SIGNPOSTS = (
     Signpost(id="SP_ic_1", throughline_id="T_ic_evelyn",
-             signpost_position=1, signpost_element=_ic_cq.element_D),
+             signpost_position=1, signpost_element=_ic_cq.element_C),
              # memories — the fifteen-year-old abuse; the memory
              # that structured everything she has done since; the
              # fixed attitude's ground
@@ -283,7 +283,7 @@ IC_SIGNPOSTS = (
              # secret; the unspoken desires that organize her
              # composed surface
     Signpost(id="SP_ic_3", throughline_id="T_ic_evelyn",
-             signpost_position=3, signpost_element=_ic_cq.element_C),
+             signpost_position=3, signpost_element=_ic_cq.element_D),
              # contemplation — as Jake presses; she contemplates
              # telling him, contemplates escape, contemplates what
              # the disclosure will cost
@@ -314,12 +314,12 @@ RS_SIGNPOSTS = (
              # a collaboration; she evades, he presses; the plan
              # is mutual without being candid
     Signpost(id="SP_rs_3", throughline_id="T_rel_jake_evelyn",
-             signpost_position=3, signpost_element=_rs_cq.element_D),
+             signpost_position=3, signpost_element=_rs_cq.element_C),
              # conceiving-an-idea — the affair night; an idea of
              # trust conceived without being realized; the
              # bandaging, the iris
     Signpost(id="SP_rs_4", throughline_id="T_rel_jake_evelyn",
-             signpost_position=4, signpost_element=_rs_cq.element_C),
+             signpost_position=4, signpost_element=_rs_cq.element_D),
              # changing-one's-nature — the slap-confession; the
              # relationship attempts to change its nature through
              # disclosure; Chinatown takes the change away before
@@ -458,7 +458,7 @@ MC_CONCERN_PICK = QuadPick(
 MC_ISSUE_PICK = QuadPick(
     id="IP_mc_jake",
     quad_id=ISSUE_QUAD_UNDERSTANDING.id,
-    chosen_position=QuadPosition.C,  # "interpretation"
+    chosen_position=QuadPosition.D,  # "interpretation"
     attached_to_kind="throughline",
     attached_to_id="T_mc_jake",
 )
@@ -512,7 +512,7 @@ OS_CONCERN_PICK = QuadPick(
 OS_ISSUE_PICK = QuadPick(
     id="IP_os_water",
     quad_id=ISSUE_QUAD_THE_PAST.id,
-    chosen_position=QuadPosition.D,  # "destiny"
+    chosen_position=QuadPosition.C,  # "destiny"
     attached_to_kind="throughline",
     attached_to_id="T_overall_water",
 )
@@ -552,7 +552,7 @@ OS_THEMATIC_PICKS = ThematicPicks(
 IC_CONCERN_PICK = QuadPick(
     id="CP_ic_evelyn",
     quad_id=CONCERN_FIXED_ATTITUDE_QUAD.id,
-    chosen_position=QuadPosition.D,  # "memories"
+    chosen_position=QuadPosition.C,  # "memories"
     attached_to_kind="throughline",
     attached_to_id="T_ic_evelyn",
 )
@@ -564,7 +564,7 @@ IC_CONCERN_PICK = QuadPick(
 IC_ISSUE_PICK = QuadPick(
     id="IP_ic_evelyn",
     quad_id=ISSUE_QUAD_MEMORIES.id,
-    chosen_position=QuadPosition.D,  # "falsehood"
+    chosen_position=QuadPosition.C,  # "falsehood"
     attached_to_kind="throughline",
     attached_to_id="T_ic_evelyn",
 )
