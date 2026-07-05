@@ -96,9 +96,17 @@ def _get_anthropic(client):
 def _get_xai(client):
     """xAI is OpenAI-wire-compatible, so we drive it with the `openai` SDK
     pointed at `api.x.ai`. Honor a caller-supplied OpenAI-style client (duck:
-    has `.chat`); else build and cache one from `XAI_API_KEY`."""
-    if client is not None and hasattr(client, "chat"):
-        return client
+    has `.chat`); else build and cache one from `XAI_API_KEY`. A supplied
+    client of the WRONG shape is an error — falling through would silently
+    route an injected fake to the real network client."""
+    if client is not None:
+        if hasattr(client, "chat"):
+            return client
+        raise TypeError(
+            "Caller-supplied client does not look like an OpenAI-style "
+            "client (no .chat) — refusing to fall back to a live xAI "
+            "client. Check the model→provider routing for this call."
+        )
     global _xai_client
     if _xai_client is None:
         try:
@@ -250,7 +258,22 @@ def _anthropic_generate(system_prompt, user_prompt,
     for block in getattr(response, "content", []) or []:
         if getattr(block, "type", None) == "text":
             out.append(block.text)
-    return "".join(out).strip()
+    text = "".join(out).strip()
+    # A truncated or empty scene must not flow silently into the draft —
+    # downstream it would be spliced, fed forward as context, and scored
+    # as if intentional.
+    stop = getattr(response, "stop_reason", None)
+    if stop == "max_tokens":
+        raise RuntimeError(
+            f"Anthropic generation truncated at max_tokens={max_tokens} "
+            f"(model {model!r}); raise max_tokens or lower effort."
+        )
+    if not text:
+        raise RuntimeError(
+            f"Anthropic generation returned no text (model {model!r}, "
+            f"stop_reason={stop!r})."
+        )
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -296,11 +319,11 @@ def _xai_reasoning_effort(model: str, effort: str):
 def _is_unsupported_effort_error(exc) -> bool:
     """True if `exc` is xAI's 'model does not support parameter
     reasoningEffort' 400 — matched on text so we needn't import the SDK's
-    exception type (and it survives minor wording changes)."""
+    exception type. Requires the 'does not support parameter' phrase so a
+    429/5xx (or an invalid-VALUE 400) that merely echoes the parameter name
+    doesn't permanently blacklist the model from the effort knob."""
     s = str(exc).lower()
-    return "reasoningeffort" in s or "reasoning_effort" in s or (
-        "does not support parameter" in s and "reasoning" in s
-    )
+    return "does not support parameter" in s and "reasoning" in s
 
 
 def _xai_invoke(method, *, model, effort, **base_kwargs):
@@ -331,7 +354,18 @@ def _xai_parse(system_prompt, user_prompt, output_format,
         messages=_xai_messages(system_prompt, user_prompt),
         response_format=output_format,
     )
-    return completion.choices[0].message.parsed
+    choice = completion.choices[0]
+    parsed = choice.message.parsed
+    if parsed is None:
+        # `parsed` is None on a refusal or a length-truncated completion;
+        # returning it would violate parse()'s contract (None ⇒ dry_run
+        # only) and crash the caller far from the cause.
+        raise RuntimeError(
+            f"xAI parse returned no structured output (model {model!r}, "
+            f"finish_reason={getattr(choice, 'finish_reason', None)!r}, "
+            f"refusal={getattr(choice.message, 'refusal', None)!r})."
+        )
+    return parsed
 
 
 def _xai_generate(system_prompt, user_prompt,
@@ -342,5 +376,18 @@ def _xai_generate(system_prompt, user_prompt,
         model=model, effort=effort, max_tokens=max_tokens,
         messages=_xai_messages(system_prompt, user_prompt),
     )
-    content = completion.choices[0].message.content or ""
-    return content.strip()
+    choice = completion.choices[0]
+    content = (choice.message.content or "").strip()
+    finish = getattr(choice, "finish_reason", None)
+    if finish == "length":
+        raise RuntimeError(
+            f"xAI generation truncated at max_tokens={max_tokens} "
+            f"(model {model!r}); reasoning tokens may have consumed the "
+            f"budget — raise max_tokens or lower effort."
+        )
+    if not content:
+        raise RuntimeError(
+            f"xAI generation returned no text (model {model!r}, "
+            f"finish_reason={finish!r})."
+        )
+    return content

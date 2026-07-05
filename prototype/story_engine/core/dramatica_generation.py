@@ -78,7 +78,10 @@ _DSP_GLOSS = {
     "resolve": ("Resolve", {
         "steadfast": "the Main Character does NOT change — they hold their "
                      "nature; what changes is the world's evidence of it",
-        "changed": "the Main Character changes their nature by the end"}),
+        # Keyed by the POLE value (Resolve.CHANGE = "change"), not the
+        # English past tense — a "changed" key silently glosses every
+        # change-resolve story with an empty string.
+        "change": "the Main Character changes their nature by the end"}),
     "growth": ("Growth", {
         "start": "the Main Character must START doing/believing something",
         "stop": "the Main Character must STOP doing/believing something"}),

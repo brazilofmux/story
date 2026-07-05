@@ -128,8 +128,17 @@ def test_report_score_is_preserved_over_scored():
     assert 0.0 <= report.score <= 1.0
 
 
+def test_stopword_only_names_do_not_cross_match():
+    """Names reducing entirely to stopwords must not match each other on
+    a shared article — 'the Duchess' is not 'the Duke'."""
+    assert not _name_matches("the Duchess", "the Duke")
+    # The role-token fallback still holds for the SAME role word.
+    assert _name_matches("the Duchess", "the Duchess of Amalfi")
+
+
 TESTS = [
     test_name_matches_fuzzy,
+    test_stopword_only_names_do_not_cross_match,
     test_faithful_read_scores_high,
     test_degraded_read_scores_low,
     test_pathos_centre_is_checked_against_authored,

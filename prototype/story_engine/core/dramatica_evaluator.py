@@ -239,6 +239,24 @@ def _matches(a: str, b: str) -> bool:
     return bool(na and nb and (na & nb))
 
 
+def _ending_cell(phrase: str) -> str:
+    """Map a blind reader's free ending phrase to a canonical ending cell
+    (the `_ENDING_TABLE` vocabulary: triumph / personal-tragedy /
+    personal-triumph / tragedy). '' when the phrase names no known cell.
+    Order matters: compound names ('personal triumph', 'hollow victory')
+    must win before their bare-word substrings."""
+    p = (phrase or "").lower().replace("-", " ")
+    if "personal triumph" in p:
+        return "personal-triumph"
+    if "personal tragedy" in p or "hollow" in p:
+        return "personal-tragedy"          # wins but anguished
+    if "tragedy" in p or "tragic" in p:
+        return "tragedy"
+    if "triumph" in p or "success" in p or "victory" in p:
+        return "triumph"
+    return ""
+
+
 def compare_to_storyform(reading: DramaticaReading,
                          storyform) -> DramaticaFidelityReport:
     """Compare a blind Dramatica reading to the authored storyform.
@@ -257,6 +275,11 @@ def compare_to_storyform(reading: DramaticaReading,
         if not spanned:
             return
         got = (got_raw or "").lower()
+        # The blind-reading schema says 'changed'; the storyform pole is
+        # 'change' (Resolve.CHANGE). Normalize so a faithful change-arc
+        # read never scores as drift.
+        if axis == "resolve" and got == "changed":
+            got = "change"
         dual = len(spanned) > 1
         note = base_note
         if dual:
@@ -276,14 +299,28 @@ def compare_to_storyform(reading: DramaticaReading,
                 "the Main Character's personal resolution")
 
     # 3. Ending shape: the Outcome×Judgment combination survived as a whole.
-    a_end = (getattr(storyform, "canonical_ending", "") or "").replace("-", " ")
+    # Compare canonical CELLS, not word-bags: 'personal tragedy' and
+    # 'personal triumph' share a word but are opposite endings, and a
+    # 'triumph' read must never satisfy an authored tragedy.
+    a_end_raw = getattr(storyform, "canonical_ending", "") or ""
+    a_end = a_end_raw.replace("-", " ")
     if a_end:
         got_end = (reading.ending_shape or "").lower()
-        # A dual axis makes ANY of its spanned poles a faithful read of the
-        # ending's flavour — match against the full span, not one pole.
-        pole_hit = any(p in got_end for p in poles.get("outcome", ()))
-        pole_hit = pole_hit or any(p in got_end for p in poles.get("judgment", ()))
-        ok = _matches(a_end, got_end) or pole_hit or "triumph" in got_end
+        authored_cells = {c.strip().replace(" ", "-")
+                          for c in a_end.split("/") if c.strip()}
+        got_cell = _ending_cell(got_end)
+        if got_cell:
+            ok = got_cell in authored_cells
+        else:
+            # Unmapped free phrasing — fall back to word overlap, but only
+            # then; the mapped vocabulary above is authoritative.
+            ok = _matches(a_end, got_end)
+        # An authored-DUAL axis makes ANY of its spanned poles a faithful
+        # read of the ending's flavour. Single-pole axes stay strict.
+        for axis in ("outcome", "judgment"):
+            span = poles.get(axis) or frozenset()
+            if len(span) > 1:
+                ok = ok or any(p in got_end for p in span)
         report.findings.append(DramaticaFidelityFinding(
             dimension="ending_shape", authored=a_end,
             decompiled=reading.ending_shape or "(none)",

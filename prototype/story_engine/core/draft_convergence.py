@@ -18,8 +18,14 @@ Stop conditions (whichever first):
 - fidelity reaches `target` (default 1.0);
 - a round produces no localizable directives (nothing left to repair);
 - a round does not improve the score over the previous round (a repair
-  that didn't help — avoid thrashing);
-- `max_iters` reached.
+  that didn't help — the round's repairs are ROLLED BACK so the returned
+  scenes are the best-scoring draft, not the degraded one);
+- `max_iters` reached (no repairs are applied on the way out — an
+  unevaluated repair would make the final score describe prose nobody
+  scored).
+
+Invariant: the returned scenes are always the best-evaluated state, and
+`final_score` is their score.
 """
 
 from __future__ import annotations
@@ -58,7 +64,13 @@ class ConvergenceRun:
 
     @property
     def final_score(self) -> float:
-        return self.history[-1].score if self.history else 0.0
+        """Score of the RETURNED scenes. Because degrading rounds are
+        rolled back and no repairs are applied after the last evaluation,
+        the returned draft is always the best-evaluated state — so this is
+        the max over the history, not necessarily the last record (the
+        last record may document the degraded round that triggered the
+        rollback)."""
+        return max((r.score for r in self.history), default=0.0)
 
     @property
     def improved(self) -> float:
@@ -89,6 +101,7 @@ def converge(
     for s in scenes:
         by_event.setdefault(s["event_id"], []).append(s)
 
+    snapshot = None   # (scene, prose) pairs from before the last repairs
     for it in range(max_iters):
         report = evaluate_fn(assemble(scenes))
         run.reports.append(report)
@@ -106,16 +119,25 @@ def converge(
             rec.stopped = "target reached"
             break
         if it > 0 and score <= run.history[it - 1].score:
+            # The previous round's repairs didn't help. Restore the prose
+            # they replaced so the caller gets the best-scoring draft, not
+            # the degraded one it was spliced into.
+            if snapshot is not None:
+                for s, prose in snapshot:
+                    s["prose"] = prose
             rec.stopped = "no improvement over previous round"
             break
         if not directives:
             rec.stopped = "no localizable drift remaining"
             break
         if it == max_iters - 1:
+            # Do NOT repair on the way out: an unevaluated repair would
+            # leave final_score describing prose nobody scored.
             rec.stopped = "max_iters reached"
-            # still repair below so the final scenes carry the last fix
+            break
 
-        # Repair + splice.
+        # Snapshot, then repair + splice.
+        snapshot = [(s, s.get("prose")) for s in scenes]
         for d in directives:
             new_prose = repair_fn(d)
             if not new_prose:

@@ -267,8 +267,11 @@ def _norm(name: str) -> set:
     toks = {t.strip(",.;:'\"").lower() for t in name.split()}
     core = {t for t in toks if t and t not in stop}
     # Keep a role-token fallback so 'the Duchess' still matches when the
-    # only shared token IS the role word.
-    return core if core else {t for t in toks if t}
+    # only shared token IS the role word — but never re-admit articles or
+    # particles, or 'the Duchess' matches 'the Duke' on the shared 'the'.
+    return core if core else {
+        t for t in toks if t and t not in {"the", "a", "an", "of"}
+    }
 
 
 def _name_matches(a: str, b: str) -> bool:

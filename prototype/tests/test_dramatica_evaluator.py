@@ -157,6 +157,71 @@ def test_throughline_coverage():
     assert len(lost_tl) == 3
 
 
+def test_triumph_read_never_satisfies_authored_tragedy():
+    """The Failure×Bad corner must be defensible: a blind read that lands
+    'personal triumph' cannot score preserved against an authored
+    'tragedy' — canonical CELLS are compared, not word-bags (the old
+    check accepted any read containing 'triumph')."""
+    from story_engine.encodings import winter_count_dramatica_complete as WD
+    sf = DramaticaStoryform(
+        title="The Winter Count", action_summary="x",
+        domain_assignments=WD.DOMAIN_ASSIGNMENTS, signposts=WD.ALL_SIGNPOSTS,
+        dynamics=WD.DYNAMIC_STORY_POINTS, story_goal="g",
+        story_consequence="c", canonical_ending=WD.CANONICAL_ENDING,
+    )
+    reading = DramaticaReading(
+        story_goal="bring the town through the winter",
+        outcome="failure", judgment="good",
+        ending_shape="a personal triumph against the odds",
+        main_character="Halla", mc_resolve="steadfast",
+        influence_character="Eirik", relationship="the siblings",
+        throughlines_present=["overall", "main character",
+                              "influence character", "relationship"],
+        overall_read="she loses the town but finds peace.",
+    )
+    by_dim = {f.dimension: f
+              for f in compare_to_storyform(reading, sf).findings}
+    assert by_dim["ending_shape"].verdict == "drifted"
+    assert by_dim["judgment"].verdict == "drifted"
+
+
+def test_personal_endings_not_confused_by_shared_word():
+    """'personal tragedy' vs authored 'personal-triumph' share a token;
+    they are opposite cells and must not word-bag-match."""
+    reading = _faithful_read()
+    reading.ending_shape = "a personal tragedy"
+    by_dim = {f.dimension: f
+              for f in compare_to_storyform(reading, _storyform()).findings}
+    assert by_dim["ending_shape"].verdict == "drifted"
+
+
+def test_changed_vocabulary_normalizes_to_change_pole():
+    """The blind-reading schema says 'changed'; the storyform pole is
+    'change'. A faithful change-arc read must score preserved."""
+    from story_engine.core.dramatica_template import (
+        DSPAxis, DynamicStoryPoint,
+    )
+    dyns = tuple(
+        DynamicStoryPoint(
+            id=d.id, axis=d.axis,
+            choice="change" if d.axis == DSPAxis.RESOLVE else d.choice,
+            story_id=d.story_id,
+        )
+        for d in RD.DYNAMIC_STORY_POINTS
+    )
+    sf = DramaticaStoryform(
+        title="Rocky", action_summary="x",
+        domain_assignments=RD.DOMAIN_ASSIGNMENTS, signposts=RD.ALL_SIGNPOSTS,
+        dynamics=dyns, story_goal="g", story_consequence="c",
+        canonical_ending=RD.CANONICAL_ENDING,
+    )
+    reading = _faithful_read()
+    reading.mc_resolve = "changed"
+    by_dim = {f.dimension: f
+              for f in compare_to_storyform(reading, sf).findings}
+    assert by_dim["mc_resolve"].verdict == "preserved"
+
+
 TESTS = [
     test_perspective_detection,
     test_faithful_read_scores_high,
@@ -166,6 +231,9 @@ TESTS = [
     test_dual_outcome_either_pole_is_faithful,
     test_binary_judgment_stays_strict_under_dual_outcome,
     test_throughline_coverage,
+    test_triumph_read_never_satisfies_authored_tragedy,
+    test_personal_endings_not_confused_by_shared_word,
+    test_changed_vocabulary_normalizes_to_change_pole,
 ]
 
 

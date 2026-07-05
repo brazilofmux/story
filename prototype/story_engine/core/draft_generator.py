@@ -208,6 +208,11 @@ def _backstory_facts(sjuzhet, fabula, name_map: dict) -> list:
     for ev in sorted(fabula, key=lambda e: e.τ_s):
         if ev.τ_s >= cutoff:
             continue
+        # A STAGED pre-cutoff event (e.g. a flashback anchored at negative
+        # τ_s) is a beat the play itself reveals — presenting its facts as
+        # backstory the audience already holds would pre-spoil the scene.
+        if ev.id in staged_ids:
+            continue
         for f in _world_facts(ev, name_map):
             if f.startswith("asserts: "):
                 facts.append(f[len("asserts: "):])
@@ -452,14 +457,6 @@ def _scene_synopsis(entry, fabula_by_id: dict, name_map: dict) -> str:
         for eid in event.participants.values()
     )
     return f"{event.type}: {parts}".strip(" :/")
-
-
-def _extract_text(response) -> str:
-    out = []
-    for block in getattr(response, "content", []) or []:
-        if getattr(block, "type", None) == "text":
-            out.append(block.text)
-    return "".join(out).strip()
 
 
 def render_scene_prose(

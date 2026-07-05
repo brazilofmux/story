@@ -73,7 +73,10 @@ def plan_repairs(report, mythos) -> list:
                         != "anti":
                     continue
                 who = _char_name(getattr(step, "character_ref_id", ""), mythos)
-                if who and who in f.authored:
+                # Exact match against the evaluator's authored format —
+                # substring matching would let 'Ann' claim a finding
+                # authored for 'Annabel' and re-render a healthy scene.
+                if who and f.authored == f"{who} (anti)":
                     out.append(RepairDirective(
                         event_id=getattr(step, "event_id", ""),
                         dimension="anti_recognition",

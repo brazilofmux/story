@@ -140,6 +140,42 @@ def pytest_approx(x, eps=1e-9):
     return _A()
 
 
+def test_degrading_round_rolls_back():
+    """A repair round that LOWERS the score must not survive into the
+    returned scenes — the caller gets the best-scoring draft back."""
+    scenes = _scenes()
+    run = converge(
+        scenes=scenes, mythos=None,
+        evaluate_fn=_scripted_eval([0.8, 0.6]),
+        repair_fn=_marker_repair, plan_fn=_plan_one("E_a"),
+        max_iters=5, target=1.0,
+    )
+    assert run.history[-1].stopped == "no improvement over previous round"
+    # The degrading repair was rolled back...
+    assert next(s for s in scenes if s["event_id"] == "E_a")["prose"] == "first"
+    # ...and final_score describes the returned (best) state, not the
+    # degraded observation that triggered the stop.
+    assert run.final_score == pytest_approx(0.8)
+
+
+def test_max_iters_returns_evaluated_state():
+    """On the max_iters path no repairs are applied after the last
+    evaluation, so final_score describes exactly the returned prose."""
+    scenes = _scenes()
+    run = converge(
+        scenes=scenes, mythos=None,
+        evaluate_fn=_scripted_eval([0.5, 0.6, 0.7]),
+        repair_fn=_marker_repair, plan_fn=_plan_one("E_a"),
+        max_iters=3, target=1.0,
+    )
+    assert run.history[-1].stopped == "max_iters reached"
+    # The last-applied repair is the one round 2 EVALUATED (spliced in
+    # round 1); round 2 applied nothing.
+    assert next(s for s in scenes if s["event_id"] == "E_a")["prose"] \
+        == "REPAIRED::E_a"
+    assert run.final_score == pytest_approx(0.7)
+
+
 TESTS = [
     test_assemble_orders_by_tau_d,
     test_converges_to_target,
@@ -148,6 +184,8 @@ TESTS = [
     test_splices_repaired_prose,
     test_respects_max_iters,
     test_no_op_repair_leaves_scene,
+    test_degrading_round_rolls_back,
+    test_max_iters_returns_evaluated_state,
 ]
 
 
