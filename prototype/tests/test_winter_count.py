@@ -2,6 +2,9 @@
 all offline: referential integrity, act coverage, signpost quads, the
 anti-marketing dynamics grid, and a dry-run brief build."""
 
+import sys
+import traceback
+
 from story_engine.core.dramatica_template import (
     CONCERN_SITUATION_QUAD, CONCERN_FIXED_ATTITUDE_QUAD,
     CONCERN_MANIPULATION_QUAD, CONCERN_ACTIVITY_QUAD,
@@ -114,3 +117,35 @@ def test_dry_run_builds_bible_and_briefs_offline():
     flashback = next(s for s in result.scenes
                      if s.event_id == "E_ketil_fall")
     assert "Authorial note (texture)" in flashback.brief
+
+
+TESTS = [
+    test_participants_and_staging_resolve,
+    test_descriptions_anchor_to_real_events,
+    test_act_map_partitions_the_fabula,
+    test_signposts_use_each_concern_once_per_throughline,
+    test_the_anti_marketing_grid_holds,
+    test_signpost_details_cover_all_sixteen,
+    test_rot_is_single_witness_and_retracts_public_belief,
+    test_dry_run_builds_bible_and_briefs_offline,
+]
+
+
+def main() -> int:
+    passed = failed = 0
+    for fn in TESTS:
+        try:
+            fn()
+        except Exception:
+            failed += 1
+            print(f"FAIL  {fn.__name__}")
+            traceback.print_exc()
+        else:
+            passed += 1
+            print(f"ok    {fn.__name__}")
+    print(f"\n{passed} passed, {failed} failed, {passed + failed} total")
+    return 0 if failed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
