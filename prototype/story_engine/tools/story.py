@@ -27,9 +27,14 @@ Usage:
     # Score it blind against your own structure:
     PYTHONPATH=. .venv/bin/python3 -m story_engine.tools.story evaluate mystory
 
+    # Give notes on the draft; the record is revised and exactly the
+    # affected prose is re-derived (never edited in place):
+    PYTHONPATH=. .venv/bin/python3 -m story_engine.tools.story revise mystory
+
 The session directory holds `story.json` (the evolving authoring record
-+ history), `draft.md`, and `evaluation.json`. Every interview round is
-persisted, so a killed session resumes where it stopped.
++ history), `draft.md`, `scenes.json` (the structured draft revision
+splices), and `evaluation.json`. Every interview round is persisted, so
+a killed session resumes where it stopped.
 """
 
 from __future__ import annotations
@@ -50,6 +55,7 @@ from story_engine.core.authoring import (
 
 SESSION_FILE = "story.json"
 DRAFT_FILE = "draft.md"
+SCENES_FILE = "scenes.json"
 EVAL_FILE = "evaluation.json"
 
 # Run lessons from the Winter Count generation (winter-count-sketch-01):
@@ -92,6 +98,10 @@ class Session:
     @property
     def draft_path(self) -> str:
         return os.path.join(self.path, DRAFT_FILE)
+
+    @property
+    def scenes_path(self) -> str:
+        return os.path.join(self.path, SCENES_FILE)
 
     @property
     def eval_path(self) -> str:
@@ -175,8 +185,8 @@ def next_step(s: Session) -> tuple:
         return ("evaluate",
                 "score the draft blind against your authored structure")
     return ("done",
-            f"draft + evaluation complete — read {DRAFT_FILE}, or keep "
-            f"interviewing and regenerate")
+            f"draft + evaluation complete — read {DRAFT_FILE}, or `revise` "
+            f"with notes on the draft")
 
 
 def _print_next(s: Session) -> None:
@@ -408,21 +418,269 @@ def cmd_generate(s: Session, *, generate=None, force: bool = False,
         on_scene=on_scene, **frame_kwargs_for(compiled),
     )
 
+    scenes = getattr(result, "scenes", None)
+    if scenes:
+        # The structured draft (RL3) — what `revise` splices.
+        from story_engine.core.draft_generator import result_to_payload
+        with open(s.scenes_path, "w") as f:
+            json.dump(result_to_payload(result), f, indent=1)
+    words = _write_draft(s, compiled, result.draft)
+    s.data["generated"] = {"at": _now(), "words": words,
+                           "effort": effort, "max_tokens": max_tokens}
+    _invalidate_evaluation(s)
+    save_session(s)
+    print(f"\nDraft saved: {s.draft_path} ({words} words)")
+    _print_next(s)
+    return 0
+
+
+def _write_draft(s: Session, compiled, body: str) -> int:
+    """draft.md = header + the assembled prose; returns the word count."""
     with open(s.draft_path, "w") as f:
-        f.write(f"# {result.title} — first draft\n\n")
+        f.write(f"# {compiled.title} — first draft\n\n")
         if compiled.logline:
             f.write(f"_{compiled.logline}_\n\n")
         f.write(f"_A {s.dialect} story, authored by interview and generated "
                 f"from the verified substrate._\n\n")
-        f.write(result.draft)
-    words = len(result.draft.split())
-    s.data["generated"] = {"at": _now(), "words": words,
-                           "effort": effort, "max_tokens": max_tokens}
-    # A regenerated draft invalidates the old evaluation.
+        f.write(body)
+    return len(body.split())
+
+
+def _invalidate_evaluation(s: Session) -> None:
+    """Any regenerated prose invalidates the old blind read."""
     if s.has_evaluation():
         os.remove(s.eval_path)
+
+
+# ============================================================================
+# revise (revision-loop-sketch-01: notes patch the record, never the prose)
+# ============================================================================
+
+# An existing event's fields that only its own scene sees (RL2). Anything
+# else a difference touches — top-level keys, overlay fields, an event's
+# when/mark/recognizer, events added or removed — is bible-scoped: it
+# reframes every scene's context, so the whole draft regenerates.
+SCENE_SCOPED_EVENT_FIELDS = frozenset({
+    "summary", "note", "who", "roles", "focalizer", "establishes", "learns",
+})
+
+REVISION_FRAME = (
+    "The author has read the generated draft and wants these changes. "
+    "Update the record to carry them — change nothing the notes do not "
+    "ask for:\n"
+)
+
+
+class RecordDiff:
+    """What changed between two authoring records, classified by blast
+    radius (RL2). Pure data; the policy lives in `record_diff`."""
+
+    def __init__(self):
+        self.bible_changed: list = []      # reasons (field names / causes)
+        self.changed_events: list = []     # event ids, scene-scoped changes
+
+    @property
+    def empty(self) -> bool:
+        return not self.bible_changed and not self.changed_events
+
+    @property
+    def full_regeneration(self) -> bool:
+        return bool(self.bible_changed)
+
+
+def record_diff(old: dict, new: dict) -> RecordDiff:
+    """Classify every difference between two authoring records. The
+    explicit policy table, not a heuristic: scene-scoped event fields
+    re-render one scene; everything else regenerates the draft."""
+    diff = RecordDiff()
+
+    for key in sorted(set(old) | set(new)):
+        if key == "events":
+            continue
+        if old.get(key) != new.get(key):
+            diff.bible_changed.append(key)
+
+    old_events = {e.get("id"): e for e in (old.get("events") or [])}
+    new_events = {e.get("id"): e for e in (new.get("events") or [])}
+    if set(old_events) != set(new_events):
+        diff.bible_changed.append("events (added/removed)")
+        return diff
+    for eid in old_events:
+        oe, ne = old_events[eid], new_events[eid]
+        if oe == ne:
+            continue
+        fields = {k for k in set(oe) | set(ne) if oe.get(k) != ne.get(k)}
+        bible_fields = fields - SCENE_SCOPED_EVENT_FIELDS
+        if bible_fields:
+            diff.bible_changed.append(
+                f"event {eid!r}: {', '.join(sorted(bible_fields))}")
+        elif fields:
+            diff.changed_events.append(eid)
+    return diff
+
+
+def _load_scenes(s: Session):
+    if not os.path.exists(s.scenes_path):
+        return None
+    with open(s.scenes_path) as f:
+        return json.load(f)
+
+
+def cmd_revise(s: Session, *, notes: str = "", extract=None, render=None,
+               generate=None, force: bool = False, assume_yes: bool = False,
+               effort: str = DEFAULT_EFFORT,
+               max_tokens: int = DEFAULT_MAX_TOKENS) -> int:
+    """The return trip: writer notes → record edits (via the interview
+    extractor) → pure diff → re-verify → regenerate exactly the blast
+    radius. The draft is re-derived, never edited (RL1). `extract`,
+    `render`, and `generate` are injectable for tests."""
+    if not s.has_draft():
+        print("Nothing to revise — generate a draft first.", file=sys.stderr)
+        _print_next(s)
+        return 1
+
+    if not notes.strip():
+        print("Your notes on the draft — what should be different in the "
+              "STORY (end with a blank line):")
+        lines = []
+        while True:
+            try:
+                line = input()
+            except EOFError:
+                break
+            if not line.strip():
+                break
+            lines.append(line)
+        notes = "\n".join(lines)
+    if not notes.strip():
+        print("No notes — nothing to revise.")
+        return 0
+
+    if extract is None:
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            print("ERROR: ANTHROPIC_API_KEY is not set — revision's "
+                  "extraction step needs it.", file=sys.stderr)
+            return 1
+        from story_engine.core.authoring_interview import extract_story_draft
+
+        def extract(notes_, prior):
+            return extract_story_draft(
+                s.brief, dialect=s.dialect, prior=prior,
+                answers=REVISION_FRAME + notes_, effort=effort)
+
+    old_doc = s.doc
+    new_doc = extract(notes, old_doc) or {}
+    diff = record_diff(old_doc, new_doc)
+
+    if diff.empty:
+        print("Your notes produced no record change — nothing regenerates. "
+              "Say what should be different in the story (who, what "
+              "happens, how it feels), not the prose.")
+        return 0
+
+    # RL4 — re-verify before any prose is spent. A note that breaks the
+    # structure is a finding for the writer, not a broken draft; the
+    # working record is kept.
+    blocking = blocking_gaps(new_doc, s.dialect)
+    if blocking:
+        print("These notes would leave the record uncompilable — keeping "
+              "the current record. The engine would need:", file=sys.stderr)
+        for g in blocking[:5]:
+            print(f"  ● {g.question}", file=sys.stderr)
+        return 1
+    try:
+        compiled = compile_story(new_doc, s.dialect)
+    except StoryFormatError as e:
+        print(f"AUTHORING ERROR (record kept): {e}", file=sys.stderr)
+        return 1
+    obs = verify_compiled(compiled)
+    if obs and not force:
+        print(f"⚠ the revised record has {len(obs)} verifier finding(s) — "
+              f"keeping the current record (pass --force to override):",
+              file=sys.stderr)
+        for o in obs:
+            print(f"  [{getattr(o, 'severity', '?')}] "
+                  f"{getattr(o, 'code', '')}: {getattr(o, 'message', o)}",
+                  file=sys.stderr)
+        return 1
+
+    # RL5 — show the blast radius before paying for it.
+    scenes = _load_scenes(s)
+    full = diff.full_regeneration or scenes is None
+    if diff.bible_changed:
+        print("Bible-scoped change(s): " + "; ".join(diff.bible_changed))
+    if diff.changed_events:
+        print("Scene-scoped change(s): " + ", ".join(diff.changed_events))
+    if full and not diff.full_regeneration:
+        print("(no structured draft on file — falling back to full "
+              "regeneration)")
+    if full:
+        n = len(compiled.sjuzhet)
+        print(f"→ full regeneration: {n} scene call(s), up to {max_tokens} "
+              f"tokens each at effort '{effort}'.")
+    else:
+        print(f"→ {len(diff.changed_events)} scene re-render(s), up to "
+              f"{max_tokens} tokens each at effort '{effort}'.")
+    if not _confirm("Revise?", assume_yes):
+        print("Not revising (record unchanged).")
+        return 0
+
+    s.data["doc"] = new_doc
+    s.data.setdefault("revisions", []).append({
+        "at": _now(), "notes": notes,
+        "scope": "full" if full else diff.changed_events,
+    })
+
+    if full:
+        save_session(s)
+        return cmd_generate(s, generate=generate, force=force,
+                            assume_yes=True, effort=effort,
+                            max_tokens=max_tokens)
+
+    if render is None:
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            print("ERROR: ANTHROPIC_API_KEY is not set — needed to "
+                  "re-render.", file=sys.stderr)
+            return 1
+        from story_engine.core.draft_repair import repair_scene
+
+        def render(directive, compiled_, before):
+            note_ = (f"A {s.dialect} story authored by interview. "
+                     + (compiled_.logline or "") + " " + LEAN_NOTE).strip()
+            rr = repair_scene(
+                directive, sjuzhet=compiled_.sjuzhet, fabula=compiled_.fabula,
+                entities=compiled_.entities,
+                descriptions=compiled_.descriptions,
+                preplay_disclosures=compiled_.preplay_disclosures,
+                title=compiled_.title, dialect_note=note_, before=before,
+                effort=effort, max_tokens=max_tokens,
+                **frame_kwargs_for(compiled_),
+            )
+            return rr.after if rr else before
+
+    from story_engine.core.draft_repair import RepairDirective
+    from story_engine.core.draft_convergence import assemble
+    by_event = {sc["event_id"]: sc for sc in scenes["scenes"]}
+    for eid in diff.changed_events:
+        sc = by_event.get(eid)
+        if sc is None:
+            print(f"  (event {eid!r} has no scene in the draft — skipped)")
+            continue
+        directive = RepairDirective(
+            event_id=eid, dimension="writer-note",
+            instruction=(f"The author revised this scene's record and asked: "
+                         f"{notes.strip()} Render the scene to the UPDATED "
+                         f"record above; carry the author's intent."),
+        )
+        print(f"  re-rendering scene for {eid!r} …")
+        sc["prose"] = render(directive, compiled, sc.get("prose", ""))
+
+    with open(s.scenes_path, "w") as f:
+        json.dump(scenes, f, indent=1)
+    words = _write_draft(s, compiled, assemble(scenes["scenes"]))
+    _invalidate_evaluation(s)
     save_session(s)
-    print(f"\nDraft saved: {s.draft_path} ({words} words)")
+    print(f"\nRevised draft saved: {s.draft_path} ({words} words)")
     _print_next(s)
     return 0
 
@@ -563,6 +821,19 @@ def _cli(argv=None):
                        choices=["low", "medium", "high", "max"])
     p_gen.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
 
+    p_rv = sub.add_parser("revise",
+                          help="give notes on the draft; the record is "
+                               "revised and the affected scenes re-derived")
+    p_rv.add_argument("session")
+    p_rv.add_argument("--notes", default="",
+                      help="the notes (prompted for if omitted)")
+    p_rv.add_argument("--force", action="store_true",
+                      help="revise even with verifier findings")
+    p_rv.add_argument("--yes", action="store_true")
+    p_rv.add_argument("--effort", default=DEFAULT_EFFORT,
+                      choices=["low", "medium", "high", "max"])
+    p_rv.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
+
     p_ev = sub.add_parser("evaluate", help="blind-read the draft and score it")
     p_ev.add_argument("session")
     p_ev.add_argument("--yes", action="store_true")
@@ -570,7 +841,7 @@ def _cli(argv=None):
     # bare `story <dir>` = status
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] not in ("new", "status", "interview", "generate",
-                                "evaluate", "-h", "--help"):
+                                "revise", "evaluate", "-h", "--help"):
         argv = ["status"] + argv
     return p.parse_args(argv)
 
@@ -578,7 +849,7 @@ def _cli(argv=None):
 def main(argv=None) -> int:
     args = _cli(argv)
     if not getattr(args, "command", None):
-        print("usage: story {new,status,interview,generate,evaluate} "
+        print("usage: story {new,status,interview,generate,revise,evaluate} "
               "<session-dir>", file=sys.stderr)
         return 2
     try:
@@ -613,6 +884,10 @@ def main(argv=None) -> int:
             return cmd_generate(s, force=args.force, assume_yes=args.yes,
                                 effort=args.effort,
                                 max_tokens=args.max_tokens)
+        if args.command == "revise":
+            return cmd_revise(s, notes=args.notes, force=args.force,
+                              assume_yes=args.yes, effort=args.effort,
+                              max_tokens=args.max_tokens)
         if args.command == "evaluate":
             return cmd_evaluate(s, assume_yes=args.yes)
     except SessionError as e:

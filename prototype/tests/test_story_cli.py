@@ -14,7 +14,8 @@ from types import SimpleNamespace
 from story_engine.tools.story import (
     Session, SessionError, new_session, load_session, save_session,
     next_step, cmd_status, cmd_interview, cmd_generate, cmd_evaluate,
-    evaluation_payload, SESSION_FILE, DRAFT_FILE, EVAL_FILE,
+    cmd_revise, record_diff, evaluation_payload,
+    SESSION_FILE, DRAFT_FILE, EVAL_FILE, SCENES_FILE,
 )
 from story_engine.core.fidelity import FidelityFinding, FidelityReport
 
@@ -226,6 +227,186 @@ def test_generate_declined_confirmation_is_a_clean_no():
     assert not s.has_draft()
 
 
+# ---- revise: the diff policy (RL2) -----------------------------------------
+
+def test_record_diff_scene_scoped_fields():
+    old = _compilable_doc()
+    new = _compilable_doc()
+    new["events"] = [dict(e) for e in new["events"]]
+    new["events"][0]["summary"] = "it opens, colder"
+    new["events"][2]["note"] = "dwell on the silence"
+    d = record_diff(old, new)
+    assert not d.bible_changed
+    assert d.changed_events == ["open", "fall"]
+    assert not d.full_regeneration
+
+
+def test_record_diff_bible_scoped_fields():
+    old = _compilable_doc()
+    for key, val in [("logline", "a different test"),
+                     ("telling", "reverse"),
+                     ("characters", [])]:
+        new = _compilable_doc(**{key: val})
+        d = record_diff(old, new)
+        assert key in d.bible_changed, key
+        assert d.full_regeneration
+
+
+def test_record_diff_event_mark_or_when_is_bible_scoped():
+    old = _compilable_doc()
+    new = _compilable_doc()
+    new["events"] = [dict(e) for e in new["events"]]
+    new["events"][1]["when"] = 4
+    d = record_diff(old, new)
+    assert d.full_regeneration and not d.changed_events
+
+
+def test_record_diff_added_or_removed_events_is_bible_scoped():
+    old = _compilable_doc()
+    new = _compilable_doc()
+    new["events"] = list(new["events"]) + [
+        {"id": "extra", "when": 10, "who": ["hero"], "summary": "more"}]
+    d = record_diff(old, new)
+    assert "events (added/removed)" in d.bible_changed
+
+
+def test_record_diff_identical_is_empty():
+    assert record_diff(_compilable_doc(), _compilable_doc()).empty
+
+
+# ---- revise: the flows (RL1, RL3–RL5) --------------------------------------
+
+def _revisable_session():
+    """A session with a compilable record, a structured draft, a draft.md,
+    and an evaluation."""
+    path = _tmp()
+    s = new_session(path, brief="x", dialect="aristotelian")
+    s.data["doc"] = _compilable_doc()
+    save_session(s)
+    payload = {"title": "Test", "story_bible": "bible", "scenes": [
+        {"tau_d": i, "event_id": eid, "focalizer": None,
+         "prose": f"prose of {eid}."}
+        for i, eid in enumerate(["open", "turn", "fall", "see"])]}
+    with open(s.scenes_path, "w") as f:
+        json.dump(payload, f)
+    with open(s.draft_path, "w") as f:
+        f.write("old draft")
+    with open(s.eval_path, "w") as f:
+        json.dump({"score": 1.0}, f)
+    return path, s
+
+
+def test_revise_scene_scoped_splices_only_the_target():
+    path, s = _revisable_session()
+    revised = _compilable_doc()
+    revised["events"] = [dict(e) for e in revised["events"]]
+    revised["events"][1]["note"] = "make the reversal colder"
+    rendered = []
+
+    def render(directive, compiled, before):
+        rendered.append((directive.event_id, before))
+        return "COLDER REVERSAL PROSE."
+
+    rc = cmd_revise(s, notes="make the reversal colder",
+                    extract=lambda n, prior: revised, render=render,
+                    assume_yes=True)
+    assert rc == 0
+    assert [e for e, _ in rendered] == ["turn"]
+    assert rendered[0][1] == "prose of turn."     # old prose passed as before
+    with open(s.scenes_path) as f:
+        scenes = json.load(f)["scenes"]
+    assert scenes[1]["prose"] == "COLDER REVERSAL PROSE."
+    assert scenes[0]["prose"] == "prose of open." # neighbors untouched
+    with open(s.draft_path) as f:
+        text = f.read()
+    assert "COLDER REVERSAL PROSE." in text and "prose of open." in text
+    assert not s.has_evaluation(), "revision must invalidate the blind read"
+    assert load_session(path).doc == revised      # the record is the truth
+    assert load_session(path).data["revisions"][0]["scope"] == ["turn"]
+
+
+def test_revise_bible_scoped_regenerates_fully():
+    path, s = _revisable_session()
+    revised = _compilable_doc(logline="a colder test")
+    calls = []
+
+    def fake_generate(**kw):
+        calls.append(kw)
+        return SimpleNamespace(title=kw["title"], draft="WHOLE NEW DRAFT.")
+
+    rc = cmd_revise(s, notes="colder throughout",
+                    extract=lambda n, prior: revised,
+                    generate=fake_generate, assume_yes=True)
+    assert rc == 0
+    assert len(calls) == 1                        # full regeneration ran
+    with open(s.draft_path) as f:
+        assert "WHOLE NEW DRAFT." in f.read()
+    assert load_session(path).doc == revised
+
+
+def test_revise_noop_diff_is_surfaced_and_keeps_the_record():
+    path, s = _revisable_session()
+    rc = cmd_revise(s, notes="something vague",
+                    extract=lambda n, prior: _compilable_doc(),
+                    render=lambda *a: "X", assume_yes=True)
+    assert rc == 0
+    assert load_session(path).doc == _compilable_doc()
+    with open(s.draft_path) as f:
+        assert f.read() == "old draft"            # nothing regenerated
+    assert s.has_evaluation()                     # nothing invalidated
+
+
+def test_revise_that_breaks_the_record_keeps_the_working_one():
+    path, s = _revisable_session()
+    broken = {"title": "T", "characters": [], "events": []}
+    rc = cmd_revise(s, notes="delete everyone",
+                    extract=lambda n, prior: broken,
+                    render=lambda *a: "X", assume_yes=True)
+    assert rc == 1
+    assert load_session(path).doc == _compilable_doc()
+
+
+def test_revise_without_structured_draft_falls_back_to_full():
+    path, s = _revisable_session()
+    os.remove(s.scenes_path)                      # draft predates scenes.json
+    revised = _compilable_doc()
+    revised["events"] = [dict(e) for e in revised["events"]]
+    revised["events"][0]["summary"] = "changed"
+    calls = []
+
+    def fake_generate(**kw):
+        calls.append(kw)
+        return SimpleNamespace(title=kw["title"], draft="REGENERATED.")
+
+    rc = cmd_revise(s, notes="change the opening",
+                    extract=lambda n, prior: revised,
+                    generate=fake_generate, assume_yes=True)
+    assert rc == 0
+    assert len(calls) == 1
+
+
+def test_generate_persists_structured_draft():
+    path = _tmp()
+    s = new_session(path, brief="x", dialect="aristotelian")
+    s.data["doc"] = _compilable_doc()
+    save_session(s)
+
+    def fake_generate(**kw):
+        scenes = [SimpleNamespace(τ_d=i, event_id=e.event_id, focalizer=None,
+                                  prose=f"p{i}")
+                  for i, e in enumerate(kw["sjuzhet"])]
+        return SimpleNamespace(title=kw["title"], story_bible="b",
+                               scenes=scenes,
+                               draft="\n\n".join(s.prose for s in scenes))
+
+    rc = cmd_generate(s, generate=fake_generate, assume_yes=True)
+    assert rc == 0
+    with open(s.scenes_path) as f:
+        payload = json.load(f)
+    assert len(payload["scenes"]) == 4
+    assert payload["scenes"][0]["event_id"] == "open"
+
+
 # ---- evaluate: payload + persistence ---------------------------------------
 
 def _report():
@@ -271,6 +452,17 @@ def test_evaluation_payload_shape():
 
 
 TESTS = [
+    test_record_diff_scene_scoped_fields,
+    test_record_diff_bible_scoped_fields,
+    test_record_diff_event_mark_or_when_is_bible_scoped,
+    test_record_diff_added_or_removed_events_is_bible_scoped,
+    test_record_diff_identical_is_empty,
+    test_revise_scene_scoped_splices_only_the_target,
+    test_revise_bible_scoped_regenerates_fully,
+    test_revise_noop_diff_is_surfaced_and_keeps_the_record,
+    test_revise_that_breaks_the_record_keeps_the_working_one,
+    test_revise_without_structured_draft_falls_back_to_full,
+    test_generate_persists_structured_draft,
     test_new_session_persists_and_reloads,
     test_new_session_rejects_bad_input,
     test_new_session_refuses_to_clobber,

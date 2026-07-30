@@ -108,12 +108,12 @@ all four.
 Working prototype, closed-corpus encodings, large test surface:
 
 - **Four dialects**, one dialect-agnostic generator + repair seam.
-- **92 design sketches** (plus 20 state-of-play snapshots) across the
+- **93 design sketches** (plus 20 state-of-play snapshots) across the
   substrate, the four dialects, identity, focalization, inference,
   lowering/verification, the generation and self-correction layer, and the
   ambiguity-honest substrate; status and open questions tracked per sketch.
   Current state: [`design/state-of-play-20.md`](design/state-of-play-20.md).
-- **1,352 tests** across 38 test files (standard-library core plus
+- **1,363 tests** across 38 test files (standard-library core plus
   venv-backed tests for the LLM-in-the-loop reader/evaluator surfaces).
 - **Generated draft artifacts** under `prototype/*_first_draft.md` — Oedipus,
   Malfi, Rocky (from two different dialects), Macbeth (Save the Cat), and the

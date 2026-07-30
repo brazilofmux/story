@@ -157,7 +157,7 @@ prototype/
 │   │                  #   llm provider seam, reader-model clients)
 │   ├── encodings/     # 62 modules across 16 works
 │   └── tools/         # writer CLI (story.py) + skeleton generator
-├── tests/             # 38 standalone test scripts (1,352 tests)
+├── tests/             # 38 standalone test scripts (1,363 tests)
 ├── demos/             # 36 demo scripts
 ├── reader_model_*.json  # probe output artifacts
 ├── README.md
@@ -329,14 +329,17 @@ Notes:
 ### Author tools
 
 - `story_engine/tools/story.py` — the turn-key writer front-end
-  (`../design/authoring-cli-sketch-01.md`): one entry point walking
-  interview → compile → verify → generate → blind evaluate, with the
-  session persisted in a directory (`story.json`, `draft.md`,
-  `evaluation.json`), resumable at every step, each command naming the
-  next. `python3 -m story_engine.tools.story new <dir> --dialect
-  <dialect> --brief "..."`, then `interview` / `generate` / `evaluate`
-  (bare `story <dir>` = status). States the call shape and asks before
-  every paid step.
+  (`../design/authoring-cli-sketch-01.md`,
+  `../design/revision-loop-sketch-01.md`): one entry point walking
+  interview → compile → verify → generate → blind evaluate → revise,
+  with the session persisted in a directory (`story.json`, `draft.md`,
+  `scenes.json`, `evaluation.json`), resumable at every step, each
+  command naming the next. `python3 -m story_engine.tools.story new
+  <dir> --dialect <dialect> --brief "..."`, then `interview` /
+  `generate` / `evaluate` / `revise` (bare `story <dir>` = status).
+  States the call shape and asks before every paid step; `revise`
+  compiles writer notes into record edits and re-derives exactly the
+  affected prose — the draft is never edited in place.
 - `story_engine/tools/skeleton.py` — CLI tool that writes the
   canonical 5-file encoding stub given a work-id, title, and
   character list. See
@@ -352,7 +355,7 @@ Notes:
 
 ### Tests
 
-The prototype currently has **38 test files / 1,352 tests**, all under
+The prototype currently has **38 test files / 1,363 tests**, all under
 `tests/`.
 
 - Standard-library path (25 files): `test_aristotelian.py`,
