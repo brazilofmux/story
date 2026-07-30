@@ -9,8 +9,9 @@ A research and design notebook plus working Python prototype for a
 story-telling engine. Three tracks live here:
 
 - `design/` — architectural sketches; self-contained per topic.
-- `prototype/` — Python 3.12 reference implementation with ~510
-  tests across 12 test files. Executable specification.
+- `prototype/` — Python 3.12 reference implementation with 1,327
+  tests across 36 test files under `prototype/tests/`. Executable
+  specification.
 - `research/` — long-form surveys of narrative theories and
   computational narrative systems.
 
@@ -40,36 +41,31 @@ the sketches argue against.
 - Tests are plain `assert` with a minimal runner at the bottom of
   each file. No framework. Each test's docstring should note
   which sketch commitment it pins.
-- Run the standard-library core tests before claiming a change works:
+- Tests live in `prototype/tests/` and run from `prototype/` with
+  `PYTHONPATH=.`. Run the suite before claiming a change works.
+  With the venv in place, the whole suite runs in one loop:
 
   ```sh
   cd prototype
-  for t in \
-    test_dramatic.py \
-    test_dramatica_template.py \
-    test_identity.py \
-    test_inference.py \
-    test_lowering.py \
-    test_proposal_walker.py \
-    test_rashomon.py \
-    test_save_the_cat.py \
-    test_substrate.py \
-    test_verification.py
-  do
-    python3 "$t" | tail -1
+  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+  for t in tests/test_*.py; do
+    echo "== $t"; PYTHONPATH=. .venv/bin/python3 "$t" | tail -1
   done
   ```
 
-- The reader-model probe and client tests require the venv; live
-  demos also require an API key:
+- 23 of the 36 test files are standard-library-only and run without
+  the venv (`PYTHONPATH=. python3 tests/test_substrate.py`, etc.).
+  The 13 that need the venv (pydantic) are the LLM-in-the-loop
+  surfaces: the reader-model clients, the four dialects' evaluator /
+  repair tests, draft evaluate/repair, dialect convergence, and the
+  production-format conformance suite.
+
+- Live demos are packages under `prototype/demos/` and require an
+  API key; `--dry-run` prints the prompt only:
 
   ```sh
   cd prototype
-  python3 -m venv .venv
-  .venv/bin/pip install -r requirements.txt
-  .venv/bin/python3 test_reader_model_client.py
-  .venv/bin/python3 test_dramatic_reader_model_client.py
-  .venv/bin/python3 demo_reader_model.py --dry-run
+  PYTHONPATH=. .venv/bin/python3 -m demos.demo_reader_model --dry-run
   ```
 
 - Python is a specification language. Favor explicit records
@@ -98,7 +94,7 @@ the sketches argue against.
 
 ## Tool preferences
 
-- File search: use glob patterns (`prototype/test_*.py`,
+- File search: use glob patterns (`prototype/tests/test_*.py`,
   `design/*-sketch-01.md`) rather than `find`.
 - Content search: ripgrep / search tools work well; the
   repository is small enough that naive search is fine.
@@ -116,10 +112,11 @@ the sketches argue against.
 - Commits carrying Claude co-authorship use:
 
   ```
-  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+  Co-Authored-By: Claude <model name> <noreply@anthropic.com>
   ```
 
-  (with the model + session matching the actual collaboration).
+  with the model + session matching the actual collaboration —
+  e.g. `Claude Opus 4.8`, `Claude Fable 5`.
 
 ## What to avoid
 

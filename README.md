@@ -108,15 +108,17 @@ all four.
 Working prototype, closed-corpus encodings, large test surface:
 
 - **Four dialects**, one dialect-agnostic generator + repair seam.
-- **105 design sketches** across the substrate, the four dialects, identity,
-  focalization, inference, lowering/verification, the generation and
-  self-correction layer, and the ambiguity-honest substrate; status and open
-  questions tracked per sketch. Current state: [`design/state-of-play-19.md`](design/state-of-play-19.md).
-- **~1,248 tests** across 33 test files (standard-library core plus
+- **90 design sketches** (plus 20 state-of-play snapshots) across the
+  substrate, the four dialects, identity, focalization, inference,
+  lowering/verification, the generation and self-correction layer, and the
+  ambiguity-honest substrate; status and open questions tracked per sketch.
+  Current state: [`design/state-of-play-20.md`](design/state-of-play-20.md).
+- **1,327 tests** across 36 test files (standard-library core plus
   venv-backed tests for the LLM-in-the-loop reader/evaluator surfaces).
 - **Generated draft artifacts** under `prototype/*_first_draft.md` — Oedipus,
   Malfi, Rocky (from two different dialects), Macbeth (Save the Cat), and the
-  originals (Vantage, Sworn, Quarter) — the evidence the loop runs.
+  originals (Vantage, Sworn, Quarter, Winter Count) — the evidence the loop
+  runs.
 - **Survey** of prior narrative theories and computational story systems in
   `research/`.
 
@@ -148,6 +150,12 @@ PYTHONPATH=. .venv/bin/python3 -m demos.demo_generate_oedipus --dry-run
   in the core). Module catalog in [`prototype/README.md`](prototype/README.md).
 - [`research/`](research/) — surveys of narrative theories (`theories/`) and
   computational story systems (`systems/`).
+- [`schema/`](schema/) — JSON Schema 2020-12 files, the language-independent
+  source of truth for every record type's shape (the port-portability
+  guarantee).
+- [`articles/`](articles/) — longer-form writeups distilled from the repo's
+  evidence for a specific audience at a specific moment; dated, kept as a
+  record even when the project moves past them.
 - [`AGENTS.md`](AGENTS.md), [`GEMINI.md`](GEMINI.md) — agent-facing guidance.
 
 ## Conventions
