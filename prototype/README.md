@@ -156,7 +156,7 @@ prototype/
 │   │                  #   llm provider seam, reader-model clients)
 │   ├── encodings/     # 62 modules across 16 works
 │   └── tools/         # skeleton generator CLI + templates
-├── tests/             # 37 standalone test scripts (1,337 tests)
+├── tests/             # 37 standalone test scripts (1,338 tests)
 ├── demos/             # 36 demo scripts
 ├── reader_model_*.json  # probe output artifacts
 ├── README.md
@@ -342,7 +342,7 @@ Notes:
 
 ### Tests
 
-The prototype currently has **37 test files / 1,337 tests**, all under
+The prototype currently has **37 test files / 1,338 tests**, all under
 `tests/`.
 
 - Standard-library path (24 files): `test_aristotelian.py`,

@@ -9,7 +9,7 @@ A research and design notebook plus working Python prototype for a
 story-telling engine. Three tracks live here:
 
 - `design/` — architectural sketches; self-contained per topic.
-- `prototype/` — Python 3.12 reference implementation with 1,337
+- `prototype/` — Python 3.12 reference implementation with 1,338
   tests across 37 test files under `prototype/tests/`. Executable
   specification.
 - `research/` — long-form surveys of narrative theories and

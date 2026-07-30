@@ -575,6 +575,45 @@ def test_dropped_output_carries_reason_and_raw_record():
     assert hasattr(d.raw, "model_dump")
 
 
+def test_review_with_unresolvable_anchor_is_dropped_not_epoch_anchored():
+    """A review whose description anchors to a record absent from the
+    passed events/descriptions has no meaningful staleness anchor. It
+    must land in `dropped` with a reason — never be silently translated
+    with anchor_τ_a=0, which staleness tracking would read as anchored
+    at the epoch."""
+    from story_engine.core.substrate import ReaderView
+
+    descriptions = _make_descriptions()
+    view = ReaderView(
+        branch_label=":canonical",
+        up_to_τ_s=10,
+        up_to_τ_a=100,
+        attention_filter=None,
+        anchor_scope=None,
+        events=(),
+        descriptions=(),
+        open_questions=(),
+    )
+    raw_output = ReaderOutput(
+        reviews=[ReaderReview(description_id="D_alpha", verdict="approved",
+                              rationale="ok")],
+        answers=[],
+    )
+    # D_alpha anchors event E_main — which is NOT in the passed events.
+    result = invoke_reader_model(
+        view=view,
+        events=[],
+        descriptions=descriptions,
+        current_τ_a=100,
+        reviews_for=["D_alpha"],
+        answers_for=[],
+        client=_FakeClient(raw_output),
+    )
+    assert len(result.review_candidates) == 0
+    assert len(result.dropped) == 1
+    assert "does not resolve" in result.dropped[0].reason
+
+
 def test_anthropic_parse_raises_on_missing_structured_output():
     """parse()'s contract: None ⇒ dry_run only. A refusal or thinking-only
     Anthropic response has parsed_output=None; the seam must fail loud, not
@@ -653,6 +692,8 @@ TESTS = [
     test_review_candidates_paired_correctly_when_raw_reviews_are_dropped,
     # Auditability
     test_dropped_output_carries_reason_and_raw_record,
+    # Unresolvable staleness anchor → dropped, not epoch-anchored
+    test_review_with_unresolvable_anchor_is_dropped_not_epoch_anchored,
     # Fail-loud LLM seam (parse contract: None ⇒ dry_run only)
     test_anthropic_parse_raises_on_missing_structured_output,
     test_anthropic_parse_raises_on_max_tokens_truncation,

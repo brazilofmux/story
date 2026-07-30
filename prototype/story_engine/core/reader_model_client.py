@@ -568,11 +568,21 @@ def _translate_review(
     (accepted); this function assumes the id resolves."""
     desc = next(d for d in descriptions if d.id == raw.description_id)
     anchor_τ_a = _resolve_anchor_τ_a(desc.attached_to, events, descriptions)
+    if anchor_τ_a is None:
+        # An unresolvable anchor must not be masked as anchored-at-epoch
+        # (τ_a=0) — staleness tracking keyed to 0 is meaningless. The
+        # invocation loop gates this case into `dropped`; reaching here
+        # means the caller skipped that gate.
+        raise ValueError(
+            f"review anchor {desc.attached_to.kind}:"
+            f"{desc.attached_to.target_id!r} does not resolve among the "
+            f"passed events/descriptions"
+        )
     return ReviewEntry(
         reviewer_id=reviewer_id,
         reviewed_at_τ_a=current_τ_a,
         verdict=ReviewVerdict(raw.verdict),
-        anchor_τ_a=anchor_τ_a if anchor_τ_a is not None else 0,
+        anchor_τ_a=anchor_τ_a,
         comment=raw.rationale,
     )
 
@@ -865,6 +875,17 @@ def invoke_reader_model(
         reason = _classify_review(rr, descriptions, reviews_for)
         if reason is not None:
             dropped.append(DroppedOutput(reason=reason, raw=rr))
+            continue
+        # A review whose description anchors to a record absent from the
+        # passed events/descriptions cannot carry a meaningful staleness
+        # anchor — drop it auditable, never mask it as anchored at τ_a=0.
+        desc = next(d for d in descriptions if d.id == rr.description_id)
+        if _resolve_anchor_τ_a(desc.attached_to, events, descriptions) is None:
+            dropped.append(DroppedOutput(
+                reason=(f"review anchor {desc.attached_to.kind}:"
+                        f"{desc.attached_to.target_id!r} does not resolve "
+                        f"among the passed events/descriptions"),
+                raw=rr))
             continue
         # Keep the target_id paired with the translated record at the
         # moment of translation. Parallel-zipping raw.reviews with a
