@@ -411,12 +411,6 @@ STC_GENRES = (
     "dude-with-a-problem", "rites-of-passage", "buddy-love", "whydunit",
     "fool-triumphant", "institutionalized", "superhero",
 )
-STC_ROLE_LABELS = (
-    "protagonist", "antagonist", "love-interest", "mentor", "confidant",
-    "ally", "narrator", "victim", "suspect", "threshold-guardian",
-)
-
-
 def _save_the_cat_overlay(doc: dict) -> list:
     gaps: list = []
     chars = doc.get("characters") or []
@@ -443,12 +437,16 @@ def _save_the_cat_overlay(doc: dict) -> list:
                         "the beats track?"))
 
     # beat coverage — each event may name a canonical beat via `beat`.
+    # Match case-insensitively, as the compiler does (_STC_SLOT_BY_NAME).
     assigned = {(ev.get("beat") or "").strip() for ev in events if (ev.get("beat") or "").strip()}
-    for b in sorted(b for b in assigned if b not in STC_CANONICAL_BEATS):
+    canonical_lower = {b.lower() for b in STC_CANONICAL_BEATS}
+    assigned_lower = {b.lower() for b in assigned}
+    for b in sorted(b for b in assigned if b.lower() not in canonical_lower):
         gaps.append(Gap("structural", "stc_unknown_beat",
                         f"'{b}' isn't one of the fifteen Save-the-Cat beats."))
     if events:
-        missing = [b for b in STC_LOAD_BEARING_BEATS if b not in assigned]
+        missing = [b for b in STC_LOAD_BEARING_BEATS
+                   if b.lower() not in assigned_lower]
         if missing:
             gaps.append(Gap("structural", "stc_unfilled_beats",
                             "These load-bearing beats aren't placed on any beat "
@@ -592,9 +590,6 @@ def _dramatica_overlay(doc: dict) -> list:
 
 
 # ---- Dramatic --------------------------------------------------------------
-DRAMATIC_THROUGHLINES = (
-    "overall-story", "main-character", "impact-character", "relationship",
-)
 DRAMATIC_RESOLUTIONS = ("affirm", "negate", "complicate", "unresolved")
 # abstract throughline owners (no single character carries them)
 DRAMATIC_OWNER_SENTINELS = ("none", "situation", "relationship")

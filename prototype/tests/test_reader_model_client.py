@@ -575,6 +575,53 @@ def test_dropped_output_carries_reason_and_raw_record():
     assert hasattr(d.raw, "model_dump")
 
 
+def test_anthropic_parse_raises_on_missing_structured_output():
+    """parse()'s contract: None ⇒ dry_run only. A refusal or thinking-only
+    Anthropic response has parsed_output=None; the seam must fail loud, not
+    hand the caller a None it will read as a dry run (and silently report
+    an empty result)."""
+    from story_engine.core import llm
+
+    client = _FakeClient(None)  # .messages.parse → parsed_output=None
+    try:
+        llm.parse(
+            system_prompt="s", user_prompt="u", output_format=ReaderOutput,
+            model="claude-test", max_tokens=100, effort="low", client=client,
+        )
+    except RuntimeError as exc:
+        assert "no structured output" in str(exc)
+    else:
+        raise AssertionError("expected RuntimeError on parsed_output=None")
+
+
+def test_anthropic_parse_raises_on_max_tokens_truncation():
+    """A structured output truncated at max_tokens must abort at the seam
+    (mirror of _anthropic_generate's guard), not surface as a validation
+    error far from the cause."""
+    from story_engine.core import llm
+
+    class _TruncatingMessages:
+        def parse(self, **kwargs):
+            class _R:
+                stop_reason = "max_tokens"
+                parsed_output = None
+            return _R()
+
+    class _TruncatingClient:
+        messages = _TruncatingMessages()
+
+    try:
+        llm.parse(
+            system_prompt="s", user_prompt="u", output_format=ReaderOutput,
+            model="claude-test", max_tokens=100, effort="low",
+            client=_TruncatingClient(),
+        )
+    except RuntimeError as exc:
+        assert "truncated at max_tokens" in str(exc)
+    else:
+        raise AssertionError("expected RuntimeError on max_tokens truncation")
+
+
 # ============================================================================
 # Runner
 # ============================================================================
@@ -606,6 +653,9 @@ TESTS = [
     test_review_candidates_paired_correctly_when_raw_reviews_are_dropped,
     # Auditability
     test_dropped_output_carries_reason_and_raw_record,
+    # Fail-loud LLM seam (parse contract: None ⇒ dry_run only)
+    test_anthropic_parse_raises_on_missing_structured_output,
+    test_anthropic_parse_raises_on_max_tokens_truncation,
 ]
 
 

@@ -30,7 +30,7 @@ the same way.
 from __future__ import annotations
 
 from story_engine.core.draft_repair import RepairDirective
-from story_engine.core.dramatica_evaluator import _dyn_map
+from story_engine.core.dramatica_evaluator import dyn_map
 
 
 # Dimensions whose drift is sealed at the ending and is therefore
@@ -58,7 +58,7 @@ def _ending_event(storyform, sjuzhet):
 def _shape_directive(drifted, storyform) -> str:
     """Rebuild the intended ending shape from the storyform's dynamics,
     as a corrective directive — in Dramatica's own terms."""
-    dyn = _dyn_map(storyform)
+    dyn = dyn_map(storyform)
     outcome = (dyn.get("outcome") or "").lower()
     judgment = (dyn.get("judgment") or "").lower()
     resolve = (dyn.get("resolve") or "").lower()

@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import importlib
 import pathlib
+import sys
 from dataclasses import dataclass, field
 
 
@@ -274,7 +275,15 @@ def _discover_encoding_verifier_output():
             continue
         try:
             result = run_fn()
-        except Exception:
+        except Exception as exc:
+            # A crashing verifier must not silently vanish from the
+            # audit's coverage — that would under-report, not fail.
+            print(
+                f"conformance: {name}.run() raised "
+                f"{type(exc).__name__}: {exc} — module excluded "
+                f"from this audit",
+                file=sys.stderr,
+            )
             continue
         if result is None:
             continue

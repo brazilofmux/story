@@ -234,7 +234,23 @@ def _anthropic_parse(system_prompt, user_prompt, output_format,
         messages=[{"role": "user", "content": user_prompt}],
         output_format=output_format,
     )
-    return response.parsed_output
+    stop = getattr(response, "stop_reason", None)
+    if stop == "max_tokens":
+        raise RuntimeError(
+            f"Anthropic parse truncated at max_tokens={max_tokens} "
+            f"(model {model!r}); raise max_tokens or lower effort."
+        )
+    parsed = response.parsed_output
+    if parsed is None:
+        # `parsed_output` is None when the response carries no text block
+        # (refusal, thinking-only output); returning it would violate
+        # parse()'s contract (None ⇒ dry_run only) — the caller would
+        # read it as a dry run and silently report an empty result.
+        raise RuntimeError(
+            f"Anthropic parse returned no structured output "
+            f"(model {model!r}, stop_reason={stop!r})."
+        )
+    return parsed
 
 
 def _anthropic_generate(system_prompt, user_prompt,

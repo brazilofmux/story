@@ -672,10 +672,19 @@ _DRAMATIC_DEFAULT_OWNER = {
 
 
 def _resolution(s) -> ResolutionDirection:
-    try:
-        return ResolutionDirection((s or "").strip().lower())
-    except ValueError:
+    """Absent means unresolved; a *named* direction must be a real one — a
+    typo ('afirm', 'resolved') must not silently flip the argument's
+    thematic stance to unresolved."""
+    text = (s or "").strip().lower()
+    if not text:
         return ResolutionDirection.UNRESOLVED
+    try:
+        return ResolutionDirection(text)
+    except ValueError:
+        valid = ", ".join(d.value for d in ResolutionDirection)
+        raise StoryFormatError(
+            f"argument resolution {s!r} is not one of: {valid}"
+        ) from None
 
 
 def _build_dramatic_overlay(doc: dict, sub: _Substrate) -> CompiledDramaticOverlay:

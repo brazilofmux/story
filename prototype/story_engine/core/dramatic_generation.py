@@ -97,8 +97,14 @@ class DramaticFrame(DialectFrame):
             lines.append("\n## The argument (what this story is arguing)")
             for a in s.arguments:
                 direction = getattr(a, "resolution_direction", "")
-                direction = getattr(direction, "value", direction)
-                lines.append(f"- The story {str(direction).upper()}S this "
+                direction = str(getattr(direction, "value", direction))
+                stance = {
+                    "affirm": "AFFIRMS",
+                    "negate": "NEGATES",
+                    "complicate": "COMPLICATES",
+                    "unresolved": "leaves UNRESOLVED",
+                }.get(direction, direction.upper())
+                lines.append(f"- The story {stance} this "
                              f"claim: {getattr(a, 'premise', '')}")
                 cp = getattr(a, "counter_premise", None)
                 if cp:

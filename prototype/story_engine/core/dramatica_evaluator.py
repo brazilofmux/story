@@ -188,7 +188,7 @@ class DramaticaFidelityReport:
         return (self.preserved / len(s)) if s else 0.0
 
 
-def _dyn_map(storyform) -> dict:
+def dyn_map(storyform) -> dict:
     """{axis: representative pole string}. For a dual axis this is the lean
     — a single string, so string-consuming callers (repair's directive) keep
     working. Use `_dyn_poles` when you need the honest full span."""
@@ -262,7 +262,7 @@ def compare_to_storyform(reading: DramaticaReading,
     """Compare a blind Dramatica reading to the authored storyform.
     Enum/name-level, pure Python; the reader never saw the storyform."""
     report = DramaticaFidelityReport(title=getattr(storyform, "title", ""))
-    dyn = _dyn_map(storyform)
+    dyn = dyn_map(storyform)
     poles = _dyn_poles(storyform)
 
     def _score_axis(axis: str, got_raw: str, base_note: str, dimension=None):
