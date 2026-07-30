@@ -231,47 +231,17 @@ def main() -> int:
 
     if compiled is not None and args.generate:
         from story_engine.core.draft_generator import generate_draft
+        from story_engine.core.authoring import frame_kwargs_for
         print("\nGenerating the first scene...")
-        gen_kw = dict(
+        result = generate_draft(
             title=compiled.title, sjuzhet=compiled.sjuzhet[:1],
             fabula=compiled.fabula, entities=compiled.entities,
             descriptions=compiled.descriptions,
             preplay_disclosures=compiled.preplay_disclosures,
             dialect_note=f"{args.dialect} story authored by interview.",
             effort="medium", max_tokens=2000,
+            **frame_kwargs_for(compiled),
         )
-        if args.dialect == "save-the-cat":
-            from story_engine.core.save_the_cat_generation import (
-                StcStorySheet, StcFrame)
-            ov = compiled.overlay
-            sheet = StcStorySheet(
-                title=compiled.title, action_summary=ov.action_summary,
-                beats=ov.beats, strands=ov.strands, characters=ov.characters,
-                beat_event_ids=ov.beat_event_ids)
-            gen_kw["adapter"] = StcFrame(sheet, compiled.sjuzhet)
-        elif args.dialect == "dramatic":
-            from story_engine.core.dramatic_generation import (
-                DramaticStory, DramaticFrame)
-            ov = compiled.overlay
-            story = DramaticStory(
-                title=compiled.title, action_summary=ov.action_summary,
-                template_id=ov.template_id, characters=ov.characters,
-                arguments=ov.arguments, throughlines=ov.throughlines,
-                stakes=ov.stakes)
-            gen_kw["adapter"] = DramaticFrame(story, compiled.fabula)
-        elif args.dialect == "dramatica":
-            from story_engine.core.dramatica_generation import (
-                DramaticaStoryform, DramaticaFrame)
-            ov = compiled.overlay
-            sf = DramaticaStoryform(
-                title=compiled.title, action_summary=ov.action_summary,
-                domain_assignments=ov.domain_assignments, signposts=ov.signposts,
-                dynamics=ov.dynamics, story_goal=ov.story_goal,
-                story_consequence=ov.story_consequence)
-            gen_kw["adapter"] = DramaticaFrame(sf, compiled.sjuzhet)
-        else:
-            gen_kw["mythos"] = compiled.mythos
-        result = generate_draft(**gen_kw)
         print("\n" + (result.draft or "(no prose)"))
     return 0
 

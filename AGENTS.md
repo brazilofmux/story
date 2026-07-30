@@ -9,8 +9,8 @@ A research and design notebook plus working Python prototype for a
 story-telling engine. Three tracks live here:
 
 - `design/` — architectural sketches; self-contained per topic.
-- `prototype/` — Python 3.12 reference implementation with 1,338
-  tests across 37 test files under `prototype/tests/`. Executable
+- `prototype/` — Python 3.12 reference implementation with 1,352
+  tests across 38 test files under `prototype/tests/`. Executable
   specification.
 - `research/` — long-form surveys of narrative theories and
   computational narrative systems.
@@ -53,7 +53,7 @@ the sketches argue against.
   done
   ```
 
-- 24 of the 37 test files are standard-library-only and run without
+- 25 of the 38 test files are standard-library-only and run without
   the venv (`PYTHONPATH=. python3 tests/test_substrate.py`, etc.).
   The 13 that need the venv (pydantic) are the LLM-in-the-loop
   surfaces: the reader-model clients, the four dialects' evaluator /

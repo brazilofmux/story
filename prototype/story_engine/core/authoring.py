@@ -928,3 +928,56 @@ def verify_compiled(compiled: CompiledStory) -> list:
         substrate_events=tuple(compiled.fabula),
         mythoi=(compiled.mythos,),
     )
+
+
+def dialect_story_object(compiled: CompiledStory):
+    """The compiled overlay → the dialect's canonical story object
+    (`ArMythos` / `StcStorySheet` / `DramaticStory` /
+    `DramaticaStoryform`) — what the generation frame wraps and the
+    blind evaluator compares against. One switch for every front-end
+    (`authoring-cli-sketch-01`, AC5); imports are function-local so the
+    compiler's own import surface stays stdlib."""
+    d = compiled.dialect
+    ov = compiled.overlay
+    if d == "aristotelian":
+        return compiled.mythos
+    if d == "save-the-cat":
+        from story_engine.core.save_the_cat_generation import StcStorySheet
+        return StcStorySheet(
+            title=compiled.title, action_summary=ov.action_summary,
+            beats=ov.beats, strands=ov.strands, characters=ov.characters,
+            beat_event_ids=ov.beat_event_ids)
+    if d == "dramatic":
+        from story_engine.core.dramatic_generation import DramaticStory
+        return DramaticStory(
+            title=compiled.title, action_summary=ov.action_summary,
+            template_id=ov.template_id, characters=ov.characters,
+            arguments=ov.arguments, throughlines=ov.throughlines,
+            stakes=ov.stakes)
+    if d == "dramatica":
+        from story_engine.core.dramatica_generation import DramaticaStoryform
+        return DramaticaStoryform(
+            title=compiled.title, action_summary=ov.action_summary,
+            domain_assignments=ov.domain_assignments,
+            signposts=ov.signposts, dynamics=ov.dynamics,
+            story_goal=ov.story_goal,
+            story_consequence=ov.story_consequence)
+    raise StoryFormatError(f"no story object for dialect {d!r}")
+
+
+def frame_kwargs_for(compiled: CompiledStory) -> dict:
+    """The dialect-specific kwargs `generate_draft` needs for a compiled
+    story: `mythos=` for Aristotelian, `adapter=` (the dialect frame)
+    for the rest."""
+    obj = dialect_story_object(compiled)
+    d = compiled.dialect
+    if d == "aristotelian":
+        return {"mythos": obj}
+    if d == "save-the-cat":
+        from story_engine.core.save_the_cat_generation import StcFrame
+        return {"adapter": StcFrame(obj, compiled.sjuzhet)}
+    if d == "dramatic":
+        from story_engine.core.dramatic_generation import DramaticFrame
+        return {"adapter": DramaticFrame(obj, compiled.fabula)}
+    from story_engine.core.dramatica_generation import DramaticaFrame
+    return {"adapter": DramaticaFrame(obj, compiled.sjuzhet)}

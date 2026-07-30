@@ -54,7 +54,7 @@ python3 -m tests.test_substrate      # any stdlib test runs this way
 python3 -m tests.test_dramatica_template
 ```
 
-Bulk run for the standard-library core (all 24 stdlib-only test files):
+Bulk run for the standard-library core (all 25 stdlib-only test files):
 
 ```sh
 cd prototype
@@ -78,6 +78,7 @@ for t in \
   test_save_the_cat \
   test_save_the_cat_generation \
   test_skeleton \
+  test_story_cli \
   test_substrate \
   test_sworn \
   test_vantage_light \
@@ -155,8 +156,8 @@ prototype/
 │   │                  #   generation/evaluation/repair/convergence,
 │   │                  #   llm provider seam, reader-model clients)
 │   ├── encodings/     # 62 modules across 16 works
-│   └── tools/         # skeleton generator CLI + templates
-├── tests/             # 37 standalone test scripts (1,338 tests)
+│   └── tools/         # writer CLI (story.py) + skeleton generator
+├── tests/             # 38 standalone test scripts (1,352 tests)
 ├── demos/             # 36 demo scripts
 ├── reader_model_*.json  # probe output artifacts
 ├── README.md
@@ -327,6 +328,15 @@ Notes:
 
 ### Author tools
 
+- `story_engine/tools/story.py` — the turn-key writer front-end
+  (`../design/authoring-cli-sketch-01.md`): one entry point walking
+  interview → compile → verify → generate → blind evaluate, with the
+  session persisted in a directory (`story.json`, `draft.md`,
+  `evaluation.json`), resumable at every step, each command naming the
+  next. `python3 -m story_engine.tools.story new <dir> --dialect
+  <dialect> --brief "..."`, then `interview` / `generate` / `evaluate`
+  (bare `story <dir>` = status). States the call shape and asks before
+  every paid step.
 - `story_engine/tools/skeleton.py` — CLI tool that writes the
   canonical 5-file encoding stub given a work-id, title, and
   character list. See
@@ -342,10 +352,10 @@ Notes:
 
 ### Tests
 
-The prototype currently has **37 test files / 1,338 tests**, all under
+The prototype currently has **38 test files / 1,352 tests**, all under
 `tests/`.
 
-- Standard-library path (24 files): `test_aristotelian.py`,
+- Standard-library path (25 files): `test_aristotelian.py`,
   `test_authoring.py`, `test_authoring_interview.py`,
   `test_compiler_stage_2.py`, `test_compiler_stage_3.py`,
   `test_draft_convergence.py`, `test_dramatic.py`,
@@ -354,7 +364,8 @@ The prototype currently has **37 test files / 1,338 tests**, all under
   `test_inference.py`, `test_lowering.py`, `test_proposal_walker.py`,
   `test_rashomon.py`, `test_save_the_cat.py`,
   `test_save_the_cat_generation.py`, `test_skeleton.py`,
-  `test_substrate.py`, `test_sworn.py`, `test_vantage_light.py`,
+  `test_story_cli.py`, `test_substrate.py`, `test_sworn.py`,
+  `test_vantage_light.py`,
   `test_verification.py`, `test_winter_count.py`.
 - Venv-backed path (13 files — need `pydantic` et al. from
   `requirements.txt`, no API key):
