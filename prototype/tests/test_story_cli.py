@@ -14,9 +14,10 @@ from types import SimpleNamespace
 from story_engine.tools.story import (
     Session, SessionError, new_session, load_session, save_session,
     next_step, cmd_status, cmd_interview, cmd_generate, cmd_evaluate,
-    cmd_revise, record_diff, evaluation_payload,
-    SESSION_FILE, DRAFT_FILE, EVAL_FILE, SCENES_FILE,
+    cmd_revise, cmd_propose, record_diff, evaluation_payload,
+    SESSION_FILE, DRAFT_FILE, EVAL_FILE, SCENES_FILE, PROPOSE_AXES,
 )
+from story_engine.core.authoring_interview import DIALECTS
 from story_engine.core.fidelity import FidelityFinding, FidelityReport
 
 
@@ -407,6 +408,84 @@ def test_generate_persists_structured_draft():
     assert payload["scenes"][0]["event_id"] == "open"
 
 
+# ---- propose: the blank-page move (P1, P2, P4) -----------------------------
+
+_DIRECTIONS = [
+    {"title": "The Cold Crossing", "pitch": "She keeps the ferry and loses "
+     "her son; the last crossing is hers alone.", "seed": "outcome: failure; "
+     "judgment: bad; resolve: steadfast"},
+    {"title": "The Bridge Toll", "pitch": "She gives up the ferry and finds "
+     "the river again through her son's eyes.", "seed": "outcome: success; "
+     "judgment: good; resolve: change"},
+    {"title": "The Ferryman's Wager", "pitch": "She wins the fight to keep "
+     "the crossing and discovers the victory empty.", "seed": "outcome: "
+     "success; judgment: bad; resolve: steadfast"},
+]
+
+
+def test_propose_stores_the_chosen_seed():
+    path = _tmp()
+    s = new_session(path, brief="ferry keeper", dialect="dramatica")
+    rc = cmd_propose(s, propose=lambda: list(_DIRECTIONS),
+                     choose=lambda n: 2)
+    assert rc == 0
+    seed = load_session(path).data["seed"]
+    assert seed["title"] == "The Bridge Toll"
+    assert "outcome: success" in seed["seed"]
+    assert next_step(s)[0] == "interview"
+
+
+def test_propose_refused_after_record_exists():
+    path = _tmp()
+    s = new_session(path, brief="x", dialect="aristotelian")
+    s.data["doc"] = {"title": "T"}
+    save_session(s)
+    rc = cmd_propose(s, propose=lambda: list(_DIRECTIONS),
+                     choose=lambda n: 1)
+    assert rc == 1
+    assert "seed" not in load_session(path).data
+
+
+def test_propose_no_choice_leaves_session_unchanged():
+    path = _tmp()
+    s = new_session(path, brief="x", dialect="aristotelian")
+    rc = cmd_propose(s, propose=lambda: list(_DIRECTIONS),
+                     choose=lambda n: None)
+    assert rc == 0
+    assert "seed" not in load_session(path).data
+
+
+def test_propose_too_few_directions_is_an_error():
+    path = _tmp()
+    s = new_session(path, brief="x", dialect="aristotelian")
+    rc = cmd_propose(s, propose=lambda: _DIRECTIONS[:1],
+                     choose=lambda n: 1)
+    assert rc == 1
+
+
+def test_interview_first_extraction_consumes_the_seed():
+    """The chosen direction arrives at the extractor as pre-written
+    author answers — and only on the first, from-brief extraction."""
+    path = _tmp()
+    s = new_session(path, brief="x", dialect="aristotelian")
+    cmd_propose(s, propose=lambda: list(_DIRECTIONS), choose=lambda n: 1)
+    seen = []
+
+    def extract(brief, prior, answers):
+        seen.append((prior is None, answers))
+        return _compilable_doc()
+
+    cmd_interview(s, extract=extract, ask=lambda qs: "", max_rounds=3)
+    assert seen, "extraction never ran"
+    first_prior_none, first_answers = seen[0]
+    assert first_prior_none
+    assert first_answers and "outcome: failure" in first_answers
+
+
+def test_propose_axes_cover_all_dialects():
+    assert set(PROPOSE_AXES) == set(DIALECTS)
+
+
 # ---- evaluate: payload + persistence ---------------------------------------
 
 def _report():
@@ -452,6 +531,12 @@ def test_evaluation_payload_shape():
 
 
 TESTS = [
+    test_propose_stores_the_chosen_seed,
+    test_propose_refused_after_record_exists,
+    test_propose_no_choice_leaves_session_unchanged,
+    test_propose_too_few_directions_is_an_error,
+    test_interview_first_extraction_consumes_the_seed,
+    test_propose_axes_cover_all_dialects,
     test_record_diff_scene_scoped_fields,
     test_record_diff_bible_scoped_fields,
     test_record_diff_event_mark_or_when_is_bible_scoped,

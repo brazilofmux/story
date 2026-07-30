@@ -17,6 +17,10 @@ Usage:
     # Where am I? What's next? (offline):
     PYTHONPATH=. python3 -m story_engine.tools.story status mystory
 
+    # Blank page? See three directions the brief could take, in plain
+    # language, and pick one — it seeds the interview:
+    PYTHONPATH=. .venv/bin/python3 -m story_engine.tools.story propose mystory
+
     # The interview: the engine asks its structural homework, you
     # answer in plain language (needs ANTHROPIC_API_KEY + venv):
     PYTHONPATH=. .venv/bin/python3 -m story_engine.tools.story interview mystory
@@ -166,9 +170,15 @@ def save_session(s: Session) -> None:
 def next_step(s: Session) -> tuple:
     """(command, human hint) — the next thing this session needs."""
     if not s.doc:
+        if s.data.get("seed"):
+            return ("interview",
+                    f"start from the chosen direction "
+                    f"({s.data['seed'].get('title', '')!r}) and answer the "
+                    f"engine's questions")
         return ("interview",
                 "extract the first record from your brief and answer the "
-                "engine's questions")
+                "engine's questions (or `propose` to see three directions "
+                "first)")
     blocking = blocking_gaps(s.doc, s.dialect)
     if blocking:
         return ("interview",
@@ -237,6 +247,138 @@ def cmd_status(s: Session) -> int:
 
 
 # ============================================================================
+# propose (authoring-propose-sketch-01: the blank-page move)
+# ============================================================================
+
+# The load-bearing axes proposals must genuinely differ on (P2) —
+# explicit per-dialect data, not vibes.
+PROPOSE_AXES = {
+    "aristotelian": (
+        "the plot kind (simple vs complex), who carries the recognition "
+        "vs who carries the suffering, and whether recognition arrives "
+        "in time to matter"),
+    "dramatica": (
+        "Outcome (is the public goal achieved?) x Judgment (does the "
+        "main character end at peace or in anguish?) x Resolve (do they "
+        "change or hold?) — the directions must land different cells"),
+    "save-the-cat": (
+        "the genre and the Midpoint / All-Is-Lost polarity (false "
+        "victory vs false defeat, and what the rock-bottom costs)"),
+    "dramatic": (
+        "the argument's resolution — affirmed, negated, complicated, or "
+        "left open — and who plays Hero vs Obstacle"),
+}
+
+# Dialect vocabulary the pitch must not use (P3) — the seed carries it.
+PITCH_JARGON = (
+    "throughline", "signpost", "beat sheet", "anagnorisis", "peripeteia",
+    "storyform", "dynamic", "overall story", "b story",
+)
+
+
+def _live_propose(s: Session, effort: str):
+    """The one injected edge: a typed call returning 3 directions."""
+    from pydantic import BaseModel, Field
+    from story_engine.core.reader_model_client_base import invoke_parse_helper
+    from story_engine.core.llm import DEFAULT_MODEL
+
+    class Direction(BaseModel):
+        title_suggestion: str = Field(
+            description="A working title for this direction.")
+        pitch: str = Field(
+            description="2-3 sentences in PLAIN story language — what "
+                        "happens and how it ends. Absolutely no story-"
+                        "theory vocabulary; write for a reader, not a "
+                        "theorist.")
+        structural_seed: str = Field(
+            description="The same direction written as the AUTHOR's "
+                        "concrete answers in the dialect's structural "
+                        "terms — commit the load-bearing choices "
+                        "explicitly. This is machine-facing; jargon "
+                        "belongs here.")
+
+    class DirectionsTyped(BaseModel):
+        directions: list[Direction] = Field(
+            description="Exactly 3 genuinely different directions.")
+
+    out = invoke_parse_helper(
+        system_prompt=(
+            "You are a story consultant. Given a writer's brief, propose "
+            "exactly THREE genuinely different directions the story could "
+            "take. They must differ on these load-bearing choices: "
+            + PROPOSE_AXES.get(s.dialect, "how it ends and who changes")
+            + ". Each direction has a plain-language pitch (no theory "
+            "vocabulary) and a structural seed (the author's concrete "
+            "commitments in the dialect's terms)."),
+        user_prompt=(f"The writer's brief ({s.dialect} dialect):\n{s.brief}"),
+        output_format=DirectionsTyped, model=DEFAULT_MODEL,
+        max_tokens=4000, effort=effort, dry_run=False,
+    )
+    return [{"title": d.title_suggestion, "pitch": d.pitch,
+             "seed": d.structural_seed} for d in (out.directions if out else [])]
+
+
+def cmd_propose(s: Session, *, propose=None, choose=None,
+                show_structure: bool = False,
+                effort: str = DEFAULT_EFFORT) -> int:
+    """Offer three directions for the brief; the chosen one seeds the
+    interview's first extraction (P1: blank page only)."""
+    if s.doc:
+        print("The interview has already produced a record — direction "
+              "changes go through `revise` now, not a re-roll.",
+              file=sys.stderr)
+        return 1
+
+    if propose is None:
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            print("ERROR: ANTHROPIC_API_KEY is not set — proposing needs "
+                  "one call.", file=sys.stderr)
+            return 1
+
+        def propose():
+            return _live_propose(s, effort)
+
+    directions = propose() or []
+    if len(directions) < 2:
+        print("The proposal call returned fewer than two directions — "
+              "nothing to choose. Try again, or just `interview`.",
+              file=sys.stderr)
+        return 1
+
+    print(f"Three ways '{s.brief[:60]}…' could go:\n" if len(s.brief) > 60
+          else f"Three ways your story could go:\n")
+    for i, d in enumerate(directions, 1):
+        print(f"  {i}. {d['title']}")
+        print(f"     {d['pitch']}")
+        if show_structure:
+            print(f"     [structure: {d['seed']}]")
+        print()
+
+    if choose is None:
+        def choose(n):
+            try:
+                raw = input(f"Which is your story? [1-{n}, or blank to "
+                            f"decide later] ").strip()
+            except EOFError:
+                return None
+            return int(raw) if raw.isdigit() and 1 <= int(raw) <= n else None
+
+    pick = choose(len(directions))
+    if pick is None:
+        print("No direction chosen — the session is unchanged; `propose` "
+              "again or `interview` from the brief alone.")
+        return 0
+    chosen = directions[pick - 1]
+    s.data["seed"] = {"at": _now(), "title": chosen["title"],
+                      "pitch": chosen["pitch"], "seed": chosen["seed"]}
+    save_session(s)
+    print(f"Chosen: {chosen['title']} — the interview will start from "
+          f"this direction.")
+    _print_next(s)
+    return 0
+
+
+# ============================================================================
 # interview (needs API unless resuming a finished record)
 # ============================================================================
 
@@ -289,6 +431,13 @@ def cmd_interview(s: Session, *, extract=None, ask=None,
         if resumed["pending"]:
             resumed["pending"] = False
             return s.doc
+        if prior is None and answers is None:
+            # A chosen direction (propose) seeds the first extraction as
+            # pre-written author answers (P4).
+            seed = (s.data.get("seed") or {}).get("seed")
+            if seed:
+                answers = ("The author chose this direction — start the "
+                           "record from it:\n" + seed)
         doc = extract(brief, prior, answers) or {}
         return doc
 
@@ -802,6 +951,15 @@ def _cli(argv=None):
     p_st = sub.add_parser("status", help="where the session is; what's next")
     p_st.add_argument("session")
 
+    p_pr = sub.add_parser("propose",
+                          help="see three directions your brief could take "
+                               "(blank page only)")
+    p_pr.add_argument("session")
+    p_pr.add_argument("--show-structure", action="store_true",
+                      help="also show each direction's structural seed")
+    p_pr.add_argument("--effort", default=DEFAULT_EFFORT,
+                      choices=["low", "medium", "high", "max"])
+
     p_iv = sub.add_parser("interview", help="answer the engine's questions")
     p_iv.add_argument("session")
     p_iv.add_argument("--max-rounds", type=int, default=8)
@@ -840,8 +998,9 @@ def _cli(argv=None):
 
     # bare `story <dir>` = status
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv and argv[0] not in ("new", "status", "interview", "generate",
-                                "revise", "evaluate", "-h", "--help"):
+    if argv and argv[0] not in ("new", "status", "propose", "interview",
+                                "generate", "revise", "evaluate",
+                                "-h", "--help"):
         argv = ["status"] + argv
     return p.parse_args(argv)
 
@@ -849,8 +1008,8 @@ def _cli(argv=None):
 def main(argv=None) -> int:
     args = _cli(argv)
     if not getattr(args, "command", None):
-        print("usage: story {new,status,interview,generate,revise,evaluate} "
-              "<session-dir>", file=sys.stderr)
+        print("usage: story {new,status,propose,interview,generate,revise,"
+              "evaluate} <session-dir>", file=sys.stderr)
         return 2
     try:
         if args.command == "new":
@@ -876,6 +1035,9 @@ def main(argv=None) -> int:
         s = load_session(args.session)
         if args.command == "status":
             return cmd_status(s)
+        if args.command == "propose":
+            return cmd_propose(s, show_structure=args.show_structure,
+                               effort=args.effort)
         if args.command == "interview":
             return cmd_interview(s, max_rounds=args.max_rounds,
                                  effort=args.effort,
