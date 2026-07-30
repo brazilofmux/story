@@ -138,3 +138,45 @@ def invoke_parse_helper(
         dry_run=dry_run,
         client=client,
     )
+
+
+def decompile_blind(
+    draft_text: str,
+    *,
+    system_prompt: str,
+    output_format: Any,
+    instruction: str,
+    title: str = "",
+    dialect_note: str = "",
+    frame_label: str = "Frame",
+    model: str = "",
+    max_tokens: int = 6000,
+    effort: str = "high",
+    dry_run: bool = False,
+    client: Optional["anthropic.Anthropic"] = None,
+) -> Optional[Any]:
+    """The shared blind-decompile assembly (ESC4,
+    `evaluator-shared-core-sketch-01`): title line, frame line, the
+    dialect's instruction sentence, then the draft prose, through
+    `invoke_parse_helper`. Each dialect's `decompile_*` wraps this with
+    its system prompt, schema, and genre-only note — the discipline that
+    `dialect_note` must never name the answer key stays documented at
+    each wrapper, because it is the dialect's contract with its reader,
+    not plumbing."""
+    header = []
+    if title:
+        header.append(f"Draft title: {title}")
+    if dialect_note:
+        header.append(f"{frame_label}: {dialect_note}")
+    header.append(instruction)
+    user_prompt = "\n".join(header) + "\n\n=== DRAFT PROSE ===\n\n" + draft_text
+    return invoke_parse_helper(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        output_format=output_format,
+        model=model,
+        max_tokens=max_tokens,
+        effort=effort,
+        dry_run=dry_run,
+        client=client,
+    )

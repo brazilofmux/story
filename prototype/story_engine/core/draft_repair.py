@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from story_engine.core.llm import DEFAULT_MODEL
+from story_engine.core.fidelity import char_name as _char_name
 
 from story_engine.core.draft_generator import (
     render_scene_prose, _scene_synopsis, _name_map,
@@ -41,14 +42,6 @@ class RepairDirective:
     dimension: str
     instruction: str
     authored: str = ""        # the authored fact being restored
-
-
-def _char_name(ref_id: str, mythos) -> str:
-    for c in getattr(mythos, "characters", ()) or ():
-        if getattr(c, "id", None) == ref_id or \
-                getattr(c, "character_ref_id", None) == ref_id:
-            return getattr(c, "name", ref_id)
-    return ref_id
 
 
 def plan_repairs(report, mythos) -> list:

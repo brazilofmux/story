@@ -25,7 +25,6 @@ the fidelity signal for this dialect — the beats are the structure.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Optional
 
 from story_engine.core.llm import DEFAULT_MODEL
@@ -35,7 +34,10 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise ImportError("save_the_cat_evaluator requires pydantic.") from exc
 
-from story_engine.core.reader_model_client_base import invoke_parse_helper
+from story_engine.core.reader_model_client_base import decompile_blind
+from story_engine.core.fidelity import (
+    FidelityFinding, FidelityReport, name_matches as _name_matches,
+)
 from story_engine.core.save_the_cat import (
     CANONICAL_BEAT_BY_SLOT, CANONICAL_BEAT_NAMES, NUM_CANONICAL_BEATS,
 )
@@ -147,18 +149,13 @@ def decompile_stc(
     `dialect_note` MUST be genre-only (defaults to GENRE_NOTE). Do NOT pass
     the generation note — naming which event fills each beat leads the read
     and it is no longer blind."""
-    header = []
-    if title:
-        header.append(f"Draft title: {title}")
-    if dialect_note:
-        header.append(f"Frame: {dialect_note}")
-    header.append("Below is the full prose of the draft. Report the "
-                  "Save-the-Cat structure you perceive, per your contract.")
-    user_prompt = "\n".join(header) + "\n\n=== DRAFT PROSE ===\n\n" + draft_text
-    return invoke_parse_helper(
+    return decompile_blind(
+        draft_text,
         system_prompt=_STC_SYSTEM_PROMPT,
-        user_prompt=user_prompt,
         output_format=StcReading,
+        instruction="Below is the full prose of the draft. Report the "
+                    "Save-the-Cat structure you perceive, per your contract.",
+        title=title, dialect_note=dialect_note,
         model=model, max_tokens=max_tokens, effort=effort,
         dry_run=dry_run, client=client,
     )
@@ -168,32 +165,11 @@ def decompile_stc(
 # Stage 2 — the fidelity comparison (pure Python, offline-testable)
 # ============================================================================
 
-@dataclass(frozen=True)
-class StcFidelityFinding:
-    dimension: str
-    authored: str
-    decompiled: str
-    verdict: str             # "preserved" | "drifted" | "lost" | "added"
-    note: str = ""
-
-
-@dataclass
-class StcFidelityReport:
-    title: str
-    findings: list = field(default_factory=list)
-
-    @property
-    def scored(self) -> list:
-        return [f for f in self.findings if f.verdict != "added"]
-
-    @property
-    def preserved(self) -> int:
-        return sum(1 for f in self.scored if f.verdict == "preserved")
-
-    @property
-    def score(self) -> float:
-        s = self.scored
-        return (self.preserved / len(s)) if s else 0.0
+# The record pair and matching policy are the shared evaluator core
+# (`fidelity.py`, evaluator-shared-core-sketch-01); the Save-the-Cat
+# vocabulary stays this module's API.
+StcFidelityFinding = FidelityFinding
+StcFidelityReport = FidelityReport
 
 
 def _norm_beat(name: str) -> str:
@@ -253,14 +229,6 @@ def _protagonist_of(sheet) -> str:
             if c:
                 return c.name
     return chars[0].name if chars else ""
-
-
-def _name_matches(a: str, b: str) -> bool:
-    na = {t for t in _norm_beat(a).split()}
-    nb = {t for t in _norm_beat(b).split()}
-    stop = {"the", "of", "a", "an", "lord", "lady", "king", "thane"}
-    na, nb = (na - stop), (nb - stop)
-    return bool(na and nb and (na & nb))
 
 
 def compare_to_sheet(reading: StcReading, sheet) -> StcFidelityReport:

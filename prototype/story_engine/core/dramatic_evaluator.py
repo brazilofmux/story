@@ -27,7 +27,6 @@ Two stages, same shape as the peers:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Optional
 
 from story_engine.core.llm import DEFAULT_MODEL
@@ -37,7 +36,11 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise ImportError("dramatic_evaluator requires pydantic.") from exc
 
-from story_engine.core.reader_model_client_base import invoke_parse_helper
+from story_engine.core.reader_model_client_base import decompile_blind
+from story_engine.core.fidelity import (
+    FidelityFinding, FidelityReport, name_matches as _name_matches,
+    content_overlap as _content_overlap,
+)
 
 
 # ============================================================================
@@ -124,18 +127,13 @@ def decompile_dramatic(
 
     `dialect_note` MUST be genre-only (defaults to GENRE_NOTE). Do NOT pass
     the generation note — naming the functions/argument leads the read."""
-    header = []
-    if title:
-        header.append(f"Draft title: {title}")
-    if dialect_note:
-        header.append(f"Frame: {dialect_note}")
-    header.append("Below is the full prose of the draft. Report the Dramatic "
-                  "structure you perceive, per your contract.")
-    user_prompt = "\n".join(header) + "\n\n=== DRAFT PROSE ===\n\n" + draft_text
-    return invoke_parse_helper(
+    return decompile_blind(
+        draft_text,
         system_prompt=_DRAMATIC_SYSTEM_PROMPT,
-        user_prompt=user_prompt,
         output_format=DramaticReading,
+        instruction="Below is the full prose of the draft. Report the "
+                    "Dramatic structure you perceive, per your contract.",
+        title=title, dialect_note=dialect_note,
         model=model, max_tokens=max_tokens, effort=effort,
         dry_run=dry_run, client=client,
     )
@@ -145,47 +143,16 @@ def decompile_dramatic(
 # Stage 2 — the fidelity comparison (pure Python, offline-testable)
 # ============================================================================
 
-@dataclass(frozen=True)
-class DramaticFidelityFinding:
-    dimension: str
-    authored: str
-    decompiled: str
-    verdict: str             # "preserved" | "drifted" | "lost" | "added"
-    note: str = ""
-
-
-@dataclass
-class DramaticFidelityReport:
-    title: str
-    findings: list = field(default_factory=list)
-
-    @property
-    def scored(self) -> list:
-        return [f for f in self.findings if f.verdict != "added"]
-
-    @property
-    def preserved(self) -> int:
-        return sum(1 for f in self.scored if f.verdict == "preserved")
-
-    @property
-    def score(self) -> float:
-        s = self.scored
-        return (self.preserved / len(s)) if s else 0.0
-
+# The record pair and matching policy are the shared evaluator core
+# (`fidelity.py`, evaluator-shared-core-sketch-01); the Dramatic
+# vocabulary stays this module's API. This dialect contributed the
+# fuzzy content-overlap matcher, now shared as `content_overlap`.
+DramaticFidelityFinding = FidelityFinding
+DramaticFidelityReport = FidelityReport
 
 _HERO_FUNCS = {"hero", "protagonist"}
 _OBSTACLE_FUNCS = {"obstacle", "antagonist"}
 _HELPER_FUNCS = {"helper"}
-
-_STOP = {"the", "of", "a", "an", "and", "to", "is", "that", "his", "her",
-         "their", "by", "it", "what", "who", "they", "he", "she", "in", "as",
-         "for", "be", "are", "or", "but", "not", "no", "than", "more", "most",
-         "person", "man", "woman", "people", "story", "thing", "you"}
-
-
-def _toks(s: str) -> set:
-    raw = "".join(c if c.isalnum() else " " for c in (s or "")).split()
-    return {t.lower() for t in raw if t}
 
 
 def _names_for(story, funcs: set) -> list:
@@ -198,24 +165,8 @@ def _names_for(story, funcs: set) -> list:
     return out
 
 
-def _name_matches(a: str, b: str) -> bool:
-    na, nb = (_toks(a) - _STOP), (_toks(b) - _STOP)
-    return bool(na and nb and (na & nb))
-
-
 def _any_name_match(read: str, pool: list) -> bool:
     return any(_name_matches(read, p) for p in pool)
-
-
-def _content_overlap(read: str, *authored: str) -> bool:
-    """Fuzzy: do the reading's content tokens overlap the authored text(s)?"""
-    r = _toks(read) - _STOP
-    if not r:
-        return False
-    a = set()
-    for t in authored:
-        a |= (_toks(t) - _STOP)
-    return bool(r & a)
 
 
 def _norm_resolution(s: str) -> str:

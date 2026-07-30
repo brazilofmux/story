@@ -54,7 +54,7 @@ python3 -m tests.test_substrate      # any stdlib test runs this way
 python3 -m tests.test_dramatica_template
 ```
 
-Bulk run for the standard-library core (all 23 stdlib-only test files):
+Bulk run for the standard-library core (all 24 stdlib-only test files):
 
 ```sh
 cd prototype
@@ -69,6 +69,7 @@ for t in \
   test_dramatic_generation \
   test_dramatica_generation \
   test_dramatica_template \
+  test_fidelity \
   test_identity \
   test_inference \
   test_lowering \
@@ -149,13 +150,13 @@ python3 -m story_engine.encodings.ackroyd_save_the_cat_verification
 ```
 prototype/
 ├── story_engine/
-│   ├── core/          # framework — 34 modules (substrate, four dialects,
+│   ├── core/          # framework — 35 modules (substrate, four dialects,
 │   │                  #   lowering/verification, authoring + compiler,
 │   │                  #   generation/evaluation/repair/convergence,
 │   │                  #   llm provider seam, reader-model clients)
 │   ├── encodings/     # 62 modules across 16 works
 │   └── tools/         # skeleton generator CLI + templates
-├── tests/             # 36 standalone test scripts (1,327 tests)
+├── tests/             # 37 standalone test scripts (1,337 tests)
 ├── demos/             # 36 demo scripts
 ├── reader_model_*.json  # probe output artifacts
 ├── README.md
@@ -220,6 +221,12 @@ route through the `llm.py` provider seam described above.
 
 - `llm.py` — the provider seam: `parse` (typed output) and `generate`
   (free text); backend chosen by model name.
+- `fidelity.py` — the shared evaluator core (stdlib): the one
+  `FidelityFinding`/`FidelityReport` pair, the name-matching policy
+  (articles + one honorific set, title fallback), the fuzzy
+  content-overlap matcher, and the authored-side name lookup. The four
+  evaluators alias its records under their own vocabularies
+  (`evaluator-shared-core-sketch-01`).
 - `draft_generator.py` — walks the sjuzhet and renders first-draft
   prose from a verified substrate; the substrate is the source of
   truth, the LLM is the renderer.
@@ -335,15 +342,15 @@ Notes:
 
 ### Tests
 
-The prototype currently has **36 test files / 1,327 tests**, all under
+The prototype currently has **37 test files / 1,337 tests**, all under
 `tests/`.
 
-- Standard-library path (23 files): `test_aristotelian.py`,
+- Standard-library path (24 files): `test_aristotelian.py`,
   `test_authoring.py`, `test_authoring_interview.py`,
   `test_compiler_stage_2.py`, `test_compiler_stage_3.py`,
   `test_draft_convergence.py`, `test_dramatic.py`,
   `test_dramatic_generation.py`, `test_dramatica_generation.py`,
-  `test_dramatica_template.py`, `test_identity.py`,
+  `test_dramatica_template.py`, `test_fidelity.py`, `test_identity.py`,
   `test_inference.py`, `test_lowering.py`, `test_proposal_walker.py`,
   `test_rashomon.py`, `test_save_the_cat.py`,
   `test_save_the_cat_generation.py`, `test_skeleton.py`,

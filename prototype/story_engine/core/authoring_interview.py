@@ -49,6 +49,11 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from story_engine.core.llm import DEFAULT_MODEL
+# The dual-pole discipline is defined once, with the template vocabulary
+# (`dramatica_template.normalize_dynamics`, evaluator-shared-core-sketch-01).
+from story_engine.core.dramatica_template import (
+    normalize_dynamics as _normalize_dynamics,
+)
 
 
 # ============================================================================
@@ -469,54 +474,6 @@ DRAMATICA_DYNAMICS = {
     "outcome": ("success", "failure"),
     "judgment": ("good", "bad"),
 }
-
-
-def _split_dual_pole(pole: str):
-    """The poles of a multi-pole string ('success|failure', 'success / failure',
-    'success or failure', 'both success and failure'), or None for a single
-    pole. The extraction schema's dynamics fields are plain strings, so a
-    compliant dual answer arrives as one string; no pole name contains a
-    space, '|', or '/', so these separators are unambiguous."""
-    s = pole.strip().lower()
-    if s.startswith("both "):
-        s = s[5:]
-    for sep in ("|", "/", " or ", " and "):
-        if sep in s:
-            parts = tuple(p.strip() for p in s.split(sep) if p.strip())
-            if len(parts) > 1:
-                return parts
-    return None
-
-
-def _normalize_dynamics(raw) -> dict:
-    """Accept dynamics as a dict {axis: pole} (the extraction schema's flat
-    shape, with underscore or hyphen keys) or a list [{axis, choice}], and
-    normalize to {axis: pole-or-tuple} keyed by the canonical hyphen axis names.
-    A list/tuple choice — or a multi-pole string like 'success|failure' — is a
-    genuinely-dual (ambiguous) axis — honored, not flattened (see
-    `dramatica-precision-limit`): forcing a binary the story doesn't commit to
-    is exactly the over-claim the substrate refuses."""
-    out: dict = {}
-    items = []
-    if isinstance(raw, dict):
-        items = list(raw.items())
-    elif isinstance(raw, list):
-        for d in raw:
-            if isinstance(d, dict):
-                items.append((d.get("axis"), d.get("choice", d.get("pole"))))
-    for axis, choice in items:
-        a = str(axis or "").strip().lower().replace("_", "-")
-        if not a:
-            continue
-        if isinstance(choice, (list, tuple)):
-            poles = tuple(str(c).strip().lower() for c in choice if str(c).strip())
-            if poles:                       # an empty list is an unset axis
-                out[a] = poles
-        else:
-            pole = str(choice or "").strip().lower()
-            if pole:                        # an empty string is an unset axis
-                out[a] = _split_dual_pole(pole) or pole
-    return out
 
 
 def _dramatica_overlay(doc: dict) -> list:

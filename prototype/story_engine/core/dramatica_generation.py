@@ -25,6 +25,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from story_engine.core.draft_generator import DialectFrame
+# One classifier for the throughline-id convention, shared with the
+# evaluator and the authoring compiler (evaluator-shared-core-sketch-01).
+from story_engine.core.dramatica_template import (
+    throughline_perspective as _perspective_of,
+)
 
 
 # ----------------------------------------------------------------------------
@@ -109,19 +114,6 @@ _DSP_GLOSS = {
         "good": "the Main Character ends personally resolved / fulfilled",
         "bad": "the Main Character ends personally unresolved / in anguish"}),
 }
-
-
-def _perspective_of(throughline_id: str) -> str:
-    t = throughline_id.lower()
-    if "overall" in t or t.startswith("t_os"):
-        return "overall"
-    if "_mc" in t or "mc_" in t:
-        return "mc"
-    if "_ic" in t or "ic_" in t:
-        return "ic"
-    if "_rel" in t or "rel_" in t or "_rs" in t:
-        return "rel"
-    return "overall"
 
 
 def _subject_of(throughline_id: str) -> str:

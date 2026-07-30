@@ -37,7 +37,6 @@ Two stages:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Optional
 
 from story_engine.core.llm import DEFAULT_MODEL
@@ -50,7 +49,13 @@ except ImportError as exc:  # pragma: no cover
         "`pip install -r prototype/requirements.txt`."
     ) from exc
 
-from story_engine.core.reader_model_client_base import invoke_parse_helper
+from story_engine.core.reader_model_client_base import decompile_blind
+from story_engine.core.fidelity import (
+    FidelityFinding, FidelityReport,
+    name_matches as _name_matches,
+    any_name_match as _any_match,
+    char_name as _char_name,
+)
 
 
 # ============================================================================
@@ -199,21 +204,15 @@ def decompile_draft(
     `dialect_note` MUST be genre-only (it defaults to GENRE_NOTE). Do NOT
     pass the generation note — naming the specific structure leads the
     read and the result is no longer blind."""
-    header = []
-    if title:
-        header.append(f"Draft title: {title}")
-    if dialect_note:
-        header.append(f"Frame (the form it was written in): {dialect_note}")
-    header.append(
-        "Below is the full prose of the draft. Read it and report the "
-        "structure you perceive, per your contract."
-    )
-    user_prompt = "\n".join(header) + "\n\n=== DRAFT PROSE ===\n\n" + draft_text
-
-    return invoke_parse_helper(
+    return decompile_blind(
+        draft_text,
         system_prompt=_DECOMPILE_SYSTEM_PROMPT,
-        user_prompt=user_prompt,
         output_format=DecompiledStructure,
+        instruction="Below is the full prose of the draft. Read it and "
+                    "report the structure you perceive, per your contract.",
+        title=title,
+        dialect_note=dialect_note,
+        frame_label="Frame (the form it was written in)",
         model=model,
         max_tokens=max_tokens,
         effort=effort,
@@ -227,78 +226,9 @@ def decompile_draft(
 # ============================================================================
 
 
-@dataclass(frozen=True)
-class FidelityFinding:
-    """One structural dimension's round-trip verdict."""
-    dimension: str
-    authored: str            # what the substrate specified
-    decompiled: str          # what the blind prose reading found
-    verdict: str             # "preserved" | "drifted" | "lost" | "added"
-    note: str = ""
-
-
-@dataclass
-class FidelityReport:
-    """The substrate → prose → substrate round-trip result."""
-    title: str
-    findings: list = field(default_factory=list)   # list[FidelityFinding]
-
-    @property
-    def scored(self) -> list:
-        """Findings that count toward the score (preserved/drifted/lost —
-        an 'added' element is informational, not a fidelity loss)."""
-        return [f for f in self.findings if f.verdict != "added"]
-
-    @property
-    def preserved(self) -> int:
-        return sum(1 for f in self.scored if f.verdict == "preserved")
-
-    @property
-    def score(self) -> float:
-        s = self.scored
-        return (self.preserved / len(s)) if s else 0.0
-
-
-def _norm(name: str) -> set:
-    """Normalize a character name to a token set for fuzzy matching —
-    'the Duchess of Amalfi' and 'the Duchess' share the 'duchess' token.
-    Drops articles/particles so the shared proper-noun tokens align."""
-    stop = {"the", "of", "a", "an", "duke", "duchess", "lord", "sir"}
-    toks = {t.strip(",.;:'\"").lower() for t in name.split()}
-    core = {t for t in toks if t and t not in stop}
-    # Keep a role-token fallback so 'the Duchess' still matches when the
-    # only shared token IS the role word — but never re-admit articles or
-    # particles, or 'the Duchess' matches 'the Duke' on the shared 'the'.
-    return core if core else {
-        t for t in toks if t and t not in {"the", "a", "an", "of"}
-    }
-
-
-def _name_matches(a: str, b: str) -> bool:
-    """True if two character names plausibly denote the same character."""
-    if not a or not b:
-        return False
-    na, nb = _norm(a), _norm(b)
-    if na & nb:
-        return True
-    # Role-word fallback: both reduce to the same single role token.
-    ra = {t.strip(",.;:'\"").lower() for t in a.split()}
-    rb = {t.strip(",.;:'\"").lower() for t in b.split()}
-    return bool(ra & rb & {"duchess", "duke", "cardinal", "king"})
-
-
-def _any_match(name: str, pool: list) -> bool:
-    return any(_name_matches(name, p) for p in pool)
-
-
-def _char_name(ref_id: str, mythos) -> str:
-    """ArCharacter id / substrate ref → readable name, for authored
-    expectations."""
-    for c in getattr(mythos, "characters", ()) or ():
-        if getattr(c, "id", None) == ref_id or \
-                getattr(c, "character_ref_id", None) == ref_id:
-            return getattr(c, "name", ref_id)
-    return ref_id
+# FidelityFinding / FidelityReport and the name-matching policy are the
+# shared evaluator core (`fidelity.py`, evaluator-shared-core-sketch-01);
+# this module contributes the Aristotelian dimensions only.
 
 
 def compare_to_mythos(decompiled: DecompiledStructure, mythos) -> FidelityReport:

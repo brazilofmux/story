@@ -23,7 +23,6 @@ tragedy, and it is exactly what an Aristotelian evaluator cannot see.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Optional
 
 from story_engine.core.llm import DEFAULT_MODEL
@@ -33,7 +32,11 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise ImportError("dramatica_evaluator requires pydantic.") from exc
 
-from story_engine.core.reader_model_client_base import invoke_parse_helper
+from story_engine.core.reader_model_client_base import decompile_blind
+from story_engine.core.fidelity import (
+    FidelityFinding, FidelityReport, name_matches, content_overlap,
+)
+from story_engine.core.dramatica_template import throughline_perspective
 
 
 # ============================================================================
@@ -139,18 +142,13 @@ def decompile_dramatica(
     `dialect_note` MUST be genre-only (defaults to GENRE_NOTE). Do NOT pass
     the generation note — naming the intended outcome/judgment leads the
     read and it is no longer blind."""
-    header = []
-    if title:
-        header.append(f"Draft title: {title}")
-    if dialect_note:
-        header.append(f"Frame: {dialect_note}")
-    header.append("Below is the full prose of the draft. Report the "
-                  "Dramatica structure you perceive, per your contract.")
-    user_prompt = "\n".join(header) + "\n\n=== DRAFT PROSE ===\n\n" + draft_text
-    return invoke_parse_helper(
+    return decompile_blind(
+        draft_text,
         system_prompt=_DRAMATICA_SYSTEM_PROMPT,
-        user_prompt=user_prompt,
         output_format=DramaticaReading,
+        instruction="Below is the full prose of the draft. Report the "
+                    "Dramatica structure you perceive, per your contract.",
+        title=title, dialect_note=dialect_note,
         model=model, max_tokens=max_tokens, effort=effort,
         dry_run=dry_run, client=client,
     )
@@ -160,32 +158,11 @@ def decompile_dramatica(
 # Stage 2 — the fidelity comparison (pure Python, offline-testable)
 # ============================================================================
 
-@dataclass(frozen=True)
-class DramaticaFidelityFinding:
-    dimension: str
-    authored: str
-    decompiled: str
-    verdict: str             # "preserved" | "drifted" | "lost" | "added"
-    note: str = ""
-
-
-@dataclass
-class DramaticaFidelityReport:
-    title: str
-    findings: list = field(default_factory=list)
-
-    @property
-    def scored(self) -> list:
-        return [f for f in self.findings if f.verdict != "added"]
-
-    @property
-    def preserved(self) -> int:
-        return sum(1 for f in self.scored if f.verdict == "preserved")
-
-    @property
-    def score(self) -> float:
-        s = self.scored
-        return (self.preserved / len(s)) if s else 0.0
+# The record pair and matching policy are the shared evaluator core
+# (`fidelity.py`, evaluator-shared-core-sketch-01); the Dramatica
+# vocabulary stays this module's API.
+DramaticaFidelityFinding = FidelityFinding
+DramaticaFidelityReport = FidelityReport
 
 
 def dyn_map(storyform) -> dict:
@@ -217,26 +194,18 @@ def _axis_label(poles: frozenset) -> str:
     return "|".join(sorted(poles))
 
 
+# The reader-facing labels for the shared throughline classifier
+# (`dramatica_template.throughline_perspective`, ESC6).
+_PERSPECTIVE_LABEL = {
+    "overall": "overall",
+    "mc": "main character",
+    "ic": "influence character",
+    "rel": "relationship",
+}
+
+
 def _perspective_of(throughline_id: str) -> str:
-    t = throughline_id.lower()
-    if "overall" in t or t.startswith("t_os"):
-        return "overall"
-    if "_mc" in t or "mc_" in t:
-        return "main character"
-    if "_ic" in t or "ic_" in t:
-        return "influence character"
-    if "_rel" in t or "rel_" in t or "_rs" in t:
-        return "relationship"
-    return "overall"
-
-
-def _norm(s: str) -> set:
-    return {t.strip(",.;:'\"").lower() for t in (s or "").split() if t}
-
-
-def _matches(a: str, b: str) -> bool:
-    na, nb = _norm(a), _norm(b)
-    return bool(na and nb and (na & nb))
+    return _PERSPECTIVE_LABEL[throughline_perspective(throughline_id)]
 
 
 def _ending_cell(phrase: str) -> str:
@@ -314,7 +283,7 @@ def compare_to_storyform(reading: DramaticaReading,
         else:
             # Unmapped free phrasing — fall back to word overlap, but only
             # then; the mapped vocabulary above is authoritative.
-            ok = _matches(a_end, got_end)
+            ok = content_overlap(got_end, a_end)
         # An authored-DUAL axis makes ANY of its spanned poles a faithful
         # read of the ending's flavour. Single-pole axes stay strict.
         for axis in ("outcome", "judgment"):
@@ -341,7 +310,8 @@ def compare_to_storyform(reading: DramaticaReading,
         report.findings.append(DramaticaFidelityFinding(
             dimension="main_character", authored=mc_subject,
             decompiled=reading.main_character or "(none)",
-            verdict="preserved" if _matches(mc_subject, reading.main_character)
+            verdict="preserved" if name_matches(mc_subject,
+                                                reading.main_character)
             else "lost"))
 
     # 6. Throughline coverage — how many of the four the reader identified.

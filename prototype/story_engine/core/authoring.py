@@ -85,6 +85,7 @@ from story_engine.core.dramatic import (
 from story_engine.core.dramatica_template import (
     DomainAssignment, DynamicStoryPoint, Signpost, Domain, DSPAxis, Dual,
     DSP_VALID_CHOICES, CONCERN_QUADS_BY_DOMAIN, verify_dramatica_complete,
+    normalize_dynamics as _normalize_dynamics,
 )
 
 
@@ -823,51 +824,6 @@ def _dramatica_tl_id(role: str, owner: str) -> str:
     if owner and stem in ("T_mc", "T_ic"):
         return stem + "_" + owner.replace(" ", "_").replace("-", "_")
     return stem
-
-
-def _split_dual_pole(pole: str):
-    """The poles of a multi-pole string ('success|failure', 'success / failure',
-    'success or failure', 'both success and failure'), or None for a single
-    pole. The interview's extraction schema carries each dynamic as one plain
-    string, so a compliant dual answer arrives in this shape; no pole name
-    contains a space, '|', or '/', so these separators are unambiguous."""
-    s = pole.strip().lower()
-    if s.startswith("both "):
-        s = s[5:]
-    for sep in ("|", "/", " or ", " and "):
-        if sep in s:
-            parts = tuple(p.strip() for p in s.split(sep) if p.strip())
-            if len(parts) > 1:
-                return parts
-    return None
-
-
-def _normalize_dynamics(raw) -> dict:
-    """The dynamics dict (axis → pole, underscore or hyphen keys) or a list of
-    {axis, choice}, normalized to {hyphen-axis: pole-or-tuple}. A 2-pole value
-    — a list, or a multi-pole string like 'success|failure' — is a
-    genuinely-dual axis (honored, not flattened — `dramatica-precision-limit`)."""
-    out: dict = {}
-    if isinstance(raw, dict):
-        items = list(raw.items())
-    elif isinstance(raw, list):
-        items = [(d.get("axis"), d.get("choice", d.get("pole")))
-                 for d in raw if isinstance(d, dict)]
-    else:
-        items = []
-    for axis, choice in items:
-        a = str(axis or "").strip().lower().replace("_", "-")
-        if not a:
-            continue
-        if isinstance(choice, (list, tuple)):
-            poles = tuple(str(c).strip().lower() for c in choice if str(c).strip())
-            if poles:
-                out[a] = poles
-        else:
-            pole = str(choice or "").strip().lower()
-            if pole:
-                out[a] = _split_dual_pole(pole) or pole
-    return out
 
 
 def _build_dramatica_overlay(doc: dict, sub: _Substrate) -> CompiledDramaticaOverlay:

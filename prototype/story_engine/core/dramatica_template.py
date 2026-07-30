@@ -2254,3 +2254,79 @@ def template_fields_with_coupling(
         d.field for d in TEMPLATE_COUPLING_DECLARATIONS
         if d.record_type == record_type and d.kind == kind
     )
+
+
+# ============================================================================
+# Shared helpers over the template vocabulary
+# (evaluator-shared-core-sketch-01, ESC5 + ESC6)
+# ============================================================================
+
+
+def throughline_perspective(throughline_id: str) -> str:
+    """Classify a throughline id's perspective by the encodings' id
+    convention (T_os…, T_mc_<owner>…, T_ic_<owner>…, T_rel…): returns
+    'overall' | 'mc' | 'ic' | 'rel'. This is the ONE definition of that
+    convention — `dramatica_generation`, `dramatica_evaluator`, and the
+    authoring compiler's minted ids (`_DRAMATICA_TL_STEM`) all key off
+    it, so a storyform whose ids follow the convention reads the same
+    everywhere."""
+    t = throughline_id.lower()
+    if "overall" in t or t.startswith("t_os"):
+        return "overall"
+    if "_mc" in t or "mc_" in t:
+        return "mc"
+    if "_ic" in t or "ic_" in t:
+        return "ic"
+    if "_rel" in t or "rel_" in t or "_rs" in t:
+        return "rel"
+    return "overall"
+
+
+def split_dual_pole(pole: str):
+    """The poles of a multi-pole string ('success|failure',
+    'success / failure', 'success or failure', 'both success and
+    failure'), or None for a single pole. Authoring surfaces carry each
+    dynamic as one plain string, so a compliant dual answer arrives in
+    this shape; no pole name contains a space, '|', or '/', so these
+    separators are unambiguous."""
+    s = pole.strip().lower()
+    if s.startswith("both "):
+        s = s[5:]
+    for sep in ("|", "/", " or ", " and "):
+        if sep in s:
+            parts = tuple(p.strip() for p in s.split(sep) if p.strip())
+            if len(parts) > 1:
+                return parts
+    return None
+
+
+def normalize_dynamics(raw) -> dict:
+    """Accept dynamics as a dict {axis: pole} (underscore or hyphen
+    keys) or a list [{axis, choice}], normalized to
+    {hyphen-axis: pole-or-tuple}. A 2-pole value — a list, or a
+    multi-pole string like 'success|failure' — is a genuinely-dual
+    (ambiguous) axis, honored, not flattened (see
+    `dramatica-precision-limit`): forcing a binary the story doesn't
+    commit to is exactly the over-claim the substrate refuses."""
+    out: dict = {}
+    if isinstance(raw, dict):
+        items = list(raw.items())
+    elif isinstance(raw, list):
+        items = [(d.get("axis"), d.get("choice", d.get("pole")))
+                 for d in raw if isinstance(d, dict)]
+    else:
+        items = []
+    for axis, choice in items:
+        a = str(axis or "").strip().lower().replace("_", "-")
+        if not a:
+            continue
+        if isinstance(choice, (list, tuple)):
+            poles = tuple(str(c).strip().lower()
+                          for c in choice if str(c).strip())
+            if poles:                       # an empty list is an unset axis
+                out[a] = poles
+        else:
+            pole = str(choice or "").strip().lower()
+            if pole:                        # an empty string is an unset axis
+                out[a] = split_dual_pole(pole) or pole
+    return out
